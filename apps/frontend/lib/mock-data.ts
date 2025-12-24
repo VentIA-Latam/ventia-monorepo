@@ -1,4 +1,164 @@
 import { PaymentRecord } from "@/lib/types/payment-record"
+import { Order } from "@/lib/types/order"
+
+export const mockOrders: Order[] = [
+  {
+    id: "#ORD-3920",
+    date: "24 Oct, 10:30 AM",
+    client: {
+      name: "Tech Solutions S.A.",
+      email: "contacto@techsolutions.com"
+    },
+    channel: "Portal B2B",
+    paymentStatus: "Pagado",
+    logisticsStatus: "En camino",
+    amount: 1245,
+    currency: "$"
+  },
+  {
+    id: "#ORD-3919",
+    date: "23 Oct, 04:15 PM",
+    client: {
+      name: "Global Logistics",
+      email: "finanzas@global-log.com"
+    },
+    channel: "WhatsApp",
+    paymentStatus: "Pendiente",
+    logisticsStatus: "Procesando",
+    amount: 4180,
+    currency: "$"
+  },
+  {
+    id: "#ORD-3918",
+    date: "23 Oct, 02:20 PM",
+    client: {
+      name: "Mercado Central",
+      email: "compras@mercadocentral.cl"
+    },
+    channel: "Venta Directa",
+    paymentStatus: "Rechazado",
+    logisticsStatus: "Cancelado",
+    amount: 3290,
+    currency: "$"
+  },
+  {
+    id: "#ORD-3917",
+    date: "22 Oct, 11:00 AM",
+    client: {
+      name: "Importadora Mega",
+      email: "contacto@importadoramega.com"
+    },
+    channel: "Portal B2B",
+    paymentStatus: "Pagado",
+    logisticsStatus: "Entregado",
+    amount: 15420,
+    currency: "$"
+  },
+  {
+    id: "#ORD-3916",
+    date: "22 Oct, 09:15 AM",
+    client: {
+      name: "Constructora Oeste",
+      email: "pagos@constructora-oeste.cl"
+    },
+    channel: "WhatsApp",
+    paymentStatus: "Pendiente",
+    logisticsStatus: "Procesando",
+    amount: 2567,
+    currency: "$"
+  },
+  {
+    id: "#ORD-3915",
+    date: "21 Oct, 03:45 PM",
+    client: {
+      name: "Distribuidora Norte",
+      email: "ventas@distrinorte.com"
+    },
+    channel: "Portal B2B",
+    paymentStatus: "Pagado",
+    logisticsStatus: "En camino",
+    amount: 8930,
+    currency: "$"
+  },
+  {
+    id: "#ORD-3914",
+    date: "21 Oct, 01:20 PM",
+    client: {
+      name: "Retail Express",
+      email: "compras@retailexpress.com"
+    },
+    channel: "Venta Directa",
+    paymentStatus: "Pagado",
+    logisticsStatus: "Entregado",
+    amount: 6745,
+    currency: "$"
+  },
+  {
+    id: "#ORD-3913",
+    date: "20 Oct, 10:00 AM",
+    client: {
+      name: "Almacenes del Sur",
+      email: "pedidos@almacenesdelsur.cl"
+    },
+    channel: "WhatsApp",
+    paymentStatus: "Pendiente",
+    logisticsStatus: "Procesando",
+    amount: 3210,
+    currency: "$"
+  },
+  {
+    id: "#ORD-3912",
+    date: "20 Oct, 08:30 AM",
+    client: {
+      name: "Ferretería Total",
+      email: "contacto@ferreteriatotal.com"
+    },
+    channel: "Portal B2B",
+    paymentStatus: "Pagado",
+    logisticsStatus: "En camino",
+    amount: 11250,
+    currency: "$"
+  },
+  {
+    id: "#ORD-3911",
+    date: "19 Oct, 05:00 PM",
+    client: {
+      name: "Supermercados Plus",
+      email: "compras@superplus.com"
+    },
+    channel: "Venta Directa",
+    paymentStatus: "Rechazado",
+    logisticsStatus: "Cancelado",
+    amount: 5640,
+    currency: "$"
+  },
+  {
+    id: "#ORD-3910",
+    date: "19 Oct, 02:15 PM",
+    client: {
+      name: "Comercial Andina",
+      email: "ventas@comercialandina.cl"
+    },
+    channel: "WhatsApp",
+    paymentStatus: "Pagado",
+    logisticsStatus: "Entregado",
+    amount: 9870,
+    currency: "$"
+  },
+  {
+    id: "#ORD-3909",
+    date: "18 Oct, 11:45 AM",
+    client: {
+      name: "Industrias del Pacífico",
+      email: "finanzas@indupac.com"
+    },
+    channel: "Portal B2B",
+    paymentStatus: "Pendiente",
+    logisticsStatus: "Procesando",
+    amount: 18450,
+    currency: "$"
+  }
+];
 
 export const mockPayments: PaymentRecord[] = [
   {

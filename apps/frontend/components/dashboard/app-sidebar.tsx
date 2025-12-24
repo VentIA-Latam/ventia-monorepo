@@ -56,7 +56,7 @@ const dataPlatform = [
   },
   {
     title: "Pedidos",
-    url: "/dashboard/conversations",
+    url: "/dashboard/orders",
     icon: ShoppingCart,
     hasSubmenu: true,
   },
