@@ -16,7 +16,8 @@ import {
   Bot,
 } from "lucide-react"
 import { usePathname } from "next/navigation"
-import Image from "next/image" // Importamos Image
+import Image from "next/image"
+import { useAuth } from "@/hooks/use-auth"
 
 import {
   Sidebar,
@@ -81,10 +82,26 @@ const dataPlatform = [
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
+  const { user, isLoading } = useAuth()
 
   const isActive = (url: string) => {
     if (url === "/dashboard") return pathname === "/dashboard";
     return pathname.startsWith(url);
+  };
+
+  const handleLogout = () => {
+    window.location.href = "/auth/logout";
+  };
+
+  // Get user initials for avatar fallback
+  const getUserInitials = () => {
+    if (!user?.name) return "U";
+    return user.name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   return (
@@ -235,12 +252,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   className="data-[state=open]:bg-gray-50 data-[state=open]:text-gray-900 w-full hover:bg-gray-50 rounded-xl transition-colors p-2 border border-transparent hover:border-gray-100"
                 >
                   <Avatar className="h-10 w-10 rounded-full bg-gray-100 border border-gray-200">
-                    <AvatarImage src="" alt="User" /> 
-                    <AvatarFallback className="bg-gray-200 text-gray-600 font-medium text-sm">VI</AvatarFallback>
+                    <AvatarImage src={user?.picture || ""} alt={user?.name || "User"} />
+                    <AvatarFallback className="bg-gray-200 text-gray-600 font-medium text-sm">
+                      {isLoading ? "..." : getUserInitials()}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight ml-3 group-data-[collapsible=icon]:hidden">
-                    <span className="truncate font-bold text-gray-800">vicenter</span>
-                    <span className="truncate text-xs text-gray-500">vquijandria@gmail.com</span>
+                    <span className="truncate font-bold text-gray-800">
+                      {isLoading ? "Cargando..." : user?.name || "Usuario"}
+                    </span>
+                    <span className="truncate text-xs text-gray-500">
+                      {isLoading ? "" : user?.email || ""}
+                    </span>
                   </div>
                   <ChevronsUpDown className="ml-auto size-4 text-gray-400 group-data-[collapsible=icon]:hidden" />
                 </SidebarMenuButton>
@@ -254,12 +277,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-3 px-3 py-2.5 text-left text-sm">
                     <Avatar className="h-9 w-9 rounded-full bg-gray-100 border border-gray-200">
-                      <AvatarImage src="" alt="Vicente" />
-                      <AvatarFallback className="bg-gray-200 text-gray-600 text-xs font-medium">VI</AvatarFallback>
+                      <AvatarImage src={user?.picture || ""} alt={user?.name || "User"} />
+                      <AvatarFallback className="bg-gray-200 text-gray-600 text-xs font-medium">
+                        {getUserInitials()}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-bold text-gray-800">vicenter</span>
-                      <span className="truncate text-xs text-gray-500">vquijandria@gmail.com</span>
+                      <span className="truncate font-bold text-gray-800">{user?.name || "Usuario"}</span>
+                      <span className="truncate text-xs text-gray-500">{user?.email || ""}</span>
                     </div>
                   </div>
                 </DropdownMenuLabel>
@@ -275,7 +300,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator className="bg-gray-100" />
-                <DropdownMenuItem className="text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer">
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer"
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   Cerrar sesión
                 </DropdownMenuItem>
