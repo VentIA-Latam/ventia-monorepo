@@ -31,25 +31,25 @@ class Tenant(Base, TimestampMixin):
         String,
         unique=True,
         index=True,
-        nullable=False,
+        nullable=True,
         comment="Company ID for Auth0 organization mapping",
     )
 
     # Shopify credentials (per tenant)
     shopify_store_url = Column(
         String,
-        nullable=False,
+        nullable=True,
         comment="Shopify store URL (e.g., 'https://my-store.myshopify.com')",
     )
     shopify_access_token = Column(
         String,
-        nullable=False,
+        nullable=True,
         comment="Shopify Admin API access token (should be encrypted in production)",
     )
     shopify_api_version = Column(
         String,
         default="2024-01",
-        nullable=False,
+        nullable=True,
         comment="Shopify API version (e.g., '2024-01')",
     )
 

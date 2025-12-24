@@ -3,8 +3,15 @@
  */
 import { Auth0Client } from '@auth0/nextjs-auth0/server';
 
-
-export const auth0 = new Auth0Client();
+// Initialize Auth0 client with explicit configuration
+export const auth0 = new Auth0Client({
+  // These will be read from environment variables automatically
+  // but we're being explicit about the audience
+  authorizationParameters: {
+    audience: process.env.AUTH0_AUDIENCE || 'https://ventia-auth0-api',
+    scope: 'openid profile email',
+  },
+});
 
 /**
  * Get the access token from the current session (Server Component)
