@@ -1,0 +1,37 @@
+{
+  "name": "ventia-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "VentIA Monorepo - Next.js Frontend + FastAPI Backend",
+  "scripts": {
+    "dev": "pnpm run --parallel dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:backend": "cd apps/backend && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:restart": "docker compose restart",
+    "db:migrate": "cd apps/backend && uv run alembic upgrade head",
+    "db:migrate:create": "cd apps/backend && uv run alembic revision --autogenerate -m",
+    "db:reset": "docker compose down -v && docker compose up -d postgres && timeout 5 && pnpm run db:migrate",
+    "build": "pnpm run --parallel build",
+    "build:frontend": "pnpm --filter frontend build",
+    "build:backend": "echo 'Backend builds in Docker'",
+    "lint": "pnpm run --parallel lint",
+    "test": "pnpm run --parallel test"
+  },
+  "keywords": [
+    "monorepo",
+    "nextjs",
+    "fastapi",
+    "shopify",
+    "auth0",
+    "multitenant"
+  ],
+  "author": "VentIA Team",
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

@@ -1,0 +1,15 @@
+"""
+API v1 router - aggregates all endpoint routers.
+"""
+
+from fastapi import APIRouter
+
+from app.api.v1.endpoints import health, orders, users
+
+# Create main API router
+api_router = APIRouter()
+
+# Include endpoint routers
+api_router.include_router(health.router, tags=["health"])
+api_router.include_router(users.router, prefix="/users", tags=["users"])
+api_router.include_router(orders.router, prefix="/orders", tags=["orders"])
