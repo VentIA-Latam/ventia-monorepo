@@ -44,7 +44,7 @@ export default function Header() {
           {/* CONTENEDOR DERECHA (Nav + Botones) */}
           {/* Esto agrupa el menú y los botones a la derecha, dejando espacio en el medio */}
           <div className="hidden md:flex items-center gap-8 lg:gap-12">
-            
+
             {/* NAV DESKTOP */}
             <nav className="flex items-center gap-6 lg:gap-8 text-sm font-semibold">
               {navLinks.map((link) => (
@@ -77,6 +77,8 @@ export default function Header() {
                 Ver Planes
               </Link>
 
+
+
               <Link
                 href="/#contacto"
                 className="
@@ -91,6 +93,24 @@ export default function Header() {
                 "
               >
                 Agenda tu Demo
+              </Link>
+
+              <Link
+                href="/login"
+                className="
+                  inline-flex items-center justify-center
+                  rounded-full
+                  border border-sky-400
+                  bg-sky-500/10
+                  px-6 py-2.5
+                  text-sm font-semibold
+                  text-sky-400
+                  hover:bg-sky-500/20
+                  transition
+                  whitespace-nowrap
+                "
+              >
+                Iniciar Sesión
               </Link>
             </div>
           </div>
@@ -138,6 +158,24 @@ export default function Header() {
                 "
               >
                 Ver Planes
+              </Link>
+
+              <Link
+                href="/login"
+                onClick={closeMenu}
+                className="
+                  inline-flex items-center justify-center
+                  rounded-full
+                  border border-sky-400
+                  bg-sky-500/10
+                  px-6 py-3
+                  text-sm font-semibold
+                  text-sky-400
+                  hover:bg-sky-500/20
+                  transition
+                "
+              >
+                Iniciar Sesión
               </Link>
 
               <Link

@@ -1,22 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
 export default function LoginPage() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Auth0 logic will go here
-    console.log("Login attempt:", { email, password, rememberMe });
+  const handleLogin = () => {
+    // Redirect to Auth0 login with returnTo pointing to dashboard
+    window.location.href = "/auth/login?returnTo=/dashboard";
   };
 
   return (
@@ -89,94 +80,23 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Input */}
-            <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Correo electrónico
-              </label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="nombre@empresa.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full"
-              />
-            </div>
-
-            {/* Password Input */}
-            <div className="space-y-2">
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Contraseña
-              </label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Ingresa tu contraseña"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <input
-                  id="remember"
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <label
-                  htmlFor="remember"
-                  className="text-sm text-gray-600 cursor-pointer"
-                >
-                  Recordarme
-                </label>
-              </div>
-              <Link
-                href="/forgot-password"
-                className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
-              >
-                ¿Olvidaste tu contraseña?
-              </Link>
-            </div>
-
-            {/* Submit Button */}
-            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+          {/* Login Button */}
+          <div className="space-y-6">
+            <Button
+              onClick={handleLogin}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg"
+            >
               Iniciar Sesión
             </Button>
-          </form>
+            <p className="text-center text-sm text-gray-500">
+              Serás redirigido a nuestro portal de autenticación seguro
+            </p>
+          </div>
 
           {/* Footer */}
           <div className="text-center space-y-2 pt-6 border-t">
             <p className="text-xs text-gray-500">
-              © 2024 Ventia. Todos los derechos reservados.
+              © 2025 Ventia. Todos los derechos reservados.
             </p>
             <Link
               href="/support"
