@@ -74,10 +74,10 @@ class Order(Base, TimestampMixin):
     notes = Column(String, nullable=True, comment="Additional notes about the order")
     status = Column(
         String,
-        default="draft",
+        default="Pendiente",
         nullable=False,
         index=True,
-        comment="Order status (draft, completed, failed, cancelled)",
+        comment="Order status (Pagado, Pendiente, Enviado, Cancelado)",
     )
 
     # Unique constraint: one draft_order_id per tenant
