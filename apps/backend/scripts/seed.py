@@ -3,7 +3,7 @@ Database seed script to populate initial test data.
 Run this script to populate the database with sample users, tenants, and orders.
 
 Usage:
-    python scripts/seed.py
+    python apps/backend/scripts/seed.py
 """
 
 import os
@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 
 # Add backend app to path
-backend_path = Path(__file__).parent.parent / "apps" / "backend"
+backend_path = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_path))
 
 from sqlalchemy.orm import Session
