@@ -8,11 +8,49 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_database, require_role
 from app.core.permissions import Role
 from app.models.user import User
-from app.schemas.order import OrderListResponse, OrderResponse, OrderUpdate, OrderValidate
+from app.schemas.order import OrderCreate, OrderListResponse, OrderResponse, OrderUpdate, OrderValidate
 from app.services.order import order_service
 from app.services.shopify import shopify_service
 
 router = APIRouter()
+
+# De momento
+@router.post("/", response_model=OrderResponse, tags=["orders"])
+async def create_order(
+    order_in: OrderCreate,
+    current_user: User = Depends(require_role(Role.ADMIN, Role.LOGISTICA)),
+    db: Session = Depends(get_database),
+) -> OrderResponse:
+    """
+    Create a new order.
+
+    Only ADMIN and LOGISTICA can create orders.
+    The order is created for the current user's tenant.
+
+    Args:
+        order_in: Order creation data (include tenant_id and shopify_draft_order_id)
+        current_user: Current authenticated user (ADMIN or LOGISTICA)
+        db: Database session
+
+    Returns:
+        Created order
+
+    Raises:
+        HTTPException: If order creation fails
+    """
+    try:
+        created_order = order_service.create_order(db, order_in)
+        return created_order
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create order: {str(e)}",
+        )
 
 
 @router.get("/", response_model=OrderListResponse, tags=["orders"])
