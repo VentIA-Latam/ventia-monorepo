@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y \
 RUN pip install uv
 
 # Copy dependency files
-COPY apps/backend/pyproject.toml apps/backend/.python-version ./
+COPY apps/backend/pyproject.toml apps/backend/.python-version apps/backend/README.md ./
 
 # Install dependencies
 RUN uv sync

@@ -40,10 +40,10 @@ def seed_database():
             print("⚠️  Database already contains data. Skipping seed...")
             return
         
-        print("🌱 Starting database seed...")
+        print("Starting database seed...")
         
         # ============ SEED TENANTS ============
-        print("\n📍 Creating tenants...")
+        print("\nCreating tenants...")
         tenants = [
             Tenant(
                 id=5,
@@ -100,10 +100,10 @@ def seed_database():
         ]
         db.add_all(tenants)
         db.commit()
-        print(f"✅ Created {len(tenants)} tenants")
+        print(f"Created {len(tenants)} tenants")
         
         # ============ SEED USERS ============
-        print("\n👥 Creating users...")
+        print("\nCreating users...")
         users = [
             User(
                 id=1,
@@ -156,10 +156,10 @@ def seed_database():
         ]
         db.add_all(users)
         db.commit()
-        print(f"✅ Created {len(users)} users")
+        print(f"Created {len(users)} users")
         
         # ============ SEED ORDERS ============
-        print("\n📦 Creating orders...")
+        print("\nCreating orders...")
         orders = [
             Order(
                 id=3,
@@ -272,13 +272,13 @@ def seed_database():
         ]
         db.add_all(orders)
         db.commit()
-        print(f"✅ Created {len(orders)} orders")
+        print(f"Created {len(orders)} orders")
         
-        print("\n✨ Database seed completed successfully!")
+        print("\nDatabase seed completed successfully!")
         
     except Exception as e:
         db.rollback()
-        print(f"\n❌ Error seeding database: {e}")
+        print(f"\nError seeding database: {e}")
         raise
     finally:
         db.close()
