@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Order } from "@/lib/types/order";
+import { useRecentActivity } from "@/contexts/RecentActivityContext";
 
 interface OrdersTableProps {
   orders: Order[];
@@ -35,6 +36,26 @@ const logisticsStatusVariants: Record<Order['logisticsStatus'], "default" | "sec
 };
 
 export function OrdersTable({ orders }: OrdersTableProps) {
+  const { addActivity } = useRecentActivity();
+
+  const handleOrderClick = (order: Order) => {
+    // Register activity
+    addActivity({
+      id: `${order.id}-${Date.now()}`,
+      orderId: order.id,
+      orderDbId: parseInt(order.id.replace(/\D/g, '')) || Date.now(), // Extract number from ID
+      cliente: order.client.name,
+      email: order.client.email,
+      fecha: order.date,
+      monto: `${order.currency}${order.amount.toLocaleString()}`,
+      estado: order.paymentStatus,
+      accion: 'viewed',
+    });
+
+    // TODO: Navigate to order detail or open modal
+    console.log('Order clicked:', order.id);
+  };
+
   return (
     <div className="border rounded-lg">
       <Table>
@@ -65,8 +86,12 @@ export function OrdersTable({ orders }: OrdersTableProps) {
         </TableHeader>
         <TableBody>
           {orders.map((order) => (
-            <TableRow key={order.id} className="hover:bg-muted/50">
-              <TableCell>
+            <TableRow
+              key={order.id}
+              className="hover:bg-muted/50 cursor-pointer"
+              onClick={() => handleOrderClick(order)}
+            >
+              <TableCell onClick={(e) => e.stopPropagation()}>
                 <input type="checkbox" className="rounded" />
               </TableCell>
               <TableCell>
