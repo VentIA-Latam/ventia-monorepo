@@ -1,20 +1,20 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
-import { recentActivity, type RecentActivity } from "@/lib/mock-data"
+import { useRecentActivity, type RecentActivity } from "@/contexts/RecentActivityContext"
 
 export function RecentActivityTable() {
+  const { activities } = useRecentActivity();
+
   const getEstadoColor = (estado: RecentActivity["estado"]) => {
     switch (estado) {
       case "Pagado":
         return "bg-green-50 text-green-700 border-green-200"
       case "Pendiente":
         return "bg-orange-50 text-orange-700 border-orange-200"
-      case "Enviado":
-        return "bg-blue-50 text-blue-700 border-blue-200"
-      case "Cancelado":
-        return "bg-red-50 text-red-700 border-red-200"
       default:
         return "bg-gray-50 text-gray-700 border-gray-200"
     }
@@ -42,38 +42,46 @@ export function RecentActivityTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {recentActivity.map((activity) => (
-              <TableRow key={activity.id} className="hover:bg-slate-50/60">
-                <TableCell className="font-medium text-sm">
-                  {activity.id}
-                </TableCell>
-                <TableCell className="text-sm text-gray-700">
-                  {activity.cliente}
-                </TableCell>
-                <TableCell className="text-sm text-gray-600">
-                  {activity.fecha}
-                </TableCell>
-                <TableCell className="text-sm font-semibold">
-                  {activity.monto}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "text-xs px-3 py-0.5",
-                      getEstadoColor(activity.estado)
-                    )}
-                  >
-                    {activity.estado}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
-                    Ver
-                  </Button>
+            {activities.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                  No hay actividad reciente. Haz clic en un pedido para verlo aquí.
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              activities.map((activity) => (
+                <TableRow key={activity.id} className="hover:bg-slate-50/60">
+                  <TableCell className="font-medium text-sm">
+                    {activity.orderId}
+                  </TableCell>
+                  <TableCell className="text-sm text-gray-700">
+                    {activity.cliente}
+                  </TableCell>
+                  <TableCell className="text-sm text-gray-600">
+                    {activity.fecha}
+                  </TableCell>
+                  <TableCell className="text-sm font-semibold">
+                    {activity.monto}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-xs px-3 py-0.5",
+                        getEstadoColor(activity.estado)
+                      )}
+                    >
+                      {activity.estado}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
+                      Ver
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>

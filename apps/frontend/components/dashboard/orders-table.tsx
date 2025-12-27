@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Order } from "@/lib/types/order";
+import { useRecentActivity } from "@/contexts/RecentActivityContext";
 
 interface OrdersTableProps {
   orders: Order[];
@@ -35,6 +36,26 @@ const logisticsStatusVariants: Record<Order['logisticsStatus'], "default" | "sec
 };
 
 export function OrdersTable({ orders }: OrdersTableProps) {
+  const { addActivity } = useRecentActivity();
+
+  const handleOrderClick = (order: Order) => {
+    // Register activity
+    addActivity({
+      id: `${order.id}-${Date.now()}`,
+      orderId: order.id,
+      orderDbId: parseInt(order.id.replace(/\D/g, '')) || Date.now(), // Extract number from ID
+      cliente: order.client.name,
+      email: order.client.email,
+      fecha: order.date,
+      monto: `${order.currency}${order.amount.toLocaleString()}`,
+      estado: order.paymentStatus,
+      accion: 'viewed',
+    });
+
+    // TODO: Navigate to order detail or open modal
+    console.log('Order clicked:', order.id);
+  };
+
   return (
     <div className="border rounded-lg">
       <Table>
@@ -49,15 +70,15 @@ export function OrdersTable({ orders }: OrdersTableProps) {
             <TableHead className="font-semibold text-muted-foreground">
               CLIENTE
             </TableHead>
-            <TableHead className="font-semibold text-muted-foreground">
+{/*             <TableHead className="font-semibold text-muted-foreground">
               CANAL
-            </TableHead>
+            </TableHead> */}
             <TableHead className="font-semibold text-muted-foreground">
               ESTADO PAGO
             </TableHead>
-            <TableHead className="font-semibold text-muted-foreground">
+            {/* <TableHead className="font-semibold text-muted-foreground">
               LOGÍSTICA
-            </TableHead>
+            </TableHead> */}
             <TableHead className="font-semibold text-muted-foreground text-right">
               MONTO
             </TableHead>
@@ -65,8 +86,12 @@ export function OrdersTable({ orders }: OrdersTableProps) {
         </TableHeader>
         <TableBody>
           {orders.map((order) => (
-            <TableRow key={order.id} className="hover:bg-muted/50">
-              <TableCell>
+            <TableRow
+              key={order.id}
+              className="hover:bg-muted/50 cursor-pointer"
+              onClick={() => handleOrderClick(order)}
+            >
+              <TableCell onClick={(e) => e.stopPropagation()}>
                 <input type="checkbox" className="rounded" />
               </TableCell>
               <TableCell>
@@ -92,26 +117,27 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                   </div>
                 </div>
               </TableCell>
-              <TableCell>
+{/*               <TableCell>
                 <div className="flex items-center gap-2">
                   <span>{channelIcons[order.channel]}</span>
                   <span className="text-sm">{order.channel}</span>
                 </div>
-              </TableCell>
+              </TableCell> */}
               <TableCell>
                 <Badge
                   variant={paymentStatusVariants[order.paymentStatus]}
                   className={
                     order.paymentStatus === 'Pagado'
-                      ? 'bg-green-500 hover:bg-green-600'
+                      ? 'bg-green-50 text-green-700 border-green-200'
                       : order.paymentStatus === 'Pendiente'
-                        ? 'bg-yellow-500 hover:bg-yellow-600'
+                        ? 'bg-orange-50 text-orange-700 border-orange-200'
                         : ''
                   }
                 >
                   {order.paymentStatus}
                 </Badge>
               </TableCell>
+              {/*               
               <TableCell>
                 <Badge
                   variant={logisticsStatusVariants[order.logisticsStatus]}
@@ -127,7 +153,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                 >
                   {order.logisticsStatus}
                 </Badge>
-              </TableCell>
+              </TableCell> */}
               <TableCell className="text-right font-semibold">
                 {order.currency}{order.amount.toLocaleString()}
               </TableCell>

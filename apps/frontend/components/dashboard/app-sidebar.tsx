@@ -61,22 +61,22 @@ const dataPlatform = [
     icon: ShoppingCart,
     hasSubmenu: true,
   },
-  {
-    title: "Clientes",
-    url: "/dashboard/clients",
-    icon: Users,
-    locked: true,
-  },
+  /*   {
+      title: "Clientes",
+      url: "/dashboard/clients",
+      icon: Users,
+      locked: true,
+    }, */
   {
     title: "Pagos",
     url: "/dashboard/payments",
     icon: CreditCard,
   },
-  {
-    title: "Mi vendedor",
-    url: "/dashboard/assistant",
-    icon: Bot,
-  },
+  /*   {
+      title: "Mi vendedor",
+      url: "/dashboard/assistant",
+      icon: Bot,
+    }, */
 ]
 
 
@@ -106,7 +106,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible="icon" className="bg-white border-r border-gray-100 [--sidebar-width-icon:4.5rem]" {...props}>
-      
+
       {/* --- HEADER con LOGO DINÁMICO --- */}
       <SidebarHeader className="h-16 flex items-center justify-between px-4 border-b border-transparent" suppressHydrationWarning>
         {/* Versión colapsada - visible solo cuando el sidebar está colapsado */}
@@ -133,10 +133,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </div>
 
           {/* Iconos de herramientas (solo visibles expandido) */}
-          <div className="flex gap-3 text-gray-400">
+          {/*           <div className="flex gap-3 text-gray-400">
             <Bell className="w-5 h-5 cursor-pointer hover:text-gray-700 transition-colors" />
             <Moon className="w-5 h-5 cursor-pointer hover:text-gray-700 transition-colors" />
-          </div>
+          </div> */}
         </div>
       </SidebarHeader>
 
@@ -163,17 +163,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       <item.icon className="w-5 h-5 mr-3 shrink-0" />
                       <span className="flex-1 truncate">{item.title}</span>
 
+                      {/*                       
                       {item.badge && (
                         <span className="text-[10px] font-bold bg-sidebar-primary/10 text-sidebar-primary px-1.5 py-0.5 rounded-full ml-auto group-data-[collapsible=icon]:hidden">
                           {item.badge}
                         </span>
-                      )}
-                      {item.hasSubmenu && (
-                          <ChevronRight className="w-4 h-4 text-gray-400 ml-auto group-data-[collapsible=icon]:hidden" />
-                      )}
-                       {item.locked && (
-                          <span className="text-gray-400 text-xs ml-auto group-data-[collapsible=icon]:hidden">🔒</span>
-                      )}
+                      )} */}
+                      {/*                       {item.hasSubmenu && (
+                        <ChevronRight className="w-4 h-4 text-gray-400 ml-auto group-data-[collapsible=icon]:hidden" />
+                      )} */}
+                      {/*                       
+                      {item.locked && (
+                        <span className="text-gray-400 text-xs ml-auto group-data-[collapsible=icon]:hidden">🔒</span>
+                      )} */}
                     </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -183,18 +185,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarGroup>
 
         {/* --- GRUPO CUENTA --- */}
+        {/*         
         <SidebarGroup className="mt-4">
           <SidebarGroupLabel className="text-gray-500 text-xs font-medium uppercase tracking-wider mb-2 px-2">
             Cuenta
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {/* Ítem de Configuraciones con Submenú Colapsable */}
               <Collapsible defaultOpen className="group/collapsible" suppressHydrationWarning>
                 <SidebarMenuItem suppressHydrationWarning>
                   <CollapsibleTrigger asChild>
-                    <SidebarMenuButton 
-                      tooltip="Configuraciones" 
+                    <SidebarMenuButton
+                      tooltip="Configuraciones"
                       className="w-full justify-between h-10 px-3 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
                     >
                       <div className="flex items-center">
@@ -204,41 +206,41 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       <ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-gray-400" />
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
-                  
+
                   <CollapsibleContent>
                     <div className="ml-9 mt-1 pl-3 border-l-2 border-yellow-400 bg-yellow-50/50 rounded-r-md p-3 space-y-2 group-data-[collapsible=icon]:hidden">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-700">Canales</span>
-                            <button className="text-[10px] bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded-full font-bold transition-colors">
-                              Conectar What...
-                            </button>
-                        </div>
-                         <div className="text-xs text-gray-500 flex items-center gap-1">
-                            <span>Idioma:</span>
-                            <span className="text-gray-700 font-semibold uppercase">ES Español</span>
-                        </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700">Canales</span>
+                        <button className="text-[10px] bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded-full font-bold transition-colors">
+                          Conectar What...
+                        </button>
+                      </div>
+                      <div className="text-xs text-gray-500 flex items-center gap-1">
+                        <span>Idioma:</span>
+                        <span className="text-gray-700 font-semibold uppercase">ES Español</span>
+                      </div>
                     </div>
                   </CollapsibleContent>
                 </SidebarMenuItem>
               </Collapsible>
 
-              {/* Soporte */}
               <SidebarMenuItem className="mt-4">
-                  <SidebarMenuButton 
-                    asChild 
-                    tooltip="Soporte"
-                    className="w-full justify-start h-10 px-3 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
-                  >
-                    <a href="#">
-                      <HelpCircle className="w-5 h-5 mr-3 text-gray-500" />
-                      <span>Soporte</span>
-                    </a>
-                  </SidebarMenuButton>
+                <SidebarMenuButton
+                  asChild
+                  tooltip="Soporte"
+                  className="w-full justify-start h-10 px-3 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                >
+                  <a href="#">
+                    <HelpCircle className="w-5 h-5 mr-3 text-gray-500" />
+                    <span>Soporte</span>
+                  </a>
+                </SidebarMenuButton>
               </SidebarMenuItem>
 
             </SidebarMenu>
           </SidebarGroupContent>
-        </SidebarGroup>
+        </SidebarGroup> 
+        */}
       </SidebarContent>
 
       {/* --- FOOTER (PERFIL) --- */}
