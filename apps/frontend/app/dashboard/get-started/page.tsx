@@ -15,7 +15,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Grid de 4 tarjetas de estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatsCard
           title="Total Pedidos"
           value="1,245"
@@ -33,13 +33,13 @@ export default function DashboardPage() {
           badgeType="warning"
         />
 
-        <StatsCard
+{/*         <StatsCard
           title="Por Despachar"
           value="8"
           icon={<Truck className="w-5 h-5" />}
           badge="Prioridad Alta"
           badgeType="info"
-        />
+        /> */}
 
         <StatsCard
           title="Ventas (Hoy)"

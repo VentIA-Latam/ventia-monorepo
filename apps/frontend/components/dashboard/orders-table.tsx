@@ -70,15 +70,15 @@ export function OrdersTable({ orders }: OrdersTableProps) {
             <TableHead className="font-semibold text-muted-foreground">
               CLIENTE
             </TableHead>
-            <TableHead className="font-semibold text-muted-foreground">
+{/*             <TableHead className="font-semibold text-muted-foreground">
               CANAL
-            </TableHead>
+            </TableHead> */}
             <TableHead className="font-semibold text-muted-foreground">
               ESTADO PAGO
             </TableHead>
-            <TableHead className="font-semibold text-muted-foreground">
+            {/* <TableHead className="font-semibold text-muted-foreground">
               LOGÍSTICA
-            </TableHead>
+            </TableHead> */}
             <TableHead className="font-semibold text-muted-foreground text-right">
               MONTO
             </TableHead>
@@ -117,26 +117,27 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                   </div>
                 </div>
               </TableCell>
-              <TableCell>
+{/*               <TableCell>
                 <div className="flex items-center gap-2">
                   <span>{channelIcons[order.channel]}</span>
                   <span className="text-sm">{order.channel}</span>
                 </div>
-              </TableCell>
+              </TableCell> */}
               <TableCell>
                 <Badge
                   variant={paymentStatusVariants[order.paymentStatus]}
                   className={
                     order.paymentStatus === 'Pagado'
-                      ? 'bg-green-500 hover:bg-green-600'
+                      ? 'bg-green-50 text-green-700 border-green-200'
                       : order.paymentStatus === 'Pendiente'
-                        ? 'bg-yellow-500 hover:bg-yellow-600'
+                        ? 'bg-orange-50 text-orange-700 border-orange-200'
                         : ''
                   }
                 >
                   {order.paymentStatus}
                 </Badge>
               </TableCell>
+              {/*               
               <TableCell>
                 <Badge
                   variant={logisticsStatusVariants[order.logisticsStatus]}
@@ -152,7 +153,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                 >
                   {order.logisticsStatus}
                 </Badge>
-              </TableCell>
+              </TableCell> */}
               <TableCell className="text-right font-semibold">
                 {order.currency}{order.amount.toLocaleString()}
               </TableCell>

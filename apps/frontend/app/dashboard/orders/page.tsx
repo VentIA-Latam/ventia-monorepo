@@ -122,7 +122,7 @@ export default function OrdersPage() {
   const currentOrders = filteredOrders.slice(startIndex, endIndex);
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
@@ -176,7 +176,7 @@ export default function OrdersPage() {
           <option value="Rechazado">Rechazado</option>
         </select>
 
-        <select
+{/*         <select
           value={filters.channel}
           onChange={(e) => setFilters({ ...filters, channel: e.target.value })}
           className="px-3 py-2 border rounded-md bg-background min-w-[150px]"
@@ -185,7 +185,7 @@ export default function OrdersPage() {
           <option value="Portal B2B">Portal B2B</option>
           <option value="WhatsApp">WhatsApp</option>
           <option value="Venta Directa">Venta Directa</option>
-        </select>
+        </select> */}
 
         <select
           value={filters.dateRange}

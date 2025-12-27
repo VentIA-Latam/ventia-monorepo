@@ -40,7 +40,7 @@ export default function DashboardLayout({
               </h2>
             </div>
           </header>
-          <div className="flex flex-1 flex-col gap-6 px-2 md:px-8 lg:px-64 py-6">
+          <div className="flex flex-1 flex-col gap-6 px-2 md:px-8 lg:px-16 py-6">
             {children}
           </div>
         </SidebarInset>
