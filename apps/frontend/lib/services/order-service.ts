@@ -13,7 +13,7 @@ export interface Order {
   customer_name: string | null;
   total_price: number;
   currency: string;
-  line_items: any[] | null;
+  line_items: LineItem[] | null;
   validado: boolean;
   validated_at: string | null;
   payment_method: string | null;
@@ -28,6 +28,14 @@ export interface OrderListResponse {
   items: Order[];
   skip: number;
   limit: number;
+}
+
+export interface LineItem {
+  id?: string | number;
+  title?: string;
+  quantity?: number;
+  price?: number | string;
+  [key: string]: unknown;
 }
 
 export interface OrderValidateRequest {
