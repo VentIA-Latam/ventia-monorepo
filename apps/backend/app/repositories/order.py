@@ -115,6 +115,32 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
             .all()
         )
 
+    def get_recent_orders(
+        self,
+        db: Session,
+        tenant_id: int,
+        *,
+        limit: int = 5,
+    ) -> list[Order]:
+        """
+        Get most recently updated orders for a tenant.
+
+        Args:
+            db: Database session
+            tenant_id: Tenant ID
+            limit: Number of recent orders to return (default 5)
+
+        Returns:
+            List of orders ordered by updated_at descending
+        """
+        return (
+            db.query(Order)
+            .filter(Order.tenant_id == tenant_id)
+            .order_by(Order.updated_at.desc())
+            .limit(limit)
+            .all()
+        )
+
     def count_by_tenant(
         self,
         db: Session,

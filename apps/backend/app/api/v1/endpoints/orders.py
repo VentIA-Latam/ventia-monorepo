@@ -8,13 +8,68 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_database, require_role
 from app.core.permissions import Role
 from app.models.user import User
-from app.schemas.order import OrderCreate, OrderListResponse, OrderResponse, OrderUpdate, OrderValidate
+from app.schemas.order import (
+    OrderCreate,
+    OrderListResponse,
+    OrderResponse,
+    OrderUpdate,
+    OrderValidate,
+)
 from app.services.order import order_service
 from app.services.shopify import shopify_service
 
 router = APIRouter()
 
 # De momento
+@router.get("/recent", response_model=OrderListResponse, tags=["orders"])
+async def get_recent_orders(
+    limit: int = 5,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_database),
+) -> OrderListResponse:
+    """
+    Get the most recently updated orders for current user's tenant.
+
+    All authenticated users can view recent orders from their tenant.
+    Orders are sorted by updated_at in descending order.
+
+    Args:
+        limit: Number of recent orders to return (default 5, max 10)
+        current_user: Current authenticated user
+        db: Database session
+
+    Returns:
+        OrderListResponse with recent orders
+
+    Raises:
+        HTTPException: If retrieval fails or limit exceeds maximum
+    """
+    # Validate limit parameter
+    if limit < 1 or limit > 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Limit must be between 1 and 10",
+        )
+
+    try:
+        recent_orders = order_service.get_recent_orders(
+            db,
+            current_user.tenant_id,
+            limit=limit,
+        )
+        return OrderListResponse(
+            total=len(recent_orders),
+            items=recent_orders,
+            skip=0,
+            limit=limit,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve recent orders: {str(e)}",
+        )
+
+
 @router.post("/", response_model=OrderResponse, tags=["orders"])
 async def create_order(
     order_in: OrderCreate,
