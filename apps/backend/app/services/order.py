@@ -74,6 +74,29 @@ class OrderService:
             limit=limit,
         )
 
+    def get_recent_orders(
+        self,
+        db: Session,
+        tenant_id: int,
+        limit: int = 5,
+    ) -> list[Order]:
+        """
+        Get recent orders for a tenant, ordered by updated_at DESC.
+
+        Args:
+            db: Database session
+            tenant_id: Tenant ID
+            limit: Number of recent orders to return (default 5)
+
+        Returns:
+            List of recent orders ordered by updated_at descending
+        """
+        return order_repository.get_recent_orders(
+            db,
+            tenant_id,
+            limit=limit,
+        )
+
     def create_order(self, db: Session, order_in: OrderCreate) -> Order:
         """
         Create a new order.

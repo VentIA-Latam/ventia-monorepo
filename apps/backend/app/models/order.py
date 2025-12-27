@@ -80,6 +80,18 @@ class Order(Base, TimestampMixin):
         comment="Order status (Pagado, Pendiente, Enviado, Cancelado)",
     )
 
+    # Delivery information
+    expected_delivery_date = Column(
+        DateTime,
+        nullable=True,
+        comment="Expected delivery date of the order",
+    )
+    dispatch_time_window = Column(
+        String,
+        nullable=True,
+        comment="Dispatch time window (e.g., '09:00-12:00')",
+    )
+
     # Unique constraint: one draft_order_id per tenant
     __table_args__ = (
         UniqueConstraint(
