@@ -18,6 +18,8 @@ class OrderBase(BaseModel):
     line_items: list[dict[str, Any]] | None = Field(None, description="Order line items (products)")
     payment_method: str | None = Field(None, description="Payment method")
     notes: str | None = Field(None, description="Additional notes")
+    expected_delivery_date: datetime | None = Field(None, description="Expected delivery date of the order")
+    dispatch_time_window: str | None = Field(None, description="Dispatch time window (e.g., '09:00-12:00')")
 
 
 class OrderCreate(OrderBase):
@@ -86,5 +88,17 @@ class OrderListResponse(BaseModel):
     items: list[OrderResponse] = Field(..., description="List of orders")
     skip: int = Field(..., description="Number of items skipped")
     limit: int = Field(..., description="Number of items per page")
+
+    model_config = ConfigDict(from_attributes=True)
+
+class OrderMetrics(BaseModel):
+    """Schema for order metrics."""
+
+    total_pedidos: int = Field(..., description="Total number of orders")
+    pendientes_pago: int = Field(..., description="Number of orders pending payment (validado=False)")
+    por_despachar: int = Field(..., description="Number of orders to dispatch (status='Pendiente')")
+    ventas_hoy: float = Field(..., description="Total sales for today")
+    ventas_mes: float = Field(..., description="Total sales for current month")
+    currency: str = Field(..., description="Currency code (USD, EUR, etc.)")
 
     model_config = ConfigDict(from_attributes=True)
