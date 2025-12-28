@@ -241,14 +241,19 @@ async def validate_order(
     db: Session = Depends(get_database),
 ) -> OrderResponse:
     """
-    Validate payment and complete draft order in Shopify.
+    Validate payment for an order.
 
-    **This is the main validation flow:**
+    **Validation flow:**
     1. Verify user has permission (ADMIN or LOGISTICA)
     2. Verify order belongs to user's tenant
-    3. Get tenant's Shopify credentials from database
-    4. Call Shopify GraphQL API to complete draft order
-    5. Update order in database with validation info
+    3. Check if order is already validated
+    4. Update order with validation info:
+       - validado = True
+       - status = "Pagado"
+       - validated_at = current datetime
+       - payment_method (if provided)
+       - notes (if provided)
+       - updated_at (automatic)
 
     Only ADMIN and LOGISTICA can validate orders.
 
@@ -259,12 +264,14 @@ async def validate_order(
         db: Database session
 
     Returns:
-        Validated order with Shopify order ID
+        Validated order
 
     Raises:
-        HTTPException: If order not found, already validated, access denied, or Shopify call fails
+        HTTPException: If order not found, already validated, or access denied
     """
-    # Get order to verify tenant BEFORE calling Shopify
+    from datetime import datetime
+
+    # Get order to verify tenant
     order = order_service.get_order(db, order_id)
 
     if not order:
@@ -280,20 +287,49 @@ async def validate_order(
             detail="Access denied to this order",
         )
 
-    # Call Shopify service to validate and complete order
-    try:
-        validated_order = await shopify_service.validate_and_complete_order(
-            db,
-            order_id,
-            validate_data,
+    # Check if already validated
+    if order.validado:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Order {order_id} has already been validated at {order.validated_at}",
         )
-        return validated_order
+
+    try:
+        # Update order validation fields
+        order.validado = True
+        order.status = "Pagado"
+        order.validated_at = datetime.utcnow()
+
+        # Add optional validation data
+        if validate_data:
+            if validate_data.payment_method:
+                order.payment_method = validate_data.payment_method
+            if validate_data.notes:
+                order.notes = validate_data.notes
+
+        # Commit changes (updated_at is automatically set by onupdate)
+        db.add(order)
+        db.commit()
+        db.refresh(order)
+
+        return order
+
+        # TODO: Integrate with Shopify when credentials are ready
+        # validated_order = await shopify_service.validate_and_complete_order(
+        #     db,
+        #     order_id,
+        #     validate_data,
+        # )
+        # return validated_order
+
     except ValueError as e:
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
     except Exception as e:
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to validate order: {str(e)}",
