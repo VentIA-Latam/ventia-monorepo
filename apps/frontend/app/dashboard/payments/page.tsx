@@ -1,5 +1,5 @@
 import { fetchPaymentRecords } from "@/lib/services/payment-service"
-import { PaymentsTable } from "@/components/dashboard/payments-table"
+import { PaymentsTable } from "@/components/dashboard/payments/payments-table"
 
 export default async function PaymentsPage() {
   const records = await fetchPaymentRecords()
