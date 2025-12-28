@@ -63,10 +63,8 @@ export function OrdersTable({ orders }: OrdersTableProps) {
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/50">
-            <TableHead className="w-12">
-              <input type="checkbox" className="rounded" />
-            </TableHead>
-            <TableHead className="font-semibold text-muted-foreground">
+
+            <TableHead className="font-semibold text-muted-foreground pl-5">
               ID PEDIDO
             </TableHead>
             <TableHead className="font-semibold text-muted-foreground">
@@ -81,7 +79,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
             {/* <TableHead className="font-semibold text-muted-foreground">
               LOGÍSTICA
             </TableHead> */}
-            <TableHead className="font-semibold text-muted-foreground text-right">
+            <TableHead className="font-semibold text-muted-foreground text-right pr-5">
               MONTO
             </TableHead>
           </TableRow>
@@ -93,10 +91,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
               className="hover:bg-muted/50 cursor-pointer"
               onClick={() => handleOrderClick(order)}
             >
-              <TableCell onClick={(e) => e.stopPropagation()}>
-                <input type="checkbox" className="rounded" />
-              </TableCell>
-              <TableCell>
+              <TableCell className="pl-5">
                 <div>
                   <div className="font-semibold text-primary hover:underline cursor-pointer">
                     {order.id}
@@ -156,7 +151,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                   {order.logisticsStatus}
                 </Badge>
               </TableCell> */}
-              <TableCell className="text-right font-semibold">
+              <TableCell className="text-right font-semibold pr-5">
                 {order.currency}{order.amount.toLocaleString()}
               </TableCell>
             </TableRow>

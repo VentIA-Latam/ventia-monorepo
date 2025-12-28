@@ -32,9 +32,11 @@ export interface OrderListResponse {
 
 export interface LineItem {
   id?: string | number;
-  title?: string;
-  quantity?: number;
-  price?: number | string;
+  sku: string;
+  product: string;
+  unitPrice: number;
+  quantity: number;
+  subtotal: number;
   [key: string]: unknown;
 }
 

@@ -128,7 +128,7 @@ export function OrderDetail({ order }: OrderDetailProps) {
         </div>
         <div className="flex items-center gap-3">
           {getStatusBadge()}
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2" disabled>
             <Printer className="w-4 h-4" />
             Imprimir
           </Button>
@@ -142,7 +142,7 @@ export function OrderDetail({ order }: OrderDetailProps) {
               {isValidating ? 'Validando...' : 'Validar Pago'}
             </Button>
           )}
-          <Button variant="destructive" className="gap-2">
+          <Button variant="destructive" className="gap-2" onClick={() => router.push('/dashboard/orders')}>
             <X className="w-4 h-4" />
             Cancelar
           </Button>
@@ -188,7 +188,6 @@ export function OrderDetail({ order }: OrderDetailProps) {
                 <p className="text-sm font-medium text-muted-foreground mb-2">DIRECCIÓN DE ENVÍO</p>
                 <div className="text-sm text-muted-foreground">
                   <p>Información no disponible</p>
-                  <p className="text-xs mt-1">(Pendiente de integración con la API)</p>
                 </div>
               </div>
             </CardContent>
@@ -219,9 +218,9 @@ export function OrderDetail({ order }: OrderDetailProps) {
                   <tbody>
                     {order.line_items && order.line_items.length > 0 ? (
                       order.line_items.map((item, index) => {
-                        const price = typeof item.price === 'string' ? parseFloat(item.price) : (item.price || 0);
+                        const unitPrice = item.unitPrice || 0;
                         const quantity = item.quantity || 1;
-                        const subtotal = price * quantity;
+                        const subtotal = item.subtotal || 0;
 
                         return (
                           <tr key={item.id || index} className="border-t">
@@ -231,15 +230,15 @@ export function OrderDetail({ order }: OrderDetailProps) {
                                   <Package className="w-6 h-6 text-muted-foreground" />
                                 </div>
                                 <div>
-                                  <p className="font-medium">{item.title || 'Producto sin nombre'}</p>
+                                  <p className="font-medium">{item.product || 'Producto sin nombre'}</p>
                                   <p className="text-xs text-muted-foreground">
-                                    SKU: {item.id || 'N/A'}
+                                    SKU: {item.sku || 'N/A'}
                                   </p>
                                 </div>
                               </div>
                             </td>
                             <td className="p-3 text-center">
-                              {formatCurrency(price, order.currency)}
+                              {formatCurrency(unitPrice, order.currency)}
                             </td>
                             <td className="p-3 text-center">{quantity}</td>
                             <td className="p-3 text-right font-semibold">
@@ -262,7 +261,7 @@ export function OrderDetail({ order }: OrderDetailProps) {
           </Card>
 
           {/* Evidencia de Pago */}
-          <Card>
+          {/*           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span className="flex items-center gap-2">
@@ -309,7 +308,7 @@ export function OrderDetail({ order }: OrderDetailProps) {
                 </div>
               )}
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
 
         {/* Right Column - Summary */}
@@ -330,11 +329,11 @@ export function OrderDetail({ order }: OrderDetailProps) {
                   {isValidating ? 'Validando...' : 'Validar Pago'}
                 </Button>
               )}
-              <Button variant="outline" className="w-full gap-2">
+              <Button variant="outline" className="w-full gap-2" disabled>
                 <Package className="w-4 h-4" />
                 Generar Factura
               </Button>
-              <Button variant="outline" className="w-full gap-2">
+              <Button variant="outline" className="w-full gap-2" disabled>
                 <MapPin className="w-4 h-4" />
                 Actualizar Logística
               </Button>
@@ -347,7 +346,7 @@ export function OrderDetail({ order }: OrderDetailProps) {
               <CardTitle>Resumen Financiero</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex justify-between text-sm">
+              {/*               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
                 <span>{formatCurrency(order.total_price * 0.84, order.currency)}</span>
               </div>
@@ -358,7 +357,7 @@ export function OrderDetail({ order }: OrderDetailProps) {
               <div className="flex justify-between text-sm text-green-600">
                 <span>Descuento (Promo)</span>
                 <span>-{formatCurrency(0, order.currency)}</span>
-              </div>
+              </div> */}
               <div className="border-t pt-3 flex justify-between">
                 <span className="font-semibold">Total</span>
                 <span className="text-xl font-bold text-primary">
@@ -397,7 +396,7 @@ export function OrderDetail({ order }: OrderDetailProps) {
                   Información no disponible
                 </p>
               </div>
-              <div className="pt-3 border-t">
+              {/*               <div className="pt-3 border-t">
                 <p className="text-xs text-muted-foreground">
                   Canal de Venta
                 </p>
@@ -407,7 +406,7 @@ export function OrderDetail({ order }: OrderDetailProps) {
                     {order.status === 'Pagado' ? 'WhatsApp Directo' : 'Portal B2B'}
                   </span>
                 </div>
-              </div>
+              </div> */}
             </CardContent>
           </Card>
 
