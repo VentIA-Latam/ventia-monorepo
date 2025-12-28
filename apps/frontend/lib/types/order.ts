@@ -1,5 +1,6 @@
 export interface Order {
-  id: string;
+  id: string; // ID visual (ej: "ORD-3920" o "123")
+  dbId: number; // ID real de la base de datos
   date: string;
   client: {
     name: string;

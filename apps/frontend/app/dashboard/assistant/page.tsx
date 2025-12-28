@@ -1,10 +1,10 @@
 "use client";
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs";
-import KnowledgeBaseForm from "@/components/dashboard/KnowledgeBaseForm";
-import PersonalityForm from "@/components/dashboard/PersonalityForm";
-import DeliveryForm from "@/components/dashboard/DeliveryForm";
-import PaymentMethodsForm from "@/components/dashboard/PaymentMethodsForm";
+import KnowledgeBaseForm from "@/components/dashboard/forms/KnowledgeBaseForm";
+import PersonalityForm from "@/components/dashboard/forms/PersonalityForm";
+import DeliveryForm from "@/components/dashboard/forms/DeliveryForm";
+import PaymentMethodsForm from "@/components/dashboard/forms/PaymentMethodsForm";
 
 export default function AssistantPage() {
   return (

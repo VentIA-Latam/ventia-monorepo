@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Order } from "@/lib/types/order";
 import { useRecentActivity } from "@/contexts/RecentActivityContext";
+import { useRouter } from "next/navigation";
 
 interface OrdersTableProps {
   orders: Order[];
@@ -37,13 +38,14 @@ const logisticsStatusVariants: Record<Order['logisticsStatus'], "default" | "sec
 
 export function OrdersTable({ orders }: OrdersTableProps) {
   const { addActivity } = useRecentActivity();
+  const router = useRouter();
 
   const handleOrderClick = (order: Order) => {
     // Register activity
     addActivity({
       id: `${order.id}-${Date.now()}`,
       orderId: order.id,
-      orderDbId: parseInt(order.id.replace(/\D/g, '')) || Date.now(), // Extract number from ID
+      orderDbId: order.dbId, // Usar el ID real de la base de datos
       cliente: order.client.name,
       email: order.client.email,
       fecha: order.date,
@@ -52,8 +54,8 @@ export function OrdersTable({ orders }: OrdersTableProps) {
       accion: 'viewed',
     });
 
-    // TODO: Navigate to order detail or open modal
-    console.log('Order clicked:', order.id);
+    // Navigate to order detail page usando el ID real de la BD
+    router.push(`/dashboard/orders/${order.dbId}`);
   };
 
   return (
@@ -70,7 +72,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
             <TableHead className="font-semibold text-muted-foreground">
               CLIENTE
             </TableHead>
-{/*             <TableHead className="font-semibold text-muted-foreground">
+            {/*             <TableHead className="font-semibold text-muted-foreground">
               CANAL
             </TableHead> */}
             <TableHead className="font-semibold text-muted-foreground">
@@ -117,7 +119,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                   </div>
                 </div>
               </TableCell>
-{/*               <TableCell>
+              {/*               <TableCell>
                 <div className="flex items-center gap-2">
                   <span>{channelIcons[order.channel]}</span>
                   <span className="text-sm">{order.channel}</span>

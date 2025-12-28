@@ -1,58 +1,78 @@
-import { StatsCard } from "@/components/dashboard/stats-card";
-import { RecentActivityTable } from "@/components/dashboard/recent-activity-table"
-import { ShoppingBag, AlertCircle, Truck, DollarSign } from "lucide-react"
+import { getAccessToken } from "@/lib/auth0";
+import { fetchDashboardMetrics, PeriodType } from "@/lib/services/metrics-service";
+import { RecentActivityTable } from "@/components/dashboard/recent-activity-table";
+import { DashboardClient } from "./dashboard-client";
+import { AutoRefresh } from "./auto-refresh";
 
-export default function DashboardPage() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-ventia-blue font-libre-franklin">
-          Dashboard General
-        </h1>
-        <p className="text-gray-600 mt-2 font-inter">
-          Bienvenido de nuevo, aquí tienes un resumen de la operación de hoy
+/**
+ * 🔒 Server Component - Dashboard con métricas reales
+ * 
+ * Esta página:
+ * 1. Se ejecuta en el servidor
+ * 2. Obtiene el token de forma segura con getAccessToken()
+ * 3. Carga métricas reales desde el backend
+ * 4. Pasa los datos al Client Component para interactividad
+ */
+
+interface DashboardPageProps {
+  searchParams: Promise<{
+    period?: string;
+  }>;
+}
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+  const params = await searchParams;
+  const period = (params.period || 'today') as PeriodType;
+
+  // 1️⃣ Obtener token de Auth0 (en el servidor)
+  const accessToken = await getAccessToken();
+
+  if (!accessToken) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold">Error de autenticación</h1>
+        <p className="text-muted-foreground">
+          No estás autenticado. Por favor, inicia sesión.
         </p>
       </div>
+    );
+  }
 
-      {/* Grid de 4 tarjetas de estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatsCard
-          title="Total Pedidos"
-          value="1,245"
-          icon={<ShoppingBag className="w-5 h-5" />}
-          change="+5%"
-          changeType="positive"
-          comparison="vs. ayer"
-        />
+  // 2️⃣ Fetch de métricas (desde el servidor)
+  let metrics;
+  let error: Error | null = null;
 
-        <StatsCard
-          title="Pendientes de Pago"
-          value="12"
-          icon={<AlertCircle className="w-5 h-5" />}
-          badge="Requieren atención"
-          badgeType="warning"
-        />
+  try {
+    metrics = await fetchDashboardMetrics(accessToken, { period });
+  } catch (err) {
+    console.error('Error loading dashboard metrics:', err);
+    error = err instanceof Error ? err : new Error('Error desconocido');
+  }
 
-{/*         <StatsCard
-          title="Por Despachar"
-          value="8"
-          icon={<Truck className="w-5 h-5" />}
-          badge="Prioridad Alta"
-          badgeType="info"
-        /> */}
-
-        <StatsCard
-          title="Ventas (Hoy)"
-          value="$4,250"
-          icon={<DollarSign className="w-5 h-5" />}
-          change="+12%"
-          changeType="positive"
-          comparison="vs. ayer"
-        />
+  // 3️⃣ Si hay error, mostrar mensaje
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold">Error al cargar métricas</h1>
+        <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-lg">
+          <p className="font-semibold">No se pudieron cargar las métricas del dashboard</p>
+          <p className="text-sm">{error.message}</p>
+        </div>
       </div>
+    );
+  }
+
+  // 4️⃣ Renderizar con datos reales
+  return (
+    <div className="space-y-6">
+      {/* Auto-refresh cada 60 segundos (1 minuto) */}
+      <AutoRefresh intervalMs={60000} />
+
+      {/* Dashboard con métricas reales */}
+      <DashboardClient initialMetrics={metrics!} />
 
       {/* Tabla de actividad reciente */}
       <RecentActivityTable />
     </div>
-  )
+  );
 }
