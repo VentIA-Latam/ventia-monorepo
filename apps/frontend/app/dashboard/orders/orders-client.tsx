@@ -3,6 +3,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { OrdersTable } from "@/components/dashboard/orders/orders-table";
 import { Order as UIOrder, OrderFilters } from "@/lib/types/order";
 import {
@@ -36,7 +43,7 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
   });
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
 
   // Filter orders based on current filters
   const filteredOrders = initialOrders.filter((order) => {
@@ -74,11 +81,11 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2" disabled>
               <Download className="w-4 h-4" />
               Exportar
             </Button>
-            <Button className="gap-2">
+            <Button className="gap-2" disabled>
               <Plus className="w-4 h-4" />
               Nuevo Pedido
             </Button>
@@ -87,7 +94,7 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex gap-3">
         <div className="flex-1 min-w-[250px] relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
@@ -98,18 +105,22 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
           />
         </div>
 
-        <select
+        <Select
           value={filters.paymentStatus}
-          onChange={(e) => setFilters({ ...filters, paymentStatus: e.target.value })}
-          className="px-3 py-2 border rounded-md bg-background min-w-[150px]"
+          onValueChange={(value) => setFilters({ ...filters, paymentStatus: value })}
         >
-          <option value="all">Estado de Pago</option>
-          <option value="Pagado">Pagado</option>
-          <option value="Pendiente">Pendiente</option>
-          <option value="Rechazado">Rechazado</option>
-        </select>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Estado de Pago" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Estado de Pago</SelectItem>
+            <SelectItem value="Pagado">Pagado</SelectItem>
+            <SelectItem value="Pendiente">Pendiente</SelectItem>
+            <SelectItem value="Rechazado">Rechazado</SelectItem>
+          </SelectContent>
+        </Select>
 
-        <select
+        {/*         <select
           value={filters.dateRange}
           onChange={(e) => setFilters({ ...filters, dateRange: e.target.value })}
           className="px-3 py-2 border rounded-md bg-background min-w-[150px]"
@@ -118,7 +129,7 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
           <option value="30">Últimos 30 días</option>
           <option value="90">Últimos 90 días</option>
           <option value="365">Último año</option>
-        </select>
+        </select> */}
       </div>
 
       {/* Table */}
