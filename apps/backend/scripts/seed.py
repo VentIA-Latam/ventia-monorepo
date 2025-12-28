@@ -199,7 +199,7 @@ def seed_database():
                     {"sku": "KB-MECH-RGB", "product": "Mechanical Keyboard RGB", "unitPrice": 120.00, "quantity": 2, "subtotal": 240.00},
                     {"sku": "WEB-LC920", "product": "Webcam Logitech C920", "unitPrice": 80.25, "quantity": 2, "subtotal": 160.50}
                 ],
-                validado=True,
+                validado=False,
                 validated_at=None,
                 payment_method=None,
                 notes=None,
