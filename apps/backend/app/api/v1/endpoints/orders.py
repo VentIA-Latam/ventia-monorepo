@@ -5,7 +5,12 @@ Order management endpoints.
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_database, require_role
+from app.api.deps import (
+    get_current_user,
+    get_current_user_or_api_key,
+    get_database,
+    require_role,
+)
 from app.core.permissions import Role
 from app.models.user import User
 from app.schemas.order import (
@@ -73,26 +78,34 @@ async def get_recent_orders(
 @router.post("/", response_model=OrderResponse, tags=["orders"])
 async def create_order(
     order_in: OrderCreate,
-    current_user: User = Depends(require_role(Role.ADMIN, Role.LOGISTICA)),
+    current_user: User = Depends(get_current_user_or_api_key),
     db: Session = Depends(get_database),
 ) -> OrderResponse:
     """
     Create a new order.
 
-    Only ADMIN and LOGISTICA can create orders.
+    **Authentication:** Accepts JWT token OR API key (X-API-Key header).
+
+    Only ADMIN and LOGISTICA roles can create orders.
     The order is created for the current user's tenant.
 
     Args:
         order_in: Order creation data (include tenant_id and shopify_draft_order_id)
-        current_user: Current authenticated user (ADMIN or LOGISTICA)
+        current_user: Current authenticated user or API key (ADMIN or LOGISTICA role required)
         db: Database session
 
     Returns:
         Created order
 
     Raises:
-        HTTPException: If order creation fails
+        HTTPException: If order creation fails or insufficient permissions
     """
+    # Verify role permission
+    if current_user.role not in [Role.ADMIN, Role.LOGISTICA]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Role '{current_user.role}' is not allowed to create orders. Requires ADMIN or LOGISTICA role.",
+        )
     try:
         created_order = order_service.create_order(db, order_in)
         return created_order
@@ -113,11 +126,13 @@ async def list_orders(
     skip: int = 0,
     limit: int = 100,
     validado: bool | None = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_or_api_key),
     db: Session = Depends(get_database),
 ) -> OrderListResponse:
     """
     List orders for current user's tenant.
+
+    **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
     All authenticated users can view orders from their tenant.
     Results are automatically filtered by tenant.
@@ -145,17 +160,19 @@ async def list_orders(
 @router.get("/{order_id}", response_model=OrderResponse, tags=["orders"])
 async def get_order(
     order_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_or_api_key),
     db: Session = Depends(get_database),
 ) -> OrderResponse:
     """
     Get order by ID.
 
+    **Authentication:** Accepts JWT token OR API key (X-API-Key header).
+
     All authenticated users can view orders from their tenant.
 
     Args:
         order_id: Order ID
-        current_user: Current authenticated user
+        current_user: Current authenticated user or API key
         db: Database session
 
     Returns:
@@ -237,11 +254,13 @@ async def update_order(
 async def validate_order(
     order_id: int,
     validate_data: OrderValidate | None = None,
-    current_user: User = Depends(require_role(Role.ADMIN, Role.LOGISTICA)),
+    current_user: User = Depends(get_current_user_or_api_key),
     db: Session = Depends(get_database),
 ) -> OrderResponse:
     """
     Validate payment for an order.
+
+    **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
     **Validation flow:**
     1. Verify user has permission (ADMIN or LOGISTICA)
@@ -255,12 +274,12 @@ async def validate_order(
        - notes (if provided)
        - updated_at (automatic)
 
-    Only ADMIN and LOGISTICA can validate orders.
+    Only ADMIN and LOGISTICA roles can validate orders.
 
     Args:
         order_id: Order ID to validate
         validate_data: Optional validation data (payment method, notes)
-        current_user: Current authenticated user (ADMIN or LOGISTICA)
+        current_user: Current authenticated user or API key (ADMIN or LOGISTICA role required)
         db: Database session
 
     Returns:
@@ -270,6 +289,13 @@ async def validate_order(
         HTTPException: If order not found, already validated, or access denied
     """
     from datetime import datetime
+
+    # Verify role permission
+    if current_user.role not in [Role.ADMIN, Role.LOGISTICA]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Role '{current_user.role}' is not allowed to validate orders. Requires ADMIN or LOGISTICA role.",
+        )
 
     # Get order to verify tenant
     order = order_service.get_order(db, order_id)

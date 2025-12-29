@@ -60,6 +60,7 @@ class Tenant(Base, TimestampMixin):
     # Relationships
     users = relationship("User", back_populates="tenant", cascade="all, delete-orphan")
     orders = relationship("Order", back_populates="tenant", cascade="all, delete-orphan")
+    api_keys = relationship("APIKey", back_populates="tenant", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         """String representation of Tenant."""
