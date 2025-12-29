@@ -45,6 +45,22 @@ def seed_database():
         # ============ SEED TENANTS ============
         print("\nCreating tenants...")
         tenants = [
+            # Tenant 1: VentIA Platform (SuperAdmin tenant)
+            Tenant(
+                id=1,
+                name="VentIA Platform",
+                slug="ventia",
+                company_id=None,
+                shopify_store_url=None,
+                shopify_access_token=None,  # Platform tenant doesn't need Shopify
+                shopify_api_version=None,
+                is_platform=True,  # This is the platform tenant
+                is_active=True,
+                settings=None,
+                created_at=datetime(2025, 12, 24, 12, 0, 0),
+                updated_at=datetime(2025, 12, 24, 12, 0, 0),
+            ),
+            # Tenant 5: Nassau (Client)
             Tenant(
                 id=5,
                 name="Nassau",

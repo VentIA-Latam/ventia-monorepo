@@ -320,33 +320,93 @@ async def validate_order(
             detail=f"Order {order_id} has already been validated at {order.validated_at}",
         )
 
+    # === SHOPIFY INTEGRATION ===
+    # Check idempotency: if order already has shopify_order_id, it was completed before
+    if order.shopify_order_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Order {order_id} already completed in Shopify (Order ID: {order.shopify_order_id})",
+        )
+
+    # Check if tenant has Shopify credentials configured
+    tenant = order.tenant
+    if not tenant.shopify_access_token or not tenant.shopify_store_url:
+        # Log this event for admin awareness
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            f"Tenant {tenant.id} ({tenant.name}) attempted to validate order but lacks Shopify credentials"
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_424_FAILED_DEPENDENCY,
+            detail=f"Tenant '{tenant.name}' does not have Shopify credentials configured. Please contact support.",
+        )
+
     try:
-        # Update order validation fields
-        order.validado = True
-        order.status = "Pagado"
-        order.validated_at = datetime.utcnow()
+        # Call Shopify service to complete draft order
+        import logging
+        logger = logging.getLogger(__name__)
 
-        # Add optional validation data
-        if validate_data:
-            if validate_data.payment_method:
-                order.payment_method = validate_data.payment_method
-            if validate_data.notes:
-                order.notes = validate_data.notes
+        logger.info(f"shopify_validate_start: order_id={order_id}, tenant_id={tenant.id}")
 
-        # Commit changes (updated_at is automatically set by onupdate)
-        db.add(order)
-        db.commit()
-        db.refresh(order)
+        validated_order = await shopify_service.validate_and_complete_order(
+            db,
+            order_id,
+            validate_data,
+        )
 
-        return order
+        logger.info(
+            f"shopify_validate_success: order_id={order_id}, "
+            f"shopify_order_id={validated_order.shopify_order_id}"
+        )
 
-        # TODO: Integrate with Shopify when credentials are ready
-        # validated_order = await shopify_service.validate_and_complete_order(
-        #     db,
-        #     order_id,
-        #     validate_data,
-        # )
-        # return validated_order
+        return validated_order
+
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        # Log Shopify errors
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(
+            f"shopify_validate_error: order_id={order_id}, error={str(e)}"
+        )
+
+        # Return appropriate error based on exception type
+        error_msg = str(e)
+
+        if "401" in error_msg or "Unauthorized" in error_msg:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Shopify authentication failed. Invalid access token.",
+            )
+        elif "404" in error_msg or "not found" in error_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Draft order not found in Shopify: {error_msg}",
+            )
+        elif "422" in error_msg or "already completed" in error_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Draft order already completed in Shopify: {error_msg}",
+            )
+        elif "429" in error_msg or "rate limit" in error_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Shopify API rate limit exceeded. Please try again later.",
+            )
+        elif "timeout" in error_msg.lower() or "connection" in error_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                detail=f"Shopify API timeout or connection error: {error_msg}",
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to complete order in Shopify: {error_msg}",
+            )
 
     except ValueError as e:
         db.rollback()
