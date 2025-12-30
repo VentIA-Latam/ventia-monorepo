@@ -99,6 +99,63 @@ class UserRepository(CRUDBase[User, UserCreate, UserUpdate]):
             .all()
         )
 
+    def get_all_with_filters(
+        self,
+        db: Session,
+        *,
+        tenant_id: int | None = None,
+        role: Role | None = None,
+        is_active: bool | None = None,
+        search: str | None = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> tuple[list[User], int]:
+        """
+        Get all users with optional filters and tenant joins.
+
+        Args:
+            db: Database session
+            tenant_id: Filter by specific tenant
+            role: Filter by user role
+            is_active: Filter by active status
+            search: Search in name or email
+            skip: Number to skip
+            limit: Max results
+
+        Returns:
+            Tuple of (users list, total count)
+        """
+        query = db.query(User)
+
+        # Apply filters
+        if tenant_id is not None:
+            query = query.filter(User.tenant_id == tenant_id)
+        if role is not None:
+            query = query.filter(User.role == role)
+        if is_active is not None:
+            query = query.filter(User.is_active == is_active)
+        if search:
+            search_pattern = f"%{search}%"
+            query = query.filter(
+                db.func.or_(
+                    User.name.ilike(search_pattern),
+                    User.email.ilike(search_pattern),
+                )
+            )
+
+        # Get total count before pagination
+        total = query.count()
+
+        # Apply ordering and pagination
+        users = (
+            query.order_by(User.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+        return users, total
+
     def update_last_login(self, db: Session, *, user: User) -> User:
         """
         Update user's last login timestamp.
