@@ -1,5 +1,6 @@
 import { getAccessToken } from "@/lib/auth0";
 import { fetchDashboardMetrics, PeriodType } from "@/lib/services/metrics-service";
+import { fetchOrders } from "@/lib/services/order-service";
 import { RecentActivityTable } from "@/components/dashboard/recent-activity-table";
 import { DashboardClient } from "./dashboard-client";
 import { AutoRefresh } from "./auto-refresh";
@@ -10,7 +11,7 @@ import { AutoRefresh } from "./auto-refresh";
  * Esta página:
  * 1. Se ejecuta en el servidor
  * 2. Obtiene el token de forma segura con getAccessToken()
- * 3. Carga métricas reales desde el backend
+ * 3. Carga métricas y actividad reciente desde el backend
  * 4. Pasa los datos al Client Component para interactividad
  */
 
@@ -38,14 +39,19 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     );
   }
 
-  // 2️⃣ Fetch de métricas (desde el servidor)
+  // 2️⃣ Fetch de métricas y actividad reciente (desde el servidor)
   let metrics;
+  let recentOrders;
   let error: Error | null = null;
 
   try {
-    metrics = await fetchDashboardMetrics(accessToken, { period });
+    // Fetch metrics and recent orders in parallel
+    [metrics, recentOrders] = await Promise.all([
+      fetchDashboardMetrics(accessToken, { period }),
+      fetchOrders(accessToken, { limit: 10, skip: 0, sortBy: 'updated_at', sortOrder: 'desc' })
+    ]);
   } catch (err) {
-    console.error('Error loading dashboard metrics:', err);
+    console.error('Error loading dashboard data:', err);
     error = err instanceof Error ? err : new Error('Error desconocido');
   }
 
@@ -71,8 +77,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       {/* Dashboard con métricas reales */}
       <DashboardClient initialMetrics={metrics!} />
 
-      {/* Tabla de actividad reciente */}
-      <RecentActivityTable />
+      {/* Tabla de actividad reciente con datos del backend */}
+      <RecentActivityTable orders={recentOrders?.items || []} />
     </div>
   );
 }
