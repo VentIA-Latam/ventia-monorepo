@@ -4,6 +4,7 @@ Pydantic schemas package.
 DTOs (Data Transfer Objects) for API requests and responses.
 """
 
+from app.schemas.activity import ActivityItem, RecentActivityResponse
 from app.schemas.health import HealthResponse
 from app.schemas.order import (
     OrderCreate,
@@ -12,6 +13,7 @@ from app.schemas.order import (
     OrderUpdate,
     OrderValidate,
 )
+from app.schemas.stats import StatsResponse
 from app.schemas.tenant import TenantCreate, TenantResponse, TenantUpdate, TenantWithToken
 from app.schemas.user import UserCreate, UserResponse, UserUpdate, UserWithTenant
 
@@ -34,4 +36,9 @@ __all__ = [
     "OrderValidate",
     "OrderResponse",
     "OrderListResponse",
+    # Stats
+    "StatsResponse",
+    # Activity
+    "ActivityItem",
+    "RecentActivityResponse",
 ]
