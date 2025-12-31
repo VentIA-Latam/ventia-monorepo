@@ -128,18 +128,21 @@ class TenantUpdate(BaseModel):
     but is automatically encrypted by the Tenant model before storage.
     """
 
-    name: Optional[str] = Field(None, min_length=1, max_length=100, description="Company name")
-    shopify_store_url: Optional[str] = Field(None, description="Shopify store URL")
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    shopify_store_url: Optional[str] = None
     shopify_access_token: Optional[str] = Field(
         None, description="Shopify Admin API access token (plaintext, will be encrypted)"
     )
-    shopify_api_version: Optional[str] = Field(None, description="Shopify API version")
-    is_active: Optional[bool] = Field(None, description="Active status")
+    shopify_api_version: Optional[str] = None
+    is_active: Optional[bool] = None
+    is_platform: Optional[bool] = Field(
+        None, description="Cannot be changed after creation (will be rejected by service)"
+    )
 
-    @field_validator("shopify_store_url", mode="before")
+    @field_validator("shopify_store_url")
     @classmethod
     def validate_shopify_url(cls, v: Optional[str]) -> Optional[str]:
-        """Validate Shopify store URL format if provided."""
+        """Validate Shopify store URL format."""
         if v and not v.startswith(("http://", "https://")):
             raise ValueError("Shopify store URL must start with http:// or https://")
         return v
