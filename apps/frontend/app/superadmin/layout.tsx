@@ -1,11 +1,11 @@
 "use client";
 
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/dashboard/app-sidebar"
+import { SuperAdminSidebar } from "@/components/superadmin/superadmin-sidebar"
 import { Separator } from "@/components/ui/separator"
 import { usePathname } from "next/navigation"
 
-export default function DashboardLayout({
+export default function SuperAdminLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -13,18 +13,16 @@ export default function DashboardLayout({
   const pathname = usePathname();
 
   const getPageTitle = () => {
-    if (pathname.includes('/assistant')) return 'Configuración de tu vendedor';
-    if (pathname.includes('/products')) return 'Productos';
-    if (pathname.includes('/conversations')) return 'Conversaciones';
-    if (pathname.includes('/metrics')) return 'Métricas';
-    if (pathname.includes('/get-started')) return 'Inicio';
-    if (pathname.includes('/payments')) return 'Pagos';
-    return 'Dashboard';
+    if (pathname === '/superadmin') return 'Dashboard SuperAdmin';
+    if (pathname.includes('/tenants')) return 'Gestión de Tenants';
+    if (pathname.includes('/users')) return 'Gestión de Usuarios';
+    if (pathname.includes('/api-keys')) return 'Gestión de API Keys';
+    return 'SuperAdmin';
   };
 
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <SuperAdminSidebar />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2 px-4">

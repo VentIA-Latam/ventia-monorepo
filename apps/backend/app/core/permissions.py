@@ -10,6 +10,7 @@ class Role(str, Enum):
     """User roles in the system."""
 
     SUPER_ADMIN = "superadmin"  # Platform admin with access to all tenants
+    SUPER_ADMIN = "superadmin"  # Platform admin with access to all tenants
     ADMIN = "admin"  # Full access to all resources
     LOGISTICA = "logistica"  # Can manage orders and validate payments
     VENTAS = "ventas"  # Can view and create orders
@@ -25,7 +26,19 @@ PERMISSIONS: Dict[Tuple[str, str], List[Role]] = {
     ("PUT", "/orders/*"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA],
     ("POST", "/orders/*/validate"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA],
     ("DELETE", "/orders/*"): [Role.SUPER_ADMIN, Role.ADMIN],
+    ("GET", "/orders"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("GET", "/orders/*"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("POST", "/orders"): [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS],
+    ("PUT", "/orders/*"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA],
+    ("POST", "/orders/*/validate"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA],
+    ("DELETE", "/orders/*"): [Role.SUPER_ADMIN, Role.ADMIN],
 
+    # USERS ENDPOINTS (only ADMIN and SUPER_ADMIN)
+    ("GET", "/users"): [Role.SUPER_ADMIN, Role.ADMIN],
+    ("GET", "/users/*"): [Role.SUPER_ADMIN, Role.ADMIN],
+    ("POST", "/users"): [Role.SUPER_ADMIN, Role.ADMIN],
+    ("PUT", "/users/*"): [Role.SUPER_ADMIN, Role.ADMIN],
+    ("DELETE", "/users/*"): [Role.SUPER_ADMIN, Role.ADMIN],
     # USERS ENDPOINTS (only ADMIN and SUPER_ADMIN)
     ("GET", "/users"): [Role.SUPER_ADMIN, Role.ADMIN],
     ("GET", "/users/*"): [Role.SUPER_ADMIN, Role.ADMIN],
