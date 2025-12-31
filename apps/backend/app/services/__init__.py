@@ -4,6 +4,7 @@ Service layer package.
 Business logic layer that orchestrates operations between API and repository layers.
 """
 
+from app.services.activity import activity_service
 from app.services.order import OrderService, order_service
 from app.services.shopify import ShopifyService, shopify_service
 from app.services.stats import StatsService, stats_service
@@ -22,4 +23,6 @@ __all__ = [
     # Stats
     "StatsService",
     "stats_service",
+    # Activity
+    "activity_service",
 ]

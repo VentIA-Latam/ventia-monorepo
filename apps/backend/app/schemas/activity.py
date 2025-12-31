@@ -1,5 +1,5 @@
 """
-Activity schemas.
+Activity schemas - represents recent platform activity from all tables.
 """
 
 from datetime import datetime
@@ -7,16 +7,14 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 
-class ActivityResponse(BaseModel):
-    """Schema for Activity response."""
+class ActivityItem(BaseModel):
+    """Activity item representing a recent change across any table."""
 
-    id: int
-    action_type: str = Field(..., description="Type of action performed")
-    description: str = Field(..., description="Human-readable description")
-    entity_type: str = Field(..., description="Type of entity affected")
-    entity_id: int | None = Field(None, description="ID of affected entity")
-    performed_by: str | None = Field(None, description="User who performed action")
-    created_at: datetime = Field(..., description="When the action occurred")
+    id: int = Field(..., description="Entity ID")
+    entity_type: str = Field(..., description="Type of entity (user, tenant, order, api_key)")
+    operation: str = Field(..., description="Operation type (CREATED or UPDATED)")
+    description: str = Field(..., description="Human-readable description of the entity")
+    timestamp: datetime = Field(..., description="When the entity was created or updated (whichever is more recent)")
 
     model_config = {"from_attributes": True}
 
@@ -24,6 +22,6 @@ class ActivityResponse(BaseModel):
 class RecentActivityResponse(BaseModel):
     """Schema for recent platform activity response."""
 
-    activities: list[ActivityResponse] = Field(
-        ..., description="List of 3 most recent activities"
+    activities: list[ActivityItem] = Field(
+        ..., description="List of 3 most recent activities from all tables"
     )

@@ -42,6 +42,7 @@ PERMISSIONS: Dict[Tuple[str, str], List[Role]] = {
 
     # STATS ENDPOINTS (only SUPER_ADMIN)
     ("GET", "/stats"): [Role.SUPER_ADMIN],
+    ("GET", "/stats/*"): [Role.SUPER_ADMIN],
 }
 
 
