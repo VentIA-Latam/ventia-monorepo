@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Order } from "@/lib/types/order";
-import { useRecentActivity } from "@/contexts/RecentActivityContext";
 import { useRouter } from "next/navigation";
 
 interface OrdersTableProps {
@@ -37,25 +36,11 @@ const logisticsStatusVariants: Record<Order['logisticsStatus'], "default" | "sec
 };
 
 export function OrdersTable({ orders }: OrdersTableProps) {
-  const { addActivity } = useRecentActivity();
   const router = useRouter();
 
-  const handleOrderClick = (order: Order) => {
-    // Register activity
-    addActivity({
-      id: `${order.id}-${Date.now()}`,
-      orderId: order.id,
-      orderDbId: order.dbId, // Usar el ID real de la base de datos
-      cliente: order.client.name,
-      email: order.client.email,
-      fecha: order.date,
-      monto: `${order.currency}${order.amount.toLocaleString()}`,
-      estado: order.paymentStatus,
-      accion: 'viewed',
-    });
-
+  const handleOrderClick = (orderDbId: number) => {
     // Navigate to order detail page usando el ID real de la BD
-    router.push(`/dashboard/orders/${order.dbId}`);
+    router.push(`/dashboard/orders/${orderDbId}`);
   };
 
   return (
@@ -89,7 +74,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
             <TableRow
               key={order.id}
               className="hover:bg-muted/50 cursor-pointer"
-              onClick={() => handleOrderClick(order)}
+              onClick={() => handleOrderClick(order.dbId)}
             >
               <TableCell className="pl-5">
                 <div>
