@@ -17,7 +17,44 @@ class OrderService:
         return order_repository.get(db, order_id)
 
     def get_order_with_tenant(self, db: Session, order_id: int) -> Order | None:
-        """Get order with tenant relationship loaded."""
+        """
+        Get order with tenant relationship eagerly loaded.
+
+        **Purpose:**
+        - Loads the related Tenant object to populate the `tenant` field in OrderResponse
+        - Used when SUPER_ADMIN needs to see which client an order belongs to
+        - Prevents N+1 query problem by using eager loading (joinedload)
+
+        **Usage in Endpoints:**
+        - SUPER_ADMIN: Call this when responding with order details
+        - Other roles: Can use regular get_order() since they only see their own tenant
+
+        **Response Schema:**
+        The returned Order object will populate the `tenant` field in OrderResponse:
+        ```
+        {
+            "id": 123,
+            "customer_email": "buyer@example.com",
+            "tenant_id": 5,
+            "validado": false,
+            ...
+            "tenant": {
+                "id": 5,
+                "name": "Acme Corp",
+                "slug": "acme-corp-outlet",
+                "company_id": "auth0|12345",
+                ...
+            }
+        }
+        ```
+
+        Args:
+            db: Database session
+            order_id: Order ID to fetch
+
+        Returns:
+            Order with tenant relationship loaded, or None if not found
+        """
         return order_repository.get_with_tenant(db, order_id)
 
     def get_orders_by_tenant(
@@ -51,6 +88,49 @@ class OrderService:
         )
 
         total = order_repository.count_by_tenant(db, tenant_id, validado=validado)
+
+        return OrderListResponse(
+            total=total,
+            items=orders,
+            skip=skip,
+            limit=limit,
+        )
+
+    def get_all_orders(
+        self,
+        db: Session,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        tenant_id: int | None = None,
+        validado: bool | None = None,
+    ) -> OrderListResponse:
+        """
+        Get all orders from all tenants (SUPER_ADMIN only).
+
+        Args:
+            db: Database session
+            skip: Number to skip
+            limit: Max results
+            tenant_id: Optional filter by specific tenant
+            validado: Optional filter by validation status
+
+        Returns:
+            OrderListResponse with total count and items
+        """
+        orders = order_repository.get_all(
+            db,
+            skip=skip,
+            limit=limit,
+            tenant_id=tenant_id,
+            validado=validado,
+        )
+
+        total = order_repository.count_all(
+            db,
+            tenant_id=tenant_id,
+            validado=validado,
+        )
 
         return OrderListResponse(
             total=total,

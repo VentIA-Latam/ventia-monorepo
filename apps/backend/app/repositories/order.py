@@ -42,16 +42,94 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
 
         return query.order_by(Order.created_at.desc()).offset(skip).limit(limit).all()
 
-    def get_with_tenant(self, db: Session, order_id: int) -> Order | None:
+    def get_all(
+        self,
+        db: Session,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        tenant_id: int | None = None,
+        validado: bool | None = None,
+    ) -> list[Order]:
         """
-        Get order with tenant relationship loaded.
+        Get all orders from all tenants (for SUPER_ADMIN).
 
         Args:
             db: Database session
-            order_id: Order ID
+            skip: Number to skip
+            limit: Max results
+            tenant_id: Optional filter by tenant ID
+            validado: Optional filter by validation status
 
         Returns:
-            Order with tenant or None
+            List of orders
+        """
+        query = db.query(Order)
+
+        # Optional tenant filter (for SUPER_ADMIN with specific tenant)
+        if tenant_id is not None:
+            query = query.filter(Order.tenant_id == tenant_id)
+
+        # Apply validation filter if specified
+        if validado is not None:
+            query = query.filter(Order.validado == validado)
+
+        return query.order_by(Order.created_at.desc()).offset(skip).limit(limit).all()
+
+    def count_all(
+        self,
+        db: Session,
+        *,
+        tenant_id: int | None = None,
+        validado: bool | None = None,
+    ) -> int:
+        """
+        Count all orders from all tenants.
+
+        Args:
+            db: Database session
+            tenant_id: Optional filter by tenant ID
+            validado: Optional filter by validation status
+
+        Returns:
+            Total count of orders
+        """
+        query = db.query(Order)
+
+        if tenant_id is not None:
+            query = query.filter(Order.tenant_id == tenant_id)
+
+        if validado is not None:
+            query = query.filter(Order.validado == validado)
+
+        return query.count()
+
+    def get_with_tenant(self, db: Session, order_id: int) -> Order | None:
+        """
+        Get order with tenant relationship eagerly loaded via joinedload.
+
+        **Performance:**
+        - Uses SQLAlchemy joinedload to load tenant in single query
+        - Prevents N+1 query problem when accessing order.tenant
+
+        **Usage:**
+        - Call when response needs to include tenant information
+        - Populates the `tenant` field in OrderResponse schema
+        - Used by endpoints that serve SUPER_ADMIN (who needs to see all tenants)
+
+        **Return Data:**
+        Order object with order.tenant populated:
+        ```python
+        order = repo.get_with_tenant(db, 123)
+        print(order.tenant.name)  # Single query, no N+1 problem
+        ```
+
+        Args:
+            db: Database session
+            order_id: Order ID to fetch
+
+        Returns:
+            Order with tenant relationship loaded, or None if not found
         """
         return (
             db.query(Order)
