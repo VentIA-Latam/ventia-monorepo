@@ -4,7 +4,7 @@ FastAPI dependencies for authentication and database.
 
 from typing import Callable
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, Header, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -13,10 +13,11 @@ from app.core.database import get_db
 from app.core.permissions import Role, can_access
 from app.models.user import User
 from app.repositories.user import user_repository
+from app.services.api_key import api_key_service
 from app.services.user import user_service
 
 # Security scheme for Bearer token
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)  # auto_error=False to allow API key fallback
 
 
 async def get_current_user(
@@ -82,6 +83,113 @@ async def get_current_user(
         )
 
 
+async def get_current_user_or_api_key(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db),
+) -> User:
+    """
+    Dependency for dual authentication: JWT token OR API key.
+
+    This dependency accepts either:
+    1. Authorization: Bearer <jwt_token> (Auth0)
+    2. X-API-Key: <api_key> (for external integrations like n8n)
+
+    If JWT token is present, it validates via Auth0 and returns the actual User.
+    If API key is present, it validates the key and returns a virtual User with
+    tenant_id and role from the API key.
+
+    Args:
+        request: FastAPI request object
+        credentials: Optional Bearer token credentials
+        x_api_key: Optional API key from X-API-Key header
+        db: Database session
+
+    Returns:
+        User: Authenticated user (real or virtual from API key)
+
+    Raises:
+        HTTPException: If neither authentication method is valid
+    """
+    # Try JWT authentication first (if Authorization header is present)
+    if credentials and credentials.credentials:
+        token = credentials.credentials
+
+        try:
+            # Verify JWT with Auth0
+            payload = await verify_token(token)
+            auth0_user_id = get_user_id_from_token(payload)
+
+            # Get user from database
+            user = user_repository.get_by_auth0_id(db, auth0_user_id)
+
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="User not found in database",
+                )
+
+            if not user.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="User account is inactive",
+                )
+
+            # Update last login
+            user_service.update_last_login(db, user)
+
+            return user
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            # JWT validation failed, try API key fallback if available
+            if not x_api_key:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=f"JWT authentication failed: {str(e)}",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+    # Try API key authentication (if X-API-Key header is present)
+    if x_api_key:
+        # Verify and get API key
+        api_key = api_key_service.verify_and_get_api_key(db, x_api_key)
+
+        if not api_key:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired API key",
+                headers={"WWW-Authenticate": "API-Key"},
+            )
+
+        # Create a virtual User object with API key's tenant and role
+        # This allows the API key to act as a user with specific permissions
+        virtual_user = User(
+            id=0,  # Virtual user has no real ID
+            auth0_user_id=f"api_key_{api_key.id}",
+            email=f"api_key_{api_key.id}@internal",
+            name=f"API Key: {api_key.name}",
+            tenant_id=api_key.tenant_id,
+            role=api_key.role,
+            is_active=True,
+        )
+
+        # Store API key info in request state for logging
+        request.state.api_key_id = api_key.id
+        request.state.auth_method = "api_key"
+
+        return virtual_user
+
+    # Neither JWT nor API key was provided
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Authentication required. Provide either Bearer token or X-API-Key header.",
+        headers={"WWW-Authenticate": "Bearer, API-Key"},
+    )
+
+
 def require_permission(method: str, path_pattern: str) -> Callable:
     """
     Dependency factory to check if user has permission for an endpoint.
@@ -110,8 +218,8 @@ def require_permission(method: str, path_pattern: str) -> Callable:
         current_user: User = Depends(get_current_user),
     ) -> User:
         """Check if user's role has permission to access this endpoint."""
-        # Get actual path from request
-        actual_path = request.url.path
+        # Get actual path from request and normalize (remove trailing slash)
+        actual_path = request.url.path.rstrip("/") or "/"
 
         # Check permission
         if not can_access(current_user.role, method, actual_path):

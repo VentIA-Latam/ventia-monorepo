@@ -11,7 +11,6 @@ from app.schemas.order import (
     OrderResponse,
     OrderUpdate,
     OrderValidate,
-    OrderWithTenant,
 )
 from app.schemas.tenant import TenantCreate, TenantResponse, TenantUpdate, TenantWithToken
 from app.schemas.user import UserCreate, UserResponse, UserUpdate, UserWithTenant
@@ -34,6 +33,5 @@ __all__ = [
     "OrderUpdate",
     "OrderValidate",
     "OrderResponse",
-    "OrderWithTenant",
     "OrderListResponse",
 ]
