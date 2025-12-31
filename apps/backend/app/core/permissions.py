@@ -34,11 +34,11 @@ PERMISSIONS: Dict[Tuple[str, str], List[Role]] = {
     ("DELETE", "/users/*"): [Role.SUPER_ADMIN, Role.ADMIN],
 
     # TENANTS ENDPOINTS (only ADMIN and SUPER_ADMIN)
-    ("GET", "/tenants"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("GET", "/tenants/*"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("POST", "/tenants"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("PUT", "/tenants/*"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("DELETE", "/tenants/*"): [Role.SUPER_ADMIN, Role.ADMIN],
+    ("GET", "/tenants"): [Role.SUPER_ADMIN],
+    ("GET", "/tenants/*"): [Role.SUPER_ADMIN],
+    ("POST", "/tenants"): [Role.SUPER_ADMIN],
+    ("PUT", "/tenants/*"): [Role.SUPER_ADMIN],
+    ("DELETE", "/tenants/*"): [Role.SUPER_ADMIN],
 }
 
 

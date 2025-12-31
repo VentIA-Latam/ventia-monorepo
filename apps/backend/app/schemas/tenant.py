@@ -38,25 +38,89 @@ class TenantBase(BaseModel):
         return v
 
 
-class TenantCreate(TenantBase):
+class TenantCreate(BaseModel):
     """
     Schema for creating a new tenant.
 
-    Shopify credentials are optional at creation time and can be added later via update.
+    Request body fields:
+    - name: Required, max 100 chars
+    - slug: Optional, auto-generated as "name-outlet" in kebab-case if not provided
+    - company_id: Optional, for Auth0 organization mapping
+    - shopify_store_url: Required, must be a valid URL
+    - shopify_access_token: Required, plaintext (will be encrypted before storage)
+    - shopify_api_version: Optional, defaults to "2024-01"
+
+    **Auto-generated slug:**
+    - Format: "{name-in-kebab-case}-outlet"
+    - Examples:
+      - "My Company" -> "my-company-outlet"
+      - "Test_123" -> "test-123-outlet"
+    - Slug must be unique in the system
 
     **Security Note**: shopify_access_token is sent as plaintext in the request body
     but is automatically encrypted by the Tenant model before storage.
     """
 
-    shopify_access_token: Optional[str] = Field(
+    name: str = Field(..., min_length=1, max_length=100, description="Company name (required)")
+    slug: Optional[str] = Field(
         None,
-        description="Shopify Admin API access token (plaintext, will be encrypted before storage)",
+        min_length=1,
+        max_length=100,
+        pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$",
+        description="URL-friendly identifier (kebab-case, optional - auto-generated as 'name-outlet' if not provided)",
     )
+    company_id: Optional[str] = Field(
+        None, max_length=100, description="Company ID for Auth0 organization mapping (optional)"
+    )
+    shopify_store_url: str = Field(
+        ..., description="Shopify store URL (required, e.g., 'https://my-store.myshopify.com')"
+    )
+    shopify_access_token: str = Field(
+        ..., description="Shopify Admin API access token (required, plaintext - will be encrypted before storage)"
+    )
+    shopify_api_version: Optional[str] = Field(
+        "2024-01", description="Shopify API version (optional, defaults to '2024-01')"
+    )
+
+    @field_validator("shopify_store_url", mode="before")
+    @classmethod
+    def validate_shopify_url(cls, v: str) -> str:
+        """Validate Shopify store URL format."""
+        if not v:
+            raise ValueError("Shopify store URL is required")
+        if not v.startswith(("http://", "https://")):
+            raise ValueError("Shopify store URL must start with http:// or https://")
+        return v
+
+    @field_validator("slug", mode="before")
+    @classmethod
+    def validate_slug(cls, v: Optional[str]) -> Optional[str]:
+        """Validate slug format if provided."""
+        if v is None:
+            return None
+        if not v:
+            raise ValueError("Slug cannot be empty if provided")
+        if not v.islower():
+            raise ValueError("Slug must be lowercase (kebab-case)")
+        return v
 
 
 class TenantUpdate(BaseModel):
     """
     Schema for updating a tenant.
+
+    **Updatable fields:**
+    - name: Company name
+    - shopify_store_url: Shopify store URL (must be valid URL)
+    - shopify_access_token: Shopify Admin API access token (plaintext, will be encrypted)
+    - shopify_api_version: Shopify API version
+    - is_active: Active status
+
+    **Immutable fields (cannot be changed):**
+    - slug: Auto-generated at creation, cannot be modified
+    - id: Primary key, immutable
+    - is_platform: Set at creation, cannot be modified after creation
+    - company_id: Set at creation, cannot be modified (handled at DB level)
 
     All fields are optional. Only provided fields will be updated.
 
@@ -64,21 +128,18 @@ class TenantUpdate(BaseModel):
     but is automatically encrypted by the Tenant model before storage.
     """
 
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    shopify_store_url: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=1, max_length=100, description="Company name")
+    shopify_store_url: Optional[str] = Field(None, description="Shopify store URL")
     shopify_access_token: Optional[str] = Field(
         None, description="Shopify Admin API access token (plaintext, will be encrypted)"
     )
-    shopify_api_version: Optional[str] = None
-    is_active: Optional[bool] = None
-    is_platform: Optional[bool] = Field(
-        None, description="Cannot be changed after creation (will be rejected by service)"
-    )
+    shopify_api_version: Optional[str] = Field(None, description="Shopify API version")
+    is_active: Optional[bool] = Field(None, description="Active status")
 
-    @field_validator("shopify_store_url")
+    @field_validator("shopify_store_url", mode="before")
     @classmethod
     def validate_shopify_url(cls, v: Optional[str]) -> Optional[str]:
-        """Validate Shopify store URL format."""
+        """Validate Shopify store URL format if provided."""
         if v and not v.startswith(("http://", "https://")):
             raise ValueError("Shopify store URL must start with http:// or https://")
         return v
@@ -88,7 +149,7 @@ class TenantResponse(BaseModel):
     """
     Schema for tenant in API responses.
 
-    **Security**: shopify_access_token is NEVER included in responses.
+    **Security**: shopify_access_token and shopify_api_version are NEVER included in responses.
     """
 
     model_config = ConfigDict(from_attributes=True)
@@ -98,10 +159,8 @@ class TenantResponse(BaseModel):
     slug: str
     company_id: Optional[str]
     shopify_store_url: Optional[str]
-    shopify_api_version: Optional[str]
     is_platform: bool
     is_active: bool
-    settings: Optional[dict[str, Any]]
     created_at: datetime
     updated_at: datetime
 
