@@ -7,6 +7,8 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
+from app.schemas.tenant import TenantResponse
+
 
 class OrderBase(BaseModel):
     """Base schema for Order with common fields."""
@@ -85,7 +87,7 @@ class OrderResponse(OrderBase):
     status: str
     created_at: datetime
     updated_at: datetime
-    tenant: Optional[Any] = Field(None, description="Optional tenant info (populated via join for SUPER_ADMIN)")
+    tenant: Optional[TenantResponse] = Field(None, description="Optional tenant info (populated via join for SUPER_ADMIN)")
 
     model_config = ConfigDict(from_attributes=True)
 

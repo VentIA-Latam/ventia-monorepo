@@ -5,7 +5,7 @@ User management endpoints (ADMIN only).
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_database, require_permission, require_role
+from app.api.deps import get_current_user, get_database, require_permission, require_role
 from app.core.permissions import Role
 from app.models.user import User
 from app.schemas.user import UserCreate, UserResponse, UserUpdate, UsersListResponse, UserUpdateResponse
@@ -55,6 +55,27 @@ async def list_users(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+
+@router.get("/me", response_model=UserResponse, tags=["users"])
+async def get_current_user_info(
+    current_user: User = Depends(get_current_user),
+) -> UserResponse:
+    """
+    Get current authenticated user information.
+
+    Returns the complete user profile including:
+    - id, email, name, role
+    - tenant_id (which tenant the user belongs to)
+    - is_active status
+    - created_at, updated_at timestamps
+
+    This endpoint is useful for the frontend to:
+    - Display user info in the UI
+    - Check user role for conditional rendering
+    - Validate tenant membership
+    """
+    return current_user
 
 
 @router.get("/{user_id}", response_model=UserResponse, tags=["users"])
