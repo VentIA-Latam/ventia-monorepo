@@ -3,7 +3,7 @@ Order schemas.
 """
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -58,7 +58,23 @@ class OrderValidate(BaseModel):
 
 
 class OrderResponse(OrderBase):
-    """Schema for Order response."""
+    """
+    Schema for Order response.
+
+    **Tenant Information:**
+    - `tenant` field is Optional[TenantResponse]
+    - Populated automatically when order is retrieved via SQL join
+    - For SUPER_ADMIN: includes full tenant info (id, name, slug, etc.)
+    - For other roles: typically None (they only see orders from their own tenant)
+    - Frontend can display tenant name/slug when available to show which customer the order belongs to
+
+    **Fields:**
+    - Standard order fields from OrderBase
+    - id, tenant_id, shopify_draft_order_id, shopify_order_id
+    - validado, validated_at, status
+    - created_at, updated_at
+    - tenant: Optional tenant details (populated on join)
+    """
 
     id: int
     tenant_id: int
@@ -69,14 +85,7 @@ class OrderResponse(OrderBase):
     status: str
     created_at: datetime
     updated_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class OrderWithTenant(OrderResponse):
-    """Schema for Order response with tenant info."""
-
-    tenant: dict = Field(..., description="Tenant info (name, slug)")
+    tenant: Optional[Any] = Field(None, description="Optional tenant info (populated via join for SUPER_ADMIN)")
 
     model_config = ConfigDict(from_attributes=True)
 
