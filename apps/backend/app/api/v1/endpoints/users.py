@@ -5,120 +5,102 @@ User management endpoints (ADMIN only).
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_database, require_role
+from app.api.deps import get_database, require_permission, require_role
 from app.core.permissions import Role
 from app.models.user import User
-from app.schemas.user import UserCreate, UserResponse, UserUpdate
+from app.schemas.user import UserCreate, UserResponse, UserUpdate, UsersListResponse, UserUpdateResponse
 from app.services.user import user_service
 
 router = APIRouter()
 
 
-@router.get("/", response_model=list[UserResponse], tags=["users"])
+@router.get("/", response_model=UsersListResponse | list[UserResponse], tags=["users"])
 async def list_users(
     skip: int = 0,
     limit: int = 100,
-    current_user: User = Depends(require_role(Role.ADMIN)),
+    tenant_id: int | None = None,
+    role: str | None = None,
+    is_active: bool | None = None,
+    search: str | None = None,
+    current_user: User = Depends(require_permission("GET", "/users")),
     db: Session = Depends(get_database),
-) -> list[UserResponse]:
+) -> UsersListResponse | list[UserResponse]:
     """
-    List all users for current user's tenant.
+    List all users.
 
-    Only ADMIN can access this endpoint.
-    Results are automatically filtered by tenant.
+    SUPER_ADMIN: All users with advanced filters and metadata.
+    - tenant_id: Filter by specific tenant
+    - role: Filter by user role (SUPER_ADMIN, ADMIN, LOGISTICA, VENTAS, VIEWER)
+    - is_active: Filter by active status (true/false)
+    - search: Search in user name or email
+    - skip/limit: Pagination
+    Returns: UsersListResponse with total, items, skip, limit
 
-    Args:
-        skip: Number of records to skip
-        limit: Maximum records to return
-        current_user: Current authenticated user (ADMIN only)
-        db: Database session
-
-    Returns:
-        List of users
+    Other roles: Only users from their own tenant.
+    Returns: list of UserResponse
     """
-    users = user_service.get_users_by_tenant(
-        db,
-        current_user.tenant_id,
-        skip=skip,
-        limit=limit,
-    )
-    return users
+    try:
+        return user_service.list_users(
+            db,
+            current_user,
+            skip=skip,
+            limit=limit,
+            tenant_id=tenant_id,
+            role=role,  # Pass as string, service will parse
+            is_active=is_active,
+            search=search,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
 
 
 @router.get("/{user_id}", response_model=UserResponse, tags=["users"])
 async def get_user(
     user_id: int,
-    current_user: User = Depends(require_role(Role.ADMIN)),
+    current_user: User = Depends(require_permission("GET", "/users")),
     db: Session = Depends(get_database),
 ) -> UserResponse:
     """
     Get user by ID.
 
-    Only ADMIN can access this endpoint.
-    Can only view users from their own tenant.
-
-    Args:
-        user_id: User ID
-        current_user: Current authenticated user (ADMIN only)
-        db: Database session
-
-    Returns:
-        User details
-
-    Raises:
-        HTTPException: If user not found or access denied
+    SUPER_ADMIN: Can access any user.
+    Other roles: Can only access users from their own tenant.
     """
-    user = user_service.get_user(db, user_id)
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User {user_id} not found",
-        )
-
-    # Verify user belongs to same tenant
-    if user.tenant_id != current_user.tenant_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this user",
-        )
-
-    return user
+    try:
+        return user_service.get_user_for_access(db, user_id, current_user)
+    except ValueError as e:
+        if "not found" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=str(e),
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=str(e),
+            )
 
 
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED, tags=["users"])
 async def create_user(
     user_in: UserCreate,
-    current_user: User = Depends(require_role(Role.ADMIN)),
+    current_user: User = Depends(require_permission("POST", "/users")),
     db: Session = Depends(get_database),
 ) -> UserResponse:
     """
     Create a new user.
 
-    Only ADMIN can create users.
-    New user will be created in the same tenant as the admin.
-
-    Args:
-        user_in: User creation data
-        current_user: Current authenticated user (ADMIN only)
-        db: Database session
-
-    Returns:
-        Created user
-
-    Raises:
-        HTTPException: If user already exists or validation fails
+    SUPER_ADMIN: Can create users in any tenant. Validates tenant exists and is active.
+    Other roles: Can only create users in their own tenant.
+    
+    Both: Cannot create SUPER_ADMIN role users.
+    Request body: email, name, role, auth0_user_id, tenant_id
     """
-    # Ensure user is created in admin's tenant
-    if user_in.tenant_id != current_user.tenant_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Can only create users in your own tenant",
-        )
-
     try:
-        user = user_service.create_user(db, user_in)
-        return user
+        return user_service.create_user_for_role(db, user_in, current_user)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -126,104 +108,70 @@ async def create_user(
         )
 
 
-@router.put("/{user_id}", response_model=UserResponse, tags=["users"])
+@router.put("/{user_id}", response_model=UserUpdateResponse, tags=["users"])
 async def update_user(
     user_id: int,
     user_in: UserUpdate,
-    current_user: User = Depends(require_role(Role.ADMIN)),
+    current_user: User = Depends(require_permission("PUT", "/users")),
     db: Session = Depends(get_database),
-) -> UserResponse:
+) -> UserUpdateResponse:
     """
     Update user.
 
-    Only ADMIN can update users.
-    Can only update users from their own tenant.
+    SUPER_ADMIN: Can update any user. Cannot deactivate themselves.
+    Other roles: Can only update users from their own tenant.
+    - Cannot deactivate SUPER_ADMIN or ADMIN users
+    - Cannot deactivate themselves
 
-    Args:
-        user_id: User ID to update
-        user_in: Update data
-        current_user: Current authenticated user (ADMIN only)
-        db: Database session
+    Updatable fields: name, role, is_active
+    Immutable fields: email, auth0_user_id, tenant_id
 
-    Returns:
-        Updated user
-
-    Raises:
-        HTTPException: If user not found or access denied
+    Returns: 200 with updated user and optional warning message
     """
-    # Get user to verify tenant
-    user = user_service.get_user(db, user_id)
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User {user_id} not found",
-        )
-
-    # Verify user belongs to same tenant
-    if user.tenant_id != current_user.tenant_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this user",
-        )
-
     try:
-        updated_user = user_service.update_user(db, user_id, user_in)
-        return updated_user
+        updated_user, warning = user_service.update_user_for_role(db, user_id, user_in, current_user)
+        return UserUpdateResponse(user=updated_user, warning=warning)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )
+        if "not found" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=str(e),
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN if "Access denied" in str(e) or "Cannot" in str(e) else status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["users"])
 async def delete_user(
     user_id: int,
-    current_user: User = Depends(require_role(Role.ADMIN)),
+    current_user: User = Depends(require_permission("DELETE", "/users")),
     db: Session = Depends(get_database),
 ) -> None:
     """
-    Delete user.
+    Deactivate user (soft delete).
 
-    Only ADMIN can delete users.
-    Can only delete users from their own tenant.
-
-    Args:
-        user_id: User ID to delete
-        current_user: Current authenticated user (ADMIN only)
-        db: Database session
-
-    Raises:
-        HTTPException: If user not found or access denied
+    SUPER_ADMIN only: Can deactivate any user (except themselves).
+    - Cannot deactivate the last active SUPER_ADMIN in the system
+    - User is marked as inactive (is_active=False) instead of deleted
     """
-    # Get user to verify tenant
-    user = user_service.get_user(db, user_id)
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User {user_id} not found",
-        )
-
-    # Verify user belongs to same tenant
-    if user.tenant_id != current_user.tenant_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this user",
-        )
-
-    # Prevent self-deletion
-    if user_id == current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete your own account",
-        )
-
     try:
-        user_service.delete_user(db, user_id)
+        user_service.delete_user_for_access(db, user_id, current_user)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )
+        if "not found" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=str(e),
+            )
+        elif "Only SUPER_ADMIN" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=str(e),
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )

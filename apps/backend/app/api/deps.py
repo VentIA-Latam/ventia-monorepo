@@ -218,8 +218,8 @@ def require_permission(method: str, path_pattern: str) -> Callable:
         current_user: User = Depends(get_current_user),
     ) -> User:
         """Check if user's role has permission to access this endpoint."""
-        # Get actual path from request
-        actual_path = request.url.path
+        # Get actual path from request and normalize (remove trailing slash)
+        actual_path = request.url.path.rstrip("/") or "/"
 
         # Check permission
         if not can_access(current_user.role, method, actual_path):

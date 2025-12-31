@@ -4,12 +4,17 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
-import { useRecentActivity, type RecentActivity } from "@/contexts/RecentActivityContext"
+import { Order } from "@/lib/services/order-service"
+import { useRouter } from "next/navigation"
 
-export function RecentActivityTable() {
-  const { activities } = useRecentActivity();
+interface RecentActivityTableProps {
+  orders: Order[];
+}
 
-  const getEstadoColor = (estado: RecentActivity["estado"]) => {
+export function RecentActivityTable({ orders }: RecentActivityTableProps) {
+  const router = useRouter();
+
+  const getEstadoColor = (estado: string) => {
     switch (estado) {
       case "Pagado":
         return "bg-green-50 text-green-700 border-green-200"
@@ -20,11 +25,28 @@ export function RecentActivityTable() {
     }
   }
 
+  const handleViewOrder = (orderId: number) => {
+    router.push(`/dashboard/orders/${orderId}`);
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">Actividad Reciente</h2>
-        <Button variant="link" className="text-blue-600">
+        <Button
+          variant="link"
+          className="text-blue-600"
+          onClick={() => router.push('/dashboard/orders')}
+        >
           Ver todo
         </Button>
       </div>
@@ -42,40 +64,45 @@ export function RecentActivityTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {activities.length === 0 ? (
+            {orders.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                  No hay actividad reciente. Haz clic en un pedido para verlo aquí.
+                  No hay pedidos recientes.
                 </TableCell>
               </TableRow>
             ) : (
-              activities.map((activity) => (
-                <TableRow key={activity.id} className="hover:bg-slate-50/60">
+              orders.map((order) => (
+                <TableRow key={order.id} className="hover:bg-slate-50/60">
                   <TableCell className="font-medium text-sm">
-                    {activity.orderId}
+                    {order.shopify_draft_order_id}
                   </TableCell>
                   <TableCell className="text-sm text-gray-700">
-                    {activity.cliente}
+                    {order.customer_name || 'Sin nombre'}
                   </TableCell>
                   <TableCell className="text-sm text-gray-600">
-                    {activity.fecha}
+                    {formatDate(order.created_at)}
                   </TableCell>
                   <TableCell className="text-sm font-semibold">
-                    {activity.monto}
+                    {order.currency}{order.total_price.toLocaleString()}
                   </TableCell>
                   <TableCell>
                     <Badge
                       variant="outline"
                       className={cn(
                         "text-xs px-3 py-0.5",
-                        getEstadoColor(activity.estado)
+                        getEstadoColor(order.status)
                       )}
                     >
-                      {activity.estado}
+                      {order.status}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-blue-600 hover:text-blue-700"
+                      onClick={() => handleViewOrder(order.id)}
+                    >
                       Ver
                     </Button>
                   </TableCell>
