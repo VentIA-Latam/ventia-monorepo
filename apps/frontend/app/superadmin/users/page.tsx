@@ -1,8 +1,83 @@
-import { Users, Plus } from "lucide-react";
+"use client";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Users, Plus, Eye, Power, MoreHorizontal, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { User } from "@/lib/types/user";
+import { CreateUserDialog } from "@/components/superadmin/create-user-dialog";
+import { EditUserDialog } from "@/components/superadmin/edit-user-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ToggleUserStatusDialog } from "@/components/superadmin/toggle-user-status-dialog";
+import { UserDetailDialog } from "@/components/superadmin/user-detail-dialog";
 
 export default function UsersPage() {
+  const router = useRouter();
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [toggleStatusDialogOpen, setToggleStatusDialogOpen] = useState(false);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [userForStatus, setUserForStatus] = useState<User | null>(null);
+  const [userForDetail, setUserForDetail] = useState<User | null>(null);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/superadmin/users");
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data.items || []);
+      }
+    } catch {
+      // handle error
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setEditDialogOpen(true);
+  };
+
+  const handleToggleStatus = (user: User) => {
+    setUserForStatus(user);
+    setToggleStatusDialogOpen(true);
+  };
+
+  const handleShowDetail = (user: User) => {
+    router.push(`/superadmin/users/${user.id}`);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -13,35 +88,108 @@ export default function UsersPage() {
             Administra todos los usuarios del sistema
           </p>
         </div>
-        <Button className="bg-green-600 hover:bg-green-700">
+        <Button
+          className="bg-green-600 hover:bg-green-700"
+          onClick={() => setCreateDialogOpen(true)}
+        >
           <Plus className="mr-2 h-4 w-4" />
           Nuevo Usuario
         </Button>
       </div>
-
-      {/* Coming Soon Card */}
       <Card>
         <CardHeader>
-          <CardTitle>🚧 En Desarrollo</CardTitle>
-          <CardDescription>
-            Esta funcionalidad estará disponible pronto
-          </CardDescription>
+          <CardTitle>Usuarios</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-12 space-y-4">
-            <Users className="h-16 w-16 text-gray-300" />
-            <div className="text-center space-y-2">
-              <p className="text-lg font-semibold text-gray-600">
-                Gestión Global de Usuarios
-              </p>
-              <p className="text-sm text-gray-500 max-w-md">
-                Aquí podrás ver todos los usuarios de la plataforma, filtrar por tenant,
-                editar roles, activar/desactivar cuentas y gestionar permisos globales.
-              </p>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-gray-500">Cargando usuarios...</div>
             </div>
-          </div>
+          ) : users.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Users className="h-12 w-12 text-gray-300 mb-4" />
+              <p className="text-gray-500">No se encontraron usuarios</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Rol</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>{user.name}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>{user.role}</TableCell>
+                    <TableCell>
+                      {user.is_active ? (
+                        <Badge className="bg-green-100 text-green-700">
+                          Activo
+                        </Badge>
+                      ) : (
+                        <Badge variant="destructive">Inactivo</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleShowDetail(user)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Ver detalles
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleToggleStatus(user)}
+                            className={user.is_active ? "text-red-600" : "text-green-600"}
+                          >
+                            <Power className="mr-2 h-4 w-4" />
+                            {user.is_active ? "Desactivar" : "Activar"}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
+      <CreateUserDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onSuccess={fetchUsers}
+      />
+      <EditUserDialog
+        user={selectedUser}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSuccess={fetchUsers}
+      />
+      <ToggleUserStatusDialog
+        user={userForStatus}
+        open={toggleStatusDialogOpen}
+        onOpenChange={setToggleStatusDialogOpen}
+        onSuccess={fetchUsers}
+      />
+      {/* <UserDetailDialog user={userForDetail} open={detailDialogOpen} onOpenChange={setDetailDialogOpen} /> */}
     </div>
   );
 }
