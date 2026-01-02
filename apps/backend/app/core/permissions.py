@@ -43,6 +43,15 @@ PERMISSIONS: Dict[Tuple[str, str], List[Role]] = {
     # STATS ENDPOINTS (only SUPER_ADMIN)
     ("GET", "/stats"): [Role.SUPER_ADMIN],
     ("GET", "/stats/*"): [Role.SUPER_ADMIN],
+
+    # API KEYS ENDPOINTS (SUPER_ADMIN and ADMIN)
+    # SUPER_ADMIN can create API keys for any tenant
+    # ADMIN can create API keys for their own tenant
+    ("GET", "/api-keys"): [Role.SUPER_ADMIN, Role.ADMIN],
+    ("GET", "/api-keys/*"): [Role.SUPER_ADMIN, Role.ADMIN],
+    ("POST", "/api-keys"): [Role.SUPER_ADMIN, Role.ADMIN],
+    ("PATCH", "/api-keys/*"): [Role.SUPER_ADMIN, Role.ADMIN],
+    ("DELETE", "/api-keys/*"): [Role.SUPER_ADMIN, Role.ADMIN],
 }
 
 

@@ -126,7 +126,6 @@ export function CreateTenantDialog({ open, onOpenChange, onSuccess }: CreateTena
                 placeholder="https://mi-tienda.myshopify.com"
                 value={formData.shopify_store_url}
                 onChange={(e) => setFormData({ ...formData, shopify_store_url: e.target.value })}
-                required
               />
             </div>
 
@@ -140,7 +139,6 @@ export function CreateTenantDialog({ open, onOpenChange, onSuccess }: CreateTena
                 placeholder="shpat_..."
                 value={formData.shopify_access_token}
                 onChange={(e) => setFormData({ ...formData, shopify_access_token: e.target.value })}
-                required
               />
               <p className="text-xs text-gray-500">
                 Token de Admin API de Shopify (se encriptará antes de guardarse)

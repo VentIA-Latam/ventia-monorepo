@@ -5,7 +5,7 @@ API Key management endpoints (ADMIN only).
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_database, require_role
+from app.api.deps import get_database, require_permission
 from app.core.permissions import Role
 from app.models.user import User
 from app.schemas.api_key import (
@@ -29,13 +29,15 @@ router = APIRouter()
 )
 async def create_api_key(
     api_key_in: APIKeyCreate,
-    current_user: User = Depends(require_role(Role.ADMIN)),
+    current_user: User = Depends(require_permission("POST", "/api-keys")),
     db: Session = Depends(get_database),
 ) -> APIKeyCreateResponse:
     """
     Create a new API key.
 
-    **Only ADMIN users can create API keys.**
+    **SUPER_ADMIN and ADMIN users can create API keys.**
+    - SUPER_ADMIN: Can create API keys for any tenant
+    - ADMIN: Can create API keys for their own tenant
 
     ⚠️ **IMPORTANT**: The complete API key is returned ONLY ONCE.
     Save it securely - you won't be able to see it again!
@@ -45,7 +47,7 @@ async def create_api_key(
 
     Args:
         api_key_in: API key creation data
-        current_user: Current authenticated user (ADMIN only)
+        current_user: Current authenticated user (SUPER_ADMIN or ADMIN)
         db: Database session
 
     Returns:
@@ -92,13 +94,13 @@ async def list_api_keys(
     limit: int = 100,
     is_active: bool | None = None,
     tenant_id: int | None = None,
-    current_user: User = Depends(require_role(Role.ADMIN)),
+    current_user: User = Depends(require_permission("GET", "/api-keys")),
     db: Session = Depends(get_database),
 ) -> APIKeyListResponse:
     """
     List API keys for current user's tenant.
 
-    **Only ADMIN users can list API keys.**
+    **SUPER_ADMIN and ADMIN users can list API keys.**
 
     If the current user has SUPER_ADMIN role, they can optionally specify
     a tenant_id to view API keys from any tenant. Otherwise, keys are
@@ -109,7 +111,7 @@ async def list_api_keys(
         limit: Maximum records to return (max 100)
         is_active: Filter by active status (optional)
         tenant_id: Tenant ID to filter by (SUPER_ADMIN only, optional)
-        current_user: Current authenticated user (ADMIN only)
+        current_user: Current authenticated user (SUPER_ADMIN or ADMIN)
         db: Database session
 
     Returns:
@@ -150,20 +152,20 @@ async def list_api_keys(
 @router.get("/{api_key_id}", response_model=APIKeyResponse, tags=["api-keys"])
 async def get_api_key(
     api_key_id: int,
-    current_user: User = Depends(require_role(Role.ADMIN)),
+    current_user: User = Depends(require_permission("GET", "/api-keys/*")),
     db: Session = Depends(get_database),
 ) -> APIKeyResponse:
     """
     Get API key details by ID.
 
-    **Only ADMIN users can access this endpoint.**
+    **SUPER_ADMIN and ADMIN users can access this endpoint.**
 
     Regular admins can only view API keys from their own tenant.
     SuperAdmins can view API keys from any tenant.
 
     Args:
         api_key_id: API key ID
-        current_user: Current authenticated user (ADMIN only)
+        current_user: Current authenticated user (SUPER_ADMIN or ADMIN)
         db: Database session
 
     Returns:
@@ -197,13 +199,13 @@ async def get_api_key(
 async def update_api_key(
     api_key_id: int,
     api_key_update: APIKeyUpdate,
-    current_user: User = Depends(require_role(Role.ADMIN)),
+    current_user: User = Depends(require_permission("PATCH", "/api-keys/*")),
     db: Session = Depends(get_database),
 ) -> APIKeyResponse:
     """
     Update an API key.
 
-    **Only ADMIN users can update API keys.**
+    **SUPER_ADMIN and ADMIN users can update API keys.**
 
     You can update the name, active status, and expiration date.
     You cannot change the role or regenerate the key itself.
@@ -214,7 +216,7 @@ async def update_api_key(
     Args:
         api_key_id: API key ID
         api_key_update: Update data
-        current_user: Current authenticated user (ADMIN only)
+        current_user: Current authenticated user (SUPER_ADMIN or ADMIN)
         db: Database session
 
     Returns:
@@ -259,13 +261,13 @@ async def update_api_key(
 )
 async def revoke_api_key(
     api_key_id: int,
-    current_user: User = Depends(require_role(Role.ADMIN)),
+    current_user: User = Depends(require_permission("DELETE", "/api-keys/*")),
     db: Session = Depends(get_database),
 ) -> None:
     """
     Revoke (deactivate) an API key.
 
-    **Only ADMIN users can revoke API keys.**
+    **SUPER_ADMIN and ADMIN users can revoke API keys.**
 
     This marks the API key as inactive. It cannot be reactivated -
     you must create a new key if needed.
@@ -277,7 +279,7 @@ async def revoke_api_key(
 
     Args:
         api_key_id: API key ID to revoke
-        current_user: Current authenticated user (ADMIN only)
+        current_user: Current authenticated user (SUPER_ADMIN or ADMIN)
         db: Database session
 
     Raises:
