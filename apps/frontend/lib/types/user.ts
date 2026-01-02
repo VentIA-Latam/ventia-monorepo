@@ -19,7 +19,7 @@ export interface UserListResponse {
 export interface UserCreate {
   name: string;
   email: string;
-  password: string;
+  password?: string; // Optional: Auth0 handles password via email invitation
   role: 'SUPER_ADMIN' | 'ADMIN' | 'LOGISTICA';
   tenant_id?: number | null;
 }
