@@ -11,7 +11,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 class TenantBase(BaseModel):
     """Base tenant schema with common fields."""
 
-    name: str = Field(..., min_length=1, max_length=100, description="Company name")
+    name: str = Field(..., min_length=1, max_length=100,
+                      description="Company name")
     slug: str = Field(
         ...,
         min_length=1,
@@ -34,7 +35,8 @@ class TenantBase(BaseModel):
     def validate_shopify_url(cls, v: Optional[str]) -> Optional[str]:
         """Validate Shopify store URL format."""
         if v and not v.startswith(("http://", "https://")):
-            raise ValueError("Shopify store URL must start with http:// or https://")
+            raise ValueError(
+                "Shopify store URL must start with http:// or https://")
         return v
 
 
@@ -61,7 +63,8 @@ class TenantCreate(BaseModel):
     but is automatically encrypted by the Tenant model before storage.
     """
 
-    name: str = Field(..., min_length=1, max_length=100, description="Company name (required)")
+    name: str = Field(..., min_length=1, max_length=100,
+                      description="Company name (required)")
     slug: Optional[str] = Field(
         None,
         min_length=1,
@@ -74,7 +77,11 @@ class TenantCreate(BaseModel):
     )
     shopify_store_url: Optional[str] = Field(
         None, description="Shopify store URL (optional, e.g., 'https://my-store.myshopify.com')"
+    shopify_store_url: Optional[str] = Field(
+        None, description="Shopify store URL (optional, e.g., 'https://my-store.myshopify.com')"
     )
+    shopify_access_token: Optional[str] = Field(
+        None, description="Shopify Admin API access token (optional, plaintext - will be encrypted before storage)"
     shopify_access_token: Optional[str] = Field(
         None, description="Shopify Admin API access token (optional, plaintext - will be encrypted before storage)"
     )
@@ -85,13 +92,18 @@ class TenantCreate(BaseModel):
     @field_validator("shopify_store_url", mode="before")
     @classmethod
     def validate_shopify_url(cls, v: Optional[str]) -> Optional[str]:
+    def validate_shopify_url(cls, v: Optional[str]) -> Optional[str]:
         """Validate Shopify store URL format."""
+        # Allow None or empty string (optional field)
         # Allow None or empty string (optional field)
         if not v:
             return None
         # If provided, must be a valid URL
+            return None
+        # If provided, must be a valid URL
         if not v.startswith(("http://", "https://")):
-            raise ValueError("Shopify store URL must start with http:// or https://")
+            raise ValueError(
+                "Shopify store URL must start with http:// or https://")
         return v
 
     @field_validator("slug", mode="before")
@@ -100,7 +112,10 @@ class TenantCreate(BaseModel):
         """Validate slug format if provided."""
         # Allow None or empty string (will be auto-generated from name)
         if not v:
+        # Allow None or empty string (will be auto-generated from name)
+        if not v:
             return None
+        # If provided with a value, validate format
         # If provided with a value, validate format
         if not v.islower():
             raise ValueError("Slug must be lowercase (kebab-case)")
@@ -146,7 +161,8 @@ class TenantUpdate(BaseModel):
     def validate_shopify_url(cls, v: Optional[str]) -> Optional[str]:
         """Validate Shopify store URL format."""
         if v and not v.startswith(("http://", "https://")):
-            raise ValueError("Shopify store URL must start with http:// or https://")
+            raise ValueError(
+                "Shopify store URL must start with http:// or https://")
         return v
 
 
@@ -177,14 +193,17 @@ class TenantDetailResponse(TenantResponse):
     Used for detail views that include user and order counts.
     """
 
-    user_count: int = Field(..., description="Number of active users in this tenant")
-    order_count: int = Field(..., description="Total number of orders for this tenant")
+    user_count: int = Field(...,
+                            description="Number of active users in this tenant")
+    order_count: int = Field(...,
+                             description="Total number of orders for this tenant")
 
 
 class TenantListResponse(BaseModel):
     """Schema for paginated list of tenants."""
 
-    total: int = Field(..., description="Total number of tenants matching the filter")
+    total: int = Field(...,
+                       description="Total number of tenants matching the filter")
     items: list[TenantResponse]
     skip: int = Field(..., description="Number of records skipped")
     limit: int = Field(..., description="Maximum number of records returned")
