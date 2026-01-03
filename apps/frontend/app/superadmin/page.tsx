@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Building2, Users, Key, Shield, Package, Activity, TrendingUp, Clock, AlertTriangle, ArrowUpRight, Search, CheckCircle2 } from "lucide-react";
+import { Building2, Users, Key, Shield, Package, Activity, TrendingUp, Clock, AlertTriangle, ArrowUpRight, Search, CheckCircle2, TrendingDown } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -114,7 +114,7 @@ export default function SuperAdminDashboard() {
       {/* Platform Stats */}
       {!loading && platformStats && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="hover:shadow-lg transition-shadow border-l-4 border-l-blue-500">
+          <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">
                 Empresas Activas
@@ -124,13 +124,13 @@ export default function SuperAdminDashboard() {
             <CardContent>
               <div className="text-3xl font-bold">{platformStats.total_tenants}</div>
               <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                <TrendingUp className="h-3 w-3 text-green-600" />
+                <TrendingDown className="h-3 w-3 text-red-600" />
                 {inactiveTenants.length} inactivos
               </p>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow border-l-4 border-l-green-500">
+          <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">
                 Total Usuarios
@@ -145,7 +145,7 @@ export default function SuperAdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow border-l-4 border-l-purple-500">
+          <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">
                 API Keys Activas
@@ -160,7 +160,7 @@ export default function SuperAdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow border-l-4 border-l-orange-500">
+          <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">
                 Super Admins

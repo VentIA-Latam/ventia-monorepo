@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { ShoppingBag, AlertCircle, Truck, DollarSign } from "lucide-react";
 import { DashboardMetrics, PeriodType } from "@/lib/services/metrics-service";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface DashboardClientProps {
   initialMetrics: DashboardMetrics;
@@ -64,19 +71,23 @@ export function DashboardClient({ initialMetrics }: DashboardClientProps) {
           <label className="text-sm font-medium text-muted-foreground">
             Periodo:
           </label>
-          <select
+          <Select
             value={selectedPeriod}
-            onChange={(e) => handlePeriodChange(e.target.value as PeriodType)}
-            className="px-4 py-2 border rounded-lg bg-background min-w-[180px] font-medium"
+            onValueChange={(value) => handlePeriodChange(value as PeriodType)}
           >
-            {Object.entries(PERIOD_LABELS).map(([value, label]) => (
-              value !== 'custom' && (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              )
-            ))}
-          </select>
+            <SelectTrigger className="px-4 py-2 border rounded-lg bg-background min-w-[180px] font-medium">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(PERIOD_LABELS).map(([value, label]) => (
+                value !== 'custom' && (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                )
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -84,7 +95,7 @@ export function DashboardClient({ initialMetrics }: DashboardClientProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatsCard
           title="Total Pedidos"
-          value={initialMetrics.total_orders.toLocaleString()}
+          value={initialMetrics.total_orders.toLocaleString('es-PE')}
           icon={<ShoppingBag className="w-5 h-5" />}
           // change="+5%"  // TODO: Calcular cambio vs periodo anterior
           // changeType="positive"

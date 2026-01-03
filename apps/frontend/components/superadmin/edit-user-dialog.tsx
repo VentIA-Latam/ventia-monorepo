@@ -12,6 +12,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { User, UserUpdate } from "@/lib/types/user";
@@ -100,11 +107,16 @@ export function EditUserDialog({ user, open, onOpenChange, onSuccess }: EditUser
             </div>
             <div className="grid gap-2">
               <Label htmlFor="role">Rol</Label>
-              <select id="role" className="border rounded px-2 py-1" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value as UserUpdate["role"] })} required>
-                <option value="SUPER_ADMIN">Super Admin</option>
-                <option value="ADMIN">Admin</option>
-                <option value="LOGISTICA">Logística</option>
-              </select>
+              <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as UserUpdate["role"] })} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar rol" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                  <SelectItem value="LOGISTICA">Logística</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>

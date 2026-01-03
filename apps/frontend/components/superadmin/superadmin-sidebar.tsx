@@ -203,6 +203,7 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-gray-100" />
+                {/*                 
                 <DropdownMenuGroup>
                   <DropdownMenuItem className="text-gray-600 focus:text-gray-900 cursor-pointer">
                     <Settings className="mr-2 h-4 w-4" />
@@ -213,7 +214,7 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
                     Notificaciones
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
-                <DropdownMenuSeparator className="bg-gray-100" />
+                <DropdownMenuSeparator className="bg-gray-100" /> */}
                 <DropdownMenuItem
                   onClick={handleLogout}
                   className="text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer"

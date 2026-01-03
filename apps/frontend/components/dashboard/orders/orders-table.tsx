@@ -137,7 +137,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                 </Badge>
               </TableCell> */}
               <TableCell className="text-right font-semibold pr-5">
-                {order.currency}{order.amount.toLocaleString()}
+                {order.currency}{order.amount.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </TableCell>
             </TableRow>
           ))}

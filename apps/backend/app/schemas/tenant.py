@@ -77,11 +77,13 @@ class TenantCreate(BaseModel):
     )
     shopify_store_url: Optional[str] = Field(
         None, description="Shopify store URL (optional, e.g., 'https://my-store.myshopify.com')"
+    )
     shopify_store_url: Optional[str] = Field(
         None, description="Shopify store URL (optional, e.g., 'https://my-store.myshopify.com')"
     )
     shopify_access_token: Optional[str] = Field(
         None, description="Shopify Admin API access token (optional, plaintext - will be encrypted before storage)"
+    )
     shopify_access_token: Optional[str] = Field(
         None, description="Shopify Admin API access token (optional, plaintext - will be encrypted before storage)"
     )
@@ -91,7 +93,6 @@ class TenantCreate(BaseModel):
 
     @field_validator("shopify_store_url", mode="before")
     @classmethod
-    def validate_shopify_url(cls, v: Optional[str]) -> Optional[str]:
     def validate_shopify_url(cls, v: Optional[str]) -> Optional[str]:
         """Validate Shopify store URL format."""
         # Allow None or empty string (optional field)
@@ -110,8 +111,7 @@ class TenantCreate(BaseModel):
     @classmethod
     def validate_slug(cls, v: Optional[str]) -> Optional[str]:
         """Validate slug format if provided."""
-        # Allow None or empty string (will be auto-generated from name)
-        if not v:
+
         # Allow None or empty string (will be auto-generated from name)
         if not v:
             return None
