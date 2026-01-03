@@ -68,6 +68,30 @@ export async function proxy(request: Request) {
 
       return Response.redirect(loginUrl);
     }
+
+    // Check if user is SUPER_ADMIN and redirect them away from dashboard
+    try {
+      const apiUrl = new URL('/api/users/me', request.url);
+      const userResponse = await fetch(apiUrl.toString(), {
+        headers: {
+          Cookie: request.headers.get('cookie') || '',
+        },
+      });
+
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        const userRole = userData.role?.toUpperCase();
+
+        // If SUPER_ADMIN, redirect to superadmin dashboard
+        if (userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN') {
+          console.log(`Redirecting SUPER_ADMIN from ${url.pathname} to /superadmin`);
+          return Response.redirect(new URL('/superadmin', request.url));
+        }
+      }
+    } catch (error) {
+      console.error('Error checking dashboard access:', error);
+      // Continue to page on error, better to allow access than block incorrectly
+    }
   }
 
   // Continue to the page
