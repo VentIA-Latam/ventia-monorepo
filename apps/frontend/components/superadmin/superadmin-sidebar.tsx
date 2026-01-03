@@ -204,14 +204,6 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-gray-100" />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    onClick={() => window.location.href = '/dashboard'}
-                    className="text-blue-600 focus:text-blue-700 focus:bg-blue-50 cursor-pointer"
-                  >
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Volver al Dashboard
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-gray-100" />
                   <DropdownMenuItem className="text-gray-600 focus:text-gray-900 cursor-pointer">
                     <Settings className="mr-2 h-4 w-4" />
                     Configuración de cuenta

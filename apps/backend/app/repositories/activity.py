@@ -36,8 +36,9 @@ class ActivityRepository:
         for user in users:
             # Determine which is more recent: created_at or updated_at
             most_recent = user.updated_at if user.updated_at else user.created_at
-            operation = "UPDATED" if (user.updated_at and user.updated_at > user.created_at) else "CREATED"
-            
+            operation = "UPDATED" if (
+                user.updated_at and user.updated_at > user.created_at) else "CREATED"
+
             activities.append({
                 "id": user.id,
                 "entity_type": "user",
@@ -50,13 +51,14 @@ class ActivityRepository:
         tenants = db.query(Tenant).all()
         for tenant in tenants:
             most_recent = tenant.updated_at if tenant.updated_at else tenant.created_at
-            operation = "UPDATED" if (tenant.updated_at and tenant.updated_at > tenant.created_at) else "CREATED"
-            
+            operation = "UPDATED" if (
+                tenant.updated_at and tenant.updated_at > tenant.created_at) else "CREATED"
+
             activities.append({
                 "id": tenant.id,
                 "entity_type": "tenant",
                 "operation": operation,
-                "description": f"Tenant: {tenant.name} ({tenant.slug})",
+                "description": f"Empresa: {tenant.name} ({tenant.slug})",
                 "timestamp": most_recent,
             })
 
@@ -64,8 +66,9 @@ class ActivityRepository:
         orders = db.query(Order).all()
         for order in orders:
             most_recent = order.updated_at if order.updated_at else order.created_at
-            operation = "UPDATED" if (order.updated_at and order.updated_at > order.created_at) else "CREATED"
-            
+            operation = "UPDATED" if (
+                order.updated_at and order.updated_at > order.created_at) else "CREATED"
+
             activities.append({
                 "id": order.id,
                 "entity_type": "order",
@@ -78,8 +81,9 @@ class ActivityRepository:
         api_keys = db.query(APIKey).all()
         for api_key in api_keys:
             most_recent = api_key.updated_at if api_key.updated_at else api_key.created_at
-            operation = "UPDATED" if (api_key.updated_at and api_key.updated_at > api_key.created_at) else "CREATED"
-            
+            operation = "UPDATED" if (
+                api_key.updated_at and api_key.updated_at > api_key.created_at) else "CREATED"
+
             activities.append({
                 "id": api_key.id,
                 "entity_type": "api_key",
@@ -95,4 +99,3 @@ class ActivityRepository:
 
 # Create singleton instance
 activity_repository = ActivityRepository()
-

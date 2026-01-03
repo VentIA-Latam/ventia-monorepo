@@ -32,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es">
       <body
         className={`${inter.variable} ${libre.variable} ${sourceSans.variable} font-sans`}
+        suppressHydrationWarning
       >
         <Auth0Provider>
           {children}

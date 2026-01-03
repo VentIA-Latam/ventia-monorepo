@@ -30,17 +30,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { APIKey } from "@/lib/types/api-key";
-import { CreateAPIKeyDialog } from "@/components/superadmin/create-api-key-dialog";
+import { CreateAPIKeyDialog } from "@/components/dashboard/create-api-key-dialog";
 import { RevokeAPIKeyDialog } from "@/components/superadmin/revoke-api-key-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info } from "lucide-react";
+import { Info, BookOpen } from "lucide-react";
 
-export default function SuperAdminAPIKeysPage() {
+export default function TenantAPIKeysPage() {
   const [apiKeys, setApiKeys] = useState<APIKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [tenantFilter, setTenantFilter] = useState<string>("all");
 
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -49,18 +48,16 @@ export default function SuperAdminAPIKeysPage() {
 
   useEffect(() => {
     fetchAPIKeys();
-  }, [statusFilter, tenantFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter]);
 
   const fetchAPIKeys = async () => {
     try {
       setLoading(true);
-      let url = `/api/superadmin/api-keys?limit=100`;
+      let url = `/api/dashboard/api-keys?limit=100`;
 
       if (statusFilter !== "all") {
         url += `&is_active=${statusFilter === "active"}`;
-      }
-      if (tenantFilter !== "all") {
-        url += `&tenant_id=${tenantFilter}`;
       }
 
       const response = await fetch(url);
@@ -135,7 +132,7 @@ export default function SuperAdminAPIKeysPage() {
             API Keys
           </h1>
           <p className="text-gray-600 mt-1">
-            Gestiona las claves de API para integraciones externas (n8n, webhooks, etc.)
+            Gestiona las claves de API para integraciones (n8n, webhooks, etc.)
           </p>
         </div>
         <Button onClick={() => setCreateDialogOpen(true)}>
@@ -144,11 +141,22 @@ export default function SuperAdminAPIKeysPage() {
         </Button>
       </div>
 
+      {/* Documentation Alert */}
       <Alert className="bg-blue-50 border-blue-200">
         <Info className="h-4 w-4 text-blue-600" />
         <AlertDescription className="text-blue-800">
-          <b>Documentación para n8n:</b> Las API Keys permiten autenticación en workflows.
-          Usa el header <code className="bg-blue-100 px-1 rounded">X-API-Key: tu_clave</code> en tus requests HTTP.
+          <div className="flex items-start gap-2">
+            <BookOpen className="h-4 w-4 mt-0.5 shrink-0" />
+            <div>
+              <b>Cómo usar en n8n:</b>
+              <ol className="list-decimal ml-4 mt-2 space-y-1">
+                <li>Copia tu API Key cuando la crees (solo se muestra una vez)</li>
+                <li>En n8n, usa el nodo &quot;HTTP Request&quot;</li>
+                <li>Añade un header: <code className="bg-blue-100 px-1 rounded">X-API-Key</code> con tu clave</li>
+                <li>URL base: <code className="bg-blue-100 px-1 rounded">{process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}</code></li>
+              </ol>
+            </div>
+          </div>
         </AlertDescription>
       </Alert>
 
@@ -156,7 +164,7 @@ export default function SuperAdminAPIKeysPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Lista de API Keys</CardTitle>
+              <CardTitle>Mis API Keys</CardTitle>
               <CardDescription>
                 {filteredAPIKeys.length} clave{filteredAPIKeys.length !== 1 ? 's' : ''} encontrada{filteredAPIKeys.length !== 1 ? 's' : ''}
               </CardDescription>
@@ -196,7 +204,6 @@ export default function SuperAdminAPIKeysPage() {
                   <TableHead>Nombre</TableHead>
                   <TableHead>Prefijo</TableHead>
                   <TableHead>Rol</TableHead>
-                  <TableHead>Tenant ID</TableHead>
                   <TableHead>Último uso</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Expira</TableHead>
@@ -206,14 +213,14 @@ export default function SuperAdminAPIKeysPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                       Cargando API Keys...
                     </TableCell>
                   </TableRow>
                 ) : filteredAPIKeys.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                      No se encontraron API Keys
+                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                      {searchTerm ? "No se encontraron API Keys" : "No tienes API Keys aún. Crea una para empezar."}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -230,7 +237,6 @@ export default function SuperAdminAPIKeysPage() {
                           {apiKey.role}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-gray-600">{apiKey.tenant_id}</TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           {getLastUsedBadge(apiKey.last_used_at)}
@@ -287,7 +293,7 @@ export default function SuperAdminAPIKeysPage() {
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onSuccess={fetchAPIKeys}
-        apiEndpoint="/api/superadmin/api-keys"
+        apiEndpoint="/api/dashboard/api-keys"
       />
 
       <RevokeAPIKeyDialog
@@ -295,7 +301,7 @@ export default function SuperAdminAPIKeysPage() {
         open={revokeDialogOpen}
         onOpenChange={setRevokeDialogOpen}
         onSuccess={fetchAPIKeys}
-        apiEndpoint="/api/superadmin/api-keys"
+        apiEndpoint="/api/dashboard/api-keys"
       />
     </div>
   );
