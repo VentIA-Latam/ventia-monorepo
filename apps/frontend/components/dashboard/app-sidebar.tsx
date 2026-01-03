@@ -15,6 +15,7 @@ import {
   ShoppingCart,
   Bot,
   Shield,
+  Key,
 } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Image from "next/image"
@@ -68,11 +69,11 @@ const dataPlatform = [
       icon: Users,
       locked: true,
     }, */
-  {
-    title: "Pagos",
-    url: "/dashboard/payments",
-    icon: CreditCard,
-  },
+  // {
+  //   title: "Pagos",
+  //   url: "/dashboard/payments",
+  //   icon: CreditCard,
+  // },
   /*   {
       title: "Mi vendedor",
       url: "/dashboard/assistant",
@@ -295,14 +296,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-gray-100" />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem className="text-gray-600 focus:text-gray-900 cursor-pointer">
+                  {/* <DropdownMenuItem className="text-gray-600 focus:text-gray-900 cursor-pointer">
                     <Settings className="mr-2 h-4 w-4" />
                     Configuración de cuenta
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="text-gray-600 focus:text-gray-900 cursor-pointer">
+                  </DropdownMenuItem> */}
+                  {!isSuperAdmin && (
+                    <DropdownMenuItem
+                      onClick={() => window.location.href = '/dashboard/settings/api-keys'}
+                      className="text-gray-600 focus:text-gray-900 cursor-pointer"
+                    >
+                      <Key className="mr-2 h-4 w-4" />
+                      Credenciales (API Key)
+                    </DropdownMenuItem>
+                  )}
+                  {/* <DropdownMenuItem className="text-gray-600 focus:text-gray-900 cursor-pointer">
                     <Bell className="mr-2 h-4 w-4" />
                     Notificaciones
-                  </DropdownMenuItem>
+                  </DropdownMenuItem> */}
                   {isSuperAdmin && (
                     <>
                       <DropdownMenuSeparator className="bg-gray-100" />

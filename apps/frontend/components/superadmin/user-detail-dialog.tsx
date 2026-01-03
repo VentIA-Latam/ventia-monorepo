@@ -43,11 +43,11 @@ export function UserDetailDialog({ user, open, onOpenChange }: UserDetailDialogP
             </div>
             <div>
               <div className="text-xs text-gray-500 mb-1">Creado</div>
-              <div className="text-sm">{user.created_at ? new Date(user.created_at).toLocaleString() : "-"}</div>
+              <div className="text-sm">{user.created_at ? new Date(user.created_at).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }) : "-"}</div>
             </div>
             <div>
               <div className="text-xs text-gray-500 mb-1">Actualizado</div>
-              <div className="text-sm">{user.updated_at ? new Date(user.updated_at).toLocaleString() : "-"}</div>
+              <div className="text-sm">{user.updated_at ? new Date(user.updated_at).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }) : "-"}</div>
             </div>
           </div>
         </div>

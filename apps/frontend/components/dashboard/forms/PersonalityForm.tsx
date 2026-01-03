@@ -4,6 +4,13 @@ import { useState } from "react";
 import { FaInfoCircle } from "react-icons/fa";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 import { HiOutlineEmojiHappy } from "react-icons/hi";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface PersonalityFormData {
   // Personality section
@@ -170,19 +177,22 @@ export default function PersonalityForm({
               País de operación
               <span className="text-red-500 ml-1">*</span>
             </label>
-            <select
+            <Select
               value={formData.operationCountry}
-              onChange={(e) => handleChange("operationCountry", e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] bg-gray-50"
+              onValueChange={(value) => handleChange("operationCountry", value)}
             >
-              <option value="">Seleccionar país</option>
-              <option value="PE">🇵🇪 Perú</option>
-              <option value="MX">🇲🇽 México</option>
-              <option value="CO">🇨🇴 Colombia</option>
-              <option value="AR">🇦🇷 Argentina</option>
-              <option value="CL">🇨🇱 Chile</option>
-              <option value="ES">🇪🇸 España</option>
-            </select>
+              <SelectTrigger className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] bg-gray-50">
+                <SelectValue placeholder="Seleccionar país" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PE">🇵🇪 Perú</SelectItem>
+                <SelectItem value="MX">🇲🇽 México</SelectItem>
+                <SelectItem value="CO">🇨🇴 Colombia</SelectItem>
+                <SelectItem value="AR">🇦🇷 Argentina</SelectItem>
+                <SelectItem value="CL">🇨🇱 Chile</SelectItem>
+                <SelectItem value="ES">🇪🇸 España</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

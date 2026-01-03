@@ -55,7 +55,7 @@ export function RecentActivityTable({ orders }: RecentActivityTableProps) {
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50/60">
-              <TableHead className="text-xs font-semibold uppercase">ID Pedido</TableHead>
+              <TableHead className="text-xs font-semibold uppercase pl-5">ID Pedido</TableHead>
               <TableHead className="text-xs font-semibold uppercase">Cliente</TableHead>
               <TableHead className="text-xs font-semibold uppercase">Fecha</TableHead>
               <TableHead className="text-xs font-semibold uppercase">Monto</TableHead>
@@ -73,7 +73,7 @@ export function RecentActivityTable({ orders }: RecentActivityTableProps) {
             ) : (
               orders.map((order) => (
                 <TableRow key={order.id} className="hover:bg-slate-50/60">
-                  <TableCell className="font-medium text-sm">
+                  <TableCell className="font-medium text-sm pl-5">
                     {order.shopify_draft_order_id}
                   </TableCell>
                   <TableCell className="text-sm text-gray-700">
@@ -83,7 +83,7 @@ export function RecentActivityTable({ orders }: RecentActivityTableProps) {
                     {formatDate(order.created_at)}
                   </TableCell>
                   <TableCell className="text-sm font-semibold">
-                    {order.currency}{order.total_price.toLocaleString()}
+                    {order.currency} {order.total_price.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </TableCell>
                   <TableCell>
                     <Badge
