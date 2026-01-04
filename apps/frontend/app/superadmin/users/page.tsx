@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { User } from "@/lib/types/user";
+import { Tenant } from "@/lib/types/tenant";
 import { CreateUserDialog } from "@/components/superadmin/create-user-dialog";
 import { EditUserDialog } from "@/components/superadmin/edit-user-dialog";
 import {
@@ -35,6 +36,7 @@ import { UserDetailDialog } from "@/components/superadmin/user-detail-dialog";
 export default function UsersPage() {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -47,6 +49,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     fetchUsers();
+    fetchTenants();
   }, []);
 
   const fetchUsers = async () => {
@@ -64,6 +67,18 @@ export default function UsersPage() {
     }
   };
 
+  const fetchTenants = async () => {
+    try {
+      const response = await fetch("/api/superadmin/tenants");
+      if (response.ok) {
+        const data = await response.json();
+        setTenants(data.items || []);
+      }
+    } catch {
+      // handle error
+    }
+  };
+
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
     setEditDialogOpen(true);
@@ -76,6 +91,12 @@ export default function UsersPage() {
 
   const handleShowDetail = (user: User) => {
     router.push(`/superadmin/users/${user.id}`);
+  };
+
+  const getTenantName = (tenantId: number | null) => {
+    if (!tenantId) return "—";
+    const tenant = tenants.find(t => t.id === tenantId);
+    return tenant ? tenant.name : "Desconocido";
   };
 
   return (
@@ -97,9 +118,6 @@ export default function UsersPage() {
         </Button>
       </div>
       <Card>
-        <CardHeader>
-          <CardTitle>Usuarios</CardTitle>
-        </CardHeader>
         <CardContent className="p-0">
           {loading ? (
             <div className="flex items-center justify-center py-12">
@@ -116,6 +134,7 @@ export default function UsersPage() {
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Tenant</TableHead>
                   <TableHead>Rol</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Acciones</TableHead>
@@ -126,6 +145,11 @@ export default function UsersPage() {
                   <TableRow key={user.id}>
                     <TableCell>{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
+                    <TableCell>
+                      <span className="text-sm text-gray-600">
+                        {getTenantName(user.tenant_id)}
+                      </span>
+                    </TableCell>
                     <TableCell>{user.role}</TableCell>
                     <TableCell>
                       {user.is_active ? (
@@ -176,12 +200,14 @@ export default function UsersPage() {
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onSuccess={fetchUsers}
+        tenants={tenants}
       />
       <EditUserDialog
         user={selectedUser}
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         onSuccess={fetchUsers}
+        tenants={tenants}
       />
       <ToggleUserStatusDialog
         user={userForStatus}

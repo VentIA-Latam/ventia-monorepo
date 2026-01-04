@@ -37,3 +37,42 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Failed to fetch users', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 }
+
+/**
+ * POST /api/superadmin/users
+ *
+ * Create a new user
+ * Requires SUPER_ADMIN role
+ */
+export async function POST(request: Request) {
+  try {
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    const body = await request.json();
+
+    // Call backend POST /users endpoint
+    const response = await fetch(`${API_URL}/users`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Failed to create user' }));
+      return NextResponse.json({ error: error.detail || 'Failed to create user' }, { status: response.status });
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data, { status: 201 });
+
+  } catch (error) {
+    console.error('Error creating user:', error);
+    return NextResponse.json({ error: 'Failed to create user', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+  }
+}

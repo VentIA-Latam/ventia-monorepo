@@ -22,15 +22,17 @@ import {
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { User, UserUpdate } from "@/lib/types/user";
+import { Tenant } from "@/lib/types/tenant";
 
 interface EditUserDialogProps {
   user: User | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  tenants: Tenant[];
 }
 
-export function EditUserDialog({ user, open, onOpenChange, onSuccess }: EditUserDialogProps) {
+export function EditUserDialog({ user, open, onOpenChange, onSuccess, tenants }: EditUserDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<UserUpdate>({
@@ -104,6 +106,31 @@ export function EditUserDialog({ user, open, onOpenChange, onSuccess }: EditUser
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="tenant">Tenant/Empresa</Label>
+              <Select
+                value={formData.tenant_id?.toString() || "none"}
+                onValueChange={(value) => setFormData({
+                  ...formData,
+                  tenant_id: value === "none" ? null : parseInt(value)
+                })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar tenant" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin tenant (Super Admin)</SelectItem>
+                  {tenants.map((tenant) => (
+                    <SelectItem key={tenant.id} value={tenant.id.toString()}>
+                      {tenant.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                Selecciona el tenant al que pertenecerá el usuario.
+              </p>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="role">Rol</Label>

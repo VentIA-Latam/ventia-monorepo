@@ -22,21 +22,24 @@ import {
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { UserCreate } from "@/lib/types/user";
+import { Tenant } from "@/lib/types/tenant";
 
 interface CreateUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  tenants: Tenant[];
 }
 
-export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDialogProps) {
+export function CreateUserDialog({ open, onOpenChange, onSuccess, tenants }: CreateUserDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<UserCreate>({
+  const [formData, setFormData] = useState<Partial<UserCreate>>({
     name: "",
     email: "",
+    auth0_user_id: "",
     role: "ADMIN",
-    tenant_id: null,
+    tenant_id: undefined,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,7 +59,7 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
         title: "Usuario creado",
         description: "El usuario se ha creado correctamente",
       });
-      setFormData({ name: "", email: "", role: "ADMIN", tenant_id: null });
+      setFormData({ name: "", email: "", auth0_user_id: "", role: "ADMIN", tenant_id: undefined });
       onSuccess();
       onOpenChange(false);
     } catch (error) {
@@ -89,7 +92,45 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
               <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
               <Input id="email" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required />
               <p className="text-xs text-gray-500">
-                Auth0 enviará un email de verificación al usuario para que configure su contraseña
+                Debe coincidir con el email del usuario en Auth0
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="auth0_user_id">Auth0 User ID <span className="text-red-500">*</span></Label>
+              <Input
+                id="auth0_user_id"
+                value={formData.auth0_user_id || ""}
+                onChange={e => setFormData({ ...formData, auth0_user_id: e.target.value })}
+                required
+                placeholder="auth0|..."
+              />
+              <p className="text-xs text-gray-500">
+                ID del usuario creado manualmente en Auth0. Formato: auth0|xxxxx o google-oauth2|xxxxx
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="tenant">Tenant/Empresa <span className="text-red-500">*</span></Label>
+              <Select
+                value={formData.tenant_id?.toString() || ""}
+                onValueChange={(value) => setFormData({
+                  ...formData,
+                  tenant_id: parseInt(value)
+                })}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar tenant" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tenants.map((tenant) => (
+                    <SelectItem key={tenant.id} value={tenant.id.toString()}>
+                      {tenant.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                Todos los usuarios deben estar asociados a un tenant específico
               </p>
             </div>
             <div className="grid gap-2">
