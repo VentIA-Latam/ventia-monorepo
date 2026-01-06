@@ -16,6 +16,7 @@ import {
   Bot,
   Shield,
   Key,
+  Receipt,
 } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Image from "next/image"
@@ -62,6 +63,11 @@ const dataPlatform = [
     url: "/dashboard/orders",
     icon: ShoppingCart,
     hasSubmenu: true,
+  },
+  {
+    title: "Facturación",
+    url: "/dashboard/invoices",
+    icon: Receipt,
   },
   /*   {
       title: "Clientes",
