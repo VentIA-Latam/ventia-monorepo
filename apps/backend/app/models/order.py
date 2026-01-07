@@ -44,6 +44,18 @@ class Order(Base, TimestampMixin):
         comment="Shopify order ID after completion (gid://shopify/Order/...)",
     )
 
+    # Customer document fields for invoicing
+    customer_document_type = Column(
+        String(10),
+        nullable=True,
+        comment="Tipo de documento: DNI o RUC",
+    )
+    customer_document_number = Column(
+        String(11),
+        nullable=True,
+        comment="Número de DNI o RUC del cliente",
+    )
+
     # Order data (inserted by n8n)
     customer_email = Column(String, nullable=False, comment="Customer email address")
     customer_name = Column(String, nullable=True, comment="Customer full name")
@@ -91,6 +103,9 @@ class Order(Base, TimestampMixin):
         nullable=True,
         comment="Dispatch time window (e.g., '09:00-12:00')",
     )
+
+    # Relationships
+    invoices = relationship("Invoice", back_populates="order", cascade="all, delete-orphan")
 
     # Unique constraint: one draft_order_id per tenant
     __table_args__ = (

@@ -15,6 +15,8 @@ class OrderBase(BaseModel):
 
     customer_email: EmailStr = Field(..., description="Customer email")
     customer_name: str | None = Field(None, description="Customer name")
+    customer_document_type: str | None = Field(None, description="Tipo de documento: DNI o RUC")
+    customer_document_number: str | None = Field(None, description="Número de DNI o RUC del cliente")
     total_price: float = Field(..., gt=0, description="Total price (must be > 0)")
     currency: str = Field(default="USD", description="Currency code")
     line_items: list[dict[str, Any]] | None = Field(None, description="Order line items (products)")
@@ -29,9 +31,9 @@ class OrderCreate(OrderBase):
     Schema for creating a new Order.
 
     Used by n8n when inserting draft orders.
+    The tenant_id is automatically set from the authenticated user's tenant.
     """
 
-    tenant_id: int = Field(..., description="Tenant ID")
     shopify_draft_order_id: str = Field(..., description="Shopify draft order ID")
 
 
@@ -40,6 +42,8 @@ class OrderUpdate(BaseModel):
 
     customer_email: EmailStr | None = None
     customer_name: str | None = None
+    customer_document_type: str | None = None
+    customer_document_number: str | None = None
     total_price: float | None = Field(None, gt=0)
     currency: str | None = None
     line_items: list[dict[str, Any]] | None = None

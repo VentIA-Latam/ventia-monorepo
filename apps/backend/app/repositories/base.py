@@ -64,18 +64,20 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         """
         return db.query(self.model).offset(skip).limit(limit).all()
 
-    def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
+    def create(self, db: Session, *, obj_in: CreateSchemaType, **extra_fields: Any) -> ModelType:
         """
         Create a new record.
 
         Args:
             db: Database session
             obj_in: Pydantic schema with data to create
+            **extra_fields: Additional fields to add to the model (e.g., tenant_id from authenticated user)
 
         Returns:
             Created model instance
         """
         obj_in_data = obj_in.model_dump()
+        obj_in_data.update(extra_fields)
         db_obj = self.model(**obj_in_data)
         db.add(db_obj)
         db.commit()

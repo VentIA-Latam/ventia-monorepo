@@ -91,10 +91,10 @@ async def create_order(
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
     Only ADMIN and LOGISTICA roles can create orders.
-    The order is created for the current user's tenant.
+    The order is created for the current user's tenant (tenant_id is obtained from current_user).
 
     Args:
-        order_in: Order creation data (include tenant_id and shopify_draft_order_id)
+        order_in: Order creation data (shopify_draft_order_id and other fields, tenant_id is NOT required)
         current_user: Current authenticated user or API key (ADMIN or LOGISTICA role required)
         db: Database session
 
@@ -111,7 +111,7 @@ async def create_order(
             detail=f"Role '{current_user.role}' is not allowed to create orders. Requires ADMIN or LOGISTICA role.",
         )
     try:
-        created_order = order_service.create_order(db, order_in)
+        created_order = order_service.create_order(db, order_in, tenant_id=current_user.tenant_id)
         return created_order
     except ValueError as e:
         raise HTTPException(

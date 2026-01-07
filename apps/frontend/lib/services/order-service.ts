@@ -9,6 +9,8 @@ export interface Order {
   tenant_id: number;
   shopify_draft_order_id: string;
   shopify_order_id: string | null;
+  customer_document_type: string | null;  // DNI o RUC
+  customer_document_number: string | null;
   customer_email: string;
   customer_name: string | null;
   total_price: number;

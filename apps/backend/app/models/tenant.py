@@ -68,10 +68,19 @@ class Tenant(Base, TimestampMixin):
     is_active = Column(Boolean, default=True, nullable=False, comment="Is tenant active")
     settings = Column(JSON, nullable=True, comment="Additional tenant-specific settings (JSON)")
 
+    # Electronic invoicing (facturación electrónica)
+    efact_ruc = Column(
+        String(11),
+        nullable=True,
+        comment="RUC del tenant para facturación electrónica",
+    )
+
     # Relationships
     users = relationship("User", back_populates="tenant", cascade="all, delete-orphan")
     orders = relationship("Order", back_populates="tenant", cascade="all, delete-orphan")
     api_keys = relationship("APIKey", back_populates="tenant", cascade="all, delete-orphan")
+    invoices = relationship("Invoice", back_populates="tenant", cascade="all, delete-orphan")
+    invoice_series = relationship("InvoiceSerie", back_populates="tenant", cascade="all, delete-orphan")
 
     @property
     def shopify_access_token(self) -> Optional[str]:

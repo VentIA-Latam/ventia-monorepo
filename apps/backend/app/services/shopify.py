@@ -85,7 +85,7 @@ class ShopifyService:
         order.validado = True
         order.validated_at = datetime.utcnow()
         order.shopify_order_id = shopify_result.get("order_id")
-        order.status = "completed"
+        order.status = "Pagado"
 
         # Add optional validation data
         if validate_data:
