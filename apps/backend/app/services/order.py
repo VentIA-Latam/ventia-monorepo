@@ -177,13 +177,14 @@ class OrderService:
             limit=limit,
         )
 
-    def create_order(self, db: Session, order_in: OrderCreate) -> Order:
+    def create_order(self, db: Session, order_in: OrderCreate, tenant_id: int) -> Order:
         """
         Create a new order.
 
         Args:
             db: Database session
             order_in: Order creation data
+            tenant_id: Tenant ID from authenticated user
 
         Returns:
             Created order
@@ -194,16 +195,16 @@ class OrderService:
         # Check if order with same draft_order_id already exists for tenant
         existing = order_repository.get_by_shopify_draft_id(
             db,
-            order_in.tenant_id,
+            tenant_id,
             order_in.shopify_draft_order_id,
         )
         if existing:
             raise ValueError(
                 f"Order with draft order ID {order_in.shopify_draft_order_id} "
-                f"already exists for tenant {order_in.tenant_id}"
+                f"already exists for tenant {tenant_id}"
             )
 
-        return order_repository.create(db, obj_in=order_in)
+        return order_repository.create(db, obj_in=order_in, tenant_id=tenant_id)
 
     def update_order(
         self,

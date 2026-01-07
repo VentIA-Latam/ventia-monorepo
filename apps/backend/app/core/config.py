@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     AUTH0_ISSUER: str
     AUTH0_ALGORITHM: str = "RS256"
 
+    # eFact-OSE (Electronic Invoicing - Peru SUNAT)
+    EFACT_BASE_URL: str = "https://ose-gw1.efact.pe:443/api-efact-ose"
+    EFACT_RUC_VENTIA: str  # Required: RUC of Ventia for OAuth2 username
+    EFACT_PASSWORD_REST: str  # Required: REST password for OAuth2 authentication
+    EFACT_TOKEN_CACHE_HOURS: int = 11  # Token cache duration (eFact tokens last 12h)
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: str | List[str]) -> List[str]:

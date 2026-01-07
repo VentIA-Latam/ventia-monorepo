@@ -110,7 +110,7 @@ export default function SuperAdminAPIKeysPage() {
 
   const getLastUsedBadge = (lastUsedAt: string | null) => {
     if (!lastUsedAt) {
-      return <Badge variant="secondary" className="text-xs">Sin usar</Badge>;
+      return <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700 border-0 rounded-md px-2 py-0.5">Sin usar</Badge>;
     }
 
     const lastUsed = new Date(lastUsedAt);
@@ -118,11 +118,11 @@ export default function SuperAdminAPIKeysPage() {
     const diffHours = Math.floor((now.getTime() - lastUsed.getTime()) / (1000 * 60 * 60));
 
     if (diffHours < 24) {
-      return <Badge className="bg-green-100 text-green-700 text-xs">Reciente</Badge>;
+      return <Badge variant="secondary" className="bg-green-100 text-green-700 border-0 rounded-md px-2 py-0.5 text-xs">Reciente</Badge>;
     } else if (diffHours < 168) { // 7 days
-      return <Badge variant="secondary" className="text-xs">{Math.floor(diffHours / 24)}d atrás</Badge>;
+      return <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 border-0 rounded-md px-2 py-0.5">{Math.floor(diffHours / 24)}d atrás</Badge>;
     } else {
-      return <Badge variant="outline" className="text-xs">Hace más de 1 semana</Badge>;
+      return <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-600 border-0 rounded-md px-2 py-0.5">Hace más de 1 semana</Badge>;
     }
   };
 
@@ -189,18 +189,18 @@ export default function SuperAdminAPIKeysPage() {
           </div>
 
           {/* Table */}
-          <div className="rounded-md border">
+          <div className="border rounded-lg bg-white shadow-sm overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Prefijo</TableHead>
-                  <TableHead>Rol</TableHead>
-                  <TableHead>Tenant ID</TableHead>
-                  <TableHead>Último uso</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Expira</TableHead>
-                  <TableHead className="w-17.5"></TableHead>
+                <TableRow className="bg-gray-50/80 border-b border-gray-200">
+                  <TableHead>NOMBRE</TableHead>
+                  <TableHead>PREFIJO</TableHead>
+                  <TableHead>ROL</TableHead>
+                  <TableHead>TENANT ID</TableHead>
+                  <TableHead>ÚLTIMO USO</TableHead>
+                  <TableHead>ESTADO</TableHead>
+                  <TableHead>EXPIRA</TableHead>
+                  <TableHead>Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -218,19 +218,19 @@ export default function SuperAdminAPIKeysPage() {
                   </TableRow>
                 ) : (
                   filteredAPIKeys.map((apiKey) => (
-                    <TableRow key={apiKey.id}>
-                      <TableCell className="font-medium">{apiKey.name}</TableCell>
+                    <TableRow key={apiKey.id} className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 last:border-0">
+                      <TableCell className="font-medium text-sm text-gray-900">{apiKey.name}</TableCell>
                       <TableCell>
-                        <code className="text-sm bg-gray-100 px-2 py-1 rounded">
+                        <code className="text-sm bg-gray-100 px-2 py-1 rounded text-gray-700">
                           {apiKey.key_prefix}••••••••
                         </code>
                       </TableCell>
                       <TableCell>
-                        <Badge className={getRoleBadgeColor(apiKey.role)}>
+                        <Badge variant="secondary" className={`${getRoleBadgeColor(apiKey.role)} border-0 rounded-md px-3 py-1`}>
                           {apiKey.role}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-gray-600">{apiKey.tenant_id}</TableCell>
+                      <TableCell className="text-sm text-gray-600">{apiKey.tenant_id}</TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           {getLastUsedBadge(apiKey.last_used_at)}
@@ -243,9 +243,13 @@ export default function SuperAdminAPIKeysPage() {
                       </TableCell>
                       <TableCell>
                         {apiKey.is_active ? (
-                          <Badge className="bg-green-100 text-green-700">Activa</Badge>
+                          <Badge variant="secondary" className="bg-green-100 text-green-700 border-0 hover:bg-green-100 rounded-md px-3 py-1">
+                            Activa
+                          </Badge>
                         ) : (
-                          <Badge variant="destructive">Revocada</Badge>
+                          <Badge variant="secondary" className="bg-red-100 text-red-700 border-0 hover:bg-red-100 rounded-md px-3 py-1">
+                            Revocada
+                          </Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-sm text-gray-600">

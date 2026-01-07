@@ -57,15 +57,11 @@ async def create_api_key(
         HTTPException: If name already exists or role is SUPER_ADMIN
     """
     try:
-        # Get tenant info for key generation
-        tenant = current_user.tenant
-
         # Create API key
         api_key, plain_key = api_key_service.create_api_key(
             db=db,
             api_key_in=api_key_in,
             tenant_id=current_user.tenant_id,
-            tenant_slug=tenant.slug,
             created_by_user_id=current_user.id,
         )
 

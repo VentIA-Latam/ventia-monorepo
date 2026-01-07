@@ -3,6 +3,7 @@ API Key service - business logic for API key management.
 """
 
 import secrets
+import uuid
 from datetime import datetime
 
 import bcrypt
@@ -18,19 +19,20 @@ from app.schemas.api_key import APIKeyCreate, APIKeyUpdate
 class APIKeyService:
     """Service for API key-related business logic."""
 
-    def generate_api_key(self, tenant_slug: str) -> str:
+    def generate_api_key(self) -> str:
         """
-        Generate a new API key with format: vnt_{tenant_slug}_{random}.
+        Generate a new API key with format: vnt_{uuid8}_{random}.
 
-        Args:
-            tenant_slug: Tenant slug for identification
+        The UUID ensures uniqueness of the key prefix.
 
         Returns:
             Complete API key string
         """
-        # Generate 24 random URL-safe characters
+        # Generate 8-character hex UUID for unique prefix
+        unique_id = uuid.uuid4().hex[:8]
+        # Generate 24 random URL-safe characters for security
         random_part = secrets.token_urlsafe(24)
-        return f"vnt_{tenant_slug}_{random_part}"
+        return f"vnt_{unique_id}_{random_part}"
 
     def hash_key(self, key: str) -> str:
         """
@@ -82,7 +84,6 @@ class APIKeyService:
         db: Session,
         api_key_in: APIKeyCreate,
         tenant_id: int,
-        tenant_slug: str,
         created_by_user_id: int,
     ) -> tuple[APIKey, str]:
         """
@@ -92,7 +93,6 @@ class APIKeyService:
             db: Database session
             api_key_in: API key creation data
             tenant_id: Tenant ID this key belongs to
-            tenant_slug: Tenant slug for key generation
             created_by_user_id: ID of user creating the key
 
         Returns:
@@ -112,7 +112,7 @@ class APIKeyService:
             )
 
         # Generate API key
-        plain_key = self.generate_api_key(tenant_slug)
+        plain_key = self.generate_api_key()
         key_hash = self.hash_key(plain_key)
         key_prefix = self.extract_prefix(plain_key)
 

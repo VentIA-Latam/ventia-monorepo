@@ -181,97 +181,97 @@ export default function TenantsPage() {
               <p className="text-gray-500">No se encontraron empresas</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Identificador</TableHead>
-                  <TableHead>ID de Empresa</TableHead>
-                  <TableHead>Tienda Shopify</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredTenants.map((tenant) => (
-                  <TableRow key={tenant.id}>
-                    <TableCell className="font-medium">{tenant.name}</TableCell>
-                    <TableCell>
-                      <code className="text-xs bg-gray-100 px-2 py-1 rounded">
-                        {tenant.slug}
-                      </code>
-                    </TableCell>
-                    <TableCell>
-                      {tenant.company_id ? (
-                        <span className="text-sm">{tenant.company_id}</span>
-                      ) : (
-                        <span className="text-gray-400 text-sm">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {tenant.shopify_store_url ? (
-                        <a
-                          href={tenant.shopify_store_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline text-sm"
-                        >
-                          {new URL(tenant.shopify_store_url).hostname}
-                        </a>
-                      ) : (
-                        <span className="text-gray-400 text-sm">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {tenant.is_platform ? (
-                        <Badge variant="secondary" className="bg-purple-100 text-purple-700">
-                          Plataforma
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline">Regular</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {tenant.is_active ? (
-                        <Badge className="bg-green-100 text-green-700">Activo</Badge>
-                      ) : (
-                        <Badge variant="destructive">Inactivo</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleViewDetails(tenant.id)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            Ver detalles
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEditTenant(tenant)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleToggleStatus(tenant)}
-                            className={tenant.is_active ? "text-red-600" : "text-green-600"}
-                          >
-                            <Power className="mr-2 h-4 w-4" />
-                            {tenant.is_active ? "Desactivar" : "Activar"}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+            <div className="border rounded-lg bg-white shadow-sm overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/80 border-b border-gray-200">
+                    <TableHead>NOMBRE</TableHead>
+                    <TableHead>IDENTIFICADOR</TableHead>
+                    <TableHead>TIENDA SHOPIFY</TableHead>
+                    <TableHead>TIPO</TableHead>
+                    <TableHead>ESTADO</TableHead>
+                    <TableHead>ACCIONES</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredTenants.map((tenant) => (
+                    <TableRow key={tenant.id} className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 last:border-0">
+                      <TableCell className="font-medium text-sm text-gray-900">{tenant.name}</TableCell>
+                      <TableCell>
+                        <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-700">
+                          {tenant.slug}
+                        </code>
+                      </TableCell>
+                      <TableCell>
+                        {tenant.shopify_store_url ? (
+                          <a
+                            href={tenant.shopify_store_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline text-sm"
+                          >
+                            {new URL(tenant.shopify_store_url).hostname}
+                          </a>
+                        ) : (
+                          <span className="text-gray-400 text-sm">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {tenant.is_platform ? (
+                          <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-0 hover:bg-purple-100 rounded-md px-3 py-1">
+                            Plataforma
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="bg-gray-100 text-gray-700 border-0 hover:bg-gray-100 rounded-md px-3 py-1">
+                            Empresa
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {tenant.is_active ? (
+                          <Badge variant="secondary" className="bg-green-100 text-green-700 border-0 hover:bg-green-100 rounded-md px-3 py-1">
+                            Activo
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="bg-red-100 text-red-700 border-0 hover:bg-red-100 rounded-md px-3 py-1">
+                            Inactivo
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleViewDetails(tenant.id)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Ver detalles
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditTenant(tenant)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleToggleStatus(tenant)}
+                              className={tenant.is_active ? "text-red-600" : "text-green-600"}
+                            >
+                              <Power className="mr-2 h-4 w-4" />
+                              {tenant.is_active ? "Desactivar" : "Activar"}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

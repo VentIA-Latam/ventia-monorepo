@@ -97,9 +97,6 @@ export default function UsersPage() {
         </Button>
       </div>
       <Card>
-        <CardHeader>
-          <CardTitle>Usuarios</CardTitle>
-        </CardHeader>
         <CardContent className="p-0">
           {loading ? (
             <div className="flex items-center justify-center py-12">
@@ -111,64 +108,72 @@ export default function UsersPage() {
               <p className="text-gray-500">No se encontraron usuarios</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Rol</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.role}</TableCell>
-                    <TableCell>
-                      {user.is_active ? (
-                        <Badge className="bg-green-100 text-green-700">
-                          Activo
-                        </Badge>
-                      ) : (
-                        <Badge variant="destructive">Inactivo</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleShowDetail(user)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            Ver detalles
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleToggleStatus(user)}
-                            className={user.is_active ? "text-red-600" : "text-green-600"}
-                          >
-                            <Power className="mr-2 h-4 w-4" />
-                            {user.is_active ? "Desactivar" : "Activar"}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+            <div className="border rounded-lg bg-white shadow-sm overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/80 border-b border-gray-200">
+                    <TableHead>NOMBRE</TableHead>
+                    <TableHead>EMAIL</TableHead>
+                    <TableHead>ROL</TableHead>
+                    <TableHead>ESTADO</TableHead>
+                    <TableHead >ACCIONES</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id} className="hover:bg-gray-50/50 cursor-pointer transition-colors border-b border-gray-100 last:border-0">
+                      <TableCell className="font-medium text-sm text-gray-900">{user.name}</TableCell>
+                      <TableCell className="text-sm text-gray-600">{user.email}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-0 hover:bg-blue-100 rounded-md px-3 py-1">
+                          {user.role}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {user.is_active ? (
+                          <Badge variant="secondary" className="bg-green-100 text-green-700 border-0 hover:bg-green-100 rounded-md px-3 py-1">
+                            Activo
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="bg-red-100 text-red-700 border-0 hover:bg-red-100 rounded-md px-3 py-1">
+                            Inactivo
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleShowDetail(user)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Ver detalles
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleToggleStatus(user)}
+                              className={user.is_active ? "text-red-600" : "text-green-600"}
+                            >
+                              <Power className="mr-2 h-4 w-4" />
+                              {user.is_active ? "Desactivar" : "Activar"}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
