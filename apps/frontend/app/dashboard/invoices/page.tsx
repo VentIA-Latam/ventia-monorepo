@@ -20,10 +20,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Receipt, Plus, Search, Download, Eye, Filter } from "lucide-react";
+import { Receipt, Plus, Search, Download, Eye, Filter, MoreVertical } from "lucide-react";
 import Link from "next/link";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-// Mock data
+// Mock data - Facturas y Boletas juntas
 const mockInvoices = [
   {
     id: "1",
@@ -40,17 +46,41 @@ const mockInvoices = [
   {
     id: "2",
     serie: "B001",
-    correlativo: "00045",
+    correlativo: "000458",
     type: "Boleta de Venta",
-    client: "Juan Carlos Pérez López",
-    ruc: "20548892",
-    date: "2026-01-04",
-    total: 1450.50,
+    client: "Juan Perez",
+    ruc: "10255280121",
+    date: "2023-10-12",
+    total: 150.00,
     status: "emitido",
     currency: "PEN",
   },
   {
     id: "3",
+    serie: "B001",
+    correlativo: "000459",
+    type: "Boleta de Venta",
+    client: "Ana Castillo",
+    ruc: "41253987",
+    date: "2023-10-12",
+    total: 1250.90,
+    status: "pendiente",
+    currency: "PEN",
+  },
+  {
+    id: "4",
+    serie: "B001",
+    correlativo: "000457",
+    type: "Boleta de Venta",
+    client: "Carlos Lopez",
+    ruc: "20011223322",
+    date: "2023-10-11",
+    total: 45.00,
+    status: "rechazado",
+    currency: "PEN",
+  },
+  {
+    id: "5",
     serie: "F001",
     correlativo: "00122",
     type: "Factura Electrónica",
@@ -58,7 +88,19 @@ const mockInvoices = [
     ruc: "20345678901",
     date: "2026-01-03",
     total: 5200.00,
-    status: "anulado",
+    status: "emitido",
+    currency: "PEN",
+  },
+  {
+    id: "6",
+    serie: "B001",
+    correlativo: "000455",
+    type: "Boleta de Venta",
+    client: "Tech Solutions SAC",
+    ruc: "20558877569",
+    date: "2023-10-10",
+    total: 3450.00,
+    status: "emitido",
     currency: "PEN",
   },
 ];
@@ -69,14 +111,23 @@ export default function InvoicesPage() {
   const [filterStatus, setFilterStatus] = useState("all");
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
-      emitido: { variant: "default", label: "Emitido" },
-      anulado: { variant: "destructive", label: "Anulado" },
-      pendiente: { variant: "secondary", label: "Pendiente" },
+    const variants: Record<string, { className: string; label: string }> = {
+      emitido: {
+        className: "bg-green-100 text-green-700 hover:bg-green-100",
+        label: "Emitido"
+      },
+      rechazado: {
+        className: "bg-red-100 text-red-700 hover:bg-red-100",
+        label: "Rechazado"
+      },
+      pendiente: {
+        className: "bg-yellow-100 text-yellow-700 hover:bg-yellow-100",
+        label: "Pendiente"
+      },
     };
     const config = variants[status] || variants.pendiente;
     return (
-      <Badge variant={config.variant} className="text-xs">
+      <Badge className={`${config.className} text-xs`}>
         {config.label}
       </Badge>
     );
@@ -98,7 +149,7 @@ export default function InvoicesPage() {
         <Link href="/dashboard/invoices/new">
           <Button className="w-full md:w-auto">
             <Plus className="h-4 w-4 mr-2" />
-            Emitir Boleta Manual
+            Emitir Comprobante
           </Button>
         </Link>
       </div>
@@ -144,7 +195,7 @@ export default function InvoicesPage() {
               <SelectContent>
                 <SelectItem value="all">Todos los estados</SelectItem>
                 <SelectItem value="emitido">Emitido</SelectItem>
-                <SelectItem value="anulado">Anulado</SelectItem>
+                <SelectItem value="rechazado">Rechazado</SelectItem>
                 <SelectItem value="pendiente">Pendiente</SelectItem>
               </SelectContent>
             </Select>
@@ -179,7 +230,12 @@ export default function InvoicesPage() {
                   mockInvoices.map((invoice) => (
                     <TableRow key={invoice.id}>
                       <TableCell className="font-medium">
-                        {invoice.serie}-{invoice.correlativo}
+                        <Link
+                          href={`/dashboard/invoices/${invoice.id}`}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {invoice.serie}-{invoice.correlativo}
+                        </Link>
                       </TableCell>
                       <TableCell>{invoice.type}</TableCell>
                       <TableCell className="max-w-[200px] truncate">
@@ -194,14 +250,29 @@ export default function InvoicesPage() {
                       </TableCell>
                       <TableCell>{getStatusBadge(invoice.status)}</TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon-sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon-sm">
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon-sm">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <Link href={`/dashboard/invoices/${invoice.id}`} className="cursor-pointer">
+                                <Eye className="h-4 w-4 mr-2" />
+                                Ver Detalle
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Download className="h-4 w-4 mr-2" />
+                              Descargar PDF
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Download className="h-4 w-4 mr-2" />
+                              Descargar XML
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))
