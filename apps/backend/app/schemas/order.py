@@ -3,11 +3,14 @@ Order schemas.
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.schemas.tenant import TenantResponse
+
+if TYPE_CHECKING:
+    from app.schemas.invoice import InvoiceResponse
 
 
 class OrderBase(BaseModel):
@@ -74,12 +77,19 @@ class OrderResponse(OrderBase):
     - For other roles: typically None (they only see orders from their own tenant)
     - Frontend can display tenant name/slug when available to show which customer the order belongs to
 
+    **Invoice Information:**
+    - `invoices` field is Optional[List[InvoiceResponse]]
+    - Populated when order is retrieved with invoice eager loading
+    - Contains all electronic invoices (facturas, boletas, NC, ND) for this order
+    - Allows viewing complete invoicing history for the order
+
     **Fields:**
     - Standard order fields from OrderBase
     - id, tenant_id, shopify_draft_order_id, shopify_order_id
     - validado, validated_at, status
     - created_at, updated_at
     - tenant: Optional tenant details (populated on join)
+    - invoices: Optional list of invoices for this order
     """
 
     id: int
@@ -92,6 +102,7 @@ class OrderResponse(OrderBase):
     created_at: datetime
     updated_at: datetime
     tenant: Optional[TenantResponse] = Field(None, description="Optional tenant info (populated via join for SUPER_ADMIN)")
+    invoices: Optional[list["InvoiceResponse"]] = Field(None, description="Optional list of invoices for this order (populated via eager loading)")
 
     model_config = ConfigDict(from_attributes=True)
 
