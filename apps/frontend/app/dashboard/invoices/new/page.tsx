@@ -35,6 +35,9 @@ import {
   User,
   ShoppingBag,
   DollarSign,
+  Loader2,
+  XCircle,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -101,6 +104,13 @@ export default function NewInvoicePage() {
   // Estado del modal de confirmación
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [observations, setObservations] = useState<string>("");
+
+  // Estados de emisión
+  type EmissionState = "idle" | "confirming" | "loading" | "success" | "error";
+  const [emissionState, setEmissionState] = useState<EmissionState>("idle");
+  const [emissionError, setEmissionError] = useState<string>("");
+  const [generatedDocumentId, setGeneratedDocumentId] = useState<string>("");
+  const [emissionTimeout, setEmissionTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Series disponibles (mock - debe venir del backend)
   const availableSeries = [
@@ -234,15 +244,62 @@ export default function NewInvoicePage() {
 
   const handleGenerate = () => {
     // Abrir modal de confirmación
+    setEmissionState("confirming");
     setIsConfirmModalOpen(true);
   };
 
-  const handleConfirmEmission = () => {
-    console.log("Emitiendo documento...");
-    console.log("Observaciones:", observations);
-    // Implementar lógica de emisión real
+  const handleConfirmEmission = async () => {
+    // Cambiar a estado loading
+    setEmissionState("loading");
+    setEmissionError("");
+
+    let timedOut = false;
+
+    // Configurar timeout de 30 segundos
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      setEmissionState("error");
+      setEmissionError("Tiempo de espera agotado. El servidor no respondió en 30 segundos. Por favor, intente nuevamente.");
+    }, 30000);
+
+    setEmissionTimeout(timeout);
+
+    try {
+      // Simulación de llamada al API (reemplazar con llamada real)
+      await new Promise((resolve) => setTimeout(resolve, 6000)); // Simular 35 segundos para forzar timeout
+
+      // Limpiar timeout si la respuesta llega antes
+      clearTimeout(timeout);
+
+      // Solo establecer éxito si no hubo timeout
+      if (!timedOut) {
+        // Simulación de respuesta exitosa
+        const mockDocumentId = `${serie}-${correlativo}`;
+        setGeneratedDocumentId(mockDocumentId);
+        setEmissionState("success");
+      }
+
+    } catch (error) {
+      clearTimeout(timeout);
+      if (!timedOut) {
+        setEmissionState("error");
+        setEmissionError("Error al emitir el comprobante. Por favor, verifique los datos e intente nuevamente.");
+      }
+    }
+  };
+
+  const handleCancelEmission = () => {
+    if (emissionTimeout) {
+      clearTimeout(emissionTimeout);
+    }
+    setEmissionState("idle");
     setIsConfirmModalOpen(false);
-    // Aquí iría la llamada al API para generar el documento
+    setEmissionError("");
+  };
+
+  const handleRetryEmission = () => {
+    setEmissionState("confirming");
+    setEmissionError("");
   };
 
   return (
@@ -717,179 +774,363 @@ export default function NewInvoicePage() {
       </div>
 
       {/* Modal de Confirmación de Emisión */}
-      <Dialog open={isConfirmModalOpen} onOpenChange={setIsConfirmModalOpen}>
+      <Dialog open={isConfirmModalOpen} onOpenChange={(open) => {
+        if (!open && emissionState !== "loading") {
+          handleCancelEmission();
+        }
+      }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto backdrop-blur-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <FileText className="h-6 w-6 text-blue-600" />
-              Emitir Boleta Electrónica
-            </DialogTitle>
-            <DialogDescription className="text-sm text-gray-600">
-              Serie: <span className="font-semibold text-blue-600">{serie || "B001"}</span>
-            </DialogDescription>
-          </DialogHeader>
+          {/* Estado: Confirmación */}
+          {emissionState === "confirming" && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-xl">
+                  <FileText className="h-6 w-6 text-blue-600" />
+                  Emitir {documentType === "01" ? "Factura" : "Boleta"} Electrónica
+                </DialogTitle>
+                <DialogDescription className="text-sm text-gray-600">
+                  Serie: <span className="font-semibold text-blue-600">{serie || (documentType === "01" ? "F001" : "B001")}</span>
+                </DialogDescription>
+              </DialogHeader>
 
-          <div className="space-y-6 py-4">
-            {/* Datos del Cliente */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <User className="h-4 w-4" />
-                <span>Datos del Cliente</span>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase">Cliente</p>
-                    <p className="text-sm font-medium text-gray-900">{clientInfo.name}</p>
+              <div className="space-y-6 py-4">
+                {/* Datos del Cliente */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <User className="h-4 w-4" />
+                    <span>Datos del Cliente</span>
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase">{clientInfo.docType} / RUC</p>
-                    <p className="text-sm font-medium text-gray-900">{clientInfo.docNumber}</p>
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase">Cliente</p>
+                        <p className="text-sm font-medium text-gray-900">{clientInfo.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase">{clientInfo.docType} / RUC</p>
+                        <p className="text-sm font-medium text-gray-900">{clientInfo.docNumber}</p>
+                      </div>
+                    </div>
+                    {clientInfo.address && (
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase">Dirección Fiscal</p>
+                        <p className="text-sm text-gray-700">{clientInfo.address}</p>
+                      </div>
+                    )}
+                    {clientInfo.email && (
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase">Email</p>
+                        <p className="text-sm text-gray-700">{clientInfo.email}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
-                {clientInfo.address && (
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase">Dirección Fiscal</p>
-                    <p className="text-sm text-gray-700">{clientInfo.address}</p>
-                  </div>
-                )}
-                {clientInfo.email && (
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase">Email</p>
-                    <p className="text-sm text-gray-700">{clientInfo.email}</p>
-                  </div>
-                )}
-              </div>
-            </div>
 
-            <Separator />
-
-            {/* Detalle de Productos */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <ShoppingBag className="h-4 w-4" />
-                <span>Detalle de Productos</span>
-              </div>
-              <div className="border rounded-lg overflow-hidden">
-                <div className="max-h-[200px] overflow-y-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50 border-b sticky top-0">
-                      <tr>
-                        <th className="text-left py-2 px-3 text-xs font-medium text-gray-600 uppercase">
-                          Producto
-                        </th>
-                        <th className="text-center py-2 px-3 text-xs font-medium text-gray-600 uppercase">
-                          Cant.
-                        </th>
-                        <th className="text-right py-2 px-3 text-xs font-medium text-gray-600 uppercase">
-                          P. Unit.
-                        </th>
-                        <th className="text-right py-2 px-3 text-xs font-medium text-gray-600 uppercase">
-                          Total
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {items.map((item) => (
-                        <tr key={item.id}>
-                          <td className="py-2 px-3 text-gray-900">
-                            {item.description}
-                          </td>
-                          <td className="py-2 px-3 text-center text-gray-700">
-                            {item.quantity}
-                          </td>
-                          <td className="py-2 px-3 text-right text-gray-700">
-                            {currency} {item.unitPrice.toFixed(2)}
-                          </td>
-                          <td className="py-2 px-3 text-right font-medium text-gray-900">
-                            {currency} {item.total.toFixed(2)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Desglose Financiero */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <DollarSign className="h-4 w-4" />
-                <span>Observaciones</span>
-                <span className="text-xs text-gray-500 font-normal">(Opcional)</span>
-              </div>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-sm text-gray-600">Op. Gravada</span>
-                  <span className="text-sm font-medium text-gray-900">
-                    {currency} {subtotal.toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-sm text-gray-600">IGV (18%)</span>
-                  <span className="text-sm font-medium text-gray-900">
-                    {currency} {totalIGV.toFixed(2)}
-                  </span>
-                </div>
-                {globalDiscount > 0 && (
-                  <div className="flex justify-between items-center py-2">
-                    <span className="text-sm text-gray-600">Descuento</span>
-                    <span className="text-sm font-medium text-red-600">
-                      - {currency} {globalDiscount.toFixed(2)}
-                    </span>
-                  </div>
-                )}
                 <Separator />
-                <div className="flex justify-between items-center py-3 bg-blue-50 rounded-lg px-4">
-                  <span className="text-base font-semibold text-gray-900">Total a Pagar</span>
-                  <span className="text-2xl font-bold text-[#2F7CF4]">
-                    {currency} {totalToPay.toFixed(2)}
-                  </span>
+
+                {/* Detalle de Productos */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <ShoppingBag className="h-4 w-4" />
+                    <span>Detalle de Productos</span>
+                  </div>
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="max-h-[200px] overflow-y-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 border-b sticky top-0">
+                          <tr>
+                            <th className="text-left py-2 px-3 text-xs font-medium text-gray-600 uppercase">
+                              Producto
+                            </th>
+                            <th className="text-center py-2 px-3 text-xs font-medium text-gray-600 uppercase">
+                              Cant.
+                            </th>
+                            <th className="text-right py-2 px-3 text-xs font-medium text-gray-600 uppercase">
+                              P. Unit.
+                            </th>
+                            <th className="text-right py-2 px-3 text-xs font-medium text-gray-600 uppercase">
+                              Total
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {items.map((item) => (
+                            <tr key={item.id}>
+                              <td className="py-2 px-3 text-gray-900">
+                                {item.description}
+                              </td>
+                              <td className="py-2 px-3 text-center text-gray-700">
+                                {item.quantity}
+                              </td>
+                              <td className="py-2 px-3 text-right text-gray-700">
+                                {currency} {item.unitPrice.toFixed(2)}
+                              </td>
+                              <td className="py-2 px-3 text-right font-medium text-gray-900">
+                                {currency} {item.total.toFixed(2)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
-                {currency === "USD" && (
-                  <p className="text-xs text-gray-500 text-right">
-                    Equivalente: S/ {(totalToPay * 3.75).toFixed(2)} (T.C: 3.75)
-                  </p>
-                )}
+
+                <Separator />
+
+                {/* Desglose Financiero */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <DollarSign className="h-4 w-4" />
+                    <span>Resumen Financiero</span>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-sm text-gray-600">Op. Gravada</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {currency} {subtotal.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2">
+                      <span className="text-sm text-gray-600">IGV (18%)</span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {currency} {totalIGV.toFixed(2)}
+                      </span>
+                    </div>
+                    {globalDiscount > 0 && (
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-sm text-gray-600">Descuento</span>
+                        <span className="text-sm font-medium text-red-600">
+                          - {currency} {globalDiscount.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    <Separator />
+                    <div className="flex justify-between items-center py-3 bg-blue-50 rounded-lg px-4">
+                      <span className="text-base font-semibold text-gray-900">Total a Pagar</span>
+                      <span className="text-2xl font-bold text-[#2F7CF4]">
+                        {currency} {totalToPay.toFixed(2)}
+                      </span>
+                    </div>
+                    {currency === "USD" && (
+                      <p className="text-xs text-gray-500 text-right">
+                        Equivalente: S/ {(totalToPay * 3.75).toFixed(2)} (T.C: 3.75)
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Observaciones */}
+                <div className="space-y-2">
+                  <Label htmlFor="observations" className="text-sm font-medium text-gray-700">
+                    Observaciones (Opcional)
+                  </Label>
+                  <Textarea
+                    id="observations"
+                    placeholder="Ej: Ingrese notas adicionales para el comprobante (condiciones de pago, referencia interna...)"
+                    value={observations}
+                    onChange={(e) => setObservations(e.target.value)}
+                    className="min-h-[80px] resize-none"
+                  />
+                </div>
               </div>
+
+              <DialogFooter className="gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleCancelEmission}
+                  className="min-w-[120px]"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleConfirmEmission}
+                  className="min-w-[120px] bg-[#2F7CF4] hover:bg-[#2F7CF4]/90"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Emitir {documentType === "01" ? "Factura" : "Boleta"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+
+          {/* Estado: Loading */}
+          {emissionState === "loading" && (
+            <div className="py-12 px-6 text-center space-y-6">
+              <div className="flex justify-center">
+                <Loader2 className="h-16 w-16 text-[#2F7CF4] animate-spin" />
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Emitiendo {documentType === "01" ? "factura" : "boleta"}...
+                </h3>
+                <p className="text-gray-600">
+                  Por favor espere, estamos enviando la información a Efact-OSE
+                </p>
+              </div>
+
+              {/* Barra de progreso indeterminada */}
+              <div className="w-full max-w-md mx-auto">
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-full bg-[#2F7CF4] animate-[loading_2s_ease-in-out_infinite]" style={{
+                    animation: 'loading 2s ease-in-out infinite',
+                    width: '40%',
+                  }} />
+                </div>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <p className="text-gray-500 font-mono">
+                  Conectando de forma segura con SUNAT/OSE...
+                </p>
+                <p className="text-gray-400 text-xs">
+                  Este proceso toma 5-8 segundos
+                </p>
+              </div>
+
+              <Button
+                variant="outline"
+                onClick={handleCancelEmission}
+                className="mt-4"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Cancelar
+              </Button>
+
+              <style jsx>{`
+                @keyframes loading {
+                  0% { margin-left: 0%; width: 0%; }
+                  50% { margin-left: 25%; width: 50%; }
+                  100% { margin-left: 100%; width: 0%; }
+                }
+              `}</style>
             </div>
+          )}
 
-            <Separator />
+          {/* Estado: Success */}
+          {emissionState === "success" && (
+            <>
+              <button
+                onClick={handleCancelEmission}
+                className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+              >
+                <XCircle className="h-4 w-4" />
+                <span className="sr-only">Cerrar</span>
+              </button>
 
-            {/* Observaciones */}
-            <div className="space-y-2">
-              <Label htmlFor="observations" className="text-sm font-medium text-gray-700">
-                Observaciones (Opcional)
-              </Label>
-              <Textarea
-                id="observations"
-                placeholder="Ej: Ingrese notas adicionales para el comprobante (si condiciones de pago, referencia interna...)"
-                value={observations}
-                onChange={(e) => setObservations(e.target.value)}
-                className="min-h-[80px] resize-none"
-              />
-            </div>
-          </div>
+              <div className="py-8 px-6 text-center space-y-6">
+                <div className="flex justify-center">
+                  <div className="rounded-full bg-green-500 p-3">
+                    <CheckCircle2 className="h-12 w-12 text-white" strokeWidth={2.5} />
+                  </div>
+                </div>
 
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsConfirmModalOpen(false)}
-              className="min-w-[120px]"
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleConfirmEmission}
-              className="min-w-[120px] bg-[#2F7CF4] hover:bg-[#2F7CF4]/90"
-            >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              Emitir Boleta
-            </Button>
-          </DialogFooter>
+                <div className="space-y-1">
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    ¡{documentType === "01" ? "Factura" : "Boleta"} Emitida Correctamente!
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {documentType === "01" ? "Factura" : "Boleta"} <span className="font-medium text-gray-700">{generatedDocumentId}</span>
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+                  <Button
+                    className="bg-[#2F7CF4] hover:bg-[#2F7CF4]/90 min-w-[140px]"
+                    onClick={() => {
+                      // Navegar a la página de detalle
+                      window.location.href = `/dashboard/invoices/${generatedDocumentId.split('-').join('')}`;
+                    }}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Ver {documentType === "01" ? "Factura" : "Boleta"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="min-w-[140px]"
+                    onClick={() => {
+                      console.log("Descargar PDF");
+                    }}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Descargar PDF
+                  </Button>
+                </div>
+
+                <button
+                  onClick={handleCancelEmission}
+                  className="text-sm text-gray-500 hover:text-gray-700 underline"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Estado: Error */}
+          {emissionState === "error" && (
+            <>
+              <button
+                onClick={handleCancelEmission}
+                className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+              >
+                <XCircle className="h-4 w-4" />
+                <span className="sr-only">Cerrar</span>
+              </button>
+
+              <div className="py-8 px-6 text-center space-y-6">
+                <div className="flex justify-center">
+                  <div className="rounded-full bg-red-500 p-3">
+                    <XCircle className="h-12 w-12 text-white" strokeWidth={2.5} />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    Error al Emitir {documentType === "01" ? "Factura" : "Boleta"}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    No se pudo procesar la emisión del documento
+                  </p>
+                </div>
+
+                <div className="bg-white border-2 border-red-500 rounded-lg p-4 text-left">
+                  <div className="flex items-start gap-2">
+                    <div className="mt-0.5">
+                      <div className="rounded-full bg-red-500 p-1">
+                        <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-red-600 text-sm mb-1">Error 2334</p>
+                      <p className="text-sm text-gray-700">
+                        {emissionError || "Documento inválido - Los montos no cuadran con el total calculado. Por favor verifique las líneas de orden."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleCancelEmission}
+                    className="min-w-[120px]"
+                  >
+                    Cerrar
+                  </Button>
+                  <Button
+                    onClick={handleRetryEmission}
+                    className="bg-[#2F7CF4] hover:bg-[#2F7CF4]/90 min-w-[120px]"
+                  >
+                    Reintentar
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
