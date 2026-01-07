@@ -11,7 +11,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 class TenantBase(BaseModel):
     """Base tenant schema with common fields."""
 
-    name: str = Field(..., min_length=1, max_length=100, description="Company name")
+    name: str = Field(..., min_length=1, max_length=100,
+                      description="Company name")
     slug: str = Field(
         ...,
         min_length=1,
@@ -34,7 +35,8 @@ class TenantBase(BaseModel):
     def validate_shopify_url(cls, v: Optional[str]) -> Optional[str]:
         """Validate Shopify store URL format."""
         if v and not v.startswith(("http://", "https://")):
-            raise ValueError("Shopify store URL must start with http:// or https://")
+            raise ValueError(
+                "Shopify store URL must start with http:// or https://")
         return v
 
 
@@ -46,8 +48,8 @@ class TenantCreate(BaseModel):
     - name: Required, max 100 chars
     - slug: Optional, auto-generated as "name-outlet" in kebab-case if not provided
     - company_id: Optional, for Auth0 organization mapping
-    - shopify_store_url: Required, must be a valid URL
-    - shopify_access_token: Required, plaintext (will be encrypted before storage)
+    - shopify_store_url: Optional, must be a valid URL if provided
+    - shopify_access_token: Optional, plaintext (will be encrypted before storage)
     - shopify_api_version: Optional, defaults to "2024-01"
 
     **Auto-generated slug:**
@@ -61,7 +63,8 @@ class TenantCreate(BaseModel):
     but is automatically encrypted by the Tenant model before storage.
     """
 
-    name: str = Field(..., min_length=1, max_length=100, description="Company name (required)")
+    name: str = Field(..., min_length=1, max_length=100,
+                      description="Company name (required)")
     slug: Optional[str] = Field(
         None,
         min_length=1,
@@ -72,11 +75,17 @@ class TenantCreate(BaseModel):
     company_id: Optional[str] = Field(
         None, max_length=100, description="Company ID for Auth0 organization mapping (optional)"
     )
-    shopify_store_url: str = Field(
-        ..., description="Shopify store URL (required, e.g., 'https://my-store.myshopify.com')"
+    shopify_store_url: Optional[str] = Field(
+        None, description="Shopify store URL (optional, e.g., 'https://my-store.myshopify.com')"
     )
-    shopify_access_token: str = Field(
-        ..., description="Shopify Admin API access token (required, plaintext - will be encrypted before storage)"
+    shopify_store_url: Optional[str] = Field(
+        None, description="Shopify store URL (optional, e.g., 'https://my-store.myshopify.com')"
+    )
+    shopify_access_token: Optional[str] = Field(
+        None, description="Shopify Admin API access token (optional, plaintext - will be encrypted before storage)"
+    )
+    shopify_access_token: Optional[str] = Field(
+        None, description="Shopify Admin API access token (optional, plaintext - will be encrypted before storage)"
     )
     shopify_api_version: Optional[str] = Field(
         "2024-01", description="Shopify API version (optional, defaults to '2024-01')"
@@ -84,22 +93,30 @@ class TenantCreate(BaseModel):
 
     @field_validator("shopify_store_url", mode="before")
     @classmethod
-    def validate_shopify_url(cls, v: str) -> str:
+    def validate_shopify_url(cls, v: Optional[str]) -> Optional[str]:
         """Validate Shopify store URL format."""
+        # Allow None or empty string (optional field)
+        # Allow None or empty string (optional field)
         if not v:
-            raise ValueError("Shopify store URL is required")
+            return None
+        # If provided, must be a valid URL
+            return None
+        # If provided, must be a valid URL
         if not v.startswith(("http://", "https://")):
-            raise ValueError("Shopify store URL must start with http:// or https://")
+            raise ValueError(
+                "Shopify store URL must start with http:// or https://")
         return v
 
     @field_validator("slug", mode="before")
     @classmethod
     def validate_slug(cls, v: Optional[str]) -> Optional[str]:
         """Validate slug format if provided."""
-        if v is None:
-            return None
+
+        # Allow None or empty string (will be auto-generated from name)
         if not v:
-            raise ValueError("Slug cannot be empty if provided")
+            return None
+        # If provided with a value, validate format
+        # If provided with a value, validate format
         if not v.islower():
             raise ValueError("Slug must be lowercase (kebab-case)")
         return v
@@ -128,20 +145,24 @@ class TenantUpdate(BaseModel):
     but is automatically encrypted by the Tenant model before storage.
     """
 
-    name: Optional[str] = Field(None, min_length=1, max_length=100, description="Company name")
-    shopify_store_url: Optional[str] = Field(None, description="Shopify store URL")
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    shopify_store_url: Optional[str] = None
     shopify_access_token: Optional[str] = Field(
         None, description="Shopify Admin API access token (plaintext, will be encrypted)"
     )
-    shopify_api_version: Optional[str] = Field(None, description="Shopify API version")
-    is_active: Optional[bool] = Field(None, description="Active status")
+    shopify_api_version: Optional[str] = None
+    is_active: Optional[bool] = None
+    is_platform: Optional[bool] = Field(
+        None, description="Cannot be changed after creation (will be rejected by service)"
+    )
 
-    @field_validator("shopify_store_url", mode="before")
+    @field_validator("shopify_store_url")
     @classmethod
     def validate_shopify_url(cls, v: Optional[str]) -> Optional[str]:
-        """Validate Shopify store URL format if provided."""
+        """Validate Shopify store URL format."""
         if v and not v.startswith(("http://", "https://")):
-            raise ValueError("Shopify store URL must start with http:// or https://")
+            raise ValueError(
+                "Shopify store URL must start with http:// or https://")
         return v
 
 
@@ -172,14 +193,17 @@ class TenantDetailResponse(TenantResponse):
     Used for detail views that include user and order counts.
     """
 
-    user_count: int = Field(..., description="Number of active users in this tenant")
-    order_count: int = Field(..., description="Total number of orders for this tenant")
+    user_count: int = Field(...,
+                            description="Number of active users in this tenant")
+    order_count: int = Field(...,
+                             description="Total number of orders for this tenant")
 
 
 class TenantListResponse(BaseModel):
     """Schema for paginated list of tenants."""
 
-    total: int = Field(..., description="Total number of tenants matching the filter")
+    total: int = Field(...,
+                       description="Total number of tenants matching the filter")
     items: list[TenantResponse]
     skip: int = Field(..., description="Number of records skipped")
     limit: int = Field(..., description="Maximum number of records returned")

@@ -148,7 +148,7 @@ async def list_orders(
     **Other Roles Behavior:**
     - Can only view orders from their own tenant
     - `tenant_id` parameter is ignored (always uses current_user.tenant_id)
-
+    
     Args:
         skip: Number of records to skip (default: 0)
         limit: Maximum records to return (default: 100, max: 1000)
@@ -221,7 +221,7 @@ async def get_order(
     - For SUPER_ADMIN: includes tenant details (id, name, slug, company_id, etc.)
     - For other roles: None (they already know their tenant)
     - Frontend can display tenant name to show which client the order belongs to
-
+    
     Args:
         order_id: Order ID
         current_user: Current authenticated user or API key

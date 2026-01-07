@@ -2,6 +2,13 @@
 
 import { useState } from "react";
 import { FaTimes, FaPlus } from "react-icons/fa";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface PaymentMethod {
   id: string;
@@ -128,20 +135,23 @@ export default function PaymentMethodsForm() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Tipo de método
                   </label>
-                  <select
+                  <Select
                     value={method.methodType}
-                    onChange={(e) =>
-                      updateMethod(method.id, "methodType", e.target.value)
+                    onValueChange={(value) =>
+                      updateMethod(method.id, "methodType", value)
                     }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] bg-white"
                   >
-                    <option value="">Seleccionar tipo</option>
-                    {paymentTypes.map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] bg-white">
+                      <SelectValue placeholder="Seleccionar tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {paymentTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

@@ -6,6 +6,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import api_keys, health, metrics, orders, stats, tenants, users
 
+
 # Create main API router
 api_router = APIRouter()
 

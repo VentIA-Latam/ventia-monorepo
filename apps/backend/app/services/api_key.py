@@ -136,6 +136,64 @@ class APIKeyService:
         # Plain key should only be shown ONCE to the user
         return db_obj, plain_key
 
+    def create_api_key_for_role(
+        self,
+        db: Session,
+        api_key_in: APIKeyCreate,
+        current_user,  # User model
+    ) -> tuple[APIKey, str]:
+        """
+        Create API key with role-based validation.
+
+        SUPER_ADMIN:
+        - Can create API keys for any tenant (if tenant_id provided)
+        - If no tenant_id provided, uses their own tenant
+
+        Other roles:
+        - Can only create API keys for their own tenant
+        - Cannot specify tenant_id
+
+        Args:
+            db: Database session
+            api_key_in: API key creation data
+            current_user: Current authenticated user
+
+        Returns:
+            Tuple of (APIKey model, plain_text_key)
+
+        Raises:
+            ValueError: If validation fails
+        """
+        from app.repositories.tenant import tenant_repository
+
+        # Determine target tenant
+        if api_key_in.tenant_id is not None:
+            # User specified a tenant_id
+            if current_user.role != Role.SUPER_ADMIN:
+                raise ValueError("Only SUPER_ADMIN can create API keys for other tenants")
+
+            target_tenant_id = api_key_in.tenant_id
+
+            # Validate tenant exists and is active
+            tenant = tenant_repository.get(db, target_tenant_id)
+            if not tenant:
+                raise ValueError(f"Tenant with ID {target_tenant_id} not found")
+            if not tenant.is_active:
+                raise ValueError(f"Tenant with ID {target_tenant_id} is not active")
+        else:
+            # Use current user's tenant
+            target_tenant_id = current_user.tenant_id
+            tenant = current_user.tenant
+
+        # Create the API key
+        return self.create_api_key(
+            db=db,
+            api_key_in=api_key_in,
+            tenant_id=target_tenant_id,
+            tenant_slug=tenant.slug,
+            created_by_user_id=current_user.id,
+        )
+
     def get_api_key(self, db: Session, api_key_id: int) -> APIKey | None:
         """Get API key by ID."""
         return api_key_repository.get(db, api_key_id)
@@ -143,6 +201,22 @@ class APIKeyService:
     def get_api_key_by_prefix(self, db: Session, key_prefix: str) -> APIKey | None:
         """Get API key by prefix."""
         return api_key_repository.get_by_key_prefix(db, key_prefix)
+
+    def get_all_api_keys(
+        self,
+        db: Session,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        is_active: bool | None = None,
+    ) -> list[APIKey]:
+        """Get all API keys across all tenants (SUPER_ADMIN only)."""
+        return api_key_repository.get_all(
+            db,
+            skip=skip,
+            limit=limit,
+            is_active=is_active,
+        )
 
     def get_api_keys_by_tenant(
         self,
@@ -161,6 +235,14 @@ class APIKeyService:
             limit=limit,
             is_active=is_active,
         )
+
+    def count_all_api_keys(
+        self,
+        db: Session,
+        is_active: bool | None = None,
+    ) -> int:
+        """Count all API keys across all tenants (SUPER_ADMIN only)."""
+        return api_key_repository.count_all(db, is_active=is_active)
 
     def count_api_keys_by_tenant(
         self,
