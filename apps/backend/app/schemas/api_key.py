@@ -24,6 +24,10 @@ class APIKeyCreate(BaseModel):
         description="Role for this API key (ADMIN, LOGISTICA, VENTAS, VIEWER). Cannot be SUPER_ADMIN.",
         examples=[Role.ADMIN, Role.LOGISTICA],
     )
+    tenant_id: int | None = Field(
+        None,
+        description="Tenant ID for the API key. Only SUPER_ADMIN can specify this. If not provided, uses current user's tenant.",
+    )
     expires_at: datetime | None = Field(
         None,
         description="Optional expiration date. If null, the key never expires.",

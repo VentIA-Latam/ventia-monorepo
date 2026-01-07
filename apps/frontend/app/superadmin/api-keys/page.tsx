@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { APIKey } from "@/lib/types/api-key";
+import { Tenant } from "@/lib/types/tenant";
 import { CreateAPIKeyDialog } from "@/components/superadmin/create-api-key-dialog";
 import { RevokeAPIKeyDialog } from "@/components/superadmin/revoke-api-key-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -37,6 +38,7 @@ import { Info } from "lucide-react";
 
 export default function SuperAdminAPIKeysPage() {
   const [apiKeys, setApiKeys] = useState<APIKey[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -49,6 +51,7 @@ export default function SuperAdminAPIKeysPage() {
 
   useEffect(() => {
     fetchAPIKeys();
+    fetchTenants();
   }, [statusFilter, tenantFilter]);
 
   const fetchAPIKeys = async () => {
@@ -72,6 +75,18 @@ export default function SuperAdminAPIKeysPage() {
       console.error("Error fetching API keys:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTenants = async () => {
+    try {
+      const response = await fetch("/api/superadmin/tenants?limit=100");
+      if (response.ok) {
+        const data = await response.json();
+        setTenants(data.items || []);
+      }
+    } catch (error) {
+      console.error("Error fetching tenants:", error);
     }
   };
 
@@ -292,6 +307,7 @@ export default function SuperAdminAPIKeysPage() {
         onOpenChange={setCreateDialogOpen}
         onSuccess={fetchAPIKeys}
         apiEndpoint="/api/superadmin/api-keys"
+        tenants={tenants}
       />
 
       <RevokeAPIKeyDialog
