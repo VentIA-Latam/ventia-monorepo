@@ -32,7 +32,7 @@ export const paymentColumns: ColumnDef<PaymentRecord>[] = [
     accessorKey: "fechaIngresada",
     header: "FECHA INGRESADA",
     cell: ({ row }) => (
-      <span className="text-xs text-slate-600">
+      <span className="text-sm text-gray-600">
         {formatDate(row.original.fechaIngresada)}
       </span>
     ),
@@ -41,7 +41,7 @@ export const paymentColumns: ColumnDef<PaymentRecord>[] = [
     accessorKey: "fechaEntrega",
     header: "FECHA DE ENTREGA DEL PEDIDO",
     cell: ({ row }) => (
-      <span className="text-xs text-slate-600">
+      <span className="text-sm text-gray-600">
         {formatDate(row.original.fechaEntrega)}
       </span>
     ),
@@ -50,7 +50,7 @@ export const paymentColumns: ColumnDef<PaymentRecord>[] = [
     accessorKey: "horarioDespacho",
     header: "HORARIO DE DESPACHO",
     cell: ({ row }) => (
-      <span className="text-xs text-slate-600">
+      <span className="text-sm text-gray-600">
         {row.original.horarioDespacho}
       </span>
     ),
@@ -59,7 +59,7 @@ export const paymentColumns: ColumnDef<PaymentRecord>[] = [
     accessorKey: "resumenPedido",
     header: "RESUMEN DEL PEDIDO",
     cell: ({ row }) => (
-      <span className="text-xs text-slate-700 whitespace-pre-line">
+      <span className="text-sm text-gray-700 whitespace-pre-line">
         {row.original.resumenPedido}
       </span>
     ),
@@ -68,7 +68,7 @@ export const paymentColumns: ColumnDef<PaymentRecord>[] = [
     accessorKey: "correo",
     header: "CORREO",
     cell: ({ row }) => (
-      <span className="text-xs text-sky-700 underline underline-offset-2">
+      <span className="text-sm text-blue-600 hover:underline">
         {row.original.correo}
       </span>
     ),
@@ -77,7 +77,7 @@ export const paymentColumns: ColumnDef<PaymentRecord>[] = [
     accessorKey: "marcaEmpresa",
     header: "MARCA O EMPRESA",
     cell: ({ row }) => (
-      <span className="text-xs text-slate-700">
+      <span className="text-sm text-gray-700">
         {row.original.marcaEmpresa}
       </span>
     ),
@@ -86,7 +86,7 @@ export const paymentColumns: ColumnDef<PaymentRecord>[] = [
     accessorKey: "montoTotal",
     header: "MONTO TOTAL DEL PAGO",
     cell: ({ row }) => (
-      <span className="text-xs font-semibold text-right block">
+      <span className="text-sm font-semibold text-right block text-gray-900">
         {row.original.moneda} {row.original.montoTotal.toFixed(2)}
       </span>
     ),
@@ -95,7 +95,7 @@ export const paymentColumns: ColumnDef<PaymentRecord>[] = [
     accessorKey: "tipoValidacion",
     header: "TIPO DE VALIDACIÓN",
     cell: ({ row }) => (
-      <span className="text-xs text-slate-700">
+      <span className="text-sm text-gray-700">
         {row.original.tipoValidacion}
       </span>
     ),
@@ -107,12 +107,12 @@ export const paymentColumns: ColumnDef<PaymentRecord>[] = [
       const validado = row.original.validado
       return (
         <Badge
-          variant={validado ? "default" : "outline"}
+          variant="secondary"
           className={cn(
-            "text-[11px] px-3 py-0.5",
+            "text-xs px-3 py-1 rounded-md border-0",
             validado
-              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-              : "bg-rose-50 text-rose-700 border-rose-200"
+              ? "bg-green-100 text-green-700 hover:bg-green-100"
+              : "bg-red-100 text-red-700 hover:bg-red-100"
           )}
         >
           {validado ? "SÍ" : "NO"}
@@ -187,15 +187,15 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Tabla */}
-      <div className="border rounded-xl bg-white shadow-sm overflow-x-auto">
+      <div className="border rounded-lg bg-white shadow-sm overflow-hidden">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="bg-slate-50/60">
+              <TableRow key={headerGroup.id} className="bg-gray-50/80 border-b border-gray-200">
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className="text-xs font-semibold min-w-[140px]"
+                    className="min-w-[140px]"
                   >
                     {header.isPlaceholder
                       ? null
@@ -213,10 +213,10 @@ export function DataTable<TData, TValue>({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  className="align-top hover:bg-slate-50/60"
+                  className="align-top hover:bg-gray-50/50 transition-colors border-b border-gray-100 last:border-0"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="text-xs">
+                    <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -229,7 +229,7 @@ export function DataTable<TData, TValue>({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center text-sm text-slate-500"
+                  className="h-24 text-center text-sm text-gray-500"
                 >
                   No se encontraron registros.
                 </TableCell>

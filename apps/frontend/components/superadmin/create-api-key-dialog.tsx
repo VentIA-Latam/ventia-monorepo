@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { APIKeyCreate, APIKeyCreateResponse } from "@/lib/types/api-key";
+import { Tenant } from "@/lib/types/tenant";
 import { useState } from "react";
 import { Copy, Check, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -14,14 +15,16 @@ interface CreateAPIKeyDialogProps {
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   apiEndpoint: string; // "/api/superadmin/api-keys" or "/api/dashboard/api-keys"
+  tenants?: Tenant[]; // For superadmin - list of tenants to select from
 }
 
-export function CreateAPIKeyDialog({ open, onOpenChange, onSuccess, apiEndpoint }: CreateAPIKeyDialogProps) {
+export function CreateAPIKeyDialog({ open, onOpenChange, onSuccess, apiEndpoint, tenants = [] }: CreateAPIKeyDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<APIKeyCreate>({
     name: "",
-    role: "VIEWER",
+    role: "viewer",
+    tenant_id: undefined,
     expires_at: null,
   });
   const [createdKey, setCreatedKey] = useState<APIKeyCreateResponse | null>(null);
@@ -76,7 +79,7 @@ export function CreateAPIKeyDialog({ open, onOpenChange, onSuccess, apiEndpoint 
   };
 
   const handleClose = () => {
-    setFormData({ name: "", role: "VIEWER", expires_at: null });
+    setFormData({ name: "", role: "viewer", tenant_id: undefined, expires_at: null });
     setCreatedKey(null);
     setCopied(false);
     onOpenChange(false);
@@ -178,20 +181,46 @@ export function CreateAPIKeyDialog({ open, onOpenChange, onSuccess, apiEndpoint 
             <Label htmlFor="role">Rol *</Label>
             <Select
               value={formData.role}
-              onValueChange={(value) => setFormData({ ...formData, role: value as 'ADMIN' | 'LOGISTICA' | 'VENTAS' | 'VIEWER' })}
+              onValueChange={(value) => setFormData({ ...formData, role: value as 'admin' | 'logistica' | 'ventas' | 'viewer' })}
               disabled={loading}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona un rol" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="VIEWER">VIEWER (Solo lectura)</SelectItem>
-                <SelectItem value="VENTAS">VENTAS</SelectItem>
-                <SelectItem value="LOGISTICA">LOGISTICA</SelectItem>
-                <SelectItem value="ADMIN">ADMIN</SelectItem>
+                <SelectItem value="viewer">Viewer (Solo lectura)</SelectItem>
+                <SelectItem value="ventas">Ventas</SelectItem>
+                <SelectItem value="logistica">Logística</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {tenants.length > 0 && (
+            <div>
+              <Label htmlFor="tenant_id">Tenant (opcional)</Label>
+              <Select
+                value={formData.tenant_id?.toString() || "default"}
+                onValueChange={(value) => setFormData({ ...formData, tenant_id: value === "default" ? undefined : parseInt(value) })}
+                disabled={loading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un tenant" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Mi tenant (predeterminado)</SelectItem>
+                  {tenants.map((tenant) => (
+                    <SelectItem key={tenant.id} value={tenant.id.toString()}>
+                      {tenant.name} ({tenant.slug})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500 mt-1">
+                Solo SUPER_ADMIN puede crear API keys para otros tenants
+              </p>
+            </div>
+          )}
 
           <div>
             <Label htmlFor="expires_at">Fecha de expiración (opcional)</Label>

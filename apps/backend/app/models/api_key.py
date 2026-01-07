@@ -30,7 +30,7 @@ class APIKey(Base, TimestampMixin):
         unique=True,
         index=True,
         nullable=False,
-        comment="First 12 characters of the key for identification",
+        comment="First 12 characters of the key (vnt_{uuid8}) for unique identification",
     )
 
     # Descriptive info

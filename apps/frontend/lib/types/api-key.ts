@@ -2,7 +2,7 @@ export interface APIKey {
   id: number;
   name: string;
   key_prefix: string;
-  role: 'ADMIN' | 'LOGISTICA' | 'VENTAS' | 'VIEWER';
+  role: 'admin' | 'logistica' | 'ventas' | 'viewer';
   tenant_id: number;
   is_active: boolean;
   last_used_at: string | null;
@@ -22,7 +22,8 @@ export interface APIKeyWithCreator extends APIKey {
 
 export interface APIKeyCreate {
   name: string;
-  role: 'ADMIN' | 'LOGISTICA' | 'VENTAS' | 'VIEWER';
+  role: 'admin' | 'logistica' | 'ventas' | 'viewer';
+  tenant_id?: number;
   expires_at?: string | null;
 }
 
@@ -31,7 +32,7 @@ export interface APIKeyCreateResponse {
   name: string;
   key: string; // Complete API key - only shown once!
   key_prefix: string;
-  role: 'ADMIN' | 'LOGISTICA' | 'VENTAS' | 'VIEWER';
+  role: 'admin' | 'logistica' | 'ventas' | 'viewer';
   tenant_id: number;
   expires_at: string | null;
   created_at: string;

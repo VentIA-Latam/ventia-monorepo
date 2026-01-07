@@ -57,15 +57,11 @@ async def create_api_key(
         HTTPException: If name already exists or role is SUPER_ADMIN
     """
     try:
-        # Get tenant info for key generation
-        tenant = current_user.tenant
-
         # Create API key
         api_key, plain_key = api_key_service.create_api_key(
             db=db,
             api_key_in=api_key_in,
             tenant_id=current_user.tenant_id,
-            tenant_slug=tenant.slug,
             created_by_user_id=current_user.id,
         )
 
@@ -98,13 +94,16 @@ async def list_api_keys(
     db: Session = Depends(get_database),
 ) -> APIKeyListResponse:
     """
-    List API keys for current user's tenant.
+    List API keys.
 
     **SUPER_ADMIN and ADMIN users can list API keys.**
 
-    If the current user has SUPER_ADMIN role, they can optionally specify
-    a tenant_id to view API keys from any tenant. Otherwise, keys are
-    automatically filtered by the user's tenant.
+    SUPER_ADMIN behavior:
+    - If no tenant_id specified: Returns API keys from ALL tenants
+    - If tenant_id specified: Returns API keys from that specific tenant only
+
+    ADMIN behavior:
+    - Always returns API keys from their own tenant only (cannot specify tenant_id)
 
     Args:
         skip: Number of records to skip (pagination)
@@ -118,28 +117,37 @@ async def list_api_keys(
         Paginated list of API keys (without complete key, only prefix)
     """
     # Determine which tenant to query
-    if current_user.role == Role.SUPER_ADMIN and tenant_id is not None:
-        # SuperAdmin can query any tenant
-        query_tenant_id = tenant_id
+    if current_user.role == Role.SUPER_ADMIN:
+        # SuperAdmin can query all tenants or a specific tenant
+        query_tenant_id = tenant_id  # None means all tenants
     else:
         # Regular admin can only query their own tenant
         query_tenant_id = current_user.tenant_id
 
     # Get API keys
-    api_keys = api_key_service.get_api_keys_by_tenant(
-        db,
-        query_tenant_id,
-        skip=skip,
-        limit=limit,
-        is_active=is_active,
-    )
-
-    # Get total count
-    total = api_key_service.count_api_keys_by_tenant(
-        db,
-        query_tenant_id,
-        is_active=is_active,
-    )
+    if query_tenant_id is None:
+        # SUPER_ADMIN querying all tenants
+        api_keys = api_key_service.get_all_api_keys(
+            db,
+            skip=skip,
+            limit=limit,
+            is_active=is_active,
+        )
+        total = api_key_service.count_all_api_keys(db, is_active=is_active)
+    else:
+        # Query specific tenant
+        api_keys = api_key_service.get_api_keys_by_tenant(
+            db,
+            query_tenant_id,
+            skip=skip,
+            limit=limit,
+            is_active=is_active,
+        )
+        total = api_key_service.count_api_keys_by_tenant(
+            db,
+            query_tenant_id,
+            is_active=is_active,
+        )
 
     return APIKeyListResponse(
         total=total,

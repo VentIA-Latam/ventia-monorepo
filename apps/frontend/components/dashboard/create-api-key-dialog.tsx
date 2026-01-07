@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { APIKeyCreateResponse } from "@/lib/types/api-key";
 import { useState } from "react";
@@ -17,6 +18,7 @@ interface CreateAPIKeyDialogProps {
 
 interface TenantAPIKeyCreate {
   name: string;
+  role: string;
   expires_at: string | null;
 }
 
@@ -25,6 +27,7 @@ export function CreateAPIKeyDialog({ open, onOpenChange, onSuccess, apiEndpoint 
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<TenantAPIKeyCreate>({
     name: "",
+    role: "viewer",
     expires_at: null,
   });
   const [createdKey, setCreatedKey] = useState<APIKeyCreateResponse | null>(null);
@@ -79,7 +82,7 @@ export function CreateAPIKeyDialog({ open, onOpenChange, onSuccess, apiEndpoint 
   };
 
   const handleClose = () => {
-    setFormData({ name: "", expires_at: null });
+    setFormData({ name: "", role: "viewer", expires_at: null });
     setCreatedKey(null);
     setCopied(false);
     onOpenChange(false);
@@ -171,6 +174,28 @@ export function CreateAPIKeyDialog({ open, onOpenChange, onSuccess, apiEndpoint 
             />
             <p className="text-xs text-gray-500 mt-1">
               Identificador descriptivo para esta API Key
+            </p>
+          </div>
+
+          <div>
+            <Label htmlFor="role">Rol *</Label>
+            <Select
+              value={formData.role}
+              onValueChange={(value) => setFormData({ ...formData, role: value })}
+              disabled={loading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona un rol" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="viewer">viewer (Solo lectura)</SelectItem>
+                <SelectItem value="ventas">ventas</SelectItem>
+                <SelectItem value="logistica">logistica</SelectItem>
+                <SelectItem value="admin">admin</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500 mt-1">
+              Nivel de permisos para esta API Key
             </p>
           </div>
 
