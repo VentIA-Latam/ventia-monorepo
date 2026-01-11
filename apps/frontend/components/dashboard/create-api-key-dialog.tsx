@@ -18,7 +18,7 @@ interface CreateAPIKeyDialogProps {
 
 interface TenantAPIKeyCreate {
   name: string;
-  role: 'admin' | 'logistica' | 'ventas' | 'viewer';
+  role: string;
   expires_at: string | null;
 }
 
@@ -178,24 +178,24 @@ export function CreateAPIKeyDialog({ open, onOpenChange, onSuccess, apiEndpoint 
           </div>
 
           <div>
-            <Label htmlFor="role">Rol <span className="text-red-500">*</span></Label>
+            <Label htmlFor="role">Rol *</Label>
             <Select
               value={formData.role}
-              onValueChange={(value) => setFormData({ ...formData, role: value as TenantAPIKeyCreate["role"] })}
+              onValueChange={(value) => setFormData({ ...formData, role: value })}
               disabled={loading}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Seleccionar rol" />
+                <SelectValue placeholder="Selecciona un rol" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="viewer">Viewer (solo lectura)</SelectItem>
-                <SelectItem value="logistica">Logística</SelectItem>
-                <SelectItem value="ventas">Ventas</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="viewer">viewer (Solo lectura)</SelectItem>
+                <SelectItem value="ventas">ventas</SelectItem>
+                <SelectItem value="logistica">logistica</SelectItem>
+                <SelectItem value="admin">admin</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-gray-500 mt-1">
-              Define los permisos que tendrá esta API Key
+              Nivel de permisos para esta API Key
             </p>
           </div>
 
