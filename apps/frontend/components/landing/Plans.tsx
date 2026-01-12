@@ -96,7 +96,7 @@ export default function Plans() {
       id="planes"
       className="bg-[#182432] py-20 md:py-28 scroll-mt-24 md:scroll-mt-28"
     >
-      <div className="mx-auto max-w-7xl px-6 md:px-10 relative">
+      <div className="mx-auto max-w-350 px-6 md:px-10 relative">
 
         <FadeUp delay={0}>
           <h2 className="text-center text-white text-4xl md:text-5xl font-libre font-semibold mb-10 md:mb-14">
@@ -149,7 +149,7 @@ export default function Plans() {
               /* DESKTOP: Grid */
               md:grid
               md:grid-cols-3
-              md:gap-10 lg:gap-12
+              md:gap-10 lg:gap-20
               items-stretch
               md:overflow-visible
               md:pb-0
@@ -171,20 +171,20 @@ export default function Plans() {
                   className="
                     bg-white rounded-[40px]
                     shadow-[0_40px_140px_rgba(0,0,0,0.40)]
-                    px-8 py-12 md:px-10 md:py-14
+                    px-4 py-12 md:px-12 md:py-12
                     flex flex-col items-center text-center
                     h-full relative
                   "
                 >
                   {/* --- ENCABEZADO DEL PLAN --- */}
-                  <h3 className="text-xl md:text-2xl tracking-widest text-black mb-2 uppercase font-inter font-bold whitespace-pre-line leading-tight">
+                  <h3 className="text-xl md:text-2xl tracking-widest text-black mb-4 uppercase font-inter font-bold whitespace-pre-line leading-tight">
                     {plan.name}
                   </h3>
 
                   {/* Subtítulo (DESDE) */}
-                  <p 
+                  <p
                     className={`
-                      text-xs md:text-sm font-inter text-[#182432]/60 mb-1 mt-2
+                      text-xs md:text-sm font-inter text-[#182432]/60 mb-1
                       ${!plan.subtitle ? "invisible" : ""}
                     `}
                   >
@@ -192,13 +192,13 @@ export default function Plans() {
                   </p>
 
                   {/* Precio y Detalle */}
-                  <div className="mb-8 w-full">
+                  <div className="mb-6 w-full">
                     {/* CAMBIO AQUÍ: text-black para negro puro */}
                     <p className="text-4xl md:text-5xl font-libre font-bold text-black">
                       {plan.price}
                     </p>
-                    
-                    <p 
+
+                    <p
                       className={`
                         text-xs md:text-sm font-inter font-medium text-[#182432] mt-2
                         ${!plan.priceDetails ? "invisible select-none" : ""}
@@ -220,17 +220,18 @@ export default function Plans() {
                       px-10 py-3
                       text-sm md:text-base font-inter font-bold text-white
                       shadow-md
-                      hover:bg-[#2F7CF4]
+                      border-2 border-[#5ACAF0]
+                      hover:bg-white hover:text-[#48C1EC] hover:border-[#48C1EC]
                       transition
                       uppercase tracking-wide
-                      mb-10
+                      mb-8
                     "
                   >
                     CONTÁCTANOS
                   </a>
 
                   {/* --- CARACTERÍSTICAS --- */}
-                  <ul className="w-full text-left text-sm md:text-base font-inter font-medium text-[#182432] space-y-3">
+                  <ul className="w-full text-left text-sm md:text-base font-inter font-medium text-[#182432] space-y-3 px-2">
                     {plan.features.map((f) => (
                       <li key={f} className="flex items-start gap-3">
                         <span className="mt-2 h-1.5 w-1.5 min-w-1.5 rounded-full bg-[#182432]" />
