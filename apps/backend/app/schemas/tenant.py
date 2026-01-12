@@ -29,6 +29,11 @@ class TenantBase(BaseModel):
     shopify_api_version: Optional[str] = Field(
         "2024-01", description="Shopify API version (e.g., '2024-01')"
     )
+    efact_ruc: Optional[str] = Field(
+        None,
+        pattern=r"^\d{11}$",
+        description="RUC del tenant para facturación electrónica (11 dígitos)"
+    )
 
     @field_validator("shopify_store_url")
     @classmethod
@@ -89,6 +94,11 @@ class TenantCreate(BaseModel):
     )
     shopify_api_version: Optional[str] = Field(
         "2024-01", description="Shopify API version (optional, defaults to '2024-01')"
+    )
+    efact_ruc: Optional[str] = Field(
+        None,
+        pattern=r"^\d{11}$",
+        description="RUC del tenant para facturación electrónica (optional, 11 dígitos)"
     )
 
     @field_validator("shopify_store_url", mode="before")
@@ -155,6 +165,11 @@ class TenantUpdate(BaseModel):
     is_platform: Optional[bool] = Field(
         None, description="Cannot be changed after creation (will be rejected by service)"
     )
+    efact_ruc: Optional[str] = Field(
+        None,
+        pattern=r"^\d{11}$",
+        description="RUC del tenant para facturación electrónica (11 dígitos)"
+    )
 
     @field_validator("shopify_store_url")
     @classmethod
@@ -180,6 +195,7 @@ class TenantResponse(BaseModel):
     slug: str
     company_id: Optional[str]
     shopify_store_url: Optional[str]
+    efact_ruc: Optional[str]
     is_platform: bool
     is_active: bool
     created_at: datetime
