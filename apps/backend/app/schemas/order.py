@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
+from app.schemas.invoice import InvoiceResponse
 from app.schemas.tenant import TenantResponse
 
 if TYPE_CHECKING:
@@ -102,7 +103,7 @@ class OrderResponse(OrderBase):
     created_at: datetime
     updated_at: datetime
     tenant: Optional[TenantResponse] = Field(None, description="Optional tenant info (populated via join for SUPER_ADMIN)")
-    invoices: Optional[list["InvoiceResponse"]] = Field(None, description="Optional list of invoices for this order (populated via eager loading)")
+    invoices: Optional[list[InvoiceResponse]] = Field(None, description="Optional list of invoices for this order (populated via eager loading)")
 
     model_config = ConfigDict(from_attributes=True)
 
