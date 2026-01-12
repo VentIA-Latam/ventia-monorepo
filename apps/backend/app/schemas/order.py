@@ -3,12 +3,15 @@ Order schemas.
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.schemas.invoice import InvoiceResponse
 from app.schemas.tenant import TenantResponse
+
+if TYPE_CHECKING:
+    from app.schemas.invoice import InvoiceResponse
 
 
 class OrderBase(BaseModel):
