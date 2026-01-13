@@ -134,21 +134,21 @@ export default function InvoicesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Receipt className="h-6 w-6" />
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Receipt className="h-5 w-5 sm:h-6 sm:w-6" />
             Facturación
           </h1>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">
             Gestiona y emite tus comprobantes electrónicos
           </p>
         </div>
         <Link href="/dashboard/invoices/new">
-          <Button className="w-full md:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
+          <Button className="w-full md:w-auto text-sm" size="sm">
+            <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
             Emitir Comprobante
           </Button>
         </Link>
@@ -157,27 +157,27 @@ export default function InvoicesPage() {
       {/* Filters and Search */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Comprobantes Emitidos</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-base sm:text-lg">Comprobantes Emitidos</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             Lista de todas las facturas y boletas generadas
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col gap-4 md:flex-row md:items-center mb-6">
+          <div className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-center mb-4 sm:mb-6">
             {/* Search */}
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
               <Input
                 placeholder="Buscar por cliente, RUC/DNI o número..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-9 sm:pl-10 text-sm"
               />
             </div>
 
             {/* Filter by Type */}
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-full md:w-[200px]">
+              <SelectTrigger className="w-full md:w-[200px] text-sm">
                 <SelectValue placeholder="Tipo de documento" />
               </SelectTrigger>
               <SelectContent>
@@ -189,7 +189,7 @@ export default function InvoicesPage() {
 
             {/* Filter by Status */}
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full md:w-[200px]">
+              <SelectTrigger className="w-full md:w-[200px] text-sm">
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
               <SelectContent>
@@ -202,95 +202,97 @@ export default function InvoicesPage() {
           </div>
 
           {/* Table */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Comprobante</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>RUC/DNI</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead className="text-right">Monto</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {mockInvoices.length === 0 ? (
+          <div className="rounded-md border overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
-                      <div className="flex flex-col items-center gap-2">
-                        <Receipt className="h-12 w-12 text-gray-300" />
-                        <p className="text-sm text-gray-500">No se encontraron comprobantes</p>
-                      </div>
-                    </TableCell>
+                    <TableHead className="min-w-[120px] text-xs sm:text-sm">Comprobante</TableHead>
+                    <TableHead className="min-w-[150px] text-xs sm:text-sm">Tipo</TableHead>
+                    <TableHead className="min-w-[180px] text-xs sm:text-sm">Cliente</TableHead>
+                    <TableHead className="min-w-[100px] text-xs sm:text-sm">RUC/DNI</TableHead>
+                    <TableHead className="min-w-[100px] text-xs sm:text-sm">Fecha</TableHead>
+                    <TableHead className="text-right min-w-[100px] text-xs sm:text-sm">Monto</TableHead>
+                    <TableHead className="min-w-[100px] text-xs sm:text-sm">Estado</TableHead>
+                    <TableHead className="text-right min-w-[80px] text-xs sm:text-sm">Acciones</TableHead>
                   </TableRow>
-                ) : (
-                  mockInvoices.map((invoice) => (
-                    <TableRow key={invoice.id}>
-                      <TableCell className="font-medium">
-                        <Link
-                          href={`/dashboard/invoices/${invoice.id}`}
-                          className="text-blue-600 hover:text-blue-800 hover:underline"
-                        >
-                          {invoice.serie}-{invoice.correlativo}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{invoice.type}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">
-                        {invoice.client}
-                      </TableCell>
-                      <TableCell>{invoice.ruc}</TableCell>
-                      <TableCell>
-                        {new Date(invoice.date).toLocaleDateString("es-PE")}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {invoice.currency} {invoice.total.toFixed(2)}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(invoice.status)}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon-sm">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                              <Link href={`/dashboard/invoices/${invoice.id}`} className="cursor-pointer">
-                                <Eye className="h-4 w-4 mr-2" />
-                                Ver Detalle
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Download className="h-4 w-4 mr-2" />
-                              Descargar PDF
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Download className="h-4 w-4 mr-2" />
-                              Descargar XML
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                </TableHeader>
+                <TableBody>
+                  {mockInvoices.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8">
+                        <div className="flex flex-col items-center gap-2">
+                          <Receipt className="h-10 w-10 sm:h-12 sm:w-12 text-gray-300" />
+                          <p className="text-xs sm:text-sm text-gray-500">No se encontraron comprobantes</p>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    mockInvoices.map((invoice) => (
+                      <TableRow key={invoice.id}>
+                        <TableCell className="font-medium text-xs sm:text-sm">
+                          <Link
+                            href={`/dashboard/invoices/${invoice.id}`}
+                            className="text-blue-600 hover:text-blue-800 hover:underline"
+                          >
+                            {invoice.serie}-{invoice.correlativo}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-xs sm:text-sm">{invoice.type}</TableCell>
+                        <TableCell className="max-w-[150px] sm:max-w-[200px] truncate text-xs sm:text-sm">
+                          {invoice.client}
+                        </TableCell>
+                        <TableCell className="text-xs sm:text-sm">{invoice.ruc}</TableCell>
+                        <TableCell className="text-xs sm:text-sm">
+                          {new Date(invoice.date).toLocaleDateString("es-PE")}
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-xs sm:text-sm">
+                          {invoice.currency} {invoice.total.toFixed(2)}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-3 w-3 sm:h-4 sm:w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem asChild>
+                                <Link href={`/dashboard/invoices/${invoice.id}`} className="cursor-pointer text-xs sm:text-sm">
+                                  <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                                  Ver Detalle
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-xs sm:text-sm">
+                                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                                Descargar PDF
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-xs sm:text-sm">
+                                <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                                Descargar XML
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
 
           {/* Pagination (placeholder) */}
-          <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-gray-600">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+            <p className="text-xs sm:text-sm text-gray-600">
               Mostrando {mockInvoices.length} de {mockInvoices.length} comprobantes
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled>
+              <Button variant="outline" size="sm" disabled className="text-xs sm:text-sm">
                 Anterior
               </Button>
-              <Button variant="outline" size="sm" disabled>
+              <Button variant="outline" size="sm" disabled className="text-xs sm:text-sm">
                 Siguiente
               </Button>
             </div>

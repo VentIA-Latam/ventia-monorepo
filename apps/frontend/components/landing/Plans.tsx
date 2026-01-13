@@ -35,7 +35,7 @@ const plans = [
     name: "IA\nBÁSICO",
     price: "$49.90",
     subtitle: "DESDE",
-    priceDetails: "", 
+    priceDetails: "",
     features: [
       "IA conversacional 24/7",
       "Atención desde redes sociales y WhatsApp",
@@ -56,7 +56,7 @@ const plans = [
   {
     name: "FULL\nOPERACIÓN",
     price: "Variable",
-    subtitle: "", 
+    subtitle: "",
     priceDetails: "+ un fee por cada entrega",
     features: [
       "Todo lo del plan IA Básico",
@@ -94,43 +94,43 @@ export default function Plans() {
   return (
     <section
       id="planes"
-      className="bg-[#182432] py-20 md:py-28 scroll-mt-24 md:scroll-mt-28"
+      className="bg-[#182432] py-12 sm:py-16 md:py-20 lg:py-28 scroll-mt-24 md:scroll-mt-28"
     >
-      <div className="mx-auto max-w-350 px-6 md:px-10 relative">
+      <div className="mx-auto max-w-350 px-4 sm:px-6 md:px-10 relative">
 
         <FadeUp delay={0}>
-          <h2 className="text-center text-white text-4xl md:text-5xl font-libre font-semibold mb-10 md:mb-14">
+          <h2 className="text-center text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-libre font-semibold mb-8 sm:mb-10 md:mb-14">
             NUESTROS PLANES
           </h2>
         </FadeUp>
 
         {/* WRAPPER DEL CARRUSEL */}
-        <div className="relative z-1 max-w-[400px] mx-auto md:max-w-none">
-          
+        <div className="relative z-1 max-w-[340px] sm:max-w-[400px] mx-auto md:max-w-none">
+
           {/* FLECHA IZQUIERDA (Móvil) */}
           <button
             onClick={() => scrollByOne("left")}
             className="
-              absolute -left-5 top-1/2 -translate-y-1/2 z-20
-              p-2 text-white hover:text-gray-300 transition
+              absolute -left-4 sm:-left-5 top-1/2 -translate-y-1/2 z-20
+              p-1.5 sm:p-2 text-white hover:text-gray-300 transition
               md:hidden
             "
             aria-label="Plan anterior"
           >
-            <ChevronLeft className="w-8 h-8" />
+            <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8" />
           </button>
 
           {/* FLECHA DERECHA (Móvil) */}
           <button
             onClick={() => scrollByOne("right")}
             className="
-              absolute -right-5 top-1/2 -translate-y-1/2 z-20
-              p-2 text-white hover:text-gray-300 transition
+              absolute -right-4 sm:-right-5 top-1/2 -translate-y-1/2 z-20
+              p-1.5 sm:p-2 text-white hover:text-gray-300 transition
               md:hidden
             "
             aria-label="Plan siguiente"
           >
-            <ChevronRight className="w-8 h-8" />
+            <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
           </button>
 
           {/* CONTENEDOR SCROLLABLE */}
@@ -149,7 +149,7 @@ export default function Plans() {
               /* DESKTOP: Grid */
               md:grid
               md:grid-cols-3
-              md:gap-10 lg:gap-20
+              md:gap-6 lg:gap-10 xl:gap-20
               items-stretch
               md:overflow-visible
               md:pb-0
@@ -169,15 +169,15 @@ export default function Plans() {
               >
                 <div
                   className="
-                    bg-white rounded-[40px]
+                    bg-white rounded-[30px] sm:rounded-[40px]
                     shadow-[0_40px_140px_rgba(0,0,0,0.40)]
-                    px-4 py-12 md:px-12 md:py-12
+                    px-6 py-8 sm:px-8 sm:py-10 md:px-12 md:py-12
                     flex flex-col items-center text-center
                     h-full relative
                   "
                 >
                   {/* --- ENCABEZADO DEL PLAN --- */}
-                  <h3 className="text-xl md:text-2xl tracking-widest text-black mb-4 uppercase font-inter font-bold whitespace-pre-line leading-tight">
+                  <h3 className="text-lg sm:text-xl md:text-2xl tracking-widest text-black mb-3 sm:mb-4 uppercase font-inter font-bold whitespace-pre-line leading-tight">
                     {plan.name}
                   </h3>
 
@@ -192,9 +192,9 @@ export default function Plans() {
                   </p>
 
                   {/* Precio y Detalle */}
-                  <div className="mb-6 w-full">
+                  <div className="mb-4 sm:mb-5 md:mb-6 w-full">
                     {/* CAMBIO AQUÍ: text-black para negro puro */}
-                    <p className="text-4xl md:text-5xl font-libre font-bold text-black">
+                    <p className="text-3xl sm:text-4xl md:text-5xl font-libre font-bold text-black">
                       {plan.price}
                     </p>
 
@@ -217,24 +217,24 @@ export default function Plans() {
                       inline-flex items-center justify-center
                       rounded-full
                       bg-[#5ACAF0]
-                      px-10 py-3
-                      text-sm md:text-base font-inter font-bold text-white
+                      px-8 sm:px-10 py-2.5 sm:py-3
+                      text-xs sm:text-sm md:text-base font-inter font-bold text-white
                       shadow-md
                       border-2 border-[#5ACAF0]
                       hover:bg-white hover:text-[#48C1EC] hover:border-[#48C1EC]
                       transition
                       uppercase tracking-wide
-                      mb-8
+                      mb-6 sm:mb-8
                     "
                   >
                     CONTÁCTANOS
                   </a>
 
                   {/* --- CARACTERÍSTICAS --- */}
-                  <ul className="w-full text-left text-sm md:text-base font-inter font-medium text-[#182432] space-y-3 px-2">
+                  <ul className="w-full text-left text-xs sm:text-sm md:text-base font-inter font-medium text-[#182432] space-y-2 sm:space-y-3 px-2">
                     {plan.features.map((f) => (
-                      <li key={f} className="flex items-start gap-3">
-                        <span className="mt-2 h-1.5 w-1.5 min-w-1.5 rounded-full bg-[#182432]" />
+                      <li key={f} className="flex items-start gap-2 sm:gap-3">
+                        <span className="mt-1.5 sm:mt-2 h-1.5 w-1.5 min-w-1.5 rounded-full bg-[#182432]" />
                         <span className="leading-snug">{f}</span>
                       </li>
                     ))}
