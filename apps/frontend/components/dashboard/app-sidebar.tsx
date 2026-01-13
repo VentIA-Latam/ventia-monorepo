@@ -14,6 +14,9 @@ import {
   LayoutDashboard,
   ShoppingCart,
   Bot,
+  Shield,
+  Key,
+  Receipt,
 } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Image from "next/image"
@@ -61,17 +64,22 @@ const dataPlatform = [
     icon: ShoppingCart,
     hasSubmenu: true,
   },
+  {
+    title: "Facturación",
+    url: "/dashboard/invoices",
+    icon: Receipt,
+  },
   /*   {
       title: "Clientes",
       url: "/dashboard/clients",
       icon: Users,
       locked: true,
     }, */
-  {
-    title: "Pagos",
-    url: "/dashboard/payments",
-    icon: CreditCard,
-  },
+  // {
+  //   title: "Pagos",
+  //   url: "/dashboard/payments",
+  //   icon: CreditCard,
+  // },
   /*   {
       title: "Mi vendedor",
       url: "/dashboard/assistant",
@@ -82,7 +90,9 @@ const dataPlatform = [
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
-  const { user, isLoading } = useAuth()
+  const { user, isLoading, isSuperAdmin } = useAuth()
+
+  console.log('AppSidebar - isSuperAdmin:', isSuperAdmin); // Debug
 
   const isActive = (url: string) => {
     if (url === "/dashboard") return pathname === "/dashboard";
@@ -292,14 +302,35 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-gray-100" />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem className="text-gray-600 focus:text-gray-900 cursor-pointer">
+                  {/* <DropdownMenuItem className="text-gray-600 focus:text-gray-900 cursor-pointer">
                     <Settings className="mr-2 h-4 w-4" />
                     Configuración de cuenta
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="text-gray-600 focus:text-gray-900 cursor-pointer">
+                  </DropdownMenuItem> */}
+                  {!isSuperAdmin && (
+                    <DropdownMenuItem
+                      onClick={() => window.location.href = '/dashboard/settings/api-keys'}
+                      className="text-gray-600 focus:text-gray-900 cursor-pointer"
+                    >
+                      <Key className="mr-2 h-4 w-4" />
+                      Credenciales (API Key)
+                    </DropdownMenuItem>
+                  )}
+                  {/* <DropdownMenuItem className="text-gray-600 focus:text-gray-900 cursor-pointer">
                     <Bell className="mr-2 h-4 w-4" />
                     Notificaciones
-                  </DropdownMenuItem>
+                  </DropdownMenuItem> */}
+                  {isSuperAdmin && (
+                    <>
+                      <DropdownMenuSeparator className="bg-gray-100" />
+                      <DropdownMenuItem
+                        onClick={() => window.location.href = '/superadmin'}
+                        className="text-purple-600 focus:text-purple-700 focus:bg-purple-50 cursor-pointer"
+                      >
+                        <Shield className="mr-2 h-4 w-4" />
+                        Panel SuperAdmin
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator className="bg-gray-100" />
                 <DropdownMenuItem

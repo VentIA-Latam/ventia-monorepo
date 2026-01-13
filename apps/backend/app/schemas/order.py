@@ -3,11 +3,15 @@ Order schemas.
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
+from app.schemas.invoice import InvoiceResponse
 from app.schemas.tenant import TenantResponse
+
+if TYPE_CHECKING:
+    from app.schemas.invoice import InvoiceResponse
 
 
 class OrderBase(BaseModel):
@@ -15,6 +19,8 @@ class OrderBase(BaseModel):
 
     customer_email: EmailStr = Field(..., description="Customer email")
     customer_name: str | None = Field(None, description="Customer name")
+    customer_document_type: str | None = Field(None, description="Tipo de documento: DNI o RUC")
+    customer_document_number: str | None = Field(None, description="Número de DNI o RUC del cliente")
     total_price: float = Field(..., gt=0, description="Total price (must be > 0)")
     currency: str = Field(default="USD", description="Currency code")
     line_items: list[dict[str, Any]] | None = Field(None, description="Order line items (products)")
@@ -29,9 +35,9 @@ class OrderCreate(OrderBase):
     Schema for creating a new Order.
 
     Used by n8n when inserting draft orders.
+    The tenant_id is automatically set from the authenticated user's tenant.
     """
 
-    tenant_id: int = Field(..., description="Tenant ID")
     shopify_draft_order_id: str = Field(..., description="Shopify draft order ID")
 
 
@@ -40,6 +46,8 @@ class OrderUpdate(BaseModel):
 
     customer_email: EmailStr | None = None
     customer_name: str | None = None
+    customer_document_type: str | None = None
+    customer_document_number: str | None = None
     total_price: float | None = Field(None, gt=0)
     currency: str | None = None
     line_items: list[dict[str, Any]] | None = None
@@ -70,12 +78,19 @@ class OrderResponse(OrderBase):
     - For other roles: typically None (they only see orders from their own tenant)
     - Frontend can display tenant name/slug when available to show which customer the order belongs to
 
+    **Invoice Information:**
+    - `invoices` field is Optional[List[InvoiceResponse]]
+    - Populated when order is retrieved with invoice eager loading
+    - Contains all electronic invoices (facturas, boletas, NC, ND) for this order
+    - Allows viewing complete invoicing history for the order
+
     **Fields:**
     - Standard order fields from OrderBase
     - id, tenant_id, shopify_draft_order_id, shopify_order_id
     - validado, validated_at, status
     - created_at, updated_at
     - tenant: Optional tenant details (populated on join)
+    - invoices: Optional list of invoices for this order
     """
 
     id: int
@@ -88,6 +103,7 @@ class OrderResponse(OrderBase):
     created_at: datetime
     updated_at: datetime
     tenant: Optional[TenantResponse] = Field(None, description="Optional tenant info (populated via join for SUPER_ADMIN)")
+    invoices: Optional[list[InvoiceResponse]] = Field(None, description="Optional list of invoices for this order (populated via eager loading)")
 
     model_config = ConfigDict(from_attributes=True)
 

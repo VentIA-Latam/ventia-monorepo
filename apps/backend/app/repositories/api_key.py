@@ -25,6 +25,55 @@ class APIKeyRepository(CRUDBase[APIKey, APIKeyCreate, APIKeyUpdate]):
         """
         return db.query(APIKey).filter(APIKey.key_prefix == key_prefix).first()
 
+    def get_all(
+        self,
+        db: Session,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        is_active: bool | None = None,
+    ) -> list[APIKey]:
+        """
+        Get all API keys across all tenants (SUPER_ADMIN only).
+
+        Args:
+            db: Database session
+            skip: Number of records to skip (pagination)
+            limit: Maximum number of records to return
+            is_active: Optional filter by active status
+
+        Returns:
+            List of API keys
+        """
+        query = db.query(APIKey)
+
+        if is_active is not None:
+            query = query.filter(APIKey.is_active == is_active)
+
+        return query.offset(skip).limit(limit).all()
+
+    def count_all(
+        self,
+        db: Session,
+        is_active: bool | None = None,
+    ) -> int:
+        """
+        Count total API keys across all tenants (SUPER_ADMIN only).
+
+        Args:
+            db: Database session
+            is_active: Optional filter by active status
+
+        Returns:
+            Total count
+        """
+        query = db.query(APIKey)
+
+        if is_active is not None:
+            query = query.filter(APIKey.is_active == is_active)
+
+        return query.count()
+
     def get_by_tenant(
         self,
         db: Session,

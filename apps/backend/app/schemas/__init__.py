@@ -6,6 +6,17 @@ DTOs (Data Transfer Objects) for API requests and responses.
 
 from app.schemas.activity import ActivityItem, RecentActivityResponse
 from app.schemas.health import HealthResponse
+from app.schemas.invoice import (
+    InvoiceCreate,
+    InvoiceListResponse,
+    InvoiceResponse,
+    InvoiceSerieCreate,
+    InvoiceSerieListResponse,
+    InvoiceSerieResponse,
+    InvoiceSerieUpdate,
+    InvoiceUpdate,
+    TicketStatusResponse,
+)
 from app.schemas.order import (
     OrderCreate,
     OrderListResponse,
@@ -36,6 +47,17 @@ __all__ = [
     "OrderValidate",
     "OrderResponse",
     "OrderListResponse",
+    # Invoice
+    "InvoiceCreate",
+    "InvoiceUpdate",
+    "InvoiceResponse",
+    "InvoiceListResponse",
+    "TicketStatusResponse",
+    # Invoice Serie
+    "InvoiceSerieCreate",
+    "InvoiceSerieUpdate",
+    "InvoiceSerieResponse",
+    "InvoiceSerieListResponse",
     # Stats
     "StatsResponse",
     # Activity

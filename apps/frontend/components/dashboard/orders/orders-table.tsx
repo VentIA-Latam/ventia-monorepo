@@ -16,23 +16,19 @@ interface OrdersTableProps {
   orders: Order[];
 }
 
-const channelIcons: Record<Order['channel'], string> = {
-  'Portal B2B': '🏢',
-  'WhatsApp': '💬',
-  'Venta Directa': '🏪',
-};
 
-const paymentStatusVariants: Record<Order['paymentStatus'], "default" | "secondary" | "destructive"> = {
-  'Pagado': 'default',
-  'Pendiente': 'secondary',
-  'Rechazado': 'destructive',
-};
-
-const logisticsStatusVariants: Record<Order['logisticsStatus'], "default" | "secondary" | "destructive" | "outline"> = {
-  'En camino': 'default',
-  'Procesando': 'secondary',
-  'Entregado': 'default',
-  'Cancelado': 'destructive',
+// Función helper para obtener color de avatar basado en iniciales
+const getAvatarColor = (name: string) => {
+  const colors = [
+    'bg-blue-100 text-blue-700',
+    'bg-purple-100 text-purple-700',
+    'bg-green-100 text-green-700',
+    'bg-orange-100 text-orange-700',
+    'bg-pink-100 text-pink-700',
+    'bg-cyan-100 text-cyan-700',
+  ];
+  const index = name.charCodeAt(0) % colors.length;
+  return colors[index];
 };
 
 export function OrdersTable({ orders }: OrdersTableProps) {
@@ -44,105 +40,77 @@ export function OrdersTable({ orders }: OrdersTableProps) {
   };
 
   return (
-    <div className="border rounded-lg">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/50">
-
-            <TableHead className="font-semibold text-muted-foreground pl-5">
-              ID PEDIDO
-            </TableHead>
-            <TableHead className="font-semibold text-muted-foreground">
-              CLIENTE
-            </TableHead>
-            {/*             <TableHead className="font-semibold text-muted-foreground">
-              CANAL
-            </TableHead> */}
-            <TableHead className="font-semibold text-muted-foreground">
-              ESTADO PAGO
-            </TableHead>
-            {/* <TableHead className="font-semibold text-muted-foreground">
-              LOGÍSTICA
-            </TableHead> */}
-            <TableHead className="font-semibold text-muted-foreground text-right pr-5">
-              MONTO
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {orders.map((order) => (
-            <TableRow
-              key={order.id}
-              className="hover:bg-muted/50 cursor-pointer"
-              onClick={() => handleOrderClick(order.dbId)}
-            >
-              <TableCell className="pl-5">
-                <div>
-                  <div className="font-semibold text-primary hover:underline cursor-pointer">
-                    {order.id}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {order.date}
-                  </div>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-sm">
-                    {order.client.name.substring(0, 2).toUpperCase()}
-                  </div>
+    <div className="border rounded-lg bg-white shadow-sm overflow-hidden">
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-gray-50/80 border-b border-gray-200">
+              <TableHead className="min-w-[120px]">
+                ID PEDIDO
+              </TableHead>
+              <TableHead className="min-w-[200px]">
+                CLIENTE
+              </TableHead>
+              <TableHead className="min-w-[120px]">
+                ESTADO PAGO
+              </TableHead>
+              <TableHead className="text-right min-w-[100px]">
+                MONTO
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {orders.map((order) => (
+              <TableRow
+                key={order.id}
+                className="hover:bg-gray-50/50 cursor-pointer transition-colors border-b border-gray-100 last:border-0"
+                onClick={() => handleOrderClick(order.dbId)}
+              >
+                <TableCell className="min-w-[120px]">
                   <div>
-                    <div className="font-medium">{order.client.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {order.client.email}
+                    <div className="font-semibold text-blue-600 hover:underline cursor-pointer text-sm">
+                      {order.id}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      {order.date}
                     </div>
                   </div>
-                </div>
-              </TableCell>
-              {/*               <TableCell>
-                <div className="flex items-center gap-2">
-                  <span>{channelIcons[order.channel]}</span>
-                  <span className="text-sm">{order.channel}</span>
-                </div>
-              </TableCell> */}
-              <TableCell>
-                <Badge
-                  variant={paymentStatusVariants[order.paymentStatus]}
-                  className={
-                    order.paymentStatus === 'Pagado'
-                      ? 'bg-green-50 text-green-700 border-green-200'
-                      : order.paymentStatus === 'Pendiente'
-                        ? 'bg-orange-50 text-orange-700 border-orange-200'
-                        : ''
-                  }
-                >
-                  {order.paymentStatus}
-                </Badge>
-              </TableCell>
-              {/*               
-              <TableCell>
-                <Badge
-                  variant={logisticsStatusVariants[order.logisticsStatus]}
-                  className={
-                    order.logisticsStatus === 'Entregado'
-                      ? 'bg-blue-500 hover:bg-blue-600'
-                      : order.logisticsStatus === 'Procesando'
-                        ? 'bg-gray-500 hover:bg-gray-600'
-                        : order.logisticsStatus === 'En camino'
-                          ? 'bg-cyan-500 hover:bg-cyan-600'
-                          : ''
-                  }
-                >
-                  {order.logisticsStatus}
-                </Badge>
-              </TableCell> */}
-              <TableCell className="text-right font-semibold pr-5">
-                {order.currency}{order.amount.toLocaleString()}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                </TableCell>
+                <TableCell className="min-w-[200px]">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold text-xs sm:text-sm ${getAvatarColor(order.client.name)}`}>
+                      {order.client.name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-sm text-gray-900 truncate">{order.client.name}</div>
+                      <div className="text-xs text-gray-500 mt-0.5 truncate">
+                        {order.client.email}
+                      </div>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="min-w-[120px]">
+                  <Badge
+                    variant="secondary"
+                    className={
+                      order.paymentStatus === 'Pagado'
+                        ? 'bg-green-100 text-green-700 border-0 hover:bg-green-100 rounded-md px-2 sm:px-3 py-1 text-xs'
+                        : order.paymentStatus === 'Pendiente'
+                          ? 'bg-yellow-100 text-yellow-700 border-0 hover:bg-yellow-100 rounded-md px-2 sm:px-3 py-1 text-xs'
+                          : 'bg-red-100 text-red-700 border-0 hover:bg-red-100 rounded-md px-2 sm:px-3 py-1 text-xs'
+                    }
+                  >
+                    {order.paymentStatus}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right font-semibold text-sm text-gray-900 min-w-[100px]">
+                  {order.currency}{order.amount.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
