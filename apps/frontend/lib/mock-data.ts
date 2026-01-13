@@ -1,7 +1,7 @@
 import { PaymentRecord } from "@/lib/types/payment-record"
-import { Order } from "@/lib/types/order"
+import { FakeOrder } from "@/lib/types/order"
 
-export const mockOrders: Order[] = [
+export const mockOrders: FakeOrder[] = [
   {
     id: "#ORD-3920",
     date: "24 Oct, 10:30 AM",

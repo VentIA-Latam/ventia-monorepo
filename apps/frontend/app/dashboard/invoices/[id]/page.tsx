@@ -39,6 +39,17 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+// Tipos
+interface ComprobanteItem {
+  codigo: string;
+  descripcion: string;
+  cantidad: number;
+  unidad: string;
+  precio_unitario: number;
+  igv: number;
+  total: number;
+}
+
 // Mock data - Base de datos completa de comprobantes
 const mockComprobantesDatabase: Record<string, any> = {
   "1": {
@@ -589,7 +600,7 @@ export default function InvoiceDetailPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {comprobante.items.map((item, index) => (
+                      {comprobante.items.map((item: ComprobanteItem, index: number) => (
                         <TableRow key={index}>
                           <TableCell className="font-medium">{index + 1}</TableCell>
                           <TableCell>
