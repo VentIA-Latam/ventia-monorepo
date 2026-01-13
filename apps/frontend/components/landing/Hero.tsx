@@ -28,7 +28,7 @@ export default function Hero() {
           <FadeUp delay={0.1}>
             <div className="text-justify relative animate-[0.2s_linear] break-words mb-6 sm:mb-8 md:mb-[47.1406px]">
               <div className="relative">
-                <p className="text-shadow-[0_0_0.8px_black] text-sm sm:text-base md:text-[20px] leading-relaxed sm:leading-normal md:leading-[24px] text-black font-['Helvetica_Roman',Helvetica,Arial,Lucida,sans-serif] m-0 p-0">
+                <p className="text-shadow-[0_0_0.5px_black] text-sm sm:text-base md:text-[20px] leading-relaxed sm:leading-normal md:leading-[24px] text-black font-['Helvetica_Roman',Helvetica,Arial,Lucida,sans-serif] m-0 p-0">
                   Ventia automatiza tus ventas y entregas para que tu negocio esté{" "}
                   <strong className="font-bold">
                     activo 24/7.
