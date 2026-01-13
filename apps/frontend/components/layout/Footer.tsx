@@ -7,7 +7,7 @@ import { FaTiktok, FaInstagram, FaLinkedin } from "react-icons/fa";
 export default function Footer() {
   return (
     <footer className="bg-[#182432] text-white py-12 md:py-24">
-      <div className="mx-auto max-w-7xl px-6 md:px-8 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
+      <div className="mx-auto w-full px-6 md:px-20 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
 
         {/* IZQUIERDA */}
         <div className="flex flex-col items-center md:items-start text-center md:text-left">
@@ -71,7 +71,7 @@ export default function Footer() {
               <p className="text-[10px] md:text-xs font-inter mb-1 uppercase tracking-widest md:hidden">
                 LIBRO DE RECLAMACIONES
               </p>
-              <div className="relative h-10 w-16 md:h-14 md:w-24">
+              <div className="relative h-10 w-16 md:h-20 md:w-32">
                 <Image
                   src="/images/libro-reclamaciones.avif"
                   alt="Libro de reclamaciones"

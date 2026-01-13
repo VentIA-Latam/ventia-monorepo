@@ -61,7 +61,7 @@ export default function Contact() {
             <h2 className="text-3xl md:text-4xl font-libre font-semibold text-[#182432] mb-4">
               TE RESPONDEMOS HOY MISMO
             </h2>
-            <p className="text-sm md:text-base font-inter text-[#182432] leading-relaxed">
+            <p className="text-sm md:text-xl font-inter text-[#321818] leading-relaxed">
               Tienes alguna duda sobre nuestras soluciones, déjanos un mensaje y nos
               contactaremos contigo.
             </p>
@@ -123,8 +123,8 @@ export default function Contact() {
                 className={`
                   inline-flex items-center justify-center rounded-full 
                   bg-[#5ACAF0] text-white px-16 md:px-24 py-3.5 
-                  text-sm md:text-base font-inter font-medium shadow-md 
-                  transition hover:bg-[#2F7CF4]
+                  text-sm md:text-2xl font-inter font-medium shadow-md 
+                  transition hover:bg-[#212835]
                   ${loading ? "opacity-70 cursor-not-allowed" : ""}
                 `}
               >

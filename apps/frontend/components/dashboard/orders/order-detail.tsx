@@ -108,85 +108,87 @@ export function OrderDetail({ order }: OrderDetailProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-start gap-2 sm:gap-4">
           <Button
             variant="ghost"
             size="icon"
+            className="shrink-0 mt-1 sm:mt-0"
             onClick={() => router.push('/dashboard/orders')}
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Pedido #{order.shopify_draft_order_id || order.id}</h1>
-            <p className="text-sm text-muted-foreground">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">Pedido #{order.shopify_draft_order_id || order.id}</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Creado el {formatDate(order.created_at)}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {getStatusBadge()}
-          <Button variant="outline" className="gap-2" disabled>
-            <Printer className="w-4 h-4" />
-            Imprimir
+          <Button variant="outline" className="gap-2 text-xs sm:text-sm" size="sm" disabled>
+            <Printer className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Imprimir</span>
           </Button>
           {!order.validado && (
             <Button
-              className="gap-2"
+              className="gap-2 text-xs sm:text-sm"
+              size="sm"
               onClick={handleValidatePago}
               disabled={isValidating}
             >
-              <CheckCircle className="w-4 h-4" />
+              <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
               {isValidating ? 'Validando...' : 'Validar Pago'}
             </Button>
           )}
-          <Button variant="destructive" className="gap-2" onClick={() => router.push('/dashboard/orders')}>
-            <X className="w-4 h-4" />
-            Cancelar
+          <Button variant="destructive" className="gap-2 text-xs sm:text-sm" size="sm" onClick={() => router.push('/dashboard/orders')}>
+            <X className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Cancelar</span>
           </Button>
         </div>
       </div>
 
       {/* Error message */}
       {error && (
-        <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-lg">
-          <p className="font-semibold">Error</p>
-          <p className="text-sm">{error}</p>
+        <div className="bg-destructive/10 text-destructive px-3 sm:px-4 py-2 sm:py-3 rounded-lg">
+          <p className="font-semibold text-sm">Error</p>
+          <p className="text-xs sm:text-sm">{error}</p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Left Column - Main Info */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
           {/* Información del Cliente */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <User className="w-4 h-4 sm:w-5 sm:h-5" />
                 Información del Cliente
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">CLIENTE</p>
-                  <p className="text-base font-semibold">{order.customer_name || 'Sin nombre'}</p>
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">CLIENTE</p>
+                  <p className="text-sm sm:text-base font-semibold break-words">{order.customer_name || 'Sin nombre'}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">CONTACTO</p>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sky-700 underline">{order.customer_email}</span>
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">CONTACTO</p>
+                  <div className="flex items-center gap-2 text-xs sm:text-sm">
+                    <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground shrink-0" />
+                    <span className="text-sky-700 underline break-all">{order.customer_email}</span>
                   </div>
                 </div>
               </div>
 
               {/* Dirección de envío - Placeholder para futuros campos */}
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-2">DIRECCIÓN DE ENVÍO</p>
-                <div className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">DIRECCIÓN DE ENVÍO</p>
+                <div className="text-xs sm:text-sm text-muted-foreground">
                   <p>Información no disponible</p>
                 </div>
               </div>
@@ -196,66 +198,68 @@ export function OrderDetail({ order }: OrderDetailProps) {
           {/* Productos */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Package className="w-4 h-4 sm:w-5 sm:h-5" />
                 Productos
-                <span className="text-sm font-normal text-muted-foreground ml-2">
+                <span className="text-xs sm:text-sm font-normal text-muted-foreground ml-2">
                   {order.line_items?.length || 0} ítems
                 </span>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="border rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="text-left p-3 text-sm font-semibold">Producto</th>
-                      <th className="text-center p-3 text-sm font-semibold">Precio Unitario</th>
-                      <th className="text-center p-3 text-sm font-semibold">Cant.</th>
-                      <th className="text-right p-3 text-sm font-semibold">Subtotal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {order.line_items && order.line_items.length > 0 ? (
-                      order.line_items.map((item, index) => {
-                        const unitPrice = item.unitPrice || 0;
-                        const quantity = item.quantity || 1;
-                        const subtotal = item.subtotal || 0;
-
-                        return (
-                          <tr key={item.id || index} className="border-t">
-                            <td className="p-3">
-                              <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 bg-muted rounded flex items-center justify-center">
-                                  <Package className="w-6 h-6 text-muted-foreground" />
-                                </div>
-                                <div>
-                                  <p className="font-medium">{item.product || 'Producto sin nombre'}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    SKU: {item.sku || 'N/A'}
-                                  </p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="p-3 text-center">
-                              {formatCurrency(unitPrice, order.currency)}
-                            </td>
-                            <td className="p-3 text-center">{quantity}</td>
-                            <td className="p-3 text-right font-semibold">
-                              {formatCurrency(subtotal, order.currency)}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[500px]">
+                    <thead className="bg-muted/50">
                       <tr>
-                        <td colSpan={4} className="p-6 text-center text-muted-foreground">
-                          No hay productos en este pedido
-                        </td>
+                        <th className="text-left p-2 sm:p-3 text-xs sm:text-sm font-semibold">Producto</th>
+                        <th className="text-center p-2 sm:p-3 text-xs sm:text-sm font-semibold">Precio Unitario</th>
+                        <th className="text-center p-2 sm:p-3 text-xs sm:text-sm font-semibold">Cant.</th>
+                        <th className="text-right p-2 sm:p-3 text-xs sm:text-sm font-semibold">Subtotal</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {order.line_items && order.line_items.length > 0 ? (
+                        order.line_items.map((item, index) => {
+                          const unitPrice = item.unitPrice || 0;
+                          const quantity = item.quantity || 1;
+                          const subtotal = item.subtotal || 0;
+
+                          return (
+                            <tr key={item.id || index} className="border-t">
+                              <td className="p-2 sm:p-3">
+                                <div className="flex items-center gap-2 sm:gap-3">
+                                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-muted rounded flex items-center justify-center shrink-0">
+                                    <Package className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="font-medium text-xs sm:text-sm truncate">{item.product || 'Producto sin nombre'}</p>
+                                    <p className="text-xs text-muted-foreground truncate">
+                                      SKU: {item.sku || 'N/A'}
+                                    </p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="p-2 sm:p-3 text-center text-xs sm:text-sm">
+                                {formatCurrency(unitPrice, order.currency)}
+                              </td>
+                              <td className="p-2 sm:p-3 text-center text-xs sm:text-sm">{quantity}</td>
+                              <td className="p-2 sm:p-3 text-right font-semibold text-xs sm:text-sm">
+                                {formatCurrency(subtotal, order.currency)}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="p-4 sm:p-6 text-center text-muted-foreground text-xs sm:text-sm">
+                            No hay productos en este pedido
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -312,29 +316,30 @@ export function OrderDetail({ order }: OrderDetailProps) {
         </div>
 
         {/* Right Column - Summary */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Acciones Requeridas */}
           <Card>
             <CardHeader>
-              <CardTitle>Acciones Requeridas</CardTitle>
+              <CardTitle className="text-base sm:text-lg">Acciones Requeridas</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2 sm:space-y-3">
               {!order.validado && (
                 <Button
-                  className="w-full gap-2"
+                  className="w-full gap-2 text-xs sm:text-sm"
+                  size="sm"
                   onClick={handleValidatePago}
                   disabled={isValidating}
                 >
-                  <CheckCircle className="w-4 h-4" />
+                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                   {isValidating ? 'Validando...' : 'Validar Pago'}
                 </Button>
               )}
-              <Button variant="outline" className="w-full gap-2" disabled>
-                <Package className="w-4 h-4" />
+              <Button variant="outline" className="w-full gap-2 text-xs sm:text-sm" size="sm" disabled>
+                <Package className="w-3 h-3 sm:w-4 sm:h-4" />
                 Generar Factura
               </Button>
-              <Button variant="outline" className="w-full gap-2" disabled>
-                <MapPin className="w-4 h-4" />
+              <Button variant="outline" className="w-full gap-2 text-xs sm:text-sm" size="sm" disabled>
+                <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
                 Actualizar Logística
               </Button>
             </CardContent>
@@ -343,7 +348,7 @@ export function OrderDetail({ order }: OrderDetailProps) {
           {/* Resumen Financiero */}
           <Card>
             <CardHeader>
-              <CardTitle>Resumen Financiero</CardTitle>
+              <CardTitle className="text-base sm:text-lg">Resumen Financiero</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {/*               <div className="flex justify-between text-sm">
@@ -358,9 +363,9 @@ export function OrderDetail({ order }: OrderDetailProps) {
                 <span>Descuento (Promo)</span>
                 <span>-{formatCurrency(0, order.currency)}</span>
               </div> */}
-              <div className="border-t pt-3 flex justify-between">
-                <span className="font-semibold">Total</span>
-                <span className="text-xl font-bold text-primary">
+              <div className="border-t pt-3 flex justify-between items-center">
+                <span className="font-semibold text-sm sm:text-base">Total</span>
+                <span className="text-lg sm:text-xl font-bold text-primary">
                   {formatCurrency(order.total_price, order.currency)}
                 </span>
               </div>
@@ -370,28 +375,28 @@ export function OrderDetail({ order }: OrderDetailProps) {
           {/* Información de Entrega */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
                 Información de Entrega
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {/* Campos futuros de la API */}
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">
                   FECHA DE ENTREGA DEL PEDIDO
                 </p>
-                <p className="text-sm">
+                <p className="text-xs sm:text-sm">
                   {/* Placeholder para fecha_entrega_pedido */}
                   Información no disponible
                 </p>
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 flex items-center gap-2">
+                  <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
                   HORARIO DE DESPACHO
                 </p>
-                <p className="text-sm">
+                <p className="text-xs sm:text-sm">
                   {/* Placeholder para horario_despacho */}
                   Información no disponible
                 </p>
@@ -414,10 +419,10 @@ export function OrderDetail({ order }: OrderDetailProps) {
           {order.notes && (
             <Card>
               <CardHeader>
-                <CardTitle>Notas</CardTitle>
+                <CardTitle className="text-base sm:text-lg">Notas</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">{order.notes}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">{order.notes}</p>
               </CardContent>
             </Card>
           )}

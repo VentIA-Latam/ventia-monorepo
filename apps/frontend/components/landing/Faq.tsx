@@ -172,9 +172,9 @@ export default function Faq({ limit = null, showMoreButton = true }: FaqProps) {
                 inline-flex items-center justify-center
                 rounded-full bg-[#5ACAF0] text-white
                 px-16 md:px-20 py-3.5
-                text-sm md:text-base font-inter font-medium
+                text-xl md:text-2xl font-inter font-medium
                 shadow-md
-                hover:bg-[#2F7CF4] transition
+                hover:bg-[#212835] transition
               "
             >
               VER MÁS
