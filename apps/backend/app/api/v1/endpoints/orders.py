@@ -131,6 +131,8 @@ async def list_orders(
     limit: int = 100,
     validado: bool | None = None,
     tenant_id: int | None = None,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
     current_user: User = Depends(get_current_user_or_api_key),
     db: Session = Depends(get_database),
 ) -> OrderListResponse:
@@ -148,12 +150,14 @@ async def list_orders(
     **Other Roles Behavior:**
     - Can only view orders from their own tenant
     - `tenant_id` parameter is ignored (always uses current_user.tenant_id)
-    
+
     Args:
         skip: Number of records to skip (default: 0)
         limit: Maximum records to return (default: 100, max: 1000)
         validado: Filter by validation status (None = all orders)
         tenant_id: SUPER_ADMIN only - filter by specific tenant (optional)
+        sort_by: Field to sort by (default: created_at)
+        sort_order: Sort order 'asc' or 'desc' (default: desc)
         current_user: Current authenticated user
         db: Database session
 
@@ -179,6 +183,8 @@ async def list_orders(
                 limit=limit,
                 tenant_id=tenant_id,  # Optional filter
                 validado=validado,
+                sort_by=sort_by,
+                sort_order=sort_order,
             )
         else:
             # Other roles: filtered to their tenant
@@ -188,6 +194,8 @@ async def list_orders(
                 skip=skip,
                 limit=limit,
                 validado=validado,
+                sort_by=sort_by,
+                sort_order=sort_order,
             )
     except Exception as e:
         raise HTTPException(

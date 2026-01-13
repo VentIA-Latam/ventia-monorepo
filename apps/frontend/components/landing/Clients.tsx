@@ -1,169 +1,99 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import * as React from "react";
 import Image from "next/image";
-import { HiChevronLeft, HiChevronRight } from "react-icons/hi";
+import Autoplay from "embla-carousel-autoplay";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 const clients = [
   { name: "Nassau", image: "/images/logo-nassau.avif" },
   { name: "Not Pepper", image: "/images/logo-not-pepper.avif" },
   { name: "Cromo", image: "/images/logo-cromo.avif" },
+  { name: "Crayfish", image: "/images/logo-crayfish.avif" },
   { name: "La Doré", image: "/images/logo-la-dore.avif" },
   { name: "Go Active", image: "/images/logo-go-active.avif" },
   { name: "AquaFlask", image: "/images/logo-aquaflask.avif" },
   { name: "Nola", image: "/images/logo-nola.avif" },
 ];
 
-const VISIBLE_DESKTOP = 5;
-
 export default function Clients() {
-  const [startIndex, setStartIndex] = useState(0);
-  const total = clients.length;
-
-  const handleNext = () => setStartIndex((prev) => (prev + 1) % total);
-  const handlePrev = () => setStartIndex((prev) => (prev - 1 + total) % total);
-
-  const getClientAt = (offset: number) => {
-    const index = (startIndex + offset + total) % total;
-    return clients[index];
-  };
-
-  const visibleMobile = 3;
-  const visibleTablet = 4;
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setStartIndex((prev) => (prev + 1) % total);
-    }, 2200);
-    return () => clearInterval(interval);
-  }, [total]);
+  const plugin = React.useRef(
+    Autoplay({ delay: 2200, stopOnInteraction: false, stopOnMouseEnter: true })
+  );
 
   return (
     <section
       id="clientes"
-      className="bg-white py-18 md:py-20 scroll-mt-24 md:scroll-mt-28"
+      className="bg-white py-18 md:py-20 scroll-mt-[109px]"
     >
+      {/* Título centrado con max-width */}
       <div className="mx-auto max-w-7xl px-6 lg:px-10">
         <div className="text-center mb-10 md:mb-12">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-libre font-semibold tracking-wide text-[#182432] mb-4">
+          <h2 className="text-3xl md:text-4xl lg:text-[40px] font-libre font-bold tracking-wide text-[#182432] mb-4">
             CLIENTES QUE CONFÍAN
           </h2>
-          <p className="text-sm md:text-base font-inter text-[#182432]">
+          <p className="text-[20px] font-inter text-[#182432] font-semibold">
             Marcas que ya automatizan sus ventas y/o logística con VentIA.
           </p>
         </div>
+      </div>
 
-        <div className="flex items-center justify-center gap-4 lg:gap-8">
-          <button
-            type="button"
-            onClick={handlePrev}
-            className="
-              hidden md:inline-flex
-              items-center justify-center
-              h-10 w-10
-              rounded-full
-              border border-gray-300
-              text-[#111827]
-              hover:bg-gray-100
-              transition
-              font-inter
-            "
-            aria-label="Anterior"
+      {/* Carrusel a todo ancho */}
+      <div className="w-full">
+        <div className="relative flex items-center justify-center gap-4 lg:gap-8 px-4 md:px-8 lg:px-12">
+          <Carousel
+            plugins={[plugin.current]}
+            className="w-[90%]"
+            opts={{
+              align: "start",
+              loop: true,
+            }}
+            onMouseEnter={() => plugin.current.stop()}
+            onMouseLeave={() => plugin.current.play()}
           >
-            <HiChevronLeft className="h-6 w-6" />
-          </button>
-
-          <div className="flex-1 flex items-center justify-center">
-            <div className="w-full flex items-center justify-center gap-8 md:gap-10 lg:gap-14">
-              {/* MOBILE: 3 logos */}
-              <div className="flex md:hidden items-center justify-center gap-8">
-                {Array.from({ length: visibleMobile }).map((_, i) => {
-                  const client = getClientAt(i);
-                  return (
-                    <div
-                      key={`${client.name}-m-${i}`}
-                      className="h-14 w-[100px] flex items-center justify-center"
-                    >
-                      <div className="relative h-full w-full transition-transform duration-300 ease-out">
-                        <Image
-                          src={client.image}
-                          alt={client.name}
-                          fill
-                          className="object-contain"
-                          sizes="33vw"
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* TABLET: 4 logos */}
-              <div className="hidden md:flex lg:hidden items-center justify-center gap-10">
-                {Array.from({ length: visibleTablet }).map((_, i) => {
-                  const client = getClientAt(i);
-                  return (
-                    <div
-                      key={`${client.name}-t-${i}`}
-                      className="h-16 w-[130px] flex items-center justify-center"
-                    >
-                      <div className="relative h-full w-full transition-transform duration-300 ease-out">
-                        <Image
-                          src={client.image}
-                          alt={client.name}
-                          fill
-                          className="object-contain"
-                          sizes="25vw"
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* DESKTOP: 5 logos */}
-              <div className="hidden lg:flex items-center justify-center gap-14">
-                {Array.from({ length: VISIBLE_DESKTOP }).map((_, i) => {
-                  const client = getClientAt(i);
-                  return (
-                    <div
-                      key={`${client.name}-d-${i}`}
-                      className="h-20 w-[170px] flex items-center justify-center"
-                    >
-                      <div className="relative h-full w-full transition-transform duration-300 ease-out lg:hover:scale-110">
-                        <Image
-                          src={client.image}
-                          alt={client.name}
-                          fill
-                          className="object-contain"
-                          sizes="(max-width:1200px) 18vw, 170px"
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+            {/* Botón Anterior - Solo Desktop */}
+            <div className="hidden md:block absolute -left-12 lg:-left-16 top-1/2 -translate-y-1/2 z-10">
+              <CarouselPrevious />
             </div>
-          </div>
 
-          <button
-            type="button"
-            onClick={handleNext}
-            className="
-              hidden md:inline-flex
-              items-center justify-center
-              h-10 w-10
-              rounded-full
-              border border-gray-300
-              text-[#111827]
-              hover:bg-gray-100
-              transition
-              font-inter
-            "
-            aria-label="Siguiente"
-          >
-            <HiChevronRight className="h-6 w-6" />
-          </button>
+            <CarouselContent className="-ml-0.5">
+              {clients.map((client, index) => (
+                <CarouselItem
+                  key={index}
+                  className="
+                    pl-0.5
+                    basis-1/3
+                    sm:basis-1/4
+                    md:basis-1/4
+                    lg:basis-1/6
+                  "
+                >
+                  <div className="h-14 sm:h-16 md:h-20 w-full flex items-center justify-center p-0.5">
+                    <div className="relative h-full w-full transition-transform duration-300 ease-out hover:scale-110">
+                      <Image
+                        src={client.image}
+                        alt={client.name}
+                        fill
+                        className="object-contain"
+                        sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 25vw, 20vw"
+                      />
+                    </div>
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+
+            {/* Botón Siguiente - Solo Desktop */}
+            <div className="hidden md:block absolute -right-12 lg:-right-16 top-1/2 -translate-y-1/2 z-10">
+              <CarouselNext />
+            </div>
+          </Carousel>
         </div>
       </div>
     </section>

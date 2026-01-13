@@ -20,6 +20,8 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         skip: int = 0,
         limit: int = 100,
         validado: bool | None = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
     ) -> list[Order]:
         """
         Get all orders for a specific tenant.
@@ -30,6 +32,8 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
             skip: Number to skip
             limit: Max results
             validado: Filter by validation status (None = all orders)
+            sort_by: Field to sort by (default: created_at)
+            sort_order: Sort order 'asc' or 'desc' (default: desc)
 
         Returns:
             List of orders
@@ -40,7 +44,14 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         if validado is not None:
             query = query.filter(Order.validado == validado)
 
-        return query.order_by(Order.created_at.desc()).offset(skip).limit(limit).all()
+        # Apply sorting
+        sort_column = getattr(Order, sort_by, Order.created_at)
+        if sort_order.lower() == "asc":
+            query = query.order_by(sort_column.asc())
+        else:
+            query = query.order_by(sort_column.desc())
+
+        return query.offset(skip).limit(limit).all()
 
     def get_all(
         self,
@@ -50,6 +61,8 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         limit: int = 100,
         tenant_id: int | None = None,
         validado: bool | None = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
     ) -> list[Order]:
         """
         Get all orders from all tenants (for SUPER_ADMIN).
@@ -60,6 +73,8 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
             limit: Max results
             tenant_id: Optional filter by tenant ID
             validado: Optional filter by validation status
+            sort_by: Field to sort by (default: created_at)
+            sort_order: Sort order 'asc' or 'desc' (default: desc)
 
         Returns:
             List of orders
@@ -74,7 +89,14 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         if validado is not None:
             query = query.filter(Order.validado == validado)
 
-        return query.order_by(Order.created_at.desc()).offset(skip).limit(limit).all()
+        # Apply sorting
+        sort_column = getattr(Order, sort_by, Order.created_at)
+        if sort_order.lower() == "asc":
+            query = query.order_by(sort_column.asc())
+        else:
+            query = query.order_by(sort_column.desc())
+
+        return query.offset(skip).limit(limit).all()
 
     def count_all(
         self,

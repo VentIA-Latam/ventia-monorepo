@@ -13,6 +13,12 @@ export interface Order {
   currency: string;
 }
 
+/**
+ * FakeOrder - Para datos mock/fake sin dbId real
+ * Usado en tests, mock data, y páginas de ejemplo
+ */
+export type FakeOrder = Omit<Order, 'dbId'>;
+
 export interface OrderFilters {
   search: string;
   paymentStatus: string;
