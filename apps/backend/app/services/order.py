@@ -65,6 +65,8 @@ class OrderService:
         skip: int = 0,
         limit: int = 100,
         validado: bool | None = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
     ) -> OrderListResponse:
         """
         Get orders for a tenant with pagination.
@@ -75,6 +77,8 @@ class OrderService:
             skip: Number to skip
             limit: Max results
             validado: Filter by validation status
+            sort_by: Field to sort by (default: created_at)
+            sort_order: Sort order 'asc' or 'desc' (default: desc)
 
         Returns:
             OrderListResponse with total count and items
@@ -85,6 +89,8 @@ class OrderService:
             skip=skip,
             limit=limit,
             validado=validado,
+            sort_by=sort_by,
+            sort_order=sort_order,
         )
 
         total = order_repository.count_by_tenant(db, tenant_id, validado=validado)
@@ -104,6 +110,8 @@ class OrderService:
         limit: int = 100,
         tenant_id: int | None = None,
         validado: bool | None = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
     ) -> OrderListResponse:
         """
         Get all orders from all tenants (SUPER_ADMIN only).
@@ -114,6 +122,8 @@ class OrderService:
             limit: Max results
             tenant_id: Optional filter by specific tenant
             validado: Optional filter by validation status
+            sort_by: Field to sort by (default: created_at)
+            sort_order: Sort order 'asc' or 'desc' (default: desc)
 
         Returns:
             OrderListResponse with total count and items
@@ -124,6 +134,8 @@ class OrderService:
             limit=limit,
             tenant_id=tenant_id,
             validado=validado,
+            sort_by=sort_by,
+            sort_order=sort_order,
         )
 
         total = order_repository.count_all(
