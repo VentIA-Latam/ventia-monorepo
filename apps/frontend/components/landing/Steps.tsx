@@ -31,9 +31,9 @@ export default function Steps() {
       <div className="max-w-[90%] mx-auto relative flex flex-col md:flex-row pt-4 sm:pt-6 md:pt-[27px] pb-4 sm:pb-6 md:pb-[27px] px-4 sm:px-0">
 
         {/* IZQUIERDA - Contenedor de Texto */}
-        <div className="w-full md:w-[47.25%] relative z-[2] order-2 md:order-1 mb-8 md:mb-0 md:mt-[137.672px] md:mb-[137.672px] md:mr-[94.2969px] md:pl-[100px]">
+        <div className="w-full md:w-[47.25%] relative z-[2] order-1 md:order-1 mb-8 md:mb-0 md:mt-[137.672px] md:mb-[137.672px] md:mr-[94.2969px] md:pl-[100px] text-center md:text-left">
           <FadeUp delay={0}>
-            <div className="text-left sm:text-justify relative animate-[0.2s_linear] break-words mb-6 sm:mb-8 md:mb-[41.3125px]">
+            <div className="relative animate-[0.2s_linear] break-words mb-6 sm:mb-8 md:mb-[41.3125px]">
               <div className="relative">
                 <p className="text-2xl sm:text-3xl md:text-[36px] leading-tight sm:leading-normal md:leading-[43.2px] text-black font-['Helvetica_Italic',Helvetica,Arial,Lucida,sans-serif] m-0 p-0">
                   Casos de éxito
@@ -43,7 +43,7 @@ export default function Steps() {
           </FadeUp>
 
           <FadeUp delay={0.1}>
-            <div className="text-left relative animate-[0.2s_linear] break-words mb-6 sm:mb-8 md:mb-[41.3125px]">
+            <div className="relative animate-[0.2s_linear] break-words mb-6 sm:mb-8 md:mb-[41.3125px]">
               <div className="relative">
                 <p className="text-2xl sm:text-3xl md:text-[40px] leading-tight sm:leading-snug md:leading-[44px] font-semibold text-black font-['Libre_Franklin',Helvetica,Arial,Lucida,sans-serif] m-0 p-0">
                   ASÍ FUNCIONA VENTIA
@@ -55,7 +55,7 @@ export default function Steps() {
           </FadeUp>
 
           <FadeUp delay={0.2}>
-            <div className="text-left relative animate-[0.2s_linear] break-words max-w-full md:max-w-[70%] mb-6 sm:mb-8 md:mb-[41.3125px] md:mr-[213.031px]">
+            <div className="relative animate-[0.2s_linear] break-words max-w-full md:max-w-[70%] mb-6 sm:mb-8 md:mb-[41.3125px] md:mr-[213.031px] mx-auto md:mx-0">
               <div className="relative">
                 <p className="text-sm sm:text-base md:text-[20px] leading-relaxed sm:leading-normal md:leading-[24px] text-black font-['Helvetica_Roman',Helvetica,Arial,Lucida,sans-serif] m-0 p-0">
                   Este mismo proceso de venta puede ser implementado en tu empresa{" "}
@@ -68,10 +68,10 @@ export default function Steps() {
           </FadeUp>
 
           <FadeUp delay={0.3}>
-            <div className="relative animate-[0.2s_linear] mb-6 sm:mb-8 md:mb-[41.3125px]">
+            <div className="relative animate-[0.2s_linear] mb-6 sm:mb-8 md:mb-[41.3125px] flex justify-center md:block">
               <a
                 href="#contacto"
-                className="inline-block relative text-sm sm:text-base md:text-[20px] leading-tight sm:leading-normal md:leading-[34px] font-medium bg-[#48c1ec] text-white font-['Helvetica_Medium',Helvetica,Arial,Lucida,sans-serif] transition-all duration-300 border-2 border-white rounded-[36px] py-2.5 sm:py-3 md:py-3 pb-1.5 px-8 sm:px-12 md:px-20 hover:bg-[#212835]"
+                className="inline-block relative text-sm sm:text-base md:text-[20px] leading-tight sm:leading-normal md:leading-[34px] font-medium bg-[#48c1ec] text-white transition-all duration-300 border-2 border-white rounded-[36px] py-2.5 sm:py-3 md:py-3 pb-1.5 px-8 sm:px-12 md:px-20 hover:bg-[#212835]"
               >
                 AGENDA TU DEMO
               </a>
@@ -80,7 +80,7 @@ export default function Steps() {
         </div>
 
         {/* DERECHA - Carrusel de Imágenes */}
-        <div className="w-full md:w-[47.25%] relative z-[2] order-1 md:order-2 mb-6 md:mb-0 md:mt-0">
+        <div className="w-full md:w-[47.25%] relative z-[2] order-2 md:order-2 mb-6 md:mb-0 md:mt-0">
           <FadeUp delay={0.4}>
             <div className="w-full flex flex-col items-center gap-4">
 
