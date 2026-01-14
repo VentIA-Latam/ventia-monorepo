@@ -27,7 +27,9 @@ export default function Steps() {
     <section
       id="casos-exito"
       className="relative bg-white pt-8 sm:pt-12 md:pt-[54px] pb-8 sm:pb-12 md:pb-[54px] scroll-mt-24 sm:scroll-mt-28 md:scroll-mt-[109px]"
+      className="relative bg-white pt-8 sm:pt-12 md:pt-[54px] pb-8 sm:pb-12 md:pb-[54px] scroll-mt-24 sm:scroll-mt-28 md:scroll-mt-[109px]"
     >
+      <div className="max-w-[90%] mx-auto relative flex flex-col md:flex-row pt-4 sm:pt-6 md:pt-[27px] pb-4 sm:pb-6 md:pb-[27px] px-4 sm:px-0">
       <div className="max-w-[90%] mx-auto relative flex flex-col md:flex-row pt-4 sm:pt-6 md:pt-[27px] pb-4 sm:pb-6 md:pb-[27px] px-4 sm:px-0">
 
         {/* IZQUIERDA - Contenedor de Texto */}
@@ -107,7 +109,35 @@ export default function Steps() {
                     />
                   </motion.div>
                 </AnimatePresence>
+              <motion.div
+                animate={{ y: [0, -12, 0] }}
+                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                className="relative w-full max-w-[320px] sm:max-w-[420px] md:max-w-[520px] h-[360px] sm:h-[440px] md:h-[600px]"
+              >
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentStep.id}
+                    initial={{ opacity: 0, x: 60 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -60 }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    className="relative w-full h-full rounded-b-sm overflow-hidden bg-[#0b2435]"
+                  >
+                    <Image
+                      src={currentStep.image}
+                      alt={`Paso ${currentStep.id}`}
+                      fill
+                      className="object-contain object-center"
+                    />
+                  </motion.div>
+                </AnimatePresence>
 
+                <button
+                  onClick={prev}
+                  className="flex absolute -left-4 sm:-left-5 md:-left-6 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 rounded-full bg-white shadow-sm border border-[#E5EAF4] text-[#182432] items-center justify-center hover:bg-[#F3F7FF] transition text-xl sm:text-2xl"
+                >
+                  ‹
+                </button>
                 <button
                   onClick={prev}
                   className="flex absolute -left-4 sm:-left-5 md:-left-6 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 rounded-full bg-white shadow-sm border border-[#E5EAF4] text-[#182432] items-center justify-center hover:bg-[#F3F7FF] transition text-xl sm:text-2xl"
@@ -122,7 +152,20 @@ export default function Steps() {
                   ›
                 </button>
               </motion.div>
+                <button
+                  onClick={next}
+                  className="flex absolute -right-4 sm:-right-5 md:-right-6 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 rounded-full bg-white shadow-sm border border-[#E5EAF4] text-[#182432] items-center justify-center hover:bg-[#F3F7FF] transition text-xl sm:text-2xl"
+                >
+                  ›
+                </button>
+              </motion.div>
 
+              <div className="flex items-center justify-center gap-1.5 mt-3">
+                {steps.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentIndex(i)}
+                    className={`rounded-full transition-all ${i === currentIndex
               <div className="flex items-center justify-center gap-1.5 mt-3">
                 {steps.map((_, i) => (
                   <button
@@ -135,7 +178,16 @@ export default function Steps() {
                   />
                 ))}
               </div>
+                      }`}
+                  />
+                ))}
+              </div>
 
+            </div>
+          </FadeUp>
+        </div>
+
+        <span className="w-0 max-w-none static block"></span>
             </div>
           </FadeUp>
         </div>
