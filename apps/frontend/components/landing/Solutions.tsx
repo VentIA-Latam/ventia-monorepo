@@ -162,10 +162,11 @@ export default function Solutions() {
               /* MOBILE: Carrusel */
               flex overflow-x-auto snap-x snap-mandatory gap-0 pb-8 no-scrollbar pt-8 sm:pt-12 md:pt-14
 
-              /* DESKTOP: Grid con gaps específicos */
+              /* DESKTOP: Grid con gaps específicos y altura uniforme */
               md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5
               md:gap-8 lg:gap-12 xl:gap-15
               md:overflow-visible md:pb-0
+              md:auto-rows-fr
             "
           >
             {solutions.map((solution, index) => (
@@ -178,31 +179,32 @@ export default function Solutions() {
 
                   /* DESKTOP */
                   md:min-w-0 md:w-auto md:px-0
+                  md:h-full
                 "
               >
                 <article className="bg-white rounded-[30px] overflow-hidden h-full flex flex-col items-center text-center p-6 sm:p-8">
 
                   {/* BADGE ETAPA */}
-                  <div className="w-[80px] sm:w-[90px] bg-[#48c1ec] text-white text-sm sm:text-[16px] font-bold rounded-full mt-2 sm:mt-4 pb-0 px-0 mb-4 sm:mb-[31.6375px] text-center overflow-hidden">
+                  <div className="w-[80px] sm:w-[90px] h-[28px] sm:h-[32px] bg-[#48c1ec] text-white text-sm sm:text-[16px] font-bold rounded-full flex items-center justify-center mt-2 sm:mt-4 mb-4 sm:mb-[31.6375px]">
                     <p className="m-0 p-0">{solution.etapa}</p>
                   </div>
 
                   {/* TÍTULO */}
-                  <div className="mb-4 sm:mb-[31.6375px]">
+                  <div className="mb-4 sm:mb-[31.6375px] min-h-[56px] md:min-h-[58px] flex items-center justify-center">
                     <p className="text-lg sm:text-xl md:text-[24px] leading-tight sm:leading-normal md:leading-[28.8px] font-['Helvetica_Italic',Helvetica,Arial,Lucida,sans-serif] italic text-black m-0 p-0">
                       {solution.titulo}
                     </p>
                   </div>
 
                   {/* DESCRIPCIÓN */}
-                  <div className="mb-4 sm:mb-6 md:mb-[31.6375px] flex-grow">
+                  <div className="mb-4 sm:mb-6 md:mb-[31.6375px] flex-grow flex items-start">
                     <p className="text-xs sm:text-sm md:text-[15px] leading-relaxed sm:leading-normal md:leading-[18px] font-['Helvetica_Roman',Helvetica,Arial,Lucida,sans-serif] font-light text-shadow-[0_0_0.5px_black] text-black m-0 p-0">
                       {solution.descripcion}
                     </p>
                   </div>
 
                   {/* IMAGEN */}
-                  <div className="w-full flex justify-center leading-[0px]">
+                  <div className="w-full flex justify-center leading-[0px] mt-auto">
                     <span className="inline-block relative max-w-full">
                       <Image
                         src={solution.image}

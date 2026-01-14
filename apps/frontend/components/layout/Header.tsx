@@ -19,7 +19,7 @@ export default function Header() {
   ];
 
   return (
-    <header className="fixed top-0 w-full bg-[#212835] text-white z-[9999] font-['Helvetica_Roman',Helvetica,Arial,Lucida,sans-serif]">
+    <header className="fixed top-0 w-full bg-[#212835] text-white z-[9999] font-['Helvetica_Roman',Helvetica,Arial,Lucida,sans-serif] shadow-[0px_4px_12px_0px_rgb(33,40,53)]">
       <div className="max-w-[90%] mx-auto relative">
         <div className="h-[109px] flex items-center justify-between transition-all duration-[400ms] ease-in-out">
 
