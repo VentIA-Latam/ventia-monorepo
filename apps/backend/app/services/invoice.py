@@ -297,7 +297,7 @@ class InvoiceService:
         self,
         db: Session,
         invoice_id: int,
-        tenant_id: int,
+        tenant_id: Optional[int] = None,
     ) -> Invoice:
         """
         Check the status of an invoice in eFact and update the invoice record.
@@ -305,7 +305,7 @@ class InvoiceService:
         Args:
             db: Database session
             invoice_id: Invoice ID
-            tenant_id: Tenant ID (for verification)
+            tenant_id: Tenant ID (for verification). If None, skips tenant validation (SUPER_ADMIN)
 
         Returns:
             Invoice: Updated invoice object with latest eFact status
@@ -319,7 +319,8 @@ class InvoiceService:
         if not invoice:
             raise ValueError(f"Invoice {invoice_id} not found")
 
-        if invoice.tenant_id != tenant_id:
+        # Validate tenant ownership if tenant_id is provided (non-SUPER_ADMIN)
+        if tenant_id is not None and invoice.tenant_id != tenant_id:
             raise ValueError(f"Invoice {invoice_id} does not belong to tenant {tenant_id}")
 
         if not invoice.efact_ticket:
@@ -406,7 +407,7 @@ class InvoiceService:
     def get_invoices_by_tenant(
         self,
         db: Session,
-        tenant_id: int,
+        tenant_id: Optional[int] = None,
         skip: int = 0,
         limit: int = 100,
     ) -> tuple[list[Invoice], int]:
@@ -415,15 +416,22 @@ class InvoiceService:
 
         Args:
             db: Database session
-            tenant_id: Tenant ID
+            tenant_id: Tenant ID. If None, returns invoices from all tenants (for SUPER_ADMIN)
             skip: Number of records to skip
             limit: Maximum number of records
 
         Returns:
             Tuple of (invoices list, total count)
         """
-        invoices = invoice_repository.get_by_tenant(db, tenant_id, skip=skip, limit=limit)
-        total = invoice_repository.count_by_tenant(db, tenant_id)
+        # SUPER_ADMIN: get all invoices from all tenants
+        if tenant_id is None:
+            invoices = invoice_repository.get_all(db, skip=skip, limit=limit)
+            total = invoice_repository.count_all(db)
+        # Regular users: get invoices from their tenant
+        else:
+            invoices = invoice_repository.get_by_tenant(db, tenant_id, skip=skip, limit=limit)
+            total = invoice_repository.count_by_tenant(db, tenant_id)
+        
         return invoices, total
 
 

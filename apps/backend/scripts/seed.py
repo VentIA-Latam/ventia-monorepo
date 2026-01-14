@@ -70,7 +70,7 @@ def seed_database():
                 shopify_access_token=None,
                 shopify_api_version=None,
                 is_active=True,
-                efact_ruc="20123456789",
+                efact_ruc="20614382741",
                 settings=None,
                 created_at=datetime(2025, 12, 24, 12, 27, 59),
                 updated_at=datetime(2025, 12, 24, 12, 27, 59),
@@ -530,7 +530,7 @@ def seed_database():
                 customer_email="juancho@gmail.com",
                 customer_name="Juancho Bustamante",
                 customer_document_type="1",
-                customer_document_number="00000000",
+                customer_document_number="76310388",
                 total_price=100,
                 currency="USD",
                 line_items=[
@@ -557,9 +557,19 @@ def seed_database():
         invoice_series = [
             InvoiceSerie(
                 tenant_id=3,  # La dore
-                invoice_type="01",  # Factura
-                serie="F001",
-                description="Serie de facturas para La dore",
+                invoice_type="03",  # Boleta
+                serie="B001",
+                description="Serie de boletas para La dore",
+                last_correlativo=0,
+                is_active=True,
+                created_at=datetime.now(),
+                updated_at=datetime.now(),
+            ),
+            InvoiceSerie(
+                tenant_id=2,  # Nassau
+                invoice_type="03",  # Boleta
+                serie="B001",
+                description="Serie de boletas para Nassau",
                 last_correlativo=0,
                 is_active=True,
                 created_at=datetime.now(),
