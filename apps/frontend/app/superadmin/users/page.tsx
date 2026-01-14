@@ -100,17 +100,17 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestión de Usuarios</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Gestión de Usuarios</h1>
+          <p className="text-sm md:text-base text-gray-600 mt-1 md:mt-2">
             Administra todos los usuarios del sistema
           </p>
         </div>
         <Button
-          className="bg-green-600 hover:bg-green-700"
+          className="bg-green-600 hover:bg-green-700 w-full sm:w-auto text-sm md:text-base"
           onClick={() => setCreateDialogOpen(true)}
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -121,42 +121,42 @@ export default function UsersPage() {
         <CardContent className="p-0">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="text-gray-500">Cargando usuarios...</div>
+              <div className="text-sm md:text-base text-gray-500">Cargando usuarios...</div>
             </div>
           ) : users.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Users className="h-12 w-12 text-gray-300 mb-4" />
-              <p className="text-gray-500">No se encontraron usuarios</p>
+              <Users className="h-10 w-10 md:h-12 md:w-12 text-gray-300 mb-3 md:mb-4" />
+              <p className="text-sm md:text-base text-gray-500">No se encontraron usuarios</p>
             </div>
           ) : (
-            <div className="border rounded-lg bg-white shadow-sm overflow-hidden">
+            <div className="border rounded-lg bg-white shadow-sm overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50/80 border-b border-gray-200">
-                    <TableHead>NOMBRE</TableHead>
-                    <TableHead>EMAIL</TableHead>
-                    <TableHead>ROL</TableHead>
-                    <TableHead>ESTADO</TableHead>
-                    <TableHead >ACCIONES</TableHead>
+                    <TableHead className="text-xs md:text-sm min-w-[150px]">NOMBRE</TableHead>
+                    <TableHead className="text-xs md:text-sm min-w-[180px]">EMAIL</TableHead>
+                    <TableHead className="text-xs md:text-sm min-w-[100px]">ROL</TableHead>
+                    <TableHead className="text-xs md:text-sm min-w-[100px]">ESTADO</TableHead>
+                    <TableHead className="text-xs md:text-sm min-w-[100px]">ACCIONES</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {users.map((user) => (
                     <TableRow key={user.id} className="hover:bg-gray-50/50 cursor-pointer transition-colors border-b border-gray-100 last:border-0">
-                      <TableCell className="font-medium text-sm text-gray-900">{user.name}</TableCell>
-                      <TableCell className="text-sm text-gray-600">{user.email}</TableCell>
+                      <TableCell className="font-medium text-xs md:text-sm text-gray-900">{user.name}</TableCell>
+                      <TableCell className="text-xs md:text-sm text-gray-600">{user.email}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-0 hover:bg-blue-100 rounded-md px-3 py-1">
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-0 hover:bg-blue-100 rounded-md px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs">
                           {user.role}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         {user.is_active ? (
-                          <Badge variant="secondary" className="bg-green-100 text-green-700 border-0 hover:bg-green-100 rounded-md px-3 py-1">
+                          <Badge variant="secondary" className="bg-green-100 text-green-700 border-0 hover:bg-green-100 rounded-md px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs">
                             Activo
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="bg-red-100 text-red-700 border-0 hover:bg-red-100 rounded-md px-3 py-1">
+                          <Badge variant="secondary" className="bg-red-100 text-red-700 border-0 hover:bg-red-100 rounded-md px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs">
                             Inactivo
                           </Badge>
                         )}
@@ -164,27 +164,27 @@ export default function UsersPage() {
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                            <DropdownMenuLabel className="text-xs md:text-sm">Acciones</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleShowDetail(user)}>
-                              <Eye className="mr-2 h-4 w-4" />
+                            <DropdownMenuItem onClick={() => handleShowDetail(user)} className="text-xs md:text-sm">
+                              <Eye className="mr-2 h-3 w-3 md:h-4 md:w-4" />
                               Ver detalles
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                              <Edit className="mr-2 h-4 w-4" />
+                            <DropdownMenuItem onClick={() => handleEditUser(user)} className="text-xs md:text-sm">
+                              <Edit className="mr-2 h-3 w-3 md:h-4 md:w-4" />
                               Editar
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => handleToggleStatus(user)}
-                              className={user.is_active ? "text-red-600" : "text-green-600"}
+                              className={`text-xs md:text-sm ${user.is_active ? "text-red-600" : "text-green-600"}`}
                             >
-                              <Power className="mr-2 h-4 w-4" />
+                              <Power className="mr-2 h-3 w-3 md:h-4 md:w-4" />
                               {user.is_active ? "Desactivar" : "Activar"}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
