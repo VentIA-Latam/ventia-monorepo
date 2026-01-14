@@ -104,17 +104,17 @@ export default function TenantsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestión de Empresas</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Gestión de Empresas</h1>
+          <p className="text-sm md:text-base text-gray-600 mt-1 md:mt-2">
             Administra todas las empresas de la plataforma
           </p>
         </div>
         <Button
-          className="bg-blue-600 hover:bg-blue-700"
+          className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto text-sm md:text-base"
           onClick={() => setCreateDialogOpen(true)}
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -125,24 +125,24 @@ export default function TenantsPage() {
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Filtros</CardTitle>
+          <CardTitle className="text-base md:text-lg">Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Buscar por nombre o slug..."
                 value={filters.search}
                 onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                className="pl-10"
+                className="pl-10 text-sm md:text-base"
               />
             </div>
             <Select
               value={filters.status}
               onValueChange={(value) => setFilters({ ...filters, status: value })}
             >
-              <SelectTrigger>
+              <SelectTrigger className="text-sm md:text-base">
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
               <SelectContent>
@@ -155,7 +155,7 @@ export default function TenantsPage() {
               value={filters.isPlatform}
               onValueChange={(value) => setFilters({ ...filters, isPlatform: value })}
             >
-              <SelectTrigger>
+              <SelectTrigger className="text-sm md:text-base">
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
@@ -173,32 +173,32 @@ export default function TenantsPage() {
         <CardContent className="p-0">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="text-gray-500">Cargando empresas...</div>
+              <div className="text-sm md:text-base text-gray-500">Cargando empresas...</div>
             </div>
           ) : filteredTenants.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Building2 className="h-12 w-12 text-gray-300 mb-4" />
-              <p className="text-gray-500">No se encontraron empresas</p>
+              <Building2 className="h-10 w-10 md:h-12 md:w-12 text-gray-300 mb-3 md:mb-4" />
+              <p className="text-sm md:text-base text-gray-500">No se encontraron empresas</p>
             </div>
           ) : (
-            <div className="border rounded-lg bg-white shadow-sm overflow-hidden">
+            <div className="border rounded-lg bg-white shadow-sm overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50/80 border-b border-gray-200">
-                    <TableHead>NOMBRE</TableHead>
-                    <TableHead>IDENTIFICADOR</TableHead>
-                    <TableHead>TIENDA SHOPIFY</TableHead>
-                    <TableHead>TIPO</TableHead>
-                    <TableHead>ESTADO</TableHead>
-                    <TableHead>ACCIONES</TableHead>
+                    <TableHead className="text-xs md:text-sm min-w-[150px]">NOMBRE</TableHead>
+                    <TableHead className="text-xs md:text-sm min-w-[120px]">IDENTIFICADOR</TableHead>
+                    <TableHead className="text-xs md:text-sm min-w-[180px]">TIENDA SHOPIFY</TableHead>
+                    <TableHead className="text-xs md:text-sm min-w-[100px]">TIPO</TableHead>
+                    <TableHead className="text-xs md:text-sm min-w-[100px]">ESTADO</TableHead>
+                    <TableHead className="text-xs md:text-sm min-w-[100px]">ACCIONES</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredTenants.map((tenant) => (
                     <TableRow key={tenant.id} className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 last:border-0">
-                      <TableCell className="font-medium text-sm text-gray-900">{tenant.name}</TableCell>
+                      <TableCell className="font-medium text-xs md:text-sm text-gray-900">{tenant.name}</TableCell>
                       <TableCell>
-                        <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-700">
+                        <code className="text-[10px] md:text-xs bg-gray-100 px-2 py-1 rounded text-gray-700">
                           {tenant.slug}
                         </code>
                       </TableCell>
@@ -208,32 +208,32 @@ export default function TenantsPage() {
                             href={tenant.shopify_store_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline text-sm"
+                            className="text-blue-600 hover:underline text-xs md:text-sm"
                           >
                             {new URL(tenant.shopify_store_url).hostname}
                           </a>
                         ) : (
-                          <span className="text-gray-400 text-sm">—</span>
+                          <span className="text-gray-400 text-xs md:text-sm">—</span>
                         )}
                       </TableCell>
                       <TableCell>
                         {tenant.is_platform ? (
-                          <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-0 hover:bg-purple-100 rounded-md px-3 py-1">
+                          <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-0 hover:bg-purple-100 rounded-md px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs">
                             Plataforma
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="bg-gray-100 text-gray-700 border-0 hover:bg-gray-100 rounded-md px-3 py-1">
+                          <Badge variant="secondary" className="bg-gray-100 text-gray-700 border-0 hover:bg-gray-100 rounded-md px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs">
                             Empresa
                           </Badge>
                         )}
                       </TableCell>
                       <TableCell>
                         {tenant.is_active ? (
-                          <Badge variant="secondary" className="bg-green-100 text-green-700 border-0 hover:bg-green-100 rounded-md px-3 py-1">
+                          <Badge variant="secondary" className="bg-green-100 text-green-700 border-0 hover:bg-green-100 rounded-md px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs">
                             Activo
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="bg-red-100 text-red-700 border-0 hover:bg-red-100 rounded-md px-3 py-1">
+                          <Badge variant="secondary" className="bg-red-100 text-red-700 border-0 hover:bg-red-100 rounded-md px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs">
                             Inactivo
                           </Badge>
                         )}
@@ -241,27 +241,27 @@ export default function TenantsPage() {
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                            <DropdownMenuLabel className="text-xs md:text-sm">Acciones</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleViewDetails(tenant.id)}>
-                              <Eye className="mr-2 h-4 w-4" />
+                            <DropdownMenuItem onClick={() => handleViewDetails(tenant.id)} className="text-xs md:text-sm">
+                              <Eye className="mr-2 h-3 w-3 md:h-4 md:w-4" />
                               Ver detalles
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEditTenant(tenant)}>
-                              <Edit className="mr-2 h-4 w-4" />
+                            <DropdownMenuItem onClick={() => handleEditTenant(tenant)} className="text-xs md:text-sm">
+                              <Edit className="mr-2 h-3 w-3 md:h-4 md:w-4" />
                               Editar
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => handleToggleStatus(tenant)}
-                              className={tenant.is_active ? "text-red-600" : "text-green-600"}
+                              className={`text-xs md:text-sm ${tenant.is_active ? "text-red-600" : "text-green-600"}`}
                             >
-                              <Power className="mr-2 h-4 w-4" />
+                              <Power className="mr-2 h-3 w-3 md:h-4 md:w-4" />
                               {tenant.is_active ? "Desactivar" : "Activar"}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -277,7 +277,7 @@ export default function TenantsPage() {
       </Card>
 
       {/* Stats */}
-      <div className="text-sm text-gray-600">
+      <div className="text-xs md:text-sm text-gray-600">
         Mostrando {filteredTenants.length} de {tenants.length} tenants
       </div>
 

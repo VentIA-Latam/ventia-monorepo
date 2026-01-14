@@ -65,6 +65,32 @@ class InvoiceRepository(CRUDBase[Invoice, InvoiceCreate, InvoiceUpdate]):
             .all()
         )
 
+    def get_all(
+        self,
+        db: Session,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> list[Invoice]:
+        """
+        Get all invoices from all tenants with pagination (for SUPER_ADMIN).
+
+        Args:
+            db: Database session
+            skip: Number of records to skip
+            limit: Maximum number of records to return
+
+        Returns:
+            List of invoices ordered by created_at DESC
+        """
+        return (
+            db.query(Invoice)
+            .order_by(Invoice.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
     def count_by_tenant(
         self,
         db: Session,
@@ -81,6 +107,21 @@ class InvoiceRepository(CRUDBase[Invoice, InvoiceCreate, InvoiceUpdate]):
             Total count of invoices
         """
         return db.query(Invoice).filter(Invoice.tenant_id == tenant_id).count()
+
+    def count_all(
+        self,
+        db: Session,
+    ) -> int:
+        """
+        Count total number of invoices from all tenants (for SUPER_ADMIN).
+
+        Args:
+            db: Database session
+
+        Returns:
+            Total count of invoices
+        """
+        return db.query(Invoice).count()
 
     def get_by_ticket(
         self,
