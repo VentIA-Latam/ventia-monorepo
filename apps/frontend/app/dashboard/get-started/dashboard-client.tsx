@@ -67,15 +67,15 @@ export function DashboardClient({ initialMetrics }: DashboardClientProps) {
         </div>
 
         {/* Selector de periodo */}
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-medium text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <label className="text-xs sm:text-sm font-medium text-muted-foreground">
             Periodo:
           </label>
           <Select
             value={selectedPeriod}
             onValueChange={(value) => handlePeriodChange(value as PeriodType)}
           >
-            <SelectTrigger className="px-4 py-2 border rounded-lg bg-background min-w-[180px] font-medium">
+            <SelectTrigger className="px-2 py-1.5 sm:px-4 sm:py-2 border rounded-lg bg-background w-auto sm:min-w-[180px] font-medium text-xs sm:text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

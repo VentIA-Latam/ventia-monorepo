@@ -56,6 +56,8 @@ export async function fetchOrders(
     skip?: number;
     limit?: number;
     validado?: boolean;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
   }
 ): Promise<OrderListResponse> {
   const queryParams = new URLSearchParams();
@@ -68,6 +70,12 @@ export async function fetchOrders(
   }
   if (params?.validado !== undefined) {
     queryParams.append('validado', params.validado.toString());
+  }
+  if (params?.sortBy !== undefined) {
+    queryParams.append('sort_by', params.sortBy);
+  }
+  if (params?.sortOrder !== undefined) {
+    queryParams.append('sort_order', params.sortOrder);
   }
 
   const url = `${API_URL}/orders${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
