@@ -38,47 +38,48 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
   const [isDownloadingXML, setIsDownloadingXML] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
 
-  // Auto-polling cuando el status es "processing"
-  useEffect(() => {
-    if (invoice.efact_status !== "processing") return;
+  // Auto-polling DESACTIVADO - la factura cambia a success solo al descargar el PDF
+  // useEffect(() => {
+  //   if (invoice.efact_status !== "processing") return;
 
-    const interval = setInterval(async () => {
-      await handleCheckStatus();
-    }, 5000); // 5 segundos
+  //   const interval = setInterval(async () => {
+  //     await handleCheckStatus();
+  //   }, 5000); // 5 segundos
 
-    return () => clearInterval(interval);
-  }, [invoice.efact_status]);
+  //   return () => clearInterval(interval);
+  // }, [invoice.efact_status]);
 
-  const handleCheckStatus = async () => {
-    try {
-      setIsCheckingStatus(true);
+  // Función desactivada - el endpoint /status no existe
+  // const handleCheckStatus = async () => {
+  //   try {
+  //     setIsCheckingStatus(true);
 
-      // Obtener token
-      const tokenRes = await fetch("/api/auth/token", { credentials: "include" });
-      if (!tokenRes.ok) throw new Error("No se pudo obtener el token");
-      const { accessToken } = await tokenRes.json();
+  //     // Obtener token
+  //     const tokenRes = await fetch("/api/auth/token", { credentials: "include" });
+  //     if (!tokenRes.ok) throw new Error("No se pudo obtener el token");
+  //     const { accessToken } = await tokenRes.json();
 
-      // Llamar al backend
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-      const response = await fetch(`${API_URL}/invoices/${invoice.id}/status`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+  //     // Llamar al backend
+  //     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  //     const response = await fetch(`${API_URL}/invoices/${invoice.id}/status`, {
+  //       headers: { Authorization: `Bearer ${accessToken}` },
+  //     });
 
-      if (!response.ok) throw new Error("Error al verificar estado");
+  //     if (!response.ok) throw new Error("Error al verificar estado");
 
-      const updatedInvoice = await response.json();
-      setInvoice(updatedInvoice);
+  //     const updatedInvoice = await response.json();
+  //     setInvoice(updatedInvoice);
 
-      // Si cambió a success o error, refrescar la página para asegurar datos actualizados
-      if (updatedInvoice.efact_status !== "processing") {
-        router.refresh();
-      }
-    } catch (err) {
-      console.error("Error checking status:", err);
-    } finally {
-      setIsCheckingStatus(false);
-    }
-  };
+  //     // Si cambió a success o error, refrescar la página para asegurar datos actualizados
+  //     if (updatedInvoice.efact_status !== "processing") {
+  //       router.refresh();
+  //     }
+  //   } catch (err) {
+  //     console.error("Error checking status:", err);
+  //   } finally {
+  //     setIsCheckingStatus(false);
+  //   }
+  // };
 
   const handleDownloadPDF = async () => {
     try {
@@ -95,7 +96,10 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
-      if (!response.ok) throw new Error("Error al descargar PDF");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Error al descargar PDF");
+      }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -106,6 +110,9 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+
+      // Refrescar los datos de la factura después de descargar
+      router.refresh();
     } catch (err) {
       console.error("Error downloading PDF:", err);
       alert(err instanceof Error ? err.message : "Error al descargar el PDF");
@@ -361,7 +368,7 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
               <CardTitle>Acciones</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {/* Botón Actualizar Estado - solo visible si está en processing */}
+              {/* Botón Actualizar Estado - DESACTIVADO porque endpoint /status está comentado
               {invoice.efact_status === 'processing' && (
                 <Button
                   className="w-full"
@@ -383,13 +390,14 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
                   )}
                 </Button>
               )}
+              */}
 
-              {/* Botón Descargar PDF */}
+              {/* Botón Descargar PDF - Esto automáticamente actualiza el status a success */}
               <Button
                 className="w-full"
                 size="sm"
                 onClick={handleDownloadPDF}
-                disabled={invoice.efact_status !== 'success' || isDownloadingPDF}
+                disabled={isDownloadingPDF}
               >
                 {isDownloadingPDF ? (
                   <>
@@ -410,7 +418,7 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
                 className="w-full"
                 size="sm"
                 onClick={handleDownloadXML}
-                disabled={invoice.efact_status !== 'success' || isDownloadingXML}
+                disabled={isDownloadingXML}
               >
                 {isDownloadingXML ? (
                   <>
