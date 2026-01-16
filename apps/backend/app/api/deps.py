@@ -4,8 +4,8 @@ FastAPI dependencies for authentication and database.
 
 from typing import Callable
 
-from fastapi import Depends, Header, HTTPException, Request, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_user_id_from_token, verify_token
@@ -16,8 +16,13 @@ from app.repositories.user import user_repository
 from app.services.api_key import api_key_service
 from app.services.user import user_service
 
-# Security scheme for Bearer token
+# Security schemes
 security = HTTPBearer(auto_error=False)  # auto_error=False to allow API key fallback
+api_key_header = APIKeyHeader(
+    name="X-API-Key",
+    auto_error=False,
+    description="API Key for external integrations (e.g., n8n, webhooks)",
+)
 
 
 async def get_current_user(
@@ -86,7 +91,7 @@ async def get_current_user(
 async def get_current_user_or_api_key(
     request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
-    x_api_key: str | None = Header(None, alias="X-API-Key"),
+    x_api_key: str | None = Depends(api_key_header),
     db: Session = Depends(get_db),
 ) -> User:
     """

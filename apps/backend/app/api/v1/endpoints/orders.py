@@ -90,12 +90,12 @@ async def create_order(
 
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
-    Only ADMIN and LOGISTICA roles can create orders.
+    SUPER_ADMIN, ADMIN and VENTAS roles can create orders.
     The order is created for the current user's tenant (tenant_id is obtained from current_user).
 
     Args:
         order_in: Order creation data (shopify_draft_order_id and other fields, tenant_id is NOT required)
-        current_user: Current authenticated user or API key (ADMIN or LOGISTICA role required)
+        current_user: Current authenticated user or API key (SUPER_ADMIN, ADMIN or VENTAS role required)
         db: Database session
 
     Returns:
@@ -105,10 +105,10 @@ async def create_order(
         HTTPException: If order creation fails or insufficient permissions
     """
     # Verify role permission
-    if current_user.role not in [Role.ADMIN, Role.LOGISTICA]:
+    if current_user.role not in [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Role '{current_user.role}' is not allowed to create orders. Requires ADMIN or LOGISTICA role.",
+            detail=f"Role '{current_user.role}' is not allowed to create orders. Requires SUPER_ADMIN, ADMIN or VENTAS role.",
         )
     try:
         created_order = order_service.create_order(db, order_in, tenant_id=current_user.tenant_id)
@@ -279,7 +279,7 @@ async def get_order(
 async def update_order(
     order_id: int,
     order_in: OrderUpdate,
-    current_user: User = Depends(require_role(Role.ADMIN, Role.LOGISTICA)),
+    current_user: User = Depends(require_role(Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS)),
     db: Session = Depends(get_database),
 ) -> OrderResponse:
     """
@@ -288,23 +288,20 @@ async def update_order(
     **Authentication:** JWT token required.
 
     **Access Control:**
-    - Only ADMIN and LOGISTICA roles can update orders
-    - Tenant restriction applies to ALL users, including SUPER_ADMIN
-    - A SUPER_ADMIN cannot update orders from other tenants without being assigned to that tenant
-    - This is a security measure to prevent accidental modifications
+    - SUPER_ADMIN, ADMIN and VENTAS roles can update orders
+    - Tenant restriction applies to non-SUPER_ADMIN users
+    - ADMIN/VENTAS can only update orders from their own tenant
 
     **Behavior:**
-    - Users can only update orders from their own tenant
-    - If order belongs to different tenant: returns 403 Forbidden
+    - ADMIN/VENTAS can only update orders from their own tenant
+    - SUPER_ADMIN can update orders from any tenant
+    - If order belongs to different tenant (non-SUPER_ADMIN): returns 403 Forbidden
     - If order not found: returns 404 Not Found
-
-    **Future Enhancement:**
-    - If SUPER_ADMIN order modification is needed, separate history with additional confirmations required
 
     Args:
         order_id: Order ID to update
         order_in: Update data
-        current_user: Current authenticated user (ADMIN or LOGISTICA required)
+        current_user: Current authenticated user (SUPER_ADMIN, ADMIN or VENTAS required)
         db: Database session
 
     Returns:
@@ -323,8 +320,8 @@ async def update_order(
             detail=f"Order {order_id} not found",
         )
 
-    # Verify order belongs to user's tenant (applies to ALL roles including SUPER_ADMIN)
-    if order.tenant_id is not current_user.tenant_id:
+    # Verify order belongs to user's tenant (ADMIN/VENTAS only, SUPER_ADMIN can access any)
+    if current_user.role != Role.SUPER_ADMIN and order.tenant_id != current_user.tenant_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this order",
@@ -353,14 +350,13 @@ async def validate_order(
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
     **Access Control:**
-    - Only ADMIN and LOGISTICA roles can validate orders
-    - Tenant restriction applies to ALL users, including SUPER_ADMIN
-    - A SUPER_ADMIN cannot validate orders from other tenants without being assigned to that tenant
-    - This is a security measure to prevent accidental payment confirmations and order modifications
+    - SUPER_ADMIN, ADMIN and VENTAS roles can validate orders
+    - ADMIN/VENTAS can only validate orders from their own tenant
+    - SUPER_ADMIN can validate orders from any tenant
 
     **Validation Flow:**
-    1. Verify user has permission (ADMIN or LOGISTICA only)
-    2. Verify order belongs to user's tenant (applies to all roles)
+    1. Verify user has permission (SUPER_ADMIN, ADMIN or VENTAS)
+    2. Verify order belongs to user's tenant (for non-SUPER_ADMIN)
     3. Check if order is already validated (409 if yes)
     4. Check for idempotency (409 if already in Shopify)
     5. Verify tenant has Shopify credentials (424 if missing)
@@ -373,13 +369,10 @@ async def validate_order(
        - notes (if provided)
        - updated_at (automatic)
 
-    **Future Enhancement:**
-    - If SUPER_ADMIN order validation is needed, separate history with additional confirmations required
-
     Args:
         order_id: Order ID to validate
         validate_data: Optional validation data (payment method, notes)
-        current_user: Current authenticated user or API key (ADMIN or LOGISTICA role required)
+        current_user: Current authenticated user or API key (SUPER_ADMIN, ADMIN or VENTAS role required)
         db: Database session
 
     Returns:
@@ -387,7 +380,7 @@ async def validate_order(
 
     Raises:
         HTTPException 404: If order not found
-        HTTPException 403: If order belongs to different tenant OR insufficient role (security restriction)
+        HTTPException 403: If order belongs to different tenant OR insufficient role
         HTTPException 400: If order already validated
         HTTPException 409: If order already completed in Shopify (idempotency check)
         HTTPException 424: If tenant lacks Shopify credentials
@@ -395,10 +388,10 @@ async def validate_order(
     from datetime import datetime
 
     # Verify role permission
-    if current_user.role not in [Role.ADMIN, Role.LOGISTICA]:
+    if current_user.role not in [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Role '{current_user.role}' is not allowed to validate orders. Requires ADMIN or LOGISTICA role.",
+            detail=f"Role '{current_user.role}' is not allowed to validate orders. Requires SUPER_ADMIN, ADMIN or VENTAS role.",
         )
 
     # Get order to verify tenant
@@ -410,8 +403,8 @@ async def validate_order(
             detail=f"Order {order_id} not found",
         )
 
-    # Verify order belongs to user's tenant (applies to ALL roles including SUPER_ADMIN)
-    if order.tenant_id is not current_user.tenant_id:
+    # Verify order belongs to user's tenant (ADMIN/VENTAS only, SUPER_ADMIN can access any)
+    if current_user.role != Role.SUPER_ADMIN and order.tenant_id != current_user.tenant_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this order",
@@ -571,8 +564,8 @@ async def delete_order(
             detail=f"Order {order_id} not found",
         )
 
-    # Verify order belongs to user's tenant (applies to ALL roles including SUPER_ADMIN)
-    if order.tenant_id is not current_user.tenant_id:
+    # Verify order belongs to user's tenant (ADMIN only, SUPER_ADMIN can access any)
+    if current_user.role != Role.SUPER_ADMIN and order.tenant_id != current_user.tenant_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this order",

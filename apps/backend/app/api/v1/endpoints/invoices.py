@@ -38,7 +38,7 @@ router = APIRouter()
 async def create_invoice_for_order(
     order_id: int,
     invoice_data: InvoiceCreate,
-    current_user: User = Depends(require_role(Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA)),
+    current_user: User = Depends(require_role(Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS)),
     db: Session = Depends(get_database),
 ) -> InvoiceResponse:
     """
@@ -47,10 +47,10 @@ async def create_invoice_for_order(
     This endpoint generates a new electronic invoice for SUNAT submission.
     The invoice is immediately submitted to eFact-OSE for processing.
 
-    **Permissions:** Requires SUPER_ADMIN, ADMIN or LOGISTICA role
-    
+    **Permissions:** Requires SUPER_ADMIN, ADMIN or VENTAS role
+
     SUPER_ADMIN: Can create invoices for any tenant
-    ADMIN/LOGISTICA: Can only create for orders in their tenant
+    ADMIN/VENTAS: Can only create for orders in their tenant
 
     **Request Body:**
     - `invoice_type`: Type of invoice (01=Factura, 03=Boleta, 07=Nota de Crédito, 08=Nota de Débito)
@@ -77,14 +77,14 @@ async def create_invoice_for_order(
     **Error Handling:**
     - `400 Bad Request`: Order validation failed, missing RUC, etc.
     - `401 Unauthorized`: User not authenticated
-    - `403 Forbidden`: User lacks ADMIN or LOGISTICA role
+    - `403 Forbidden`: User lacks ADMIN or VENTAS role
     - `404 Not Found`: Order not found
     - `500 Internal Server Error`: eFact submission or processing error
 
     Args:
         order_id: Order ID to create invoice for
         invoice_data: Invoice creation data (InvoiceCreate)
-        current_user: Current authenticated user (must be SUPER_ADMIN, ADMIN or LOGISTICA)
+        current_user: Current authenticated user (must be SUPER_ADMIN, ADMIN or VENTAS)
         db: Database session
 
     Returns:
@@ -96,8 +96,8 @@ async def create_invoice_for_order(
     try:
         # Validate tenant access
         # SUPER_ADMIN can create invoices for any tenant
-        # ADMIN and LOGISTICA can only create for their own tenant
-        if current_user.role in (Role.ADMIN, Role.LOGISTICA):
+        # ADMIN and VENTAS can only create for their own tenant
+        if current_user.role in (Role.ADMIN, Role.VENTAS):
             order = order_repository.get(db, order_id)
             if not order or order.tenant_id != current_user.tenant_id:
                 raise HTTPException(
