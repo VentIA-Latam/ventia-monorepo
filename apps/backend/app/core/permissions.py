@@ -53,10 +53,23 @@ PERMISSIONS: Dict[Tuple[str, str], List[Role]] = {
     ("PATCH", "/api-keys/*"): [Role.SUPER_ADMIN, Role.ADMIN],
     ("DELETE", "/api-keys/*"): [Role.SUPER_ADMIN, Role.ADMIN],
     
-    # INVOICES ENDPOINTS
+    # INVOICES ENDPOINTS (legacy paths under /orders - will be deprecated in HU-009)
     ("POST", "/orders/*/invoice"): [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS],
     ("GET", "/orders/*/invoices"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
     ("GET", "/orders/invoices"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+
+    # INVOICES ENDPOINTS (new unified paths)
+    ("POST", "/invoices"): [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS],
+    ("POST", "/invoices/*"): [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS],
+    ("GET", "/invoices"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("GET", "/invoices/*"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+
+    # INVOICE SERIES ENDPOINTS
+    ("GET", "/invoice-series"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("GET", "/invoice-series/*"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("POST", "/invoice-series"): [Role.SUPER_ADMIN, Role.ADMIN],
+    ("PATCH", "/invoice-series/*"): [Role.SUPER_ADMIN, Role.ADMIN],
+    ("DELETE", "/invoice-series/*"): [Role.SUPER_ADMIN, Role.ADMIN],
 }
 
 

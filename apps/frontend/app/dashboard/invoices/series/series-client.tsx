@@ -122,6 +122,56 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
     }
   };
 
+  const handleOpenEdit = (serie: InvoiceSerie) => {
+    setSelectedSerie(serie);
+    setFormData({
+      invoice_type: serie.invoice_type,
+      serie: serie.serie,
+      description: serie.description || "",
+      is_active: serie.is_active,
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdate = async () => {
+    if (!selectedSerie) return;
+
+    try {
+      setIsSaving(true);
+      setError(null);
+
+      const response = await fetch(`/api/invoice-series/${selectedSerie.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: formData.description || null,
+          is_active: formData.is_active,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || "Error al actualizar la serie");
+      }
+
+      await loadSeries();
+      setIsEditDialogOpen(false);
+      setSelectedSerie(null);
+      resetForm();
+    } catch (err) {
+      console.error("Error updating serie:", err);
+      setError(err instanceof Error ? err.message : "Error al actualizar la serie");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCloseEditDialog = () => {
+    setIsEditDialogOpen(false);
+    setSelectedSerie(null);
+    resetForm();
+  };
+
   const resetForm = () => {
     setFormData({
       invoice_type: INVOICE_TYPES.FACTURA,
@@ -232,17 +282,17 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
                           <Button
                             variant="ghost"
                             size="sm"
-                            disabled
-                            title="Funcionalidad no disponible aún"
+                            onClick={() => handleOpenEdit(serie)}
+                            title="Editar serie"
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            disabled
-                            title="Funcionalidad no disponible aún"
-                            className="text-red-400"
+                            onClick={() => handleDelete(serie.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            title="Eliminar serie"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -340,6 +390,83 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
                 </>
               ) : (
                 "Crear Serie"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Editar Serie</DialogTitle>
+            <DialogDescription>
+              Modifica la descripción o el estado de la serie {selectedSerie?.serie}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Tipo de Comprobante</Label>
+              <Input
+                value={INVOICE_TYPE_LABELS[formData.invoice_type] || formData.invoice_type}
+                disabled
+                className="bg-gray-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Serie</Label>
+              <Input
+                value={formData.serie}
+                disabled
+                className="font-mono bg-gray-50"
+              />
+              <p className="text-xs text-gray-500">
+                La serie no puede ser modificada una vez creada
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_description">Descripción</Label>
+              <Textarea
+                id="edit_description"
+                placeholder="Ej: Serie principal de facturas"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                rows={2}
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="is_active"
+                checked={formData.is_active}
+                onChange={(e) =>
+                  setFormData({ ...formData, is_active: e.target.checked })
+                }
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="is_active" className="text-sm font-normal">
+                Serie activa (puede ser usada para emitir comprobantes)
+              </Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseEditDialog}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdate} disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                "Guardar Cambios"
               )}
             </Button>
           </DialogFooter>

@@ -14,7 +14,7 @@ export async function GET() {
       );
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/invoice-series`, {
+    const response = await fetch(`${API_BASE_URL}/invoice-series`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
 
     const body = await request.json();
 
-    const response = await fetch(`${API_BASE_URL}/api/v1/invoice-series`, {
+    const response = await fetch(`${API_BASE_URL}/invoice-series`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -2,6 +2,7 @@
 FastAPI dependencies for authentication and database.
 """
 
+import warnings
 from typing import Callable
 
 from fastapi import Depends, HTTPException, Request, status
@@ -197,6 +198,11 @@ async def get_current_user_or_api_key(
 
 def require_permission(method: str, path_pattern: str) -> Callable:
     """
+    DEPRECATED: Use require_permission_dual instead.
+
+    This function only supports JWT authentication. For dual auth (JWT + API key),
+    use require_permission_dual which is the recommended approach.
+
     Dependency factory to check if user has permission for an endpoint.
 
     Args:
@@ -205,18 +211,12 @@ def require_permission(method: str, path_pattern: str) -> Callable:
 
     Returns:
         Callable: Dependency function that checks permissions
-
-    Usage:
-        ```python
-        @router.post("/orders/{order_id}/validate")
-        async def validate_order(
-            order_id: int,
-            current_user: User = Depends(require_permission("POST", "/orders/*/validate"))
-        ):
-            # Only ADMIN and LOGISTICA can access this
-            ...
-        ```
     """
+    warnings.warn(
+        "require_permission is deprecated. Use require_permission_dual instead for dual auth support.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
     async def permission_checker(
         request: Request,
@@ -238,28 +238,87 @@ def require_permission(method: str, path_pattern: str) -> Callable:
     return permission_checker
 
 
+def require_permission_dual(method: str, path_pattern: str) -> Callable:
+    """
+    Unified dependency factory for dual authentication (JWT + API Key) with permission validation.
+
+    This is the recommended dependency for endpoints that need to:
+    1. Support both JWT (Auth0) and API key authentication
+    2. Validate permissions against the centralized PERMISSIONS table
+
+    Args:
+        method: HTTP method (GET, POST, PUT, DELETE, PATCH)
+        path_pattern: Path pattern for permission lookup (e.g., "/invoices", "/invoices/*")
+
+    Returns:
+        Callable: Dependency function that authenticates and authorizes the request
+
+    Usage:
+        ```python
+        @router.post("/{order_id}/invoice")
+        async def create_invoice(
+            order_id: int,
+            current_user: User = Depends(require_permission_dual("POST", "/invoices"))
+        ):
+            # User is authenticated (JWT or API key) and authorized
+            ...
+        ```
+
+    Raises:
+        HTTPException 401: If authentication fails (invalid JWT or API key)
+        HTTPException 403: If user's role doesn't have permission for the endpoint
+    """
+
+    async def permission_checker(
+        request: Request,
+        credentials: HTTPAuthorizationCredentials | None = Depends(security),
+        x_api_key: str | None = Depends(api_key_header),
+        db: Session = Depends(get_db),
+    ) -> User:
+        """Authenticate via JWT or API key, then check permissions."""
+        # Step 1: Authenticate using dual auth (JWT or API key)
+        current_user = await get_current_user_or_api_key(
+            request=request,
+            credentials=credentials,
+            x_api_key=x_api_key,
+            db=db,
+        )
+
+        # Step 2: Check permission against PERMISSIONS table
+        # Use the actual request path for accurate permission checking
+        actual_path = request.url.path.rstrip("/") or "/"
+
+        if not can_access(current_user.role, method, actual_path):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Role '{current_user.role.value}' is not allowed to {method} {actual_path}",
+            )
+
+        return current_user
+
+    return permission_checker
+
+
 def require_role(*allowed_roles: Role) -> Callable:
     """
-    Dependency factory to require specific roles.
+    DEPRECATED: Use require_permission_dual instead.
 
-    Simpler alternative to require_permission for role-based checks.
+    This function only supports JWT authentication and doesn't use the centralized
+    PERMISSIONS table. Use require_permission_dual for consistent auth handling.
+
+    Dependency factory to require specific roles.
 
     Args:
         allowed_roles: Roles that are allowed to access the endpoint
 
     Returns:
         Callable: Dependency function that checks role
-
-    Usage:
-        ```python
-        @router.get("/admin")
-        async def admin_endpoint(
-            current_user: User = Depends(require_role(Role.ADMIN))
-        ):
-            # Only ADMIN can access
-            ...
-        ```
     """
+    warnings.warn(
+        "require_role is deprecated. Use require_permission_dual instead for dual auth and centralized permissions.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
     async def role_checker(current_user: User = Depends(get_current_user)) -> User:
         """Check if user has one of the allowed roles."""

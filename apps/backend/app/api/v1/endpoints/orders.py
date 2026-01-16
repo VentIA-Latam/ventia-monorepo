@@ -11,7 +11,7 @@ from app.api.deps import (
     get_current_user,
     get_current_user_or_api_key,
     get_database,
-    require_role,
+    require_permission_dual,
 )
 from app.core.permissions import Role
 from app.models.user import User
@@ -82,7 +82,7 @@ async def get_recent_orders(
 @router.post("/", response_model=OrderResponse, tags=["orders"])
 async def create_order(
     order_in: OrderCreate,
-    current_user: User = Depends(get_current_user_or_api_key),
+    current_user: User = Depends(require_permission_dual("POST", "/orders")),
     db: Session = Depends(get_database),
 ) -> OrderResponse:
     """
@@ -104,12 +104,6 @@ async def create_order(
     Raises:
         HTTPException: If order creation fails or insufficient permissions
     """
-    # Verify role permission
-    if current_user.role not in [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Role '{current_user.role}' is not allowed to create orders. Requires SUPER_ADMIN, ADMIN or VENTAS role.",
-        )
     try:
         created_order = order_service.create_order(db, order_in, tenant_id=current_user.tenant_id)
         return created_order
@@ -279,13 +273,13 @@ async def get_order(
 async def update_order(
     order_id: int,
     order_in: OrderUpdate,
-    current_user: User = Depends(require_role(Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS)),
+    current_user: User = Depends(require_permission_dual("PUT", "/orders/*")),
     db: Session = Depends(get_database),
 ) -> OrderResponse:
     """
     Update order.
 
-    **Authentication:** JWT token required.
+    **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
     **Access Control:**
     - SUPER_ADMIN, ADMIN and VENTAS roles can update orders
@@ -341,7 +335,7 @@ async def update_order(
 async def validate_order(
     order_id: int,
     validate_data: OrderValidate | None = None,
-    current_user: User = Depends(get_current_user_or_api_key),
+    current_user: User = Depends(require_permission_dual("POST", "/orders/*/validate")),
     db: Session = Depends(get_database),
 ) -> OrderResponse:
     """
@@ -386,13 +380,6 @@ async def validate_order(
         HTTPException 424: If tenant lacks Shopify credentials
     """
     from datetime import datetime
-
-    # Verify role permission
-    if current_user.role not in [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Role '{current_user.role}' is not allowed to validate orders. Requires SUPER_ADMIN, ADMIN or VENTAS role.",
-        )
 
     # Get order to verify tenant
     order = order_service.get_order(db, order_id)
@@ -522,13 +509,13 @@ async def validate_order(
 @router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["orders"])
 async def delete_order(
     order_id: int,
-    current_user: User = Depends(require_role(Role.ADMIN)),
+    current_user: User = Depends(require_permission_dual("DELETE", "/orders/*")),
     db: Session = Depends(get_database),
 ) -> None:
     """
     Delete order (soft delete).
 
-    **Authentication:** JWT token required.
+    **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
     **Access Control:**
     - Only ADMIN role can delete orders

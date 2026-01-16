@@ -13,10 +13,8 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import (
-    get_current_user,
     get_database,
-    require_permission,
-    require_role,
+    require_permission_dual,
 )
 from app.core.permissions import Role
 from app.models.user import User
@@ -38,7 +36,7 @@ router = APIRouter()
 async def create_invoice_for_order(
     order_id: int,
     invoice_data: InvoiceCreate,
-    current_user: User = Depends(require_role(Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS)),
+    current_user: User = Depends(require_permission_dual("POST", "/invoices")),
     db: Session = Depends(get_database),
 ) -> InvoiceResponse:
     """
@@ -155,7 +153,7 @@ async def create_invoice_for_order(
 )
 async def get_invoices_for_order(
     order_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission_dual("GET", "/invoices")),
     db: Session = Depends(get_database),
 ) -> list[InvoiceResponse]:
     """
@@ -244,111 +242,162 @@ async def get_invoices_for_order(
         )
 
 
-# @router.get(
-#     "/{invoice_id}/status",
-#     response_model=InvoiceResponse,
-#     tags=["invoices"],
-# )
-# async def check_invoice_status(
-#     invoice_id: int,
-#     current_user: User = Depends(get_current_user),
-#     db: Session = Depends(get_database),
-# ) -> InvoiceResponse:
-#     """
-#     Check the status of an invoice in eFact and update the invoice record.
-# 
-#     This endpoint queries eFact-OSE API to get the current processing status
-#     of a submitted invoice and updates the local database record accordingly.
-# 
-#     **NOTA IMPORTANTE:** Según documentación de eFact, el flujo correcto es:
-#     1. send_document() retorna un ticket
-#     2. Intentar descargar el PDF con el ticket
-#     3. Si el PDF está disponible → invoice procesado con éxito
-#     4. Si hay error → invoice rechazado (revisar error)
-#     
-#     Este endpoint usa get_document_status() pero puede que necesite ajustarse
-#     según la API real de eFact.
-# 
-#     **Permissions:** 
-#     - All authenticated users can check status of their tenant's invoices
-#     - SUPER_ADMIN can check status of any tenant's invoices
-# 
-#     **Process:**
-#     1. Validates invoice exists and user has access
-#     2. Queries eFact-OSE API with the invoice's ticket
-#     3. Updates invoice status in database based on eFact response
-#     4. Returns updated invoice
-# 
-#     **eFact Status Values:**
-#     - `processing`: Still being processed by eFact/SUNAT
-#     - `success`: Successfully validated and accepted by SUNAT
-#     - `error`: Rejected by eFact/SUNAT (check efact_error for details)
-# 
-#     **Response:**
-#     Returns InvoiceResponse with updated:
-#     - `efact_status`: Current status from eFact
-#     - `efact_response`: CDR (Constancia de Recepción) if successful
-#     - `efact_error`: Error message if failed
-#     - `efact_processed_at`: Timestamp when processing completed
-# 
-#     Args:
-#         invoice_id: Invoice ID to check status for
-#         current_user: Current authenticated user
-#         db: Database session
-# 
-#     Returns:
-#         InvoiceResponse: Invoice with updated eFact status
-# 
-#     Raises:
-#         HTTPException: 
-#             - 400 Bad Request: Invoice has no eFact ticket
-#             - 403 Forbidden: Invoice doesn't belong to user's tenant (non-SUPER_ADMIN)
-#             - 404 Not Found: Invoice not found
-#             - 500 Internal Server Error: eFact API error or unexpected error
-#     """
-#     try:
-#         # Get invoice and validate it exists
-#         invoice = invoice_service.check_invoice_status(
-#             db=db,
-#             invoice_id=invoice_id,
-#             tenant_id=current_user.tenant_id if current_user.role != Role.SUPER_ADMIN else None,
-#         )
-# 
-#         logger.info(
-#             f"Invoice {invoice_id} status checked by user {current_user.id}. "
-#             f"Status: {invoice.efact_status}"
-#         )
-# 
-#         return InvoiceResponse.from_orm(invoice)
-# 
-#     except ValueError as e:
-#         # Validation errors (invoice not found, no ticket, wrong tenant, etc.)
-#         error_msg = str(e)
-#         
-#         # Determine appropriate status code
-#         if "not found" in error_msg.lower():
-#             status_code = status.HTTP_404_NOT_FOUND
-#         elif "does not belong" in error_msg.lower():
-#             status_code = status.HTTP_403_FORBIDDEN
-#         else:
-#             status_code = status.HTTP_400_BAD_REQUEST
-#         
-#         logger.warning(f"Status check validation failed for invoice {invoice_id}: {error_msg}")
-#         raise HTTPException(
-#             status_code=status_code,
-#             detail=error_msg,
-#         )
-# 
-#     except Exception as e:
-#         # eFact API errors or unexpected errors
-#         logger.error(
-#             f"Unexpected error checking status for invoice {invoice_id}: {str(e)}",
-#             exc_info=True,
-#         )
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"Failed to check invoice status: {str(e)}",
-#         )
+@router.get(
+    "/{invoice_id}/status",
+    response_model=InvoiceResponse,
+    tags=["invoices"],
+)
+async def check_invoice_status(
+    invoice_id: int,
+    current_user: User = Depends(require_permission_dual("GET", "/invoices/*")),
+    db: Session = Depends(get_database),
+) -> InvoiceResponse:
+    """
+    Check the status of an invoice in eFact and update the invoice record.
+
+    This endpoint verifies the processing status of a submitted invoice by
+    attempting to download the PDF from eFact. According to eFact documentation,
+    if the PDF is available, the document has been successfully processed.
+
+    **Authentication:** Accepts JWT token OR API key (X-API-Key header).
+
+    **Permissions:**
+    - All authenticated users can check status of their tenant's invoices
+    - SUPER_ADMIN can check status of any tenant's invoices
+
+    **Process:**
+    1. Validates invoice exists and user has access
+    2. If already in final status (success/error), returns without calling eFact
+    3. Attempts to download PDF from eFact
+    4. If PDF available → status = "success"
+    5. If error → status = "error" + saves error message
+    6. Returns updated invoice
+
+    **eFact Status Values:**
+    - `pending`: Invoice created, not yet sent to eFact
+    - `processing`: Sent to eFact, awaiting response from SUNAT
+    - `success`: Successfully validated and accepted by SUNAT
+    - `error`: Rejected by eFact/SUNAT (check efact_error for details)
+
+    **Response:**
+    Returns InvoiceResponse with updated:
+    - `efact_status`: Current status from eFact
+    - `efact_error`: Error message if failed
+    - `efact_processed_at`: Timestamp when processing completed
+
+    Args:
+        invoice_id: Invoice ID to check status for
+        current_user: Current authenticated user
+        db: Database session
+
+    Returns:
+        InvoiceResponse: Invoice with updated eFact status
+
+    Raises:
+        HTTPException:
+            - 400 Bad Request: Invoice has no eFact ticket
+            - 403 Forbidden: Invoice doesn't belong to user's tenant (non-SUPER_ADMIN)
+            - 404 Not Found: Invoice not found
+            - 500 Internal Server Error: Unexpected error
+    """
+    from datetime import datetime
+    from app.repositories.invoice import invoice_repository
+    from app.integrations.efact_client import EFactClient
+    from app.schemas.invoice import InvoiceUpdate
+
+    try:
+        # 1. Get invoice
+        invoice = invoice_repository.get(db, invoice_id)
+        if not invoice:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Invoice {invoice_id} not found",
+            )
+
+        # 2. Validate tenant access (skip for SUPER_ADMIN)
+        if current_user.role != Role.SUPER_ADMIN and invoice.tenant_id != current_user.tenant_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied to this invoice",
+            )
+
+        # 3. Validate invoice has eFact ticket
+        if not invoice.efact_ticket:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invoice {invoice_id} has no eFact ticket",
+            )
+
+        # 4. If already in final status, return without calling eFact
+        if invoice.efact_status in ["success", "error"]:
+            logger.info(
+                f"Invoice {invoice_id} already in final status '{invoice.efact_status}'. "
+                f"Returning cached result."
+            )
+            return InvoiceResponse.from_orm(invoice)
+
+        # 5. Try to download PDF to verify status
+        efact_client = EFactClient()
+        try:
+            pdf_bytes = efact_client.download_pdf(invoice.efact_ticket)
+
+            # PDF available = success
+            invoice_update = InvoiceUpdate(efact_status="success")
+            invoice = invoice_repository.update(db, db_obj=invoice, obj_in=invoice_update)
+            invoice.efact_processed_at = datetime.utcnow()
+            db.add(invoice)
+            db.commit()
+            db.refresh(invoice)
+
+            logger.info(
+                f"Invoice {invoice_id} status updated to 'success' by user {current_user.id}. "
+                f"PDF is available ({len(pdf_bytes)} bytes)."
+            )
+
+        except Exception as e:
+            # Error downloading PDF = still processing or error
+            error_msg = str(e)
+
+            # Check if it's a "still processing" type error vs actual error
+            # eFact typically returns different errors for "not ready yet" vs "failed"
+            if "404" in error_msg or "not found" in error_msg.lower():
+                # Document still processing, don't update to error yet
+                logger.info(
+                    f"Invoice {invoice_id} PDF not yet available. Status remains 'processing'."
+                )
+            else:
+                # Actual error, update status
+                invoice_update = InvoiceUpdate(
+                    efact_status="error",
+                    efact_error=f"Status check failed: {error_msg}"
+                )
+                invoice = invoice_repository.update(db, db_obj=invoice, obj_in=invoice_update)
+                invoice.efact_processed_at = datetime.utcnow()
+                db.add(invoice)
+                db.commit()
+                db.refresh(invoice)
+
+                logger.warning(
+                    f"Invoice {invoice_id} status updated to 'error' by user {current_user.id}. "
+                    f"Error: {error_msg}"
+                )
+
+        return InvoiceResponse.from_orm(invoice)
+
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+
+    except Exception as e:
+        # Unexpected errors
+        logger.error(
+            f"Unexpected error checking status for invoice {invoice_id}: {str(e)}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to check invoice status: {str(e)}",
+        )
 
 
 @router.get(
@@ -357,7 +406,7 @@ async def get_invoices_for_order(
 )
 async def download_invoice_pdf(
     invoice_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission_dual("GET", "/invoices/*")),
     db: Session = Depends(get_database),
 ) -> Response:
     """
@@ -520,7 +569,7 @@ async def download_invoice_pdf(
 )
 async def download_invoice_xml(
     invoice_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission_dual("GET", "/invoices/*")),
     db: Session = Depends(get_database),
 ) -> Response:
     """
@@ -686,7 +735,7 @@ async def download_invoice_xml(
 async def list_invoices(
     skip: int = 0,
     limit: int = 100,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission_dual("GET", "/invoices")),
     db: Session = Depends(get_database),
 ) -> InvoiceListResponse:
     """
