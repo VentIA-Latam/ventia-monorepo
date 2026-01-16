@@ -408,7 +408,7 @@ def seed_database():
                 notes="Esperando confirmación", status="Pendiente", created_at=datetime(2025, 11, 25, 11, 30, 0), updated_at=datetime(2025, 11, 25, 11, 30, 0)),
             Order(tenant_id=2, shopify_draft_order_id="DFT-017", shopify_order_id="ORD-017",
                 customer_email="camila.herrera@company.com", customer_name="Camila Herrera", 
-                customer_document_type="DNI", customer_document_number="66789012",
+                customer_document_type="1", customer_document_number="66789012",
                 total_price=1575.00, currency="USD",
                 line_items=[
                     {"sku": "PC-DELL-WKS", "product": "Dell Workstation Desktop", "unitPrice": 1200.00, "quantity": 1, "subtotal": 1200.00},
@@ -417,7 +417,7 @@ def seed_database():
                 notes="Pedido empresarial", status="Pagado", created_at=datetime(2025, 11, 28, 13, 0, 0), updated_at=datetime(2025, 11, 28, 14, 30, 0)),
             Order(tenant_id=2, shopify_draft_order_id="DFT-018", shopify_order_id="ORD-018",
                 customer_email="fernando.castro@mail.com", customer_name="Fernando Castro", 
-                customer_document_type="RUC", customer_document_number="20333777666",
+                customer_document_type="6", customer_document_number="20333777666",
                 total_price=670.50, currency="USD",
                 line_items=[
                     {"sku": "LIGHT-RNG-18", "product": "Ring Light 18\"", "unitPrice": 89.50, "quantity": 3, "subtotal": 268.50},
@@ -426,7 +426,7 @@ def seed_database():
                 notes=None, status="Pagado", created_at=datetime(2025, 12, 1, 9, 20, 0), updated_at=datetime(2025, 12, 1, 10, 0, 0)),
             Order(tenant_id=2, shopify_draft_order_id="DFT-019", shopify_order_id="ORD-019",
                 customer_email="daniela.morales@email.com", customer_name="Daniela Morales", 
-                customer_document_type="DNI", customer_document_number="77890123",
+                customer_document_type="1", customer_document_number="77890123",
                 total_price=210.00, currency="USD",
                 line_items=[
                     {"sku": "COOL-LP-RGB", "product": "Laptop Cooling Pad RGB", "unitPrice": 55.00, "quantity": 2, "subtotal": 110.00},
@@ -435,7 +435,7 @@ def seed_database():
                 notes=None, status="Pagado", created_at=datetime(2025, 12, 3, 14, 45, 0), updated_at=datetime(2025, 12, 3, 15, 15, 0)),
             Order(tenant_id=2, shopify_draft_order_id="DFT-020", shopify_order_id="ORD-020",
                 customer_email="ricardo.flores@biz.com", customer_name="Ricardo Flores", 
-                customer_document_type="RUC", customer_document_number="20222888999",
+                customer_document_type="6", customer_document_number="20222888999",
                 total_price=980.25, currency="USD",
                 line_items=[
                     {"sku": "MON-GM-27-144", "product": "27\" Gaming Monitor 144Hz", "unitPrice": 380.00, "quantity": 2, "subtotal": 760.00},
@@ -444,7 +444,7 @@ def seed_database():
                 notes=None, status="Pendiente", created_at=datetime(2025, 12, 5, 11, 0, 0), updated_at=datetime(2025, 12, 5, 11, 45, 0)),
             Order(tenant_id=2, shopify_draft_order_id="DFT-021", shopify_order_id=None,
                 customer_email="paula.jimenez@company.com", customer_name="Paula Jimenez", 
-                customer_document_type="DNI", customer_document_number="88901234",
+                customer_document_type="1", customer_document_number="88901234",
                 total_price=135.00, currency="USD",
                 line_items=[
                     {"sku": "MOUSE-WRL-SLM", "product": "Wireless Mouse Slim", "unitPrice": 45.00, "quantity": 3, "subtotal": 135.00}
@@ -452,7 +452,7 @@ def seed_database():
                 notes=None, status="Pendiente", created_at=datetime(2025, 12, 8, 10, 15, 0), updated_at=datetime(2025, 12, 8, 10, 15, 0)),
             Order(tenant_id=2, shopify_draft_order_id="DFT-022", shopify_order_id="ORD-022",
                 customer_email="sergio.navarro@email.com", customer_name="Sergio Navarro", 
-                customer_document_type="RUC", customer_document_number="20111444555",
+                customer_document_type="6", customer_document_number="20111444555",
                 total_price=1425.00, currency="USD",
                 line_items=[
                     {"sku": "IPHONE-15P-256", "product": "iPhone 15 Pro 256GB", "unitPrice": 1100.00, "quantity": 1, "subtotal": 1100.00},
@@ -462,7 +462,7 @@ def seed_database():
                 notes="Entrega urgente", status="Pagado", created_at=datetime(2025, 12, 10, 15, 50, 0), updated_at=datetime(2025, 12, 10, 16, 30, 0)),
             Order(tenant_id=2, shopify_draft_order_id="DFT-023", shopify_order_id="ORD-023",
                 customer_email="adriana.vega@mail.com", customer_name="Adriana Vega", 
-                customer_document_type="DNI", customer_document_number="99012345",
+                customer_document_type="1", customer_document_number="99012345",
                 total_price=555.00, currency="USD",
                 line_items=[
                     {"sku": "WEB-LG-4K", "product": "Webcam 4K Logitech", "unitPrice": 185.00, "quantity": 3, "subtotal": 555.00}
@@ -470,7 +470,7 @@ def seed_database():
                 notes=None, status="Pagado", created_at=datetime(2025, 12, 12, 12, 20, 0), updated_at=datetime(2025, 12, 12, 13, 0, 0)),
             Order(tenant_id=2, shopify_draft_order_id="DFT-024", shopify_order_id="ORD-024",
                 customer_email="jorge.ramos@biz.com", customer_name="Jorge Ramos", 
-                customer_document_type="RUC", customer_document_number="20999666777",
+                customer_document_type="6", customer_document_number="20999666777",
                 total_price=790.00, currency="USD",
                 line_items=[
                     {"sku": "DOCK-USBC-11", "product": "Docking Station USB-C", "unitPrice": 320.00, "quantity": 2, "subtotal": 640.00},
@@ -479,7 +479,7 @@ def seed_database():
                 notes=None, status="Pagado", created_at=datetime(2025, 12, 15, 10, 0, 0), updated_at=datetime(2025, 12, 15, 10, 45, 0)),
             Order(tenant_id=2, shopify_draft_order_id="DFT-025", shopify_order_id=None,
                 customer_email="natalia.ortiz@email.com", customer_name="Natalia Ortiz", 
-                customer_document_type="DNI", customer_document_number="11223344",
+                customer_document_type="1", customer_document_number="11223344",
                 total_price=265.50, currency="USD",
                 line_items=[
                     {"sku": "SSD-PORT-500", "product": "Portable SSD 500GB", "unitPrice": 85.50, "quantity": 3, "subtotal": 256.50},
@@ -495,7 +495,7 @@ def seed_database():
                 notes="Cliente corporativo", status="Pagado", created_at=datetime(2025, 12, 20, 10, 15, 0), updated_at=datetime(2025, 12, 20, 11, 30, 0)),
             Order(tenant_id=2, shopify_draft_order_id="DFT-027", shopify_order_id="ORD-027",
                 customer_email="patricia.gomez@mail.com", customer_name="Patricia Gomez", 
-                customer_document_type="RUC", customer_document_number="20888555666",
+                customer_document_type="6", customer_document_number="20888555666",
                 total_price=435.75, currency="USD",
                 line_items=[
                     {"sku": "MIC-BLUE-YETI", "product": "Microphone Blue Yeti", "unitPrice": 129.99, "quantity": 1, "subtotal": 129.99},
@@ -505,7 +505,7 @@ def seed_database():
                 notes=None, status="Pagado", created_at=datetime(2025, 12, 22, 14, 30, 0), updated_at=datetime(2025, 12, 22, 15, 0, 0)),
             Order(tenant_id=2, shopify_draft_order_id="DFT-028", shopify_order_id="ORD-028",
                 customer_email="manuel.reyes@email.com", customer_name="Manuel Reyes", 
-                customer_document_type="DNI", customer_document_number="22334455",
+                customer_document_type="1", customer_document_number="22334455",
                 total_price=625.00, currency="USD",
                 line_items=[
                     {"sku": "WATCH-APL-S9", "product": "Smart Watch Apple Watch", "unitPrice": 399.00, "quantity": 1, "subtotal": 399.00},

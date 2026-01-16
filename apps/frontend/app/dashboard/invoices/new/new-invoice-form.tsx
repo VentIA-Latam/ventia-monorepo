@@ -320,13 +320,27 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
                       <SelectContent>
                         {series.map((s) => (
                           <SelectItem key={s.id} value={s.id.toString()}>
-                            {s.serie} (Siguiente: {s.correlativo})
+                            {s.serie}{s.description ? ` - ${s.description}` : ""}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   )}
                 </div>
+
+                {/* Número de Comprobante (calculado automáticamente) */}
+                {selectedSerie && (
+                  <div className="space-y-2">
+                    <Label>Número de Comprobante</Label>
+                    <div className="p-3 border rounded-md bg-muted/50 text-muted-foreground font-mono">
+                      {(() => {
+                        const selectedSerieObj = series.find(s => s.id.toString() === selectedSerie);
+                        if (!selectedSerieObj) return "-";
+                        return `${selectedSerieObj.serie}-${String(selectedSerieObj.last_correlativo + 1).padStart(8, "0")}`;
+                      })()}
+                    </div>
+                  </div>
+                )}
 
                 {/* Referencia (solo para NC/ND) */}
                 {requiresReference && (
@@ -350,7 +364,7 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
                           <SelectContent>
                             {validReferenceInvoices.map((inv) => (
                               <SelectItem key={inv.id} value={inv.id.toString()}>
-                                {inv.serie}-{inv.numero} (S/ {inv.total.toFixed(2)})
+                                {inv.serie}-{inv.correlativo} (S/ {inv.total.toFixed(2)})
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -476,7 +490,7 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
                     >
                       <div>
                         <p className="text-sm font-medium">
-                          {inv.serie}-{inv.numero}
+                          {inv.serie}-{inv.correlativo}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {inv.invoice_type === "01" ? "Factura" :

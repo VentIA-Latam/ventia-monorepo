@@ -92,7 +92,7 @@ export interface InvoiceSerie {
   tenant_id: number;
   invoice_type: "01" | "03" | "07" | "08";
   serie: string; // 4 caracteres alfanuméricos
-  correlativo: number; // Próximo correlativo a usar
+  last_correlativo: number; // Último correlativo usado (siguiente = last + 1)
   is_active: boolean;
   description?: string;
   created_at: string;

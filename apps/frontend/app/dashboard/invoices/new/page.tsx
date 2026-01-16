@@ -2,6 +2,7 @@ import { getAccessToken } from "@/lib/auth0";
 import { fetchOrder } from "@/lib/services/order-service";
 import { fetchInvoicesByOrder } from "@/lib/services/invoice-service";
 import { notFound, redirect } from "next/navigation";
+import type { Invoice } from "@/lib/types/invoice";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -126,7 +127,7 @@ export default async function NewInvoicePage({ searchParams }: NewInvoicePagePro
   }
 
   // 5️⃣ Cargar invoices previos (para NC/ND)
-  let existingInvoices = [];
+  let existingInvoices: Invoice[] = [];
   try {
     existingInvoices = await fetchInvoicesByOrder(accessToken, orderId);
   } catch (err) {

@@ -235,7 +235,7 @@ export function CreateInvoiceDialog({
 
                 {/* Serie */}
                 <div className="space-y-2">
-                  <Label htmlFor="serie">Serie de Numeración</Label>
+                  <Label htmlFor="serie">Serie</Label>
                   {isLoadingSeries ? (
                     <div className="flex items-center justify-center py-4">
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -251,9 +251,7 @@ export function CreateInvoiceDialog({
                       <SelectContent>
                         {series.map((s) => (
                           <SelectItem key={s.id} value={s.serie}>
-                            {s.serie} - {s.description || "Sin descripción"}
-                            {" (Último: "}
-                            {String(s.last_correlativo).padStart(8, "0")})
+                            {s.serie}{s.description ? ` - ${s.description}` : ""}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -267,10 +265,24 @@ export function CreateInvoiceDialog({
                       </AlertDescription>
                     </Alert>
                   )}
-                  <p className="text-xs text-muted-foreground">
-                    El número correlativo se asignará automáticamente
-                  </p>
                 </div>
+
+                {/* Número de Comprobante (calculado automáticamente) */}
+                {serie && (
+                  <div className="space-y-2">
+                    <Label>Número de Comprobante</Label>
+                    <div className="p-2 border rounded-md bg-muted/50 text-muted-foreground font-mono text-sm">
+                      {(() => {
+                        const selectedSerieObj = series.find(s => s.serie === serie);
+                        if (!selectedSerieObj) return "-";
+                        return `${selectedSerieObj.serie}-${String(selectedSerieObj.last_correlativo + 1).padStart(8, "0")}`;
+                      })()}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Se asigna automáticamente
+                    </p>
+                  </div>
+                )}
 
                 {/* Información de la orden */}
                 <div className="rounded-lg border p-3 space-y-2 text-sm">

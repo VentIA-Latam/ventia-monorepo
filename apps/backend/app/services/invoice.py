@@ -124,21 +124,20 @@ class InvoiceService:
         if not line_items:
             raise ValueError(f"Order {order_id} has no line items")
 
-        # Calculate subtotal from line items
-        subtotal = 0.0
-        for item in line_items:
-            # Each item should have price and quantity
-            # Support both 'price' and 'unitPrice' keys for compatibility
-            try:
-                price = float(item.get("price") or item.get("unitPrice") or 0)
-                quantity = float(item.get("quantity") or 0)
-                subtotal += price * quantity
-            except (ValueError, TypeError):
-                raise ValueError(f"Invalid price or quantity in line items: {item}")
+        # IMPORTANT: Prices in line_items ALREADY INCLUDE IGV (final consumer prices)
+        # We need to calculate the base amount (subtotal) by removing IGV
+        #
+        # Formula: total = subtotal + igv = subtotal + (subtotal * 0.18) = subtotal * 1.18
+        # Therefore: subtotal = total / 1.18
 
-        # Calculate IGV (18% for Peru)
-        igv = subtotal * 0.18
-        total = subtotal + igv
+        # Use order.total_price as the final amount (already includes IGV)
+        total = order.total_price
+
+        # Calculate base amount (subtotal without IGV)
+        subtotal = round(total / 1.18, 2)
+
+        # Calculate IGV as the difference
+        igv = round(total - subtotal, 2)
 
         # ===== HANDLE REFERENCES FOR NC/ND =====
 
@@ -222,7 +221,11 @@ class InvoiceService:
                         "sku": item.get("sku", f"ITEM{idx+1:03d}"),
                         "description": item.get("product") or item.get("title", "Producto"),
                         "quantity": item.get("quantity", 1),
-                        "unit_price": float(item.get("price") or item.get("unitPrice") or 0),
+                        # IMPORTANT: Prices in line_items include IGV, but generate_json_ubl
+                        # expects prices WITHOUT IGV (it calculates IGV internally)
+                        "unit_price": round(
+                            float(item.get("price") or item.get("unitPrice") or 0) / 1.18, 2
+                        ),
                         "unit": "NIU",
                     }
                     for idx, item in enumerate(invoice.items)
