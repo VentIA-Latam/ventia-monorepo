@@ -233,6 +233,14 @@ class InvoiceService:
                 subtotal=invoice.subtotal,
                 igv=invoice.igv,
                 total=invoice.total,
+                # Datos del emisor desde el tenant
+                emisor_nombre_comercial=tenant.emisor_nombre_comercial,
+                emisor_ubigeo=tenant.emisor_ubigeo,
+                emisor_departamento=tenant.emisor_departamento,
+                emisor_provincia=tenant.emisor_provincia,
+                emisor_distrito=tenant.emisor_distrito,
+                emisor_direccion=tenant.emisor_direccion or "SIN DIRECCION",
+                # Referencias para NC/ND
                 reference_type=invoice.reference_type,
                 reference_serie=invoice.reference_serie,
                 reference_correlativo=invoice.reference_correlativo,
