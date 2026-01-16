@@ -200,7 +200,7 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
       };
 
       // Crear invoice - La ruta correcta es /invoices/{orderId}/invoice
-      const response = await fetch(`${API_URL}/invoices/${order.id}/invoice`, {
+      const response = await fetch(`${API_URL}/orders/${order.id}/invoices`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

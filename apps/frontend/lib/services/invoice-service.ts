@@ -130,14 +130,14 @@ export async function fetchInvoicesByOrder(
 
 /**
  * Create invoice from order
- * POST /invoices/{orderId}/invoice
+ * POST /orders/{orderId}/invoices
  */
 export async function createInvoice(
   accessToken: string,
   orderId: number,
   data: InvoiceCreate
 ): Promise<Invoice> {
-  const response = await fetch(`${API_URL}/invoices/${orderId}/invoice`, {
+  const response = await fetch(`${API_URL}/orders/${orderId}/invoices`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,

@@ -124,7 +124,7 @@ export function CreateInvoiceDialog({
 
       // Llamar al backend directamente - RUTA CORREGIDA
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-      const response = await fetch(`${API_URL}/invoices/${order.id}/invoice`, {
+      const response = await fetch(`${API_URL}/orders/${order.id}/invoices`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
