@@ -139,14 +139,6 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
             Gestiona facturas, boletas y comprobantes electrónicos
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Link href="/dashboard/invoices/series">
-            <Button variant="outline">
-              <Filter className="h-4 w-4 mr-2" />
-              Series
-            </Button>
-          </Link>
-        </div>
       </div>
 
       {/* Filters */}

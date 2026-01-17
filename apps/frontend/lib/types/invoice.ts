@@ -81,6 +81,11 @@ export interface InvoiceCreate {
   serie: string; // Serie configurada (ej: "F001", "B001")
   reference_invoice_id?: number; // Solo para NC/ND - ID del comprobante a referenciar
   reference_reason?: string; // Solo para NC/ND - Motivo de la nota
+  // Customer data overrides (optional)
+  cliente_tipo_documento?: string; // Override document type
+  cliente_numero_documento?: string; // Override document number
+  cliente_razon_social?: string; // Override customer name
+  cliente_email?: string; // Override customer email
 }
 
 /**
