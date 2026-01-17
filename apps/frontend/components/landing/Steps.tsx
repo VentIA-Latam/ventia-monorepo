@@ -70,7 +70,9 @@ export default function Steps() {
           <FadeUp delay={0.3}>
             <div className="relative animate-[0.2s_linear] mb-6 sm:mb-8 md:mb-[41.3125px] flex justify-center md:block">
               <a
-                href="#contacto"
+                href="https://calendly.com/tarek-ventia-latam/ventia"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-block relative text-sm sm:text-base md:text-[20px] leading-tight sm:leading-normal md:leading-[34px] font-medium bg-[#48c1ec] text-white transition-all duration-300 border-2 border-white rounded-[36px] py-2.5 sm:py-3 md:py-3 pb-1.5 px-8 sm:px-12 md:px-20 hover:bg-[#212835]"
               >
                 AGENDA TU DEMO

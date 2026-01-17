@@ -40,7 +40,9 @@ export default function Hero() {
               {/* Botones con ancho máximo en mobile, flex en desktop */}
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4 max-w-[320px] sm:max-w-none mx-auto lg:mx-0">
                 <a
-                  href="#contacto"
+                  href="https://calendly.com/tarek-ventia-latam/ventia"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="flex-1 text-center text-sm md:text-base lg:text-lg font-bold bg-[rgb(33,40,53)] text-white border-2 border-[rgb(33,40,53)] rounded-full py-3 md:py-3.5 px-6 no-underline transition-colors hover:bg-[#48c1ec] hover:border-[#48c1ec]"
                 >
                   AGENDA TU DEMO
