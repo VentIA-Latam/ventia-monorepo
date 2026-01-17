@@ -115,7 +115,9 @@ export default function SuperAdminAPIKeysPage() {
     }
   };
 
-  const formatDate = (dateString: string | null) => {
+  import { formatDateTime } from "@/lib/utils";
+
+  const formatDateLocal = (dateString: string | null) => {
     if (!dateString) return "Nunca";
     return new Date(dateString).toLocaleString('es-ES', {
       dateStyle: 'short',
@@ -251,7 +253,7 @@ export default function SuperAdminAPIKeysPage() {
                           {getLastUsedBadge(apiKey.last_used_at)}
                           {apiKey.last_used_at && (
                             <span className="text-[10px] md:text-xs text-gray-500">
-                              {formatDate(apiKey.last_used_at)}
+                              {formatDateLocal(apiKey.last_used_at)}
                             </span>
                           )}
                         </div>
@@ -268,7 +270,7 @@ export default function SuperAdminAPIKeysPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-xs md:text-sm text-gray-600">
-                        {apiKey.expires_at ? formatDate(apiKey.expires_at) : "Sin vencimiento"}
+                        {apiKey.expires_at ? formatDateLocal(apiKey.expires_at) : "Sin vencimiento"}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>

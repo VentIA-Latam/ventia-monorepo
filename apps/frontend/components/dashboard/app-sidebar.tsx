@@ -208,37 +208,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* --- GRUPO CONFIGURACIÓN --- */}
-        {!isSuperAdmin && (
-          <SidebarGroup className="mt-4">
-            <SidebarGroupLabel className="text-gray-500 text-xs font-medium uppercase tracking-wider mb-2 px-2">
-              Configuración
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {dataConfiguration.map((item) => (
-                  <SidebarMenuItem key={item.title} className="mb-1">
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(item.url)}
-                      tooltip={item.title}
-                      className={`
-                          w-full justify-between h-10 px-3 rounded-lg transition-all duration-200
-                          ${isActive(item.url) ? "border border-sidebar-border shadow-sm" : ""}
-                      `}
-                    >
-                      <a href={item.url} className="flex items-center w-full">
-                        <item.icon className="w-5 h-5 mr-3 shrink-0" />
-                        <span className="flex-1 truncate">{item.title}</span>
-                      </a>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
         {/* --- GRUPO CUENTA --- */}
         {/*         
         <SidebarGroup className="mt-4">
@@ -347,14 +316,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-gray-100" />
                 <DropdownMenuGroup>
-                  {/* <DropdownMenuItem className="text-gray-600 focus:text-gray-900 cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Configuración de cuenta
-                  </DropdownMenuItem> */}
-                  {/* <DropdownMenuItem className="text-gray-600 focus:text-gray-900 cursor-pointer">
-                    <Bell className="mr-2 h-4 w-4" />
-                    Notificaciones
-                  </DropdownMenuItem> */}
+                  {!isSuperAdmin && (
+                    <>
+                      <DropdownMenuItem
+                        onClick={() => window.location.href = '/dashboard/invoices/series'}
+                        className="text-gray-600 focus:text-gray-900 cursor-pointer"
+                      >
+                        <FileBarChart className="mr-2 h-4 w-4" />
+                        Series de facturación
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => window.location.href = '/dashboard/settings/api-keys'}
+                        className="text-gray-600 focus:text-gray-900 cursor-pointer"
+                      >
+                        <Key className="mr-2 h-4 w-4" />
+                        Credenciales (API Key)
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-gray-100" />
+                    </>
+                  )}
                   {isSuperAdmin && (
                     <>
                       <DropdownMenuItem

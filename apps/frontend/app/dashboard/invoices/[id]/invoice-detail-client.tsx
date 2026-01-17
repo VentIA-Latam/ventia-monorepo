@@ -26,6 +26,7 @@ import {
   INVOICE_STATUS_NAMES,
   INVOICE_STATUS_COLORS
 } from "@/lib/types/invoice";
+import { formatDateTime } from "@/lib/utils";
 
 interface InvoiceDetailClientProps {
   invoice: Invoice;
@@ -182,15 +183,7 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
     return `${symbols[currency] || currency} ${amount.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+
 
   const tipoComprobante = INVOICE_TYPE_NAMES[invoice.invoice_type] || invoice.invoice_type;
 
@@ -458,7 +451,7 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
                   <Calendar className="h-4 w-4" />
                   Fecha de Emisión
                 </p>
-                <p className="font-medium mt-1">{formatDate(invoice.created_at)}</p>
+                <p className="font-medium mt-1">{formatDateTime(invoice.created_at)}</p>
               </div>
               {invoice.efact_processed_at && (
                 <div>
@@ -466,7 +459,7 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
                     <Clock className="h-4 w-4" />
                     Fecha de Validación
                   </p>
-                  <p className="font-medium mt-1">{formatDate(invoice.efact_processed_at)}</p>
+                  <p className="font-medium mt-1">{formatDateTime(invoice.efact_processed_at)}</p>
                 </div>
               )}
               {invoice.efact_ticket && (
