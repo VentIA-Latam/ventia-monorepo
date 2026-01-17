@@ -603,17 +603,37 @@ async def create_invoice_for_order(
     - `serie`: Invoice series code (4 characters, e.g., "F001", "B001")
     - `reference_invoice_id`: (Optional) Referenced invoice ID for NC/ND
     - `reference_reason`: (Optional) Reason for credit/debit note
+    - `cliente_tipo_documento`: (Optional) Customer document type (SUNAT catálogo 06). If not provided, uses order's customer_document_type
+    - `cliente_numero_documento`: (Optional) Customer document number. If not provided, uses order's customer_document_number
+    - `cliente_razon_social`: (Optional) Customer name/business name. If not provided, uses order's customer_name
+    - `cliente_email`: (Optional) Customer email for invoice delivery. If not provided, uses order's customer_email
+
+    **Valid Document Types (SUNAT catálogo 06):**
+    - 0: Sin documento (for customers without identification)
+    - 1: DNI (8 digits)
+    - 4: Carnet de extranjería (8-12 characters)
+    - 6: RUC (11 digits)
+    - 7: Pasaporte (5-12 characters)
+    - A: Cédula diplomática
+
+    **Validation Rules:**
+    - **Factura (01)**: REQUIRES RUC (cliente_tipo_documento=6) with exactly 11 digits
+    - **Boleta (03)**: Accepts all document types (0, 1, 4, 6, 7, A)
+    - **NC/ND (07/08)**: Same rules as the referenced invoice
+    - Document number length is validated based on document type
+    - Validation failures return HTTP 400 with detailed error messages
 
     **Process:**
     1. Validates order exists and is validated
-    2. Validates customer has document information
-    3. Validates tenant has RUC configured
-    4. Gets next correlativo from invoice series (thread-safe)
-    5. Calculates totals from order line items
-    6. Creates invoice record in database
-    7. Generates JSON-UBL document
-    8. Submits to eFact-OSE API
-    9. Returns invoice with eFact ticket (status: "processing")
+    2. Uses provided customer data or falls back to order data
+    3. Validates customer document type is consistent with invoice type
+    4. Validates tenant has RUC configured
+    5. Gets next correlativo from invoice series (thread-safe)
+    6. Calculates totals from order line items
+    7. Creates invoice record in database
+    8. Generates JSON-UBL document
+    9. Submits to eFact-OSE API
+    10. Returns invoice with eFact ticket (status: "processing")
 
     Args:
         order_id: Order ID to create invoice for
