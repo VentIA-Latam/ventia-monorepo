@@ -90,12 +90,130 @@ class InvoiceService:
         if not order.validado:
             raise ValueError(f"Order {order_id} has not been validated yet")
 
+        # ===== DETERMINE CUSTOMER DATA =====
+        # Use provided customer data if available, otherwise use order data
+        
+        # Determine customer document type
+        if invoice_data.cliente_tipo_documento:
+            customer_document_type = invoice_data.cliente_tipo_documento
+        else:
+            customer_document_type = order.customer_document_type
+        
+        # Determine customer document number
+        if invoice_data.cliente_numero_documento:
+            customer_document_number = invoice_data.cliente_numero_documento
+        else:
+            customer_document_number = order.customer_document_number
+        
+        # Determine customer name/razon social
+        if invoice_data.cliente_razon_social:
+            customer_razon_social = invoice_data.cliente_razon_social
+        else:
+            customer_razon_social = order.customer_name or "CLIENTE"
+        
+        # Determine customer email
+        if invoice_data.cliente_email:
+            customer_email = invoice_data.cliente_email
+        else:
+            customer_email = order.customer_email
+
         # Validate customer has document info
-        if not order.customer_document_type or not order.customer_document_number:
+        if not customer_document_type or not customer_document_number:
             raise ValueError(
-                f"Order {order_id} is missing customer document information "
-                "(tipo_documento and numero_documento required)"
+                f"Customer document information is required for invoicing. "
+                "Provide cliente_tipo_documento and cliente_numero_documento in the request, "
+                "or ensure the order has customer_document_type and customer_document_number."
             )
+
+        # ===== VALIDATE DOCUMENT TYPE VS INVOICE TYPE =====
+        # SUNAT document types (catálogo 06):
+        # - 0: Sin documento (for customers without identification)
+        # - 1: DNI (Documento Nacional de Identidad)
+        # - 4: Carnet de extranjería
+        # - 6: RUC (Registro Único de Contribuyentes)
+        # - 7: Pasaporte
+        # - A: Cédula diplomática de identidad
+        
+        # SUNAT rules for invoice types:
+        # - Factura (01): MUST have RUC (tipo_documento = "6") with 11 digits
+        # - Boleta (03): Can have DNI, Sin documento, Carnet extranjería, Pasaporte, etc.
+        # - NC/ND (07/08): Follow same rules as the referenced document
+        
+        # Define valid document types per invoice type
+        VALID_DOCUMENT_TYPES_FACTURA = ["6"]  # Only RUC for Facturas
+        VALID_DOCUMENT_TYPES_BOLETA = ["0", "1", "4", "6", "7", "A"]  # Multiple types for Boletas
+        
+        # Validate based on invoice type
+        if invoice_data.invoice_type == "01":  # Factura
+            if customer_document_type not in VALID_DOCUMENT_TYPES_FACTURA:
+                raise ValueError(
+                    "Facturas (invoice_type=01) require RUC (cliente_tipo_documento=6) with 11 digits. "
+                    f"Received cliente_tipo_documento={customer_document_type}. "
+                    "For customers without RUC, use Boleta (invoice_type=03) instead."
+                )
+            # Factura must have RUC with exactly 11 digits
+            if len(customer_document_number) != 11:
+                raise ValueError(
+                    f"Facturas require RUC with 11 digits. "
+                    f"Received: {customer_document_number} ({len(customer_document_number)} digits)."
+                )
+        
+        elif invoice_data.invoice_type == "03":  # Boleta
+            if customer_document_type not in VALID_DOCUMENT_TYPES_BOLETA:
+                raise ValueError(
+                    f"Invalid cliente_tipo_documento for Boleta: {customer_document_type}. "
+                    f"Valid types: 0 (Sin documento), 1 (DNI), 4 (Carnet extranjería), "
+                    f"6 (RUC), 7 (Pasaporte), A (Cédula diplomática)."
+                )
+            
+            # Validate document number length based on type
+            if customer_document_type == "1":  # DNI
+                if len(customer_document_number) != 8:
+                    raise ValueError(
+                        f"DNI (tipo_documento=1) must be 8 digits. "
+                        f"Received: {customer_document_number} ({len(customer_document_number)} digits)."
+                    )
+            elif customer_document_type == "6":  # RUC
+                if len(customer_document_number) != 11:
+                    raise ValueError(
+                        f"RUC (tipo_documento=6) must be 11 digits. "
+                        f"Received: {customer_document_number} ({len(customer_document_number)} digits)."
+                    )
+            elif customer_document_type == "4":  # Carnet de extranjería
+                if len(customer_document_number) < 8 or len(customer_document_number) > 12:
+                    raise ValueError(
+                        f"Carnet de extranjería (tipo_documento=4) must be between 8 and 12 characters. "
+                        f"Received: {customer_document_number} ({len(customer_document_number)} characters)."
+                    )
+            elif customer_document_type == "7":  # Pasaporte
+                if len(customer_document_number) < 5 or len(customer_document_number) > 12:
+                    raise ValueError(
+                        f"Pasaporte (tipo_documento=7) must be between 5 and 12 characters. "
+                        f"Received: {customer_document_number} ({len(customer_document_number)} characters)."
+                    )
+            elif customer_document_type == "0":  # Sin documento
+                # For "sin documento", allow flexible length but minimum 1 character
+                if len(customer_document_number) < 1:
+                    raise ValueError(
+                        "Document number is required even for tipo_documento=0 (Sin documento). "
+                        "Use a placeholder value like '00000000'."
+                    )
+            # tipo_documento "A" (Cédula diplomática) - flexible length
+        
+        # For NC/ND (07/08), validate against all possible types since they reference other invoices
+        elif invoice_data.invoice_type in ("07", "08"):
+            all_valid_types = set(VALID_DOCUMENT_TYPES_FACTURA + VALID_DOCUMENT_TYPES_BOLETA)
+            if customer_document_type not in all_valid_types:
+                raise ValueError(
+                    f"Invalid cliente_tipo_documento: {customer_document_type}. "
+                    f"Valid types: {', '.join(sorted(all_valid_types))}."
+                )
+            
+            # Validate lengths for common types
+            if customer_document_type == "1" and len(customer_document_number) != 8:
+                raise ValueError(f"DNI must be 8 digits. Received: {len(customer_document_number)} digits.")
+            elif customer_document_type == "6" and len(customer_document_number) != 11:
+                raise ValueError(f"RUC must be 11 digits. Received: {len(customer_document_number)} digits.")
 
         # Get tenant and validate it has RUC
         tenant = tenant_repository.get(db, tenant_id)
@@ -181,9 +299,10 @@ class InvoiceService:
             correlativo=correlativo,
             emisor_ruc=tenant.efact_ruc,
             emisor_razon_social=tenant.name,
-            cliente_tipo_documento=order.customer_document_type,
-            cliente_numero_documento=order.customer_document_number,
-            cliente_razon_social=order.customer_name or "CLIENTE",
+            cliente_tipo_documento=customer_document_type,
+            cliente_numero_documento=customer_document_number,
+            cliente_razon_social=customer_razon_social,
+            cliente_email=customer_email,
             currency=order.currency,
             subtotal=subtotal,
             igv=igv,
