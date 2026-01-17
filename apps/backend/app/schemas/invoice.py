@@ -39,6 +39,11 @@ class InvoiceCreate(InvoiceBase):
     Optional fields (for Credit/Debit Notes):
     - reference_invoice_id: ID of the referenced invoice (for NC/ND)
     - reference_reason: Reason for the credit/debit note
+
+    Optional fields (customer data override):
+    - cliente_tipo_documento: Customer document type (1=DNI, 6=RUC). If not provided, uses order data
+    - cliente_numero_documento: Customer document number. If not provided, uses order data
+    - cliente_razon_social: Customer name/business name. If not provided, uses order data
     """
 
     serie: str = Field(
@@ -54,6 +59,34 @@ class InvoiceCreate(InvoiceBase):
         None,
         max_length=200,
         description="Reason for credit/debit note"
+    )
+    
+    # Customer data override (optional)
+    cliente_tipo_documento: Optional[str] = Field(
+        None,
+        pattern=r"^[0-9A]{1}$",
+        description=(
+            "Customer document type (SUNAT catálogo 06): "
+            "0=Sin documento, 1=DNI, 4=Carnet extranjería, 6=RUC, 7=Pasaporte, A=Cédula diplomática. "
+            "Note: Factura (01) requires tipo_documento=6 (RUC). "
+            "(overrides order customer_document_type)"
+        )
+    )
+    cliente_numero_documento: Optional[str] = Field(
+        None,
+        min_length=8,
+        max_length=11,
+        description="Customer document number: DNI (8 digits) or RUC (11 digits) (overrides order customer_document_number)"
+    )
+    cliente_razon_social: Optional[str] = Field(
+        None,
+        max_length=200,
+        description="Customer name or business name (overrides order customer_name)"
+    )
+    cliente_email: Optional[str] = Field(
+        None,
+        max_length=255,
+        description="Customer email for invoice delivery (overrides order customer_email)"
     )
 
 
@@ -96,6 +129,7 @@ class InvoiceResponse(InvoiceBase):
     cliente_tipo_documento: str
     cliente_numero_documento: str
     cliente_razon_social: str
+    cliente_email: Optional[str]
 
     # Totals
     subtotal: float

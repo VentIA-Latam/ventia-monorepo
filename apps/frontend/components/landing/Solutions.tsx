@@ -5,7 +5,6 @@ import Image from "next/image";
 import FadeUp from "@/components/ui/FadeUp";
 
 // Flechas SVG
-// Flechas SVG
 const ChevronLeft = ({ className }: { className?: string }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -117,40 +116,13 @@ export default function Solutions() {
 
       {/* CONTENEDOR PRINCIPAL */}
       <div className="relative max-w-[90%] mx-auto px-4 sm:px-0">
-      className="relative bg-[#fafafa] py-12 sm:py-16 md:py-20 lg:py-[80px] w-full scroll-mt-24 sm:scroll-mt-28 md:scroll-mt-[109px]"
-    >
-      {/* FONDO MARCA DE AGUA */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-center opacity-40">
-        <div className="relative w-[500px] sm:w-[650px] md:w-[850px] aspect-square">
-          <Image
-            src="/images/logo-ventia-gris.png"
-            alt="Fondo soluciones"
-            fill
-            className="object-contain pt-8 sm:pt-10 md:pt-[55px]"
-          />
-        </div>
-      </div>
 
-      {/* CONTENEDOR PRINCIPAL */}
-      <div className="relative max-w-[90%] mx-auto px-4 sm:px-0">
-
-        {/* TÍTULO Y DESCRIPCIÓN */}
         {/* TÍTULO Y DESCRIPCIÓN */}
         <FadeUp delay={0}>
           <div className="relative text-center mb-8 sm:mb-10 md:mb-[47px]">
             <h2 className="text-2xl sm:text-3xl md:text-[40px] leading-tight sm:leading-snug md:leading-[44px] font-libre font-semibold text-shadow-[0_0_1px_black] text-black m-0 mb-6 sm:mb-8 md:mb-[47px] p-0">
               NUESTRAS SOLUCIONES
-          <div className="relative text-center mb-8 sm:mb-10 md:mb-[47px]">
-            <h2 className="text-2xl sm:text-3xl md:text-[40px] leading-tight sm:leading-snug md:leading-[44px] font-libre font-semibold text-shadow-[0_0_1px_black] text-black m-0 mb-6 sm:mb-8 md:mb-[47px] p-0">
-              NUESTRAS SOLUCIONES
             </h2>
-            <div className="max-w-full sm:max-w-[700px] md:max-w-[857px] mx-auto px-4 sm:px-0">
-              <p className="text-sm sm:text-base md:text-[20px] leading-relaxed sm:leading-normal md:leading-[24px] font-['Helvetica_Roman',Helvetica,Arial,Lucida,sans-serif] text-black m-0 p-0">
-                Nos encargamos de todo: atender, vender, cobrar y entregar.
-                Olvídate de la operación diaria y dedica cada minuto a hacer
-                crecer tus ventas.
-              </p>
-            </div>
             <div className="max-w-full sm:max-w-[700px] md:max-w-[857px] mx-auto px-4 sm:px-0">
               <p className="text-sm sm:text-base md:text-[20px] leading-relaxed sm:leading-normal md:leading-[24px] font-['Helvetica_Roman',Helvetica,Arial,Lucida,sans-serif] text-black m-0 p-0">
                 Nos encargamos de todo: atender, vender, cobrar y entregar.
@@ -164,17 +136,12 @@ export default function Solutions() {
         {/* WRAPPER CARDS CON FLECHAS (MOBILE) */}
         <div className="relative max-w-[340px] sm:max-w-[400px] mx-auto md:max-w-none">
 
-        {/* WRAPPER CARDS CON FLECHAS (MOBILE) */}
-        <div className="relative max-w-[340px] sm:max-w-[400px] mx-auto md:max-w-none">
-
           {/* FLECHA IZQUIERDA (Móvil) */}
           <button
             onClick={() => scrollByOne("left")}
             className="absolute -left-3 sm:-left-4 top-1/2 -translate-y-1/2 z-20 p-1.5 sm:p-2 text-[#212835] hover:text-black transition md:hidden"
-            className="absolute -left-3 sm:-left-4 top-1/2 -translate-y-1/2 z-20 p-1.5 sm:p-2 text-[#212835] hover:text-black transition md:hidden"
             aria-label="Anterior"
           >
-            <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8" />
             <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8" />
           </button>
 
@@ -182,21 +149,16 @@ export default function Solutions() {
           <button
             onClick={() => scrollByOne("right")}
             className="absolute -right-3 sm:-right-4 top-1/2 -translate-y-1/2 z-20 p-1.5 sm:p-2 text-[#212835] hover:text-black transition md:hidden"
-            className="absolute -right-3 sm:-right-4 top-1/2 -translate-y-1/2 z-20 p-1.5 sm:p-2 text-[#212835] hover:text-black transition md:hidden"
             aria-label="Siguiente"
           >
             <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
-            <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
           </button>
 
-          {/* CONTENEDOR SCROLLABLE / GRID */}
           {/* CONTENEDOR SCROLLABLE / GRID */}
           <div
             ref={carouselRef}
             onScroll={handleScroll}
             className="
-              /* MOBILE: Carrusel */
-              flex overflow-x-auto snap-x snap-mandatory gap-0 pb-8 no-scrollbar pt-8 sm:pt-12 md:pt-14
               /* MOBILE: Carrusel */
               flex overflow-x-auto snap-x snap-mandatory gap-0 pb-8 no-scrollbar pt-8 sm:pt-12 md:pt-14
 
@@ -213,8 +175,6 @@ export default function Solutions() {
                 delay={0.05 * index}
                 className="
                   /* MOBILE */
-                  min-w-full w-full snap-center shrink-0 px-2
-
                   min-w-full w-full snap-center shrink-0 px-2
 
                   /* DESKTOP */
@@ -252,11 +212,7 @@ export default function Solutions() {
                         width={220}
                         height={167}
                         className="max-w-[180px] sm:max-w-[200px] md:max-w-full h-auto relative"
-                        width={220}
-                        height={167}
-                        className="max-w-[180px] sm:max-w-[200px] md:max-w-full h-auto relative"
                       />
-                    </span>
                     </span>
                   </div>
                 </article>
@@ -266,27 +222,16 @@ export default function Solutions() {
 
           {/* PAGINACIÓN (DOTS) - Solo Móvil */}
           <div className="flex justify-center gap-2.5 mt-5 md:hidden">
-          <div className="flex justify-center gap-2.5 mt-5 md:hidden">
             {solutions.map((_, i) => (
               <a
-              <a
                 key={i}
-                href="#"
-                onClick={(e) => e.preventDefault()}
                 href="#"
                 onClick={(e) => e.preventDefault()}
                 className={`
                   inline-block w-[7px] h-[7px] rounded-full bg-[#212835]
                   ${i === activeIndex ? "opacity-100" : "opacity-50"}
                   transition-opacity
-                  inline-block w-[7px] h-[7px] rounded-full bg-[#212835]
-                  ${i === activeIndex ? "opacity-100" : "opacity-50"}
-                  transition-opacity
                 `}
-                style={{ textIndent: "-9999px" }}
-              >
-                {i + 1}
-              </a>
                 style={{ textIndent: "-9999px" }}
               >
                 {i + 1}
@@ -296,22 +241,11 @@ export default function Solutions() {
         </div>
 
         {/* BOTÓN CTA */}
-        {/* BOTÓN CTA */}
         <FadeUp delay={0.15}>
-          <div className="relative text-center mt-6 sm:mt-8 md:mt-[27px] p-0">
           <div className="relative text-center mt-6 sm:mt-8 md:mt-[27px] p-0">
             <a
               href="#contacto"
               className="
-                inline-block
-                bg-[#212835] text-white
-                text-sm sm:text-base md:text-[20px] leading-tight sm:leading-normal md:leading-[34px]
-                font-['Helvetica_Medium',Helvetica,Arial,Lucida,sans-serif]
-                rounded-[36px]
-                pt-2.5 sm:pt-3 md:pt-3 pb-1.5 px-10 sm:px-16 md:px-20
-                border-0
-                transition-all duration-300
-                hover:bg-[#48c1ec]
                 inline-block
                 bg-[#212835] text-white
                 text-sm sm:text-base md:text-[20px] leading-tight sm:leading-normal md:leading-[34px]
@@ -331,4 +265,3 @@ export default function Solutions() {
     </section>
   );
 }
-

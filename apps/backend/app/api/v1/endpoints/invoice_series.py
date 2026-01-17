@@ -12,7 +12,8 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_database, require_role
 from app.core.permissions import Role
 from app.models.user import User
-from app.schemas.invoice import InvoiceSerieCreate, InvoiceSerieResponse
+from app.repositories.invoice_serie import invoice_serie_repository
+from app.schemas.invoice import InvoiceSerieCreate, InvoiceSerieResponse, InvoiceSerieUpdate
 from app.services.invoice_serie import invoice_serie_service
 
 logger = logging.getLogger(__name__)
@@ -248,4 +249,285 @@ async def list_invoice_series(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve invoice series: {str(e)}",
+        )
+
+
+@router.get(
+    "/{serie_id}",
+    response_model=InvoiceSerieResponse,
+    tags=["invoice-series"],
+)
+async def get_invoice_serie(
+    serie_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_database),
+) -> InvoiceSerieResponse:
+    """
+    Get a specific invoice series by ID.
+
+    - **Non-SUPER_ADMIN users**: Can only view series from their own tenant
+    - **SUPER_ADMIN users**: Can view any series
+
+    **Permissions:** Requires authentication
+
+    **Path Parameters:**
+    - `serie_id`: Invoice series ID
+
+    **Response:**
+    Returns InvoiceSerieResponse with:
+    - `id`: Serie ID
+    - `tenant_id`: Tenant ID
+    - `serie`: Series code
+    - `invoice_type`: Invoice type
+    - `last_correlativo`: Current correlativo
+    - `is_active`: Active status
+    - `created_at`: Creation timestamp
+    - `updated_at`: Last update timestamp
+
+    **Error Handling:**
+    - `401 Unauthorized`: User not authenticated
+    - `403 Forbidden`: User doesn't have access to this serie's tenant
+    - `404 Not Found`: Serie not found
+
+    Args:
+        serie_id: Serie ID
+        current_user: Current authenticated user
+        db: Database session
+
+    Returns:
+        InvoiceSerieResponse: Serie details
+
+    Raises:
+        HTTPException: 401/403/404/500 errors
+    """
+    try:
+        # Get serie by ID
+        serie = invoice_serie_repository.get(db, serie_id)
+        if not serie:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Invoice serie {serie_id} not found",
+            )
+
+        # Validate access: non-SUPER_ADMIN can only access their own tenant
+        if current_user.role != Role.SUPER_ADMIN:
+            if serie.tenant_id != current_user.tenant_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You can only view series from your own tenant",
+                )
+
+        logger.info(
+            f"Retrieved invoice serie {serie_id} by user {current_user.id} ({current_user.role})"
+        )
+
+        return InvoiceSerieResponse.from_orm(serie)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"Error retrieving invoice serie {serie_id}: {str(e)}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve invoice serie: {str(e)}",
+        )
+
+
+@router.patch(
+    "/{serie_id}",
+    response_model=InvoiceSerieResponse,
+    tags=["invoice-series"],
+)
+async def update_invoice_serie(
+    serie_id: int,
+    serie_update: InvoiceSerieUpdate,
+    current_user: User = Depends(require_role(Role.ADMIN, Role.SUPER_ADMIN)),
+    db: Session = Depends(get_database),
+) -> InvoiceSerieResponse:
+    """
+    Update an invoice series.
+
+    Only `description` and `is_active` fields can be updated.
+    Series code and invoice type cannot be changed after creation.
+
+    - **ADMIN users**: Can only update series from their own tenant
+    - **SUPER_ADMIN users**: Can update any series
+
+    **Permissions:** Requires ADMIN or SUPER_ADMIN role
+
+    **Path Parameters:**
+    - `serie_id`: Invoice series ID
+
+    **Request Body (InvoiceSerieUpdate):**
+    - `description` (optional): Human-readable description
+    - `is_active` (optional): Whether series is active
+
+    **Response:**
+    Returns updated InvoiceSerieResponse
+
+    **Error Handling:**
+    - `400 Bad Request`: Validation error
+    - `401 Unauthorized`: User not authenticated
+    - `403 Forbidden`: User doesn't have access to this serie's tenant
+    - `404 Not Found`: Serie not found
+
+    Args:
+        serie_id: Serie ID
+        serie_update: InvoiceSerieUpdate schema
+        current_user: Current authenticated user (must be ADMIN or SUPER_ADMIN)
+        db: Database session
+
+    Returns:
+        InvoiceSerieResponse: Updated serie
+
+    Raises:
+        HTTPException: 400/401/403/404/500 errors
+    """
+    try:
+        # Get serie by ID
+        serie = invoice_serie_repository.get(db, serie_id)
+        if not serie:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Invoice serie {serie_id} not found",
+            )
+
+        # Validate access: non-SUPER_ADMIN can only update their own tenant
+        if current_user.role != Role.SUPER_ADMIN:
+            if serie.tenant_id != current_user.tenant_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You can only update series from your own tenant",
+                )
+
+        # Use service to update (handles validation)
+        updated_serie = invoice_serie_service.update_serie(
+            db=db,
+            serie_id=serie_id,
+            tenant_id=serie.tenant_id,
+            serie_data=serie_update,
+        )
+
+        logger.info(
+            f"Updated invoice serie {serie_id} by user {current_user.id} ({current_user.role})"
+        )
+
+        return InvoiceSerieResponse.from_orm(updated_serie)
+
+    except ValueError as e:
+        logger.warning(f"Validation error updating serie {serie_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"Error updating invoice serie {serie_id}: {str(e)}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update invoice serie: {str(e)}",
+        )
+
+
+@router.delete(
+    "/{serie_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["invoice-series"],
+)
+async def delete_invoice_serie(
+    serie_id: int,
+    current_user: User = Depends(require_role(Role.ADMIN, Role.SUPER_ADMIN)),
+    db: Session = Depends(get_database),
+):
+    """
+    Delete an invoice series.
+
+    Series can only be deleted if they have not been used (last_correlativo == 0).
+    If the series has been used, it will be deactivated instead of deleted.
+
+    - **ADMIN users**: Can only delete series from their own tenant
+    - **SUPER_ADMIN users**: Can delete any series
+
+    **Permissions:** Requires ADMIN or SUPER_ADMIN role
+
+    **Path Parameters:**
+    - `serie_id`: Invoice series ID
+
+    **Response:**
+    Returns 204 No Content on success
+
+    **Behavior:**
+    - If `last_correlativo == 0`: Hard delete (removes from database)
+    - If `last_correlativo > 0`: Soft delete (sets `is_active = False`)
+
+    **Error Handling:**
+    - `401 Unauthorized`: User not authenticated
+    - `403 Forbidden`: User doesn't have access to this serie's tenant
+    - `404 Not Found`: Serie not found
+
+    Args:
+        serie_id: Serie ID
+        current_user: Current authenticated user (must be ADMIN or SUPER_ADMIN)
+        db: Database session
+
+    Raises:
+        HTTPException: 401/403/404/500 errors
+    """
+    try:
+        # Get serie by ID
+        serie = invoice_serie_repository.get(db, serie_id)
+        if not serie:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Invoice serie {serie_id} not found",
+            )
+
+        # Validate access: non-SUPER_ADMIN can only delete their own tenant
+        if current_user.role != Role.SUPER_ADMIN:
+            if serie.tenant_id != current_user.tenant_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You can only delete series from your own tenant",
+                )
+
+        # Check if series has been used
+        if serie.last_correlativo > 0:
+            # Soft delete: deactivate the series
+            invoice_serie_service.deactivate_serie(
+                db=db,
+                serie_id=serie_id,
+                tenant_id=serie.tenant_id,
+            )
+            logger.info(
+                f"Soft-deleted (deactivated) invoice serie {serie_id} "
+                f"(had {serie.last_correlativo} invoices) "
+                f"by user {current_user.id} ({current_user.role})"
+            )
+        else:
+            # Hard delete: remove from database
+            invoice_serie_repository.delete(db, id=serie_id)
+            logger.info(
+                f"Hard-deleted invoice serie {serie_id} "
+                f"by user {current_user.id} ({current_user.role})"
+            )
+
+        return None
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"Error deleting invoice serie {serie_id}: {str(e)}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete invoice serie: {str(e)}",
         )

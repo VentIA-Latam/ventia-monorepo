@@ -46,9 +46,9 @@ class Order(Base, TimestampMixin):
 
     # Customer document fields for invoicing
     customer_document_type = Column(
-        String(10),
+        String(1),
         nullable=True,
-        comment="Tipo de documento: DNI o RUC",
+        comment="Tipo de documento: 1=DNI, 6=RUC",
     )
     customer_document_number = Column(
         String(11),

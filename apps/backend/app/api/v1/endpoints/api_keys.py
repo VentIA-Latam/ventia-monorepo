@@ -5,7 +5,7 @@ API Key management endpoints (ADMIN only).
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_database, require_permission
+from app.api.deps import get_database, require_permission_dual
 from app.core.permissions import Role
 from app.models.user import User
 from app.schemas.api_key import (
@@ -29,7 +29,7 @@ router = APIRouter()
 )
 async def create_api_key(
     api_key_in: APIKeyCreate,
-    current_user: User = Depends(require_permission("POST", "/api-keys")),
+    current_user: User = Depends(require_permission_dual("POST", "/api-keys")),
     db: Session = Depends(get_database),
 ) -> APIKeyCreateResponse:
     """
@@ -90,7 +90,7 @@ async def list_api_keys(
     limit: int = 100,
     is_active: bool | None = None,
     tenant_id: int | None = None,
-    current_user: User = Depends(require_permission("GET", "/api-keys")),
+    current_user: User = Depends(require_permission_dual("GET", "/api-keys")),
     db: Session = Depends(get_database),
 ) -> APIKeyListResponse:
     """
@@ -160,7 +160,7 @@ async def list_api_keys(
 @router.get("/{api_key_id}", response_model=APIKeyResponse, tags=["api-keys"])
 async def get_api_key(
     api_key_id: int,
-    current_user: User = Depends(require_permission("GET", "/api-keys/*")),
+    current_user: User = Depends(require_permission_dual("GET", "/api-keys/*")),
     db: Session = Depends(get_database),
 ) -> APIKeyResponse:
     """
@@ -207,7 +207,7 @@ async def get_api_key(
 async def update_api_key(
     api_key_id: int,
     api_key_update: APIKeyUpdate,
-    current_user: User = Depends(require_permission("PATCH", "/api-keys/*")),
+    current_user: User = Depends(require_permission_dual("PATCH", "/api-keys/*")),
     db: Session = Depends(get_database),
 ) -> APIKeyResponse:
     """
@@ -269,7 +269,7 @@ async def update_api_key(
 )
 async def revoke_api_key(
     api_key_id: int,
-    current_user: User = Depends(require_permission("DELETE", "/api-keys/*")),
+    current_user: User = Depends(require_permission_dual("DELETE", "/api-keys/*")),
     db: Session = Depends(get_database),
 ) -> None:
     """
