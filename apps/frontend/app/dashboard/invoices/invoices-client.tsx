@@ -28,6 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { formatDate } from "@/lib/utils";
 import { Invoice, INVOICE_TYPE_NAMES, INVOICE_STATUS_NAMES, INVOICE_STATUS_COLORS } from "@/lib/types/invoice";
 import {
   FileText,
@@ -139,14 +140,6 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
             Gestiona facturas, boletas y comprobantes electrónicos
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Link href="/dashboard/invoices/series">
-            <Button variant="outline">
-              <Filter className="h-4 w-4 mr-2" />
-              Series
-            </Button>
-          </Link>
-        </div>
       </div>
 
       {/* Filters */}
@@ -249,7 +242,7 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
                         {invoice.currency} {invoice.total.toFixed(2)}
                       </TableCell>
                       <TableCell>
-                        {new Date(invoice.created_at).toLocaleDateString("es-PE")}
+                        {formatDate(invoice.created_at)}
                       </TableCell>
                       <TableCell>
                         <Badge

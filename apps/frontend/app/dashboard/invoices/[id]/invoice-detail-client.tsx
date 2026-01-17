@@ -26,6 +26,7 @@ import {
   INVOICE_STATUS_NAMES,
   INVOICE_STATUS_COLORS
 } from "@/lib/types/invoice";
+import { formatDateTime } from "@/lib/utils";
 
 interface InvoiceDetailClientProps {
   invoice: Invoice;
@@ -49,37 +50,50 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
   //   return () => clearInterval(interval);
   // }, [invoice.efact_status]);
 
-  // Función desactivada - el endpoint /status no existe
-  // const handleCheckStatus = async () => {
-  //   try {
-  //     setIsCheckingStatus(true);
+  const handleCheckStatus = async () => {
+    try {
+      setIsCheckingStatus(true);
 
-  //     // Obtener token
-  //     const tokenRes = await fetch("/api/auth/token", { credentials: "include" });
-  //     if (!tokenRes.ok) throw new Error("No se pudo obtener el token");
-  //     const { accessToken } = await tokenRes.json();
+      // Obtener token
+      const tokenRes = await fetch("/api/auth/token", { credentials: "include" });
+      if (!tokenRes.ok) throw new Error("No se pudo obtener el token");
+      const { accessToken } = await tokenRes.json();
 
-  //     // Llamar al backend
-  //     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-  //     const response = await fetch(`${API_URL}/invoices/${invoice.id}/status`, {
-  //       headers: { Authorization: `Bearer ${accessToken}` },
-  //     });
+      // Llamar al backend
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+      const response = await fetch(`${API_URL}/invoices/${invoice.id}/status`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
 
-  //     if (!response.ok) throw new Error("Error al verificar estado");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error response:', response.status, errorData);
+        throw new Error(errorData.detail || `Error ${response.status}: ${response.statusText}`);
+      }
 
-  //     const updatedInvoice = await response.json();
-  //     setInvoice(updatedInvoice);
+      const updatedInvoice = await response.json();
+      setInvoice(updatedInvoice);
 
-  //     // Si cambió a success o error, refrescar la página para asegurar datos actualizados
-  //     if (updatedInvoice.efact_status !== "processing") {
-  //       router.refresh();
-  //     }
-  //   } catch (err) {
-  //     console.error("Error checking status:", err);
-  //   } finally {
-  //     setIsCheckingStatus(false);
-  //   }
-  // };
+      // Mostrar mensaje según el resultado
+      if (updatedInvoice.efact_status === 'success') {
+        alert('✅ Factura validada exitosamente por SUNAT');
+      } else if (updatedInvoice.efact_status === 'error') {
+        alert(`❌ Error de validación: ${updatedInvoice.efact_error || 'Error desconocido'}`);
+      } else if (updatedInvoice.efact_status === 'processing') {
+        alert('⏳ La factura aún está en proceso de validación. Intenta nuevamente en unos segundos.');
+      }
+
+      // Si cambió a success o error, refrescar la página para asegurar datos actualizados
+      if (updatedInvoice.efact_status !== "processing") {
+        router.refresh();
+      }
+    } catch (err) {
+      console.error("Error checking status:", err);
+      alert(err instanceof Error ? err.message : "Error al verificar estado");
+    } finally {
+      setIsCheckingStatus(false);
+    }
+  };
 
   const handleDownloadPDF = async () => {
     try {
@@ -169,15 +183,7 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
     return `${symbols[currency] || currency} ${amount.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+
 
   const tipoComprobante = INVOICE_TYPE_NAMES[invoice.invoice_type] || invoice.invoice_type;
 
@@ -368,8 +374,8 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
               <CardTitle>Acciones</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {/* Botón Actualizar Estado - DESACTIVADO porque endpoint /status está comentado
-              {invoice.efact_status === 'processing' && (
+              {/* Botón Verificar Estado - visible cuando está en processing o error */}
+              {(invoice.efact_status === 'processing' || invoice.efact_status === 'error') && (
                 <Button
                   className="w-full"
                   variant="secondary"
@@ -385,19 +391,18 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
                   ) : (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2" />
-                      Actualizar Estado
+                      Verificar Estado
                     </>
                   )}
                 </Button>
               )}
-              */}
 
-              {/* Botón Descargar PDF - Esto automáticamente actualiza el status a success */}
+              {/* Botón Descargar PDF */}
               <Button
                 className="w-full"
                 size="sm"
                 onClick={handleDownloadPDF}
-                disabled={isDownloadingPDF}
+                disabled={isDownloadingPDF || invoice.efact_status !== 'success'}
               >
                 {isDownloadingPDF ? (
                   <>
@@ -446,7 +451,7 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
                   <Calendar className="h-4 w-4" />
                   Fecha de Emisión
                 </p>
-                <p className="font-medium mt-1">{formatDate(invoice.created_at)}</p>
+                <p className="font-medium mt-1">{formatDateTime(invoice.created_at)}</p>
               </div>
               {invoice.efact_processed_at && (
                 <div>
@@ -454,7 +459,7 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
                     <Clock className="h-4 w-4" />
                     Fecha de Validación
                   </p>
-                  <p className="font-medium mt-1">{formatDate(invoice.efact_processed_at)}</p>
+                  <p className="font-medium mt-1">{formatDateTime(invoice.efact_processed_at)}</p>
                 </div>
               )}
               {invoice.efact_ticket && (

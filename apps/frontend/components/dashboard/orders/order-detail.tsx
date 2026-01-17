@@ -22,6 +22,7 @@ import {
   FileText
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDateTime } from "@/lib/utils";
 
 interface OrderDetailProps {
   order: Order;
@@ -42,17 +43,6 @@ export function OrderDetail({ order, invoices }: OrderDetailProps) {
   const router = useRouter();
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Formatear fecha
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
 
   // Formatear moneda
   const formatCurrency = (amount: number, currency: string) => {
@@ -128,7 +118,7 @@ export function OrderDetail({ order, invoices }: OrderDetailProps) {
           <div className="min-w-0 flex-1">
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">Pedido #{order.shopify_draft_order_id || order.id}</h1>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              Creado el {formatDate(order.created_at)}
+              Creado el {formatDateTime(order.created_at)}
             </p>
           </div>
         </div>

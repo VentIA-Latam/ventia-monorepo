@@ -3,7 +3,7 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { cn } from "@/lib/utils"
+import { cn, formatDate } from "@/lib/utils"
 import { Order } from "@/lib/services/order-service"
 import { useRouter } from "next/navigation"
 
@@ -29,14 +29,7 @@ export function RecentActivityTable({ orders }: RecentActivityTableProps) {
     router.push(`/dashboard/orders/${orderId}`);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    });
-  };
+
 
   return (
     <div className="space-y-4">
