@@ -5,6 +5,7 @@ import { Key, Plus, Search, MoreHorizontal, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { formatDateTime } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -96,8 +97,6 @@ export default function TenantAPIKeysPage() {
         return 'bg-gray-100 text-gray-700';
     }
   };
-
-  import { formatDateTime } from "@/lib/utils";
 
   const formatDateLocal = (dateString: string | null) => {
     if (!dateString) return "Nunca";
