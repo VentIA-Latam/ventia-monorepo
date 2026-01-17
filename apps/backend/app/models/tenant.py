@@ -68,11 +68,51 @@ class Tenant(Base, TimestampMixin):
     is_active = Column(Boolean, default=True, nullable=False, comment="Is tenant active")
     settings = Column(JSON, nullable=True, comment="Additional tenant-specific settings (JSON)")
 
-    # Electronic invoicing (facturación electrónica)
+    # Electronic invoicing (facturacion electronica)
     efact_ruc = Column(
         String(11),
         nullable=True,
-        comment="RUC del tenant para facturación electrónica",
+        comment="RUC del tenant para facturacion electronica",
+    )
+
+    # Datos del emisor para facturacion electronica
+    emisor_nombre_comercial = Column(
+        String(200),
+        nullable=True,
+        comment="Nombre comercial del emisor para comprobantes electronicos",
+    )
+    emisor_ubigeo = Column(
+        String(6),
+        nullable=False,
+        default="150101",
+        server_default="150101",
+        comment="Codigo UBIGEO INEI del domicilio fiscal",
+    )
+    emisor_departamento = Column(
+        String(100),
+        nullable=False,
+        default="LIMA",
+        server_default="LIMA",
+        comment="Departamento del domicilio fiscal",
+    )
+    emisor_provincia = Column(
+        String(100),
+        nullable=False,
+        default="LIMA",
+        server_default="LIMA",
+        comment="Provincia del domicilio fiscal",
+    )
+    emisor_distrito = Column(
+        String(100),
+        nullable=False,
+        default="LIMA",
+        server_default="LIMA",
+        comment="Distrito del domicilio fiscal",
+    )
+    emisor_direccion = Column(
+        String(500),
+        nullable=True,
+        comment="Direccion completa del domicilio fiscal",
     )
 
     # Relationships

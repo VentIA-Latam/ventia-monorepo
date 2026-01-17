@@ -17,6 +17,7 @@ import {
   Shield,
   Key,
   Receipt,
+  FileBarChart,
 } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Image from "next/image"
@@ -85,6 +86,19 @@ const dataPlatform = [
       url: "/dashboard/assistant",
       icon: Bot,
     }, */
+]
+
+const dataConfiguration = [
+  {
+    title: "Series de facturación",
+    url: "/dashboard/invoices/series",
+    icon: FileBarChart,
+  },
+  {
+    title: "Credenciales (API Key)",
+    url: "/dashboard/settings/api-keys",
+    icon: Key,
+  },
 ]
 
 
@@ -302,26 +316,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-gray-100" />
                 <DropdownMenuGroup>
-                  {/* <DropdownMenuItem className="text-gray-600 focus:text-gray-900 cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Configuración de cuenta
-                  </DropdownMenuItem> */}
                   {!isSuperAdmin && (
-                    <DropdownMenuItem
-                      onClick={() => window.location.href = '/dashboard/settings/api-keys'}
-                      className="text-gray-600 focus:text-gray-900 cursor-pointer"
-                    >
-                      <Key className="mr-2 h-4 w-4" />
-                      Credenciales (API Key)
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem
+                        onClick={() => window.location.href = '/dashboard/invoices/series'}
+                        className="text-gray-600 focus:text-gray-900 cursor-pointer"
+                      >
+                        <FileBarChart className="mr-2 h-4 w-4" />
+                        Series de facturación
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => window.location.href = '/dashboard/settings/api-keys'}
+                        className="text-gray-600 focus:text-gray-900 cursor-pointer"
+                      >
+                        <Key className="mr-2 h-4 w-4" />
+                        Credenciales (API Key)
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-gray-100" />
+                    </>
                   )}
-                  {/* <DropdownMenuItem className="text-gray-600 focus:text-gray-900 cursor-pointer">
-                    <Bell className="mr-2 h-4 w-4" />
-                    Notificaciones
-                  </DropdownMenuItem> */}
                   {isSuperAdmin && (
                     <>
-                      <DropdownMenuSeparator className="bg-gray-100" />
                       <DropdownMenuItem
                         onClick={() => window.location.href = '/superadmin'}
                         className="text-purple-600 focus:text-purple-700 focus:bg-purple-50 cursor-pointer"
@@ -329,6 +344,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         <Shield className="mr-2 h-4 w-4" />
                         Panel SuperAdmin
                       </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-gray-100" />
                     </>
                   )}
                 </DropdownMenuGroup>

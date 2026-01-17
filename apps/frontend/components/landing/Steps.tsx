@@ -70,7 +70,9 @@ export default function Steps() {
           <FadeUp delay={0.3}>
             <div className="relative animate-[0.2s_linear] mb-6 sm:mb-8 md:mb-[41.3125px] flex justify-center md:block">
               <a
-                href="#contacto"
+                href="https://calendly.com/tarek-ventia-latam/ventia"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-block relative text-sm sm:text-base md:text-[20px] leading-tight sm:leading-normal md:leading-[34px] font-medium bg-[#48c1ec] text-white transition-all duration-300 border-2 border-white rounded-[36px] py-2.5 sm:py-3 md:py-3 pb-1.5 px-8 sm:px-12 md:px-20 hover:bg-[#212835]"
               >
                 AGENDA TU DEMO
@@ -83,7 +85,6 @@ export default function Steps() {
         <div className="w-full md:w-[47.25%] relative z-[2] order-2 md:order-2 mb-6 md:mb-0 md:mt-0">
           <FadeUp delay={0.4}>
             <div className="w-full flex flex-col items-center gap-4">
-
 
               <motion.div
                 animate={{ y: [0, -12, 0] }}

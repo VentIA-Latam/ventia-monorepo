@@ -72,12 +72,14 @@ export default function Header() {
 
                 {/* Agenda tu Demo */}
                 <li className="inline-flex items-center">
-                  <Link
-                    href="/#contacto"
+                  <a
+                    href="https://calendly.com/tarek-ventia-latam/ventia"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="text-[#1e2532] bg-white inline-flex relative transition-all duration-200 ease items-center justify-center w-[170px] h-11 font-bold text-[14px] leading-[14px] border border-white rounded-full hover:bg-white/10 hover:text-white/70"
                   >
                     Agenda tu Demo
-                  </Link>
+                  </a>
                 </li>
 
                 {/* Iniciar Sesión */}
@@ -128,13 +130,15 @@ export default function Header() {
               Ver Planes
             </Link>
 
-            <Link
-              href="/#contacto"
+            <a
+              href="https://calendly.com/tarek-ventia-latam/ventia"
+              target="_blank"
+              rel="noopener noreferrer"
               onClick={closeMenu}
               className="text-white bg-transparent transition-[opacity,background-color] duration-200 ease-in-out block border-b border-b-[rgba(0,0,0,0.03)] py-2.5 px-[5%]"
             >
               Agenda tu Demo
-            </Link>
+            </a>
 
             <Link
               href="/login"

@@ -10,9 +10,9 @@ class Role(str, Enum):
     """User roles in the system."""
 
     SUPER_ADMIN = "superadmin"  # Platform admin with access to all tenants
-    ADMIN = "admin"  # Full access to all resources
-    LOGISTICA = "logistica"  # Can manage orders and validate payments
-    VENTAS = "ventas"  # Can view and create orders
+    ADMIN = "admin"  # Full access to all resources within tenant
+    LOGISTICA = "logistica"  # Read-only access to orders and invoices (for dispatch)
+    VENTAS = "ventas"  # Can create, edit orders, validate payments and create invoices
     VIEWER = "viewer"  # Read-only access
 
 
@@ -22,8 +22,8 @@ PERMISSIONS: Dict[Tuple[str, str], List[Role]] = {
     ("GET", "/orders"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
     ("GET", "/orders/*"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
     ("POST", "/orders"): [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS],
-    ("PUT", "/orders/*"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA],
-    ("POST", "/orders/*/validate"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA],
+    ("PUT", "/orders/*"): [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS],
+    ("POST", "/orders/*/validate"): [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS],
     ("DELETE", "/orders/*"): [Role.SUPER_ADMIN, Role.ADMIN],
 
     # USERS ENDPOINTS (only ADMIN and SUPER_ADMIN)
@@ -52,7 +52,67 @@ PERMISSIONS: Dict[Tuple[str, str], List[Role]] = {
     ("POST", "/api-keys"): [Role.SUPER_ADMIN, Role.ADMIN],
     ("PATCH", "/api-keys/*"): [Role.SUPER_ADMIN, Role.ADMIN],
     ("DELETE", "/api-keys/*"): [Role.SUPER_ADMIN, Role.ADMIN],
+    
+    # INVOICES ENDPOINTS (RESTful paths under /orders/{id}/invoices)
+    ("POST", "/orders/*/invoices"): [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS],
+    ("GET", "/orders/*/invoices"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+
+    # INVOICES ENDPOINTS (new unified paths)
+    ("POST", "/invoices"): [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS],
+    ("POST", "/invoices/*"): [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS],
+    ("GET", "/invoices"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("GET", "/invoices/*"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+
+    # INVOICE SERIES ENDPOINTS
+    ("GET", "/invoice-series"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("GET", "/invoice-series/*"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("POST", "/invoice-series"): [Role.SUPER_ADMIN, Role.ADMIN],
+    ("PATCH", "/invoice-series/*"): [Role.SUPER_ADMIN, Role.ADMIN],
+    ("DELETE", "/invoice-series/*"): [Role.SUPER_ADMIN, Role.ADMIN],
 }
+
+
+def _match_path_pattern(pattern: str, path: str) -> bool:
+    """
+    Match a path against a pattern with wildcard support.
+
+    Wildcards:
+    - `*` matches a single path segment (e.g., `/orders/*/invoices` matches `/orders/123/invoices`)
+    - Pattern ending with `/*` matches any path starting with that prefix
+
+    Examples:
+        >>> _match_path_pattern("/orders/*", "/orders/123")
+        True
+        >>> _match_path_pattern("/orders/*/invoices", "/orders/123/invoices")
+        True
+        >>> _match_path_pattern("/orders/*", "/orders/123/invoices")
+        True
+    """
+    # Handle trailing wildcard (matches anything after prefix)
+    if pattern.endswith("/*"):
+        prefix = pattern[:-1]  # Remove trailing *
+        return path.startswith(prefix)
+
+    # Handle wildcards in the middle of the pattern
+    if "*" in pattern:
+        pattern_parts = pattern.split("/")
+        path_parts = path.split("/")
+
+        # If pattern has fewer parts than path, no match (unless trailing /*)
+        if len(pattern_parts) != len(path_parts):
+            return False
+
+        # Compare each segment
+        for pattern_part, path_part in zip(pattern_parts, path_parts):
+            if pattern_part == "*":
+                continue  # Wildcard matches any single segment
+            if pattern_part != path_part:
+                return False
+
+        return True
+
+    # No wildcards - exact match
+    return pattern == path
 
 
 def can_access(role: Role, method: str, path: str) -> bool:
@@ -83,11 +143,8 @@ def can_access(role: Role, method: str, path: str) -> bool:
 
     # Try wildcard match
     for (perm_method, perm_path), allowed_roles in PERMISSIONS.items():
-        if perm_method == method and perm_path.endswith("/*"):
-            # Convert "/orders/*" to "/orders/"
-            pattern_prefix = perm_path[:-1]  # Remove *
-            if normalized_path.startswith(pattern_prefix):
-                return role in allowed_roles
+        if perm_method == method and _match_path_pattern(perm_path, normalized_path):
+            return role in allowed_roles
 
     # No permission found - deny by default
     return False
@@ -113,9 +170,7 @@ def get_allowed_roles(method: str, path: str) -> List[Role]:
 
     # Try wildcard match
     for (perm_method, perm_path), allowed_roles in PERMISSIONS.items():
-        if perm_method == method and perm_path.endswith("/*"):
-            pattern_prefix = perm_path[:-1]
-            if normalized_path.startswith(pattern_prefix):
-                return allowed_roles
+        if perm_method == method and _match_path_pattern(perm_path, normalized_path):
+            return allowed_roles
 
     return []

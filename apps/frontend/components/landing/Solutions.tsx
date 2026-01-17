@@ -244,7 +244,9 @@ export default function Solutions() {
         <FadeUp delay={0.15}>
           <div className="relative text-center mt-6 sm:mt-8 md:mt-[27px] p-0">
             <a
-              href="#contacto"
+              href="https://calendly.com/tarek-ventia-latam/ventia"
+              target="_blank"
+              rel="noopener noreferrer"
               className="
                 inline-block
                 bg-[#212835] text-white

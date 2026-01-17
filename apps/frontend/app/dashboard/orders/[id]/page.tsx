@@ -1,7 +1,9 @@
 import { getAccessToken } from "@/lib/auth0";
 import { fetchOrder } from "@/lib/services/order-service";
+import { fetchInvoicesByOrder } from "@/lib/services/invoice-service";
 import { OrderDetail } from "@/components/dashboard/orders/order-detail";
 import { notFound } from "next/navigation";
+import { Invoice } from "@/lib/types/invoice";
 
 /**
  * 🔒 Server Component - Página de detalle de orden
@@ -10,7 +12,8 @@ import { notFound } from "next/navigation";
  * 1. Se ejecuta en el servidor
  * 2. Obtiene el token de forma segura con getAccessToken()
  * 3. Carga los datos de la orden específica
- * 4. Pasa los datos al Client Component para interactividad
+ * 4. Carga los invoices de la orden
+ * 5. Pasa los datos al Client Component para interactividad
  */
 
 interface OrderPageProps {
@@ -66,6 +69,15 @@ export default async function OrderPage({ params }: OrderPageProps) {
     );
   }
 
-  // 4️⃣ Renderizar el componente cliente con los datos
-  return <OrderDetail order={order!} />;
+  // 4️⃣ Cargar invoices de la orden
+  let invoices: Invoice[] = [];
+  try {
+    invoices = await fetchInvoicesByOrder(accessToken, orderId);
+  } catch (err) {
+    console.error('Error loading invoices:', err);
+    // No es crítico, continuar sin invoices
+  }
+
+  // 5️⃣ Renderizar el componente cliente con los datos
+  return <OrderDetail order={order!} invoices={invoices} />;
 }

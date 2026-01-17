@@ -19,7 +19,9 @@ export default function DashboardLayout({
     if (pathname.includes('/metrics')) return 'Métricas';
     if (pathname.includes('/get-started')) return 'Inicio';
     if (pathname.includes('/payments')) return 'Pagos';
+    if (pathname.includes('/invoices/series')) return 'Series de facturación';
     if (pathname.includes('/invoices')) return 'Facturación';
+    if (pathname.includes('/settings/api-keys')) return 'Credenciales (API Key)';
     return 'Dashboard';
   };
 

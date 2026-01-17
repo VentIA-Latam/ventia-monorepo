@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     EFACT_BASE_URL: str = "https://ose-gw1.efact.pe:443/api-efact-ose"
     EFACT_RUC_VENTIA: str  # Required: RUC of Ventia for OAuth2 username
     EFACT_PASSWORD_REST: str  # Required: REST password for OAuth2 authentication
-    EFACT_TOKEN_CACHE_HOURS: int = 11  # Token cache duration (eFact tokens last 12h)
+    EFACT_TOKEN_CACHE_HOURS: int = 1  # Token cache duration (eFact tokens last 12h)
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod

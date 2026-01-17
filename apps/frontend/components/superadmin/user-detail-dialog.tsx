@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { User } from "@/lib/types/user";
+import { formatDateTime } from "@/lib/utils";
 
 interface UserDetailDialogProps {
   user: User | null;
@@ -43,11 +44,11 @@ export function UserDetailDialog({ user, open, onOpenChange }: UserDetailDialogP
             </div>
             <div>
               <div className="text-xs text-gray-500 mb-1">Creado</div>
-              <div className="text-sm">{user.created_at ? new Date(user.created_at).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }) : "-"}</div>
+              <div className="text-sm">{user.created_at ? formatDateTime(user.created_at) : "-"}</div>
             </div>
             <div>
               <div className="text-xs text-gray-500 mb-1">Actualizado</div>
-              <div className="text-sm">{user.updated_at ? new Date(user.updated_at).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }) : "-"}</div>
+              <div className="text-sm">{user.updated_at ? formatDateTime(user.updated_at) : "-"}</div>
             </div>
           </div>
         </div>

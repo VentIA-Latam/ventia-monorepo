@@ -20,9 +20,9 @@ def upgrade() -> None:
     # Add customer document type and number fields for invoicing
     op.add_column('orders', sa.Column(
         'customer_document_type',
-        sa.String(10),
+        sa.String(1),
         nullable=True,
-        comment="Tipo de documento: DNI o RUC"
+        comment="Tipo de documento: 1=DNI, 6=RUC"
     ))
     op.add_column('orders', sa.Column(
         'customer_document_number',

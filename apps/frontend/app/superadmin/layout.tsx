@@ -24,19 +24,19 @@ export default function SuperAdminLayout({
     <SidebarProvider>
       <SuperAdminSidebar />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4">
+        <header className="flex h-14 md:h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 border-b border-gray-100">
+          <div className="flex items-center gap-2 px-3 md:px-4 w-full">
             <SidebarTrigger className="-ml-1" />
             <Separator
               orientation="vertical"
               className="mr-2 data-[orientation=vertical]:h-4"
             />
-            <h2 className="text-lg font-semibold text-gray-800 font-libre-franklin">
+            <h2 className="text-base md:text-lg font-semibold text-gray-800 font-libre-franklin truncate">
               {getPageTitle()}
             </h2>
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-6 px-2 md:px-8 lg:px-16 py-6">
+        <div className="flex flex-1 flex-col gap-4 md:gap-6 px-3 sm:px-4 md:px-6 lg:px-12 xl:px-16 py-4 md:py-6">
           {children}
         </div>
       </SidebarInset>
