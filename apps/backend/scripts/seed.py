@@ -605,7 +605,7 @@ def seed_database():
                 invoice_type="03",  # Boleta
                 serie="B001",
                 description="Serie de boletas para Nassau",
-                last_correlativo=0,
+                last_correlativo=11,
                 is_active=True,
                 created_at=datetime.now(),
                 updated_at=datetime.now(),

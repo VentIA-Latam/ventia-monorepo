@@ -114,6 +114,13 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
     }
   }, [customerDocumentType]);
 
+  // 1️⃣.1 Handle DNI 00000000 - Auto-fill name as NINGUNO (solo para DNI)
+  useEffect(() => {
+    if (customerDocumentType === "1" && customerDocumentNumber === "00000000") {
+      setCustomerName("NINGUNO");
+    }
+  }, [customerDocumentNumber, customerDocumentType]);
+
   // 2️⃣ Cargar series cuando cambia el tipo de invoice
   useEffect(() => {
     if (!invoiceType) {
@@ -440,7 +447,7 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
                       onChange={(e) => setCustomerDocumentNumber(e.target.value)}
                       placeholder="Ingresa número de documento"
                       disabled={customerDocumentType === "0"}
-                      maxLength={customerDocumentType === "6" ? 11 : 20}
+                      maxLength={customerDocumentType === "6" ? 11 : customerDocumentType === "1" ? 8 : 20}
                     />
                     {customerDocumentType === "6" && customerDocumentNumber && customerDocumentNumber.length !== 11 && (
                       <p className="text-xs text-destructive">
@@ -814,41 +821,41 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
 
       {/* Modal de Confirmación */}
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent className="sm:max-w-[550px]">
+        <DialogContent className="max-w-[95vw] sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl">Confirmar Creación de Comprobante</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Confirmar Creación de Comprobante</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Revisa los datos antes de enviar el comprobante a SUNAT
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
             {/* Tipo y Serie */}
-            <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Tipo de Documento:</span>
-                <span className="font-semibold text-base">
+            <div className="rounded-lg border bg-muted/50 p-3 sm:p-4 space-y-2 sm:space-y-3">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
+                <span className="text-xs sm:text-sm text-muted-foreground">Tipo de Documento:</span>
+                <span className="font-semibold text-sm sm:text-base">
                   {invoiceType === "01" ? "Factura" :
                     invoiceType === "03" ? "Boleta de Venta" :
                       invoiceType === "07" ? "Nota de Crédito" : "Nota de Débito"}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Serie:</span>
-                <span className="font-semibold text-lg text-primary">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
+                <span className="text-xs sm:text-sm text-muted-foreground">Serie:</span>
+                <span className="font-semibold text-base sm:text-lg text-primary">
                   {series.find(s => s.id.toString() === selectedSerie)?.serie}
                 </span>
               </div>
             </div>
 
             {/* Datos del Cliente */}
-            <div className="space-y-3 border rounded-lg p-4">
-              <h4 className="font-medium text-sm text-muted-foreground">Datos del Cliente</h4>
+            <div className="space-y-2 sm:space-y-3 border rounded-lg p-3 sm:p-4">
+              <h4 className="font-medium text-xs sm:text-sm text-muted-foreground">Datos del Cliente</h4>
               <div className="space-y-2">
-                <div className="flex justify-between text-sm">
+                <div className="flex flex-col sm:flex-row sm:justify-between text-xs sm:text-sm gap-1">
                   <span className="text-muted-foreground">Nombre / Razón Social:</span>
-                  <span className="font-medium text-right max-w-[60%]">{customerName}</span>
+                  <span className="font-medium sm:text-right break-words">{customerName}</span>
                 </div>
-                <div className="flex justify-between text-sm">
+                <div className="flex flex-col sm:flex-row sm:justify-between text-xs sm:text-sm gap-1">
                   <span className="text-muted-foreground">Tipo de Documento:</span>
                   <span className="font-medium">
                     {customerDocumentType === "6" ? "RUC" :
@@ -858,69 +865,76 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
                             customerDocumentType === "7" ? "Pasaporte" : "Documento"}
                   </span>
                 </div>
-                <div className="flex justify-between text-sm">
+                <div className="flex flex-col sm:flex-row sm:justify-between text-xs sm:text-sm gap-1">
                   <span className="text-muted-foreground">Número de Documento:</span>
                   <span className="font-medium">{customerDocumentNumber}</span>
                 </div>
                 {customerEmail && (
-                  <div className="flex justify-between text-sm">
+                  <div className="flex flex-col sm:flex-row sm:justify-between text-xs sm:text-sm gap-1">
                     <span className="text-muted-foreground">Email:</span>
-                    <span className="font-medium text-xs">{customerEmail}</span>
+                    <span className="font-medium break-all">{customerEmail}</span>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Productos */}
-            <div className="space-y-3 border rounded-lg p-4">
-              <h4 className="font-medium text-sm text-muted-foreground">
-                Productos ({order.line_items.length})
+            <div className="space-y-2 sm:space-y-3 border rounded-lg p-3 sm:p-4">
+              <h4 className="font-medium text-xs sm:text-sm text-muted-foreground">
+                Productos ({order.line_items?.length ?? 0})
               </h4>
-              <div className="space-y-2 max-h-32 overflow-y-auto">
-                {order.line_items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between text-sm py-1 border-b last:border-0">
-                    <div className="flex-1">
-                      <p className="font-medium text-xs">{item.product}</p>
+              <div className="space-y-2 max-h-28 sm:max-h-32 overflow-y-auto">
+                {(order.line_items ?? []).map((item, idx) => (
+                  <div key={idx} className="flex justify-between text-xs sm:text-sm py-1 border-b last:border-0 gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-xs truncate">{item.product}</p>
                       <p className="text-xs text-muted-foreground">
-                        Cant: {item.quantity} x {order.currency} {item.unitPrice.toFixed(2)}
+                        {item.quantity} x {order.currency} {item.unitPrice.toFixed(2)}
                       </p>
                     </div>
-                    <span className="font-medium">{order.currency} {item.subtotal.toFixed(2)}</span>
+                    <span className="font-medium text-xs sm:text-sm whitespace-nowrap">{order.currency} {item.subtotal.toFixed(2)}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Totales */}
-            <div className="space-y-2 border rounded-lg p-4 bg-muted/30">
-              <div className="flex justify-between text-sm">
+            <div className="space-y-2 border rounded-lg p-3 sm:p-4 bg-muted/30">
+              <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-muted-foreground">Subtotal:</span>
                 <span className="font-medium">{order.currency} {(order.total_price / 1.18).toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-muted-foreground">IGV (18%):</span>
                 <span className="font-medium">{order.currency} {(order.total_price - (order.total_price / 1.18)).toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-base font-bold pt-2 border-t">
+              <div className="flex justify-between items-center text-sm sm:text-base font-bold pt-2 border-t">
                 <span>Total:</span>
-                <span className="text-primary text-xl">{order.currency} {order.total_price.toFixed(2)}</span>
+                <span className="text-primary text-base sm:text-xl">{order.currency} {order.total_price.toFixed(2)}</span>
               </div>
             </div>
 
             {/* Advertencia */}
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-xs">
+            <Alert className="py-2 sm:py-3">
+              <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+              <AlertDescription className="text-[10px] sm:text-xs">
                 El comprobante será enviado a SUNAT para su validación.
                 Esta acción no se puede deshacer.
               </AlertDescription>
             </Alert>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmDialog(false)}
+              className="w-full sm:w-auto text-sm"
+            >
               Cancelar
             </Button>
-            <Button onClick={handleConfirmCreate} size="lg">
+            <Button
+              onClick={handleConfirmCreate}
+              className="w-full sm:w-auto text-sm"
+            >
               Confirmar y Crear
             </Button>
           </DialogFooter>
@@ -967,15 +981,8 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
         onDownloadPdf={async () => {
           if (createdInvoice) {
             try {
-              // Obtener token
-              const tokenRes = await fetch("/api/auth/token", { credentials: "include" });
-              if (!tokenRes.ok) throw new Error("No se pudo obtener el token");
-              const { accessToken } = await tokenRes.json();
-
-              // Descargar PDF con token
-              const response = await fetch(`${API_URL}/invoices/${createdInvoice.id}/pdf`, {
-                headers: { Authorization: `Bearer ${accessToken}` },
-              });
+              // Descargar PDF via proxy route
+              const response = await fetch(`/api/invoices/pdf/${createdInvoice.id}`);
 
               if (!response.ok) throw new Error("Error al descargar PDF");
 

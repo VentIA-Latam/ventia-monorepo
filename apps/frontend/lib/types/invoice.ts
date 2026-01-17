@@ -37,7 +37,7 @@ export interface Invoice {
   // Emisor (Tenant/Empresa)
   emisor_ruc: string;
   emisor_razon_social: string;
-
+  cliente_email: string;
   // Cliente
   cliente_tipo_documento: string; // "1"=DNI, "6"=RUC, "4"=CE, etc.
   cliente_numero_documento: string;

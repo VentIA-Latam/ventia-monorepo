@@ -473,7 +473,7 @@ export function OrderDetail({ order, invoices }: OrderDetailProps) {
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             <p className="font-medium text-sm">
-                              {invoice.serie}-{invoice.numero}
+                              {invoice.serie}-{String(invoice.correlativo).padStart(8, "0")}
                             </p>
                             <Badge
                               variant={

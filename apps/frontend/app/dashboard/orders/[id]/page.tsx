@@ -3,6 +3,7 @@ import { fetchOrder } from "@/lib/services/order-service";
 import { fetchInvoicesByOrder } from "@/lib/services/invoice-service";
 import { OrderDetail } from "@/components/dashboard/orders/order-detail";
 import { notFound } from "next/navigation";
+import { Invoice } from "@/lib/types/invoice";
 
 /**
  * 🔒 Server Component - Página de detalle de orden
@@ -69,7 +70,7 @@ export default async function OrderPage({ params }: OrderPageProps) {
   }
 
   // 4️⃣ Cargar invoices de la orden
-  let invoices = [];
+  let invoices: Invoice[] = [];
   try {
     invoices = await fetchInvoicesByOrder(accessToken, orderId);
   } catch (err) {

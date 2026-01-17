@@ -91,7 +91,7 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
 
   const handleDownloadPDF = async (invoiceId: number) => {
     try {
-      const response = await fetch(`/api/invoices/${invoiceId}/pdf`);
+      const response = await fetch(`/api/invoices/pdf/${invoiceId}`);
       if (!response.ok) throw new Error("Error al descargar PDF");
 
       const blob = await response.blob();
@@ -110,7 +110,7 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
 
   const handleDownloadXML = async (invoiceId: number) => {
     try {
-      const response = await fetch(`/api/invoices/${invoiceId}/xml`);
+      const response = await fetch(`/api/invoices/xml/${invoiceId}`);
       if (!response.ok) throw new Error("Error al descargar XML");
 
       const blob = await response.blob();

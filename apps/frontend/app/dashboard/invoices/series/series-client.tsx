@@ -322,7 +322,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
               <Select
                 value={formData.invoice_type}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, invoice_type: value })
+                  setFormData({ ...formData, invoice_type: value as typeof formData.invoice_type })
                 }
               >
                 <SelectTrigger>
