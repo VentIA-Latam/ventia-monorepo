@@ -81,3 +81,19 @@ export function formatTime(isoDate: string): string {
     timeZone: 'America/Lima'
   });
 }
+
+/**
+ * Extrae el ID numérico de un Shopify GraphQL ID
+ * @param gid - ID en formato "gid://shopify/DraftOrder/1026313977995"
+ * @returns El ID numérico "1026313977995", o el valor original si no coincide
+ */
+export function extractShopifyDraftOrderId(gid: string): string {
+  const match = gid.match(/gid:\/\/shopify\/DraftOrder\/(\d+)/);
+  return match ? match[1] : gid;
+}
+
+
+export function extractShopifyOrderId(gid: string): string {
+  const match = gid.match(/gid:\/\/shopify\/Order\/(\d+)/);
+  return match ? match[1] : gid;
+}

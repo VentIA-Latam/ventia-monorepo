@@ -82,7 +82,7 @@ async def get_recent_orders(
         )
 
 
-@router.post("/", response_model=OrderResponse, tags=["orders"])
+@router.post("", response_model=OrderResponse, tags=["orders"])
 async def create_order(
     order_in: OrderCreate,
     current_user: User = Depends(require_permission_dual("POST", "/orders")),
@@ -122,7 +122,7 @@ async def create_order(
         )
 
 
-@router.get("/", response_model=OrderListResponse, tags=["orders"])
+@router.get("", response_model=OrderListResponse, tags=["orders"])
 async def list_orders(
     skip: int = 0,
     limit: int = 100,

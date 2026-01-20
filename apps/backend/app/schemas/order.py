@@ -3,7 +3,7 @@ Order schemas.
 """
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -14,6 +14,16 @@ if TYPE_CHECKING:
     from app.schemas.invoice import InvoiceResponse
 
 
+class LineItemBase(BaseModel):
+    """Schema for a line item in an order."""
+
+    sku: str = Field(..., description="Product SKU")
+    product: str = Field(..., description="Product name")
+    unitPrice: float = Field(..., gt=0, description="Unit price (must be > 0)")
+    quantity: int = Field(..., gt=0, description="Quantity (must be > 0)")
+    subtotal: float | None = Field(None, description="Subtotal (calculated if not provided)")
+
+
 class OrderBase(BaseModel):
     """Base schema for Order with common fields."""
 
@@ -21,9 +31,9 @@ class OrderBase(BaseModel):
     customer_name: str | None = Field(None, description="Customer name")
     customer_document_type: str | None = Field(None, description="Tipo de documento: DNI o RUC")
     customer_document_number: str | None = Field(None, description="Número de DNI o RUC del cliente")
-    total_price: float = Field(..., gt=0, description="Total price (must be > 0)")
+    total_price: float | None = Field(None, description="Total price (calculated if not provided)")
     currency: str = Field(default="USD", description="Currency code")
-    line_items: list[dict[str, Any]] | None = Field(None, description="Order line items (products)")
+    line_items: list[LineItemBase] | None = Field(None, description="Order line items (products)")
     payment_method: str | None = Field(None, description="Payment method")
     notes: str | None = Field(None, description="Additional notes")
     expected_delivery_date: datetime | None = Field(None, description="Expected delivery date of the order")
@@ -50,7 +60,7 @@ class OrderUpdate(BaseModel):
     customer_document_number: str | None = None
     total_price: float | None = Field(None, gt=0)
     currency: str | None = None
-    line_items: list[dict[str, Any]] | None = None
+    line_items: list[LineItemBase] | None = None
     payment_method: str | None = None
     notes: str | None = None
     status: str | None = None

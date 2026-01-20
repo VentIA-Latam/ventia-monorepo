@@ -16,6 +16,7 @@ app = FastAPI(
     docs_url=f"{settings.API_V1_STR}/docs",
     redoc_url=f"{settings.API_V1_STR}/redoc",
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    redirect_slashes=False,  # Evita 307 redirects que pierden el header Authorization
 )
 
 # Configure CORS
