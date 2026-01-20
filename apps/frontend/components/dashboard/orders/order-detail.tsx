@@ -22,7 +22,7 @@ import {
   FileText
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, extractShopifyDraftOrderId } from "@/lib/utils";
 
 interface OrderDetailProps {
   order: Order;
@@ -116,7 +116,7 @@ export function OrderDetail({ order, invoices }: OrderDetailProps) {
             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">Pedido #{order.shopify_draft_order_id || order.id}</h1>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">Pedido #{order.shopify_draft_order_id ? extractShopifyDraftOrderId(order.shopify_draft_order_id) : order.id}</h1>
             <p className="text-xs sm:text-sm text-muted-foreground">
               Creado el {formatDateTime(order.created_at)}
             </p>

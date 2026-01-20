@@ -14,7 +14,7 @@ from app.services.user import user_service
 router = APIRouter()
 
 
-@router.get("/", response_model=UsersListResponse | list[UserResponse], tags=["users"])
+@router.get("", response_model=UsersListResponse | list[UserResponse], tags=["users"])
 async def list_users(
     skip: int = 0,
     limit: int = 100,
@@ -109,7 +109,7 @@ async def get_user(
             )
 
 
-@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED, tags=["users"])
+@router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED, tags=["users"])
 async def create_user(
     user_in: UserCreate,
     current_user: User = Depends(require_permission_dual("POST", "/users")),

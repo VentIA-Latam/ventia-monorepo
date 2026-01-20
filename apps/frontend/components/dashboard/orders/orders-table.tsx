@@ -48,7 +48,10 @@ export function OrdersTable({ orders }: OrdersTableProps) {
           <TableHeader>
             <TableRow className="bg-gray-50/80 border-b border-gray-200">
               <TableHead className="min-w-[120px]">
-                ID PEDIDO
+                ID DRAFT
+              </TableHead>
+              <TableHead className="min-w-[120px]">
+                ID ORDEN
               </TableHead>
               <TableHead className="min-w-[200px]">
                 CLIENTE
@@ -80,6 +83,15 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                       {order.date}
                     </div>
                   </div>
+                </TableCell>
+                <TableCell className="min-w-[120px]">
+                  {order.shopifyOrderId ? (
+                    <div className="font-semibold text-green-600 text-sm">
+                      {order.shopifyOrderId}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-400 italic">Pendiente</span>
+                  )}
                 </TableCell>
                 <TableCell className="min-w-[200px]">
                   <div className="flex items-center gap-2 sm:gap-3">

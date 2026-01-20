@@ -23,7 +23,7 @@ from app.services.tenant import tenant_service
 router = APIRouter()
 
 
-@router.get("/", response_model=TenantListResponse, tags=["tenants"])
+@router.get("", response_model=TenantListResponse, tags=["tenants"])
 async def list_tenants(
     skip: int = 0,
     limit: int = 100,
@@ -133,7 +133,7 @@ async def get_tenant(
     )
 
 
-@router.post("/", response_model=TenantResponse, status_code=status.HTTP_201_CREATED, tags=["tenants"])
+@router.post("", response_model=TenantResponse, status_code=status.HTTP_201_CREATED, tags=["tenants"])
 async def create_tenant(
     tenant_in: TenantCreate,
     current_user: User = Depends(require_permission("POST", "/tenants")),

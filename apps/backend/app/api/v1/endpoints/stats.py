@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("/", response_model=StatsResponse, tags=["stats"])
+@router.get("", response_model=StatsResponse, tags=["stats"])
 async def get_platform_stats(
     current_user: User = Depends(require_permission("GET", "/stats")),
     db: Session = Depends(get_database),

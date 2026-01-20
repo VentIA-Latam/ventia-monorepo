@@ -515,7 +515,7 @@ async def download_invoice_xml(
 
 
 @router.get(
-    "/",
+    "",
     response_model=InvoiceListResponse,
     tags=["invoices"],
 )

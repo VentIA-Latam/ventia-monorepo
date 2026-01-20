@@ -12,6 +12,39 @@ from app.schemas.order import OrderCreate, OrderListResponse, OrderUpdate
 class OrderService:
     """Service for order-related business logic."""
 
+    def _calculate_line_items_and_total(
+        self,
+        line_items: list[dict] | None,
+    ) -> tuple[list[dict], float]:
+        """
+        Calculate subtotals for each line item and total price.
+
+        Args:
+            line_items: List of line items (may have subtotal or not)
+
+        Returns:
+            Tuple of (processed_line_items, total_price)
+        """
+        if not line_items:
+            return [], 0.0
+
+        processed_items = []
+        total = 0.0
+
+        for item in line_items:
+            unit_price = item.get("unitPrice", 0)
+            quantity = item.get("quantity", 1)
+            subtotal = round(unit_price * quantity, 2)
+
+            processed_item = {
+                **item,
+                "subtotal": subtotal,  # Always calculate/override
+            }
+            processed_items.append(processed_item)
+            total += subtotal
+
+        return processed_items, round(total, 2)
+
     def get_order(self, db: Session, order_id: int) -> Order | None:
         """Get order by ID."""
         return order_repository.get(db, order_id)
@@ -193,6 +226,8 @@ class OrderService:
         """
         Create a new order.
 
+        Automatically calculates subtotal for each line item and total_price.
+
         Args:
             db: Database session
             order_in: Order creation data
@@ -203,6 +238,7 @@ class OrderService:
 
         Raises:
             ValueError: If order with same draft_order_id already exists for tenant
+            ValueError: If order has no line items or total_price <= 0
         """
         # Check if order with same draft_order_id already exists for tenant
         existing = order_repository.get_by_shopify_draft_id(
@@ -216,7 +252,30 @@ class OrderService:
                 f"already exists for tenant {tenant_id}"
             )
 
-        return order_repository.create(db, obj_in=order_in, tenant_id=tenant_id)
+        # Calculate line_items subtotals and total_price
+        line_items_data = (
+            [item.model_dump() for item in order_in.line_items]
+            if order_in.line_items
+            else []
+        )
+        processed_items, calculated_total = self._calculate_line_items_and_total(
+            line_items_data
+        )
+
+        # Validate that total > 0
+        if calculated_total <= 0:
+            raise ValueError(
+                "Order must have at least one line item with positive price"
+            )
+
+        # Pass calculated values as extra_fields to override schema values
+        return order_repository.create(
+            db,
+            obj_in=order_in,
+            tenant_id=tenant_id,
+            line_items=processed_items,
+            total_price=calculated_total,
+        )
 
     def update_order(
         self,
