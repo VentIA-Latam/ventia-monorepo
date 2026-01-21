@@ -60,7 +60,7 @@ export default function Footer() {
         </div>
 
         {/* DERECHA */}
-        <div className="flex flex-col items-center md:items-end text-center md:text-right gap-8 md:gap-10">
+        <div className="flex flex-col items-center md:items-end text-center md:text-right gap-8 md:gap-5">
 
           {/* LIBRO DE RECLAMACIONES */}
           <Link
