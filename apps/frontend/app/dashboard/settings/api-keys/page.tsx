@@ -98,14 +98,6 @@ export default function TenantAPIKeysPage() {
     }
   };
 
-  const formatDateLocal = (dateString: string | null) => {
-    if (!dateString) return "Nunca";
-    return new Date(dateString).toLocaleString('es-ES', {
-      dateStyle: 'short',
-      timeStyle: 'short'
-    });
-  };
-
   const getLastUsedBadge = (lastUsedAt: string | null) => {
     if (!lastUsedAt) {
       return <Badge variant="secondary" className="text-xs">Sin usar</Badge>;
@@ -243,7 +235,7 @@ export default function TenantAPIKeysPage() {
                           {getLastUsedBadge(apiKey.last_used_at)}
                           {apiKey.last_used_at && (
                             <span className="text-xs text-gray-500">
-                              {formatDateLocal(apiKey.last_used_at)}
+                              {apiKey.last_used_at ? formatDateTime(apiKey.last_used_at) : "Nunca"}
                             </span>
                           )}
                         </div>
@@ -256,7 +248,7 @@ export default function TenantAPIKeysPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-sm text-gray-600">
-                        {apiKey.expires_at ? formatDateLocal(apiKey.expires_at) : "Sin vencimiento"}
+                        {apiKey.expires_at ? formatDateTime(apiKey.expires_at) : "Sin vencimiento"}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>

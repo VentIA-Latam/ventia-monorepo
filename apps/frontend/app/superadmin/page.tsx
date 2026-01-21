@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getPlatformStats, getRecentActivity, type PlatformStats, type Activity as ActivityType } from "@/lib/services/stats";
 import { getAllTenants, getGlobalOrders, type TenantSummary, type GlobalOrder } from "@/lib/services/superadmin";
+import { formatDateTime } from "@/lib/utils";
 
 export default function SuperAdminDashboard() {
   const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
@@ -348,12 +349,7 @@ export default function SuperAdminDashboard() {
                           {translateOperation(activity.operation)}
                         </Badge>
                         <span className="text-[10px] md:text-xs text-gray-500">
-                          {new Date(activity.timestamp).toLocaleString('es-ES', {
-                            day: '2-digit',
-                            month: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
+                          {formatDateTime(activity.timestamp)}
                         </span>
                       </div>
                     </div>

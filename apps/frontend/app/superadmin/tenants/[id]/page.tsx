@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { TenantDetail } from "@/lib/types/tenant";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatDate, formatDateTime } from "@/lib/utils";
 
 export default function TenantDetailPage() {
   const params = useParams();
@@ -146,14 +147,10 @@ export default function TenantDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {new Date(tenant.created_at).toLocaleDateString('es-ES', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric'
-              })}
+              {formatDateTime(tenant.created_at)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Última actualización: {new Date(tenant.updated_at).toLocaleDateString('es-ES')}
+              Última actualización: {formatDateTime(tenant.updated_at)}
             </p>
           </CardContent>
         </Card>
@@ -254,19 +251,13 @@ export default function TenantDetailPage() {
             <div className="flex justify-between">
               <span className="text-gray-500">Creado:</span>
               <span>
-                {new Date(tenant.created_at).toLocaleString('es-ES', {
-                  dateStyle: 'medium',
-                  timeStyle: 'short'
-                })}
+                {formatDateTime(tenant.created_at)}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Última actualización:</span>
               <span>
-                {new Date(tenant.updated_at).toLocaleString('es-ES', {
-                  dateStyle: 'medium',
-                  timeStyle: 'short'
-                })}
+                {formatDateTime(tenant.updated_at)}
               </span>
             </div>
           </div>

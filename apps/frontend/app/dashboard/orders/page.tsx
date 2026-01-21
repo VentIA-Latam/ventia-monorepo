@@ -2,6 +2,7 @@ import { Order as UIOrder } from "@/lib/types/order";
 import { fetchOrders, Order as BackendOrder } from "@/lib/services/order-service";
 import { getAccessToken } from "@/lib/auth0";
 import { OrdersClientView } from "./orders-client";
+import { formatDate } from "@/lib/utils";
 
 /**
  * Server Component - Carga de datos segura
@@ -33,11 +34,7 @@ function mapBackendOrderToUI(backendOrder: BackendOrder): UIOrder {
   return {
     id: backendOrder.shopify_draft_order_id || backendOrder.id.toString(),
     dbId: backendOrder.id, // ID real de la base de datos
-    date: new Date(backendOrder.created_at).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    }),
+    date: formatDate(backendOrder.created_at),
     client: {
       name: backendOrder.customer_name || 'Sin nombre',
       email: backendOrder.customer_email,

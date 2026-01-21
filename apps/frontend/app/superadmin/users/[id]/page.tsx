@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { User } from "@/lib/types/user";
+import { formatDate, formatDateTime } from "@/lib/utils";
 
 export default function UserDetailPage() {
   const params = useParams();
@@ -165,14 +166,10 @@ export default function UserDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {new Date(user.created_at).toLocaleDateString('es-ES', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric'
-              })}
+              {formatDate(user.created_at)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Última actualización: {new Date(user.updated_at).toLocaleDateString('es-ES')}
+              Última actualización: {formatDate(user.updated_at)}
             </p>
           </CardContent>
         </Card>
@@ -243,19 +240,13 @@ export default function UserDetailPage() {
             <div className="flex justify-between">
               <span className="text-gray-500">Creado:</span>
               <span>
-                {new Date(user.created_at).toLocaleString('es-ES', {
-                  dateStyle: 'medium',
-                  timeStyle: 'short'
-                })}
+                {formatDateTime(user.created_at)}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Última actualización:</span>
               <span>
-                {new Date(user.updated_at).toLocaleString('es-ES', {
-                  dateStyle: 'medium',
-                  timeStyle: 'short'
-                })}
+                {formatDateTime(user.updated_at)}
               </span>
             </div>
           </div>

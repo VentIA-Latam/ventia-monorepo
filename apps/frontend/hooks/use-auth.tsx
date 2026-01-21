@@ -7,7 +7,7 @@
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useEffect, useState } from 'react';
 
-type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'LOGISTICA' | null;
+type UserRole = 'superadmin' | 'admin' | 'logistica' | null;
 
 interface UserWithRole {
   id: number;
@@ -55,9 +55,9 @@ export function useAuth() {
     userDetails,
     role: userRole,
     isAuthenticated: !!user,
-    isSuperAdmin: userRole?.toUpperCase() === 'SUPERADMIN' || userRole === 'SUPER_ADMIN',
-    isAdmin: userRole?.toUpperCase() === 'ADMIN',
-    isLogistica: userRole?.toUpperCase() === 'LOGISTICA',
+    isSuperAdmin: userRole?.toLowerCase() === 'superadmin',
+    isAdmin: userRole?.toLowerCase() === 'admin',
+    isLogistica: userRole?.toLowerCase() === 'logistica',
     isLoading: isLoading || loadingRole,
     error,
   };
