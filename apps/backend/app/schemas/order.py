@@ -3,9 +3,9 @@ Order schemas.
 """
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 from app.schemas.invoice import InvoiceResponse
 from app.schemas.tenant import TenantResponse
@@ -44,11 +44,39 @@ class OrderCreate(OrderBase):
     """
     Schema for creating a new Order.
 
-    Used by n8n when inserting draft orders.
+    Used by n8n when inserting orders from e-commerce platforms.
     The tenant_id is automatically set from the authenticated user's tenant.
+
+    Validation:
+    - At least one of shopify_draft_order_id or woocommerce_order_id must be provided
+    - Cannot provide both simultaneously (mutually exclusive)
     """
 
-    shopify_draft_order_id: str = Field(..., description="Shopify draft order ID")
+    shopify_draft_order_id: str | None = Field(
+        None, description="Shopify draft order ID (required if not WooCommerce)"
+    )
+    woocommerce_order_id: int | None = Field(
+        None, description="WooCommerce order ID (required if not Shopify)"
+    )
+
+    @model_validator(mode="after")
+    def validate_platform_id(self) -> "OrderCreate":
+        """Ensure exactly one platform ID is provided."""
+        has_shopify = self.shopify_draft_order_id is not None
+        has_woocommerce = self.woocommerce_order_id is not None
+
+        if not has_shopify and not has_woocommerce:
+            raise ValueError(
+                "Either shopify_draft_order_id or woocommerce_order_id must be provided"
+            )
+
+        if has_shopify and has_woocommerce:
+            raise ValueError(
+                "Cannot provide both shopify_draft_order_id and woocommerce_order_id. "
+                "An order can only belong to one platform."
+            )
+
+        return self
 
 
 class OrderUpdate(BaseModel):
@@ -105,15 +133,19 @@ class OrderResponse(OrderBase):
 
     id: int
     tenant_id: int
-    shopify_draft_order_id: str
+    shopify_draft_order_id: str | None
     shopify_order_id: str | None
+    woocommerce_order_id: int | None = Field(None, description="WooCommerce order ID")
+    source_platform: Literal["shopify", "woocommerce"] | None = Field(
+        None, description="Source e-commerce platform"
+    )
     validado: bool
     validated_at: datetime | None
     status: str
     created_at: datetime
     updated_at: datetime
-    tenant: Optional[TenantResponse] = Field(None, description="Optional tenant info (populated via join for SUPER_ADMIN)")
-    invoices: Optional[list[InvoiceResponse]] = Field(None, description="Optional list of invoices for this order (populated via eager loading)")
+    tenant: TenantResponse | None = Field(None, description="Optional tenant info (populated via join for SUPER_ADMIN)")
+    invoices: list[InvoiceResponse] | None = Field(None, description="Optional list of invoices for this order (populated via eager loading)")
 
     model_config = ConfigDict(from_attributes=True)
 
