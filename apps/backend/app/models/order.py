@@ -1,8 +1,20 @@
 """
-Order model - represents orders from Shopify draft orders.
+Order model - represents orders from e-commerce platforms (Shopify, WooCommerce).
 """
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, JSON, String, UniqueConstraint
+from typing import Literal
+
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base, TimestampMixin
@@ -10,12 +22,16 @@ from app.models.base import Base, TimestampMixin
 
 class Order(Base, TimestampMixin):
     """
-    Order model - represents a Shopify draft order.
+    Order model - represents an order from an e-commerce platform.
+
+    Supports multiple platforms:
+    - Shopify: Uses shopify_draft_order_id (string, GraphQL ID format)
+    - WooCommerce: Uses woocommerce_order_id (integer)
 
     Flow:
-    1. n8n creates draft order in Shopify and inserts into this table
+    1. n8n creates order in e-commerce platform and inserts into this table
     2. User validates payment in frontend
-    3. Backend calls Shopify GraphQL to complete the draft order
+    3. Backend calls e-commerce API to mark order as paid/complete
     """
 
     __tablename__ = "orders"
@@ -34,7 +50,7 @@ class Order(Base, TimestampMixin):
     shopify_draft_order_id = Column(
         String,
         index=True,
-        nullable=False,
+        nullable=True,
         comment="Shopify draft order ID (gid://shopify/DraftOrder/...)",
     )
     shopify_order_id = Column(
@@ -42,6 +58,14 @@ class Order(Base, TimestampMixin):
         index=True,
         nullable=True,
         comment="Shopify order ID after completion (gid://shopify/Order/...)",
+    )
+
+    # WooCommerce references
+    woocommerce_order_id = Column(
+        Integer,
+        index=True,
+        nullable=True,
+        comment="WooCommerce order ID (integer)",
     )
 
     # Customer document fields for invoicing
@@ -107,19 +131,41 @@ class Order(Base, TimestampMixin):
     # Relationships
     invoices = relationship("Invoice", back_populates="order", cascade="all, delete-orphan")
 
-    # Unique constraint: one draft_order_id per tenant
+    # Unique constraints: one order ID per tenant per platform
     __table_args__ = (
         UniqueConstraint(
             "tenant_id",
             "shopify_draft_order_id",
             name="uq_tenant_draft_order",
         ),
+        UniqueConstraint(
+            "tenant_id",
+            "woocommerce_order_id",
+            name="uq_tenant_woo_order",
+        ),
     )
+
+    @property
+    def source_platform(self) -> Literal["shopify", "woocommerce"] | None:
+        """
+        Get the source e-commerce platform for this order.
+
+        Returns:
+            'shopify' if shopify_draft_order_id exists,
+            'woocommerce' if woocommerce_order_id exists,
+            None if neither exists.
+        """
+        if self.shopify_draft_order_id:
+            return "shopify"
+        if self.woocommerce_order_id:
+            return "woocommerce"
+        return None
 
     def __repr__(self) -> str:
         """String representation of Order."""
         return (
             f"<Order(id={self.id}, tenant_id={self.tenant_id}, "
             f"customer='{self.customer_email}', total={self.total_price}, "
-            f"validado={self.validado}, status='{self.status}')>"
+            f"validado={self.validado}, status='{self.status}', "
+            f"platform='{self.source_platform}')>"
         )
