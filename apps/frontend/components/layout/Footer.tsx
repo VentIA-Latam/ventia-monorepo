@@ -89,6 +89,22 @@ export default function Footer() {
             <p className="text-xs md:text-lg font-inter mb-1">ventas@ventia-latam.com</p>
             <p className="text-xs md:text-lg font-inter">+51 951 752 355</p>
           </div>
+
+          {/* LINKS LEGALES */}
+          <div className="md:text-right text-center flex flex-col gap-2">
+            <Link
+              href="/terms-and-conditions"
+              className="text-xs md:text-sm font-inter text-white/80 hover:text-white transition"
+            >
+              Términos y Condiciones
+            </Link>
+            <Link
+              href="/privacy-policy"
+              className="text-xs md:text-sm font-inter text-white/80 hover:text-white transition"
+            >
+              Política de Privacidad
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
