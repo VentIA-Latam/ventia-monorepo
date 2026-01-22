@@ -3,15 +3,25 @@ Order schemas.
 """
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 from app.schemas.invoice import InvoiceResponse
 from app.schemas.tenant import TenantResponse
 
 if TYPE_CHECKING:
     from app.schemas.invoice import InvoiceResponse
+
+
+class LineItemBase(BaseModel):
+    """Schema for a line item in an order."""
+
+    sku: str = Field(..., description="Product SKU")
+    product: str = Field(..., description="Product name")
+    unitPrice: float = Field(..., gt=0, description="Unit price (must be > 0)")
+    quantity: int = Field(..., gt=0, description="Quantity (must be > 0)")
+    subtotal: float | None = Field(None, description="Subtotal (calculated if not provided)")
 
 
 class OrderBase(BaseModel):
@@ -21,9 +31,9 @@ class OrderBase(BaseModel):
     customer_name: str | None = Field(None, description="Customer name")
     customer_document_type: str | None = Field(None, description="Tipo de documento: DNI o RUC")
     customer_document_number: str | None = Field(None, description="Número de DNI o RUC del cliente")
-    total_price: float = Field(..., gt=0, description="Total price (must be > 0)")
+    total_price: float | None = Field(None, description="Total price (calculated if not provided)")
     currency: str = Field(default="USD", description="Currency code")
-    line_items: list[dict[str, Any]] | None = Field(None, description="Order line items (products)")
+    line_items: list[LineItemBase] | None = Field(None, description="Order line items (products)")
     payment_method: str | None = Field(None, description="Payment method")
     notes: str | None = Field(None, description="Additional notes")
     expected_delivery_date: datetime | None = Field(None, description="Expected delivery date of the order")
@@ -34,11 +44,39 @@ class OrderCreate(OrderBase):
     """
     Schema for creating a new Order.
 
-    Used by n8n when inserting draft orders.
+    Used by n8n when inserting orders from e-commerce platforms.
     The tenant_id is automatically set from the authenticated user's tenant.
+
+    Validation:
+    - At least one of shopify_draft_order_id or woocommerce_order_id must be provided
+    - Cannot provide both simultaneously (mutually exclusive)
     """
 
-    shopify_draft_order_id: str = Field(..., description="Shopify draft order ID")
+    shopify_draft_order_id: str | None = Field(
+        None, description="Shopify draft order ID (required if not WooCommerce)"
+    )
+    woocommerce_order_id: int | None = Field(
+        None, description="WooCommerce order ID (required if not Shopify)"
+    )
+
+    @model_validator(mode="after")
+    def validate_platform_id(self) -> "OrderCreate":
+        """Ensure exactly one platform ID is provided."""
+        has_shopify = self.shopify_draft_order_id is not None
+        has_woocommerce = self.woocommerce_order_id is not None
+
+        if not has_shopify and not has_woocommerce:
+            raise ValueError(
+                "Either shopify_draft_order_id or woocommerce_order_id must be provided"
+            )
+
+        if has_shopify and has_woocommerce:
+            raise ValueError(
+                "Cannot provide both shopify_draft_order_id and woocommerce_order_id. "
+                "An order can only belong to one platform."
+            )
+
+        return self
 
 
 class OrderUpdate(BaseModel):
@@ -50,7 +88,7 @@ class OrderUpdate(BaseModel):
     customer_document_number: str | None = None
     total_price: float | None = Field(None, gt=0)
     currency: str | None = None
-    line_items: list[dict[str, Any]] | None = None
+    line_items: list[LineItemBase] | None = None
     payment_method: str | None = None
     notes: str | None = None
     status: str | None = None
@@ -95,15 +133,19 @@ class OrderResponse(OrderBase):
 
     id: int
     tenant_id: int
-    shopify_draft_order_id: str
+    shopify_draft_order_id: str | None
     shopify_order_id: str | None
+    woocommerce_order_id: int | None = Field(None, description="WooCommerce order ID")
+    source_platform: Literal["shopify", "woocommerce"] | None = Field(
+        None, description="Source e-commerce platform"
+    )
     validado: bool
     validated_at: datetime | None
     status: str
     created_at: datetime
     updated_at: datetime
-    tenant: Optional[TenantResponse] = Field(None, description="Optional tenant info (populated via join for SUPER_ADMIN)")
-    invoices: Optional[list[InvoiceResponse]] = Field(None, description="Optional list of invoices for this order (populated via eager loading)")
+    tenant: TenantResponse | None = Field(None, description="Optional tenant info (populated via join for SUPER_ADMIN)")
+    invoices: list[InvoiceResponse] | None = Field(None, description="Optional list of invoices for this order (populated via eager loading)")
 
     model_config = ConfigDict(from_attributes=True)
 

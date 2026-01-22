@@ -3,9 +3,9 @@ Tenant (Company) schemas for request/response validation.
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class TenantBase(BaseModel):
@@ -23,26 +23,11 @@ class TenantBase(BaseModel):
     company_id: Optional[str] = Field(
         None, max_length=100, description="Company ID for Auth0 organization mapping"
     )
-    shopify_store_url: Optional[str] = Field(
-        None, description="Shopify store URL (e.g., 'https://my-store.myshopify.com')"
-    )
-    shopify_api_version: Optional[str] = Field(
-        "2024-01", description="Shopify API version (e.g., '2024-01')"
-    )
     efact_ruc: Optional[str] = Field(
         None,
         pattern=r"^\d{11}$",
         description="RUC del tenant para facturación electrónica (11 dígitos)"
     )
-
-    @field_validator("shopify_store_url")
-    @classmethod
-    def validate_shopify_url(cls, v: Optional[str]) -> Optional[str]:
-        """Validate Shopify store URL format."""
-        if v and not v.startswith(("http://", "https://")):
-            raise ValueError(
-                "Shopify store URL must start with http:// or https://")
-        return v
 
 
 class TenantCreate(BaseModel):
@@ -53,19 +38,17 @@ class TenantCreate(BaseModel):
     - name: Required, max 100 chars
     - slug: Optional, auto-generated as "name-outlet" in kebab-case if not provided
     - company_id: Optional, for Auth0 organization mapping
-    - shopify_store_url: Optional, must be a valid URL if provided
-    - shopify_access_token: Optional, plaintext (will be encrypted before storage)
-    - shopify_api_version: Optional, defaults to "2024-01"
+    
+    **E-commerce Configuration:**
+    - ecommerce_platform: "shopify" | "woocommerce" | None
+    - ecommerce_store_url: Store URL (required if platform is set)
+    - ecommerce_access_token: Shopify Admin API access token (for Shopify only)
+    - ecommerce_consumer_key: WooCommerce consumer key (for WooCommerce only)
+    - ecommerce_consumer_secret: WooCommerce consumer secret (for WooCommerce only)
+    - sync_on_validation: Whether to sync to e-commerce when validating payment (default: True)
 
-    **Auto-generated slug:**
-    - Format: "{name-in-kebab-case}-outlet"
-    - Examples:
-      - "My Company" -> "my-company-outlet"
-      - "Test_123" -> "test-123-outlet"
-    - Slug must be unique in the system
-
-    **Security Note**: shopify_access_token is sent as plaintext in the request body
-    but is automatically encrypted by the Tenant model before storage.
+    **Security Note**: All tokens/secrets are sent as plaintext in the request body
+    but are automatically encrypted before storage in the settings JSON field.
     """
 
     name: str = Field(..., min_length=1, max_length=100,
@@ -80,56 +63,90 @@ class TenantCreate(BaseModel):
     company_id: Optional[str] = Field(
         None, max_length=100, description="Company ID for Auth0 organization mapping (optional)"
     )
-    shopify_store_url: Optional[str] = Field(
-        None, description="Shopify store URL (optional, e.g., 'https://my-store.myshopify.com')"
+    
+    # === E-COMMERCE CONFIGURATION ===
+    ecommerce_platform: Optional[Literal["shopify", "woocommerce"]] = Field(
+        None, description="E-commerce platform: 'shopify' or 'woocommerce'"
     )
-    shopify_store_url: Optional[str] = Field(
-        None, description="Shopify store URL (optional, e.g., 'https://my-store.myshopify.com')"
+    ecommerce_store_url: Optional[str] = Field(
+        None, description="E-commerce store URL (e.g., 'https://my-store.myshopify.com' or 'https://my-store.com')"
     )
-    shopify_access_token: Optional[str] = Field(
-        None, description="Shopify Admin API access token (optional, plaintext - will be encrypted before storage)"
+    ecommerce_access_token: Optional[str] = Field(
+        None, description="Shopify Admin API access token (only for Shopify, will be encrypted)"
     )
-    shopify_access_token: Optional[str] = Field(
-        None, description="Shopify Admin API access token (optional, plaintext - will be encrypted before storage)"
+    shopify_api_version: str = Field(
+        "2024-01", description="Shopify API version (only for Shopify, default: '2024-01')"
     )
-    shopify_api_version: Optional[str] = Field(
-        "2024-01", description="Shopify API version (optional, defaults to '2024-01')"
+    ecommerce_consumer_key: Optional[str] = Field(
+        None, description="WooCommerce REST API consumer key (only for WooCommerce, will be encrypted)"
     )
+    ecommerce_consumer_secret: Optional[str] = Field(
+        None, description="WooCommerce REST API consumer secret (only for WooCommerce, will be encrypted)"
+    )
+    sync_on_validation: bool = Field(
+        True, description="Sync order status to e-commerce platform when payment is validated"
+    )
+
+    # === INVOICING ===
     efact_ruc: Optional[str] = Field(
         None,
         pattern=r"^\d{11}$",
         description="RUC del tenant para facturación electrónica (optional, 11 dígitos)"
     )
 
-    @field_validator("shopify_store_url", mode="before")
+    @field_validator("ecommerce_store_url", mode="before")
     @classmethod
-    def validate_shopify_url(cls, v: Optional[str]) -> Optional[str]:
-        """Validate Shopify store URL format."""
-        # Allow None or empty string (optional field)
-        # Allow None or empty string (optional field)
+    def validate_store_url(cls, v: Optional[str]) -> Optional[str]:
+        """Validate store URL format."""
         if not v:
             return None
-        # If provided, must be a valid URL
-            return None
-        # If provided, must be a valid URL
         if not v.startswith(("http://", "https://")):
             raise ValueError(
-                "Shopify store URL must start with http:// or https://")
-        return v
+                "Store URL must start with http:// or https://")
+        return v.rstrip("/")
 
     @field_validator("slug", mode="before")
     @classmethod
     def validate_slug(cls, v: Optional[str]) -> Optional[str]:
         """Validate slug format if provided."""
-
-        # Allow None or empty string (will be auto-generated from name)
         if not v:
             return None
-        # If provided with a value, validate format
-        # If provided with a value, validate format
         if not v.islower():
             raise ValueError("Slug must be lowercase (kebab-case)")
         return v
+
+    @model_validator(mode="after")
+    def validate_ecommerce_config(self) -> "TenantCreate":
+        """
+        Validate e-commerce configuration consistency.
+        
+        Rules:
+        - If ecommerce_platform is set, ecommerce_store_url is required
+        - Shopify requires ecommerce_access_token (optional, can be set later)
+        - WooCommerce uses consumer_key/consumer_secret (optional, can be set later)
+        - Cannot mix Shopify and WooCommerce credentials
+        """
+        if self.ecommerce_platform:
+            if not self.ecommerce_store_url:
+                raise ValueError(
+                    f"ecommerce_store_url is required when ecommerce_platform is '{self.ecommerce_platform}'"
+                )
+            
+            if self.ecommerce_platform == "shopify":
+                # Shopify should not have WooCommerce credentials
+                if self.ecommerce_consumer_key or self.ecommerce_consumer_secret:
+                    raise ValueError(
+                        "Cannot use WooCommerce credentials (consumer_key/consumer_secret) with Shopify platform"
+                    )
+            
+            elif self.ecommerce_platform == "woocommerce":
+                # WooCommerce should not have Shopify credentials
+                if self.ecommerce_access_token:
+                    raise ValueError(
+                        "Cannot use Shopify credentials (access_token) with WooCommerce platform"
+                    )
+        
+        return self
 
 
 class TenantUpdate(BaseModel):
@@ -138,54 +155,104 @@ class TenantUpdate(BaseModel):
 
     **Updatable fields:**
     - name: Company name
-    - shopify_store_url: Shopify store URL (must be valid URL)
-    - shopify_access_token: Shopify Admin API access token (plaintext, will be encrypted)
-    - shopify_api_version: Shopify API version
     - is_active: Active status
+    - efact_ruc: RUC for electronic invoicing
+    
+    **E-commerce Configuration:**
+    - ecommerce_platform: "shopify" | "woocommerce" | None (set to None to clear)
+    - ecommerce_store_url: Store URL
+    - ecommerce_access_token: Shopify access token (will be encrypted)
+    - ecommerce_consumer_key: WooCommerce consumer key (will be encrypted)
+    - ecommerce_consumer_secret: WooCommerce consumer secret (will be encrypted)
+    - sync_on_validation: Sync to e-commerce on payment validation
 
     **Immutable fields (cannot be changed):**
-    - slug: Auto-generated at creation, cannot be modified
-    - id: Primary key, immutable
-    - is_platform: Set at creation, cannot be modified after creation
-    - company_id: Set at creation, cannot be modified (handled at DB level)
+    - slug, id, is_platform, company_id
 
     All fields are optional. Only provided fields will be updated.
-
-    **Security Note**: shopify_access_token is sent as plaintext in the request body
-    but is automatically encrypted by the Tenant model before storage.
     """
 
     name: Optional[str] = Field(None, min_length=1, max_length=100)
-    shopify_store_url: Optional[str] = None
-    shopify_access_token: Optional[str] = Field(
-        None, description="Shopify Admin API access token (plaintext, will be encrypted)"
-    )
-    shopify_api_version: Optional[str] = None
     is_active: Optional[bool] = None
     is_platform: Optional[bool] = Field(
         None, description="Cannot be changed after creation (will be rejected by service)"
     )
+    
+    # === E-COMMERCE CONFIGURATION ===
+    ecommerce_platform: Optional[Literal["shopify", "woocommerce"]] = Field(
+        None, description="E-commerce platform: 'shopify' or 'woocommerce' (set explicitly to change)"
+    )
+    ecommerce_store_url: Optional[str] = Field(
+        None, description="E-commerce store URL"
+    )
+    ecommerce_access_token: Optional[str] = Field(
+        None, description="Shopify Admin API access token (only for Shopify, will be encrypted)"
+    )
+    shopify_api_version: Optional[str] = Field(
+        None, description="Shopify API version (only for Shopify)"
+    )
+    ecommerce_consumer_key: Optional[str] = Field(
+        None, description="WooCommerce REST API consumer key (only for WooCommerce, will be encrypted)"
+    )
+    ecommerce_consumer_secret: Optional[str] = Field(
+        None, description="WooCommerce REST API consumer secret (only for WooCommerce, will be encrypted)"
+    )
+    sync_on_validation: Optional[bool] = Field(
+        None, description="Sync order status to e-commerce platform when payment is validated"
+    )
+
+    # === INVOICING ===
     efact_ruc: Optional[str] = Field(
         None,
         pattern=r"^\d{11}$",
         description="RUC del tenant para facturación electrónica (11 dígitos)"
     )
 
-    @field_validator("shopify_store_url")
+    @field_validator("ecommerce_store_url", mode="before")
     @classmethod
-    def validate_shopify_url(cls, v: Optional[str]) -> Optional[str]:
-        """Validate Shopify store URL format."""
+    def validate_store_url(cls, v: Optional[str]) -> Optional[str]:
+        """Validate store URL format."""
         if v and not v.startswith(("http://", "https://")):
             raise ValueError(
-                "Shopify store URL must start with http:// or https://")
-        return v
+                "Store URL must start with http:// or https://")
+        return v.rstrip("/") if v else v
+
+
+class EcommerceSettingsResponse(BaseModel):
+    """
+    Sanitized e-commerce settings for API responses.
+    
+    **Security**: NEVER includes access_token, consumer_key, or consumer_secret.
+    Only shows platform type, store URL, and sync configuration.
+    """
+    
+    platform: Optional[Literal["shopify", "woocommerce"]] = Field(
+        None, description="Configured e-commerce platform"
+    )
+    store_url: Optional[str] = Field(
+        None, description="E-commerce store URL"
+    )
+    sync_on_validation: bool = Field(
+        True, description="Whether orders sync to e-commerce on validation"
+    )
+    has_credentials: bool = Field(
+        False, description="Whether credentials are configured (without exposing them)"
+    )
 
 
 class TenantResponse(BaseModel):
     """
     Schema for tenant in API responses.
 
-    **Security**: shopify_access_token and shopify_api_version are NEVER included in responses.
+    **Security**: 
+    - E-commerce credentials (access_token, consumer_key, consumer_secret) are NEVER exposed
+    - ecommerce_settings shows platform config with has_credentials flag instead
+    
+    **E-commerce Configuration**:
+    - ecommerce_settings.platform: "shopify" | "woocommerce" | None
+    - ecommerce_settings.store_url: E-commerce store URL
+    - ecommerce_settings.sync_on_validation: Whether sync is enabled
+    - ecommerce_settings.has_credentials: Boolean indicating if credentials are set (without exposing them)
     """
 
     model_config = ConfigDict(from_attributes=True)
@@ -194,12 +261,75 @@ class TenantResponse(BaseModel):
     name: str
     slug: str
     company_id: Optional[str]
-    shopify_store_url: Optional[str]
     efact_ruc: Optional[str]
     is_platform: bool
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    
+    # Sanitized e-commerce settings (never includes credentials)
+    ecommerce_settings: Optional[EcommerceSettingsResponse] = Field(
+        None, description="E-commerce platform configuration (credentials hidden)"
+    )
+
+    @classmethod
+    def from_tenant(cls, tenant: Any) -> "TenantResponse":
+        """
+        Create a TenantResponse from a Tenant model with sanitized ecommerce_settings.
+        
+        This method safely extracts e-commerce settings without exposing credentials.
+        
+        Args:
+            tenant: Tenant model instance
+            
+        Returns:
+            TenantResponse with sanitized ecommerce_settings
+        """
+        # Build sanitized ecommerce settings
+        ecommerce_settings = None
+        
+        if hasattr(tenant, 'get_settings') and callable(tenant.get_settings):
+            try:
+                settings = tenant.get_settings()
+                if settings.ecommerce and settings.ecommerce.has_ecommerce:
+                    ecommerce = settings.ecommerce
+                    
+                    # Determine if credentials are configured
+                    has_credentials = False
+                    store_url = None
+                    
+                    if ecommerce.platform == "shopify" and ecommerce.shopify:
+                        store_url = ecommerce.shopify.store_url
+                        has_credentials = bool(ecommerce.shopify.access_token)
+                    elif ecommerce.platform == "woocommerce" and ecommerce.woocommerce:
+                        store_url = ecommerce.woocommerce.store_url
+                        has_credentials = bool(
+                            ecommerce.woocommerce.consumer_key and 
+                            ecommerce.woocommerce.consumer_secret
+                        )
+                    
+                    ecommerce_settings = EcommerceSettingsResponse(
+                        platform=ecommerce.platform,
+                        store_url=store_url,
+                        sync_on_validation=ecommerce.sync_on_validation,
+                        has_credentials=has_credentials,
+                    )
+            except Exception:
+                # If settings parsing fails, leave ecommerce_settings as None
+                pass
+        
+        return cls(
+            id=tenant.id,
+            name=tenant.name,
+            slug=tenant.slug,
+            company_id=tenant.company_id,
+            efact_ruc=tenant.efact_ruc,
+            is_platform=tenant.is_platform,
+            is_active=tenant.is_active,
+            created_at=tenant.created_at,
+            updated_at=tenant.updated_at,
+            ecommerce_settings=ecommerce_settings,
+        )
 
 
 class TenantDetailResponse(TenantResponse):

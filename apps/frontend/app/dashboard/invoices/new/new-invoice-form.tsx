@@ -25,6 +25,7 @@ import { InvoiceSuccessDialog } from "@/components/invoices/invoice-success-dial
 import { InvoiceErrorDialog } from "@/components/invoices/invoice-error-dialog";
 import type { Order } from "@/lib/services/order-service";
 import type { Invoice, InvoiceSerie, InvoiceCreate } from "@/lib/types/invoice";
+import { extractShopifyDraftOrderId, extractShopifyOrderId } from "@/lib/utils";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -383,7 +384,7 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
           </Link>
           <h1 className="text-3xl font-bold mt-2">Crear Comprobante</h1>
           <p className="text-muted-foreground">
-            Orden #{order.shopify_draft_order_id} • {order.customer_name}
+            Orden #{order.shopify_order_id ? extractShopifyOrderId(order.shopify_order_id) : order.shopify_order_id!.toString()} • {order.customer_name}
           </p>
         </div>
         <FileText className="h-12 w-12 text-muted-foreground" />
@@ -651,7 +652,7 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
             <CardContent className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground">Número de Orden</p>
-                <p className="font-medium">{order.shopify_draft_order_id}</p>
+                <p className="font-medium">{order.shopify_order_id ? extractShopifyOrderId(order.shopify_order_id) : order.shopify_order_id!.toString()}</p>
               </div>
 
               <Separator />

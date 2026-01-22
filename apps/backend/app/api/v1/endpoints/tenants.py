@@ -2,7 +2,7 @@
 Tenant management endpoints.
 
 These endpoints allow ADMIN users to manage tenant (client company) configurations,
-including Shopify credentials.
+including unified e-commerce settings (Shopify/WooCommerce).
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -23,7 +23,7 @@ from app.services.tenant import tenant_service
 router = APIRouter()
 
 
-@router.get("/", response_model=TenantListResponse, tags=["tenants"])
+@router.get("", response_model=TenantListResponse, tags=["tenants"])
 async def list_tenants(
     skip: int = 0,
     limit: int = 100,
@@ -50,7 +50,7 @@ async def list_tenants(
         - name: Company name
         - slug: URL-friendly identifier
         - company_id: Auth0 organization mapping ID
-        - shopify_store_url: Shopify store URL
+        - ecommerce_settings: E-commerce configuration (platform, store_url, sync_on_validation, has_credentials)
         - is_active: Active status
         - is_platform: Platform tenant flag
         - created_at: Creation timestamp
@@ -70,7 +70,7 @@ async def list_tenants(
 
         return TenantListResponse(
             total=total,
-            items=tenants,
+            items=[TenantResponse.from_tenant(t) for t in tenants],
             skip=skip,
             limit=limit,
         )
@@ -91,7 +91,8 @@ async def get_tenant(
     Get detailed tenant information with statistics.
 
     Returns comprehensive tenant information including:
-    - Basic tenant data: id, name, slug, company_id, shopify_store_url, is_active, is_platform
+    - Basic tenant data: id, name, slug, company_id, is_active, is_platform
+    - E-commerce settings: platform, store_url, sync_on_validation, has_credentials
     - Timestamps: created_at, updated_at
     - Statistics: number of active users, total orders
 
@@ -125,15 +126,16 @@ async def get_tenant(
             detail=f"Tenant {tenant_id} not found",
         )
 
-    # Combine tenant data with stats
+    # Build response with sanitized ecommerce_settings
+    base_response = TenantResponse.from_tenant(tenant)
     return TenantDetailResponse(
-        **tenant.__dict__,
+        **base_response.model_dump(),
         user_count=stats["user_count"],
         order_count=stats["order_count"],
     )
 
 
-@router.post("/", response_model=TenantResponse, status_code=status.HTTP_201_CREATED, tags=["tenants"])
+@router.post("", response_model=TenantResponse, status_code=status.HTTP_201_CREATED, tags=["tenants"])
 async def create_tenant(
     tenant_in: TenantCreate,
     current_user: User = Depends(require_permission("POST", "/tenants")),
@@ -146,9 +148,14 @@ async def create_tenant(
     - name: Company name (required, max 100 chars)
     - slug: URL-friendly identifier in kebab-case (optional - auto-generated as "name-outlet" if not provided)
     - company_id: Auth0 organization mapping ID (optional)
-    - shopify_store_url: Shopify store URL (required, must be valid URL starting with http:// or https://)
-    - shopify_access_token: Shopify Admin API access token (required, plaintext - encrypted before storage)
-    - shopify_api_version: Shopify API version (optional, defaults to "2024-01")
+    
+    **E-commerce Configuration (optional):**
+    - ecommerce_platform: "shopify" | "woocommerce" | None
+    - ecommerce_store_url: Store URL (required if platform is set)
+    - ecommerce_access_token: Shopify Admin API access token (only for Shopify, will be encrypted)
+    - ecommerce_consumer_key: WooCommerce consumer key (only for WooCommerce, will be encrypted)
+    - ecommerce_consumer_secret: WooCommerce consumer secret (only for WooCommerce, will be encrypted)
+    - sync_on_validation: Whether to sync to e-commerce when validating payment (default: True)
 
     **Auto-generated slug:**
     - If slug is not provided, it will be auto-generated as "{name-in-kebab-case}-outlet"
@@ -160,28 +167,29 @@ async def create_tenant(
     **Validations:**
     - name: Must be 1-100 characters
     - slug: If provided, must be unique and in kebab-case format (lowercase alphanumeric with hyphens)
-    - shopify_store_url: Must start with http:// or https://
-    - shopify_access_token: Required and plaintext (will be encrypted before storage)
+    - ecommerce_store_url: Must start with http:// or https:// (required if platform is set)
+    - Cannot mix Shopify and WooCommerce credentials
 
     **Defaults:**
     - is_platform: Always False (new tenants are clients, not platform)
     - is_active: Always True
-    - shopify_api_version: "2024-01" if not provided
+    - sync_on_validation: True if not provided
 
     **Returns:**
     - 201 Created with the created tenant including its ID
-    - TenantResponse includes: id, name, slug, company_id, shopify_store_url, is_active, is_platform, created_at, updated_at
+    - TenantResponse includes: id, name, slug, company_id, is_active, is_platform, 
+      ecommerce_settings, created_at, updated_at
 
     **Raises:**
     - 400: If slug already exists, validation fails, or invalid request data
     - 500: If creation fails for unexpected reasons
 
-    **Security Note**: shopify_access_token is sent as plaintext in the request body
-    but is automatically encrypted by the Tenant model before storage in the database.
+    **Security Note**: All e-commerce credentials are sent as plaintext in the request body
+    but are automatically encrypted before storage in the settings JSON field.
     """
     try:
         created_tenant = tenant_service.create_tenant(db, tenant_in)
-        return created_tenant
+        return TenantResponse.from_tenant(created_tenant)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -206,10 +214,15 @@ async def update_tenant(
 
     **Updatable fields:**
     - name: Company name (max 100 chars)
-    - shopify_store_url: Shopify store URL (must start with http:// or https://)
-    - shopify_access_token: Shopify Admin API access token (plaintext - will be encrypted)
-    - shopify_api_version: Shopify API version
     - is_active: Active status
+    
+    **E-commerce Configuration:**
+    - ecommerce_platform: "shopify" | "woocommerce" | None (change platform)
+    - ecommerce_store_url: Store URL
+    - ecommerce_access_token: Shopify access token (will be encrypted)
+    - ecommerce_consumer_key: WooCommerce consumer key (will be encrypted)
+    - ecommerce_consumer_secret: WooCommerce consumer secret (will be encrypted)
+    - sync_on_validation: Sync to e-commerce on payment validation
 
     **Immutable fields (cannot be changed after creation):**
     - slug: Auto-generated identifier, set at creation
@@ -221,9 +234,9 @@ async def update_tenant(
     - updated_at: Automatically updated to current timestamp
 
     **Validations:**
-    - shopify_store_url: If provided, must start with http:// or https://
+    - ecommerce_store_url: If provided, must start with http:// or https://
     - name: If provided, must be 1-100 characters
-    - Cannot attempt to modify immutable fields
+    - Cannot mix Shopify and WooCommerce credentials
 
     Args:
         tenant_id: Tenant ID to update
@@ -233,16 +246,16 @@ async def update_tenant(
 
     Returns:
         200 OK with updated tenant including ID
-        - TenantResponse includes: id, name, slug, company_id, shopify_store_url, 
-          is_active, is_platform, created_at, updated_at
+        - TenantResponse includes: id, name, slug, company_id, 
+          is_active, is_platform, ecommerce_settings, created_at, updated_at
 
     Raises:
         HTTPException 404: If tenant not found
         HTTPException 400: If validation fails or attempting to modify immutable fields
         HTTPException 500: If update fails for unexpected reasons
 
-    **Security Note**: shopify_access_token is sent as plaintext in the request body
-    but is automatically encrypted by the Tenant model before storage in the database.
+    **Security Note**: E-commerce credentials are sent as plaintext in the request body
+    but are automatically encrypted before storage in the settings JSON field.
     """
     try:
         updated_tenant = tenant_service.update_tenant(db, tenant_id, tenant_in)
@@ -253,7 +266,7 @@ async def update_tenant(
                 detail=f"Tenant {tenant_id} not found",
             )
 
-        return updated_tenant
+        return TenantResponse.from_tenant(updated_tenant)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

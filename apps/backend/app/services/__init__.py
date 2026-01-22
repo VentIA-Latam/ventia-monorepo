@@ -5,10 +5,10 @@ Business logic layer that orchestrates operations between API and repository lay
 """
 
 from app.services.activity import activity_service
+from app.services.ecommerce import EcommerceService, ecommerce_service
 from app.services.invoice import InvoiceService, invoice_service
 from app.services.invoice_serie import InvoiceSerieService, invoice_serie_service
 from app.services.order import OrderService, order_service
-from app.services.shopify import ShopifyService, shopify_service
 from app.services.stats import StatsService, stats_service
 from app.services.user import UserService, user_service
 from app.integrations.efact_client import EFactClient
@@ -26,9 +26,9 @@ __all__ = [
     # Invoice Serie
     "InvoiceSerieService",
     "invoice_serie_service",
-    # Shopify
-    "ShopifyService",
-    "shopify_service",
+    # E-commerce (unified)
+    "EcommerceService",
+    "ecommerce_service",
     # eFact
     "EFactClient",
     # Stats
