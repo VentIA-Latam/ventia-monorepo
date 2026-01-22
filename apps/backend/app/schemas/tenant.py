@@ -74,6 +74,9 @@ class TenantCreate(BaseModel):
     ecommerce_access_token: Optional[str] = Field(
         None, description="Shopify Admin API access token (only for Shopify, will be encrypted)"
     )
+    shopify_api_version: str = Field(
+        "2024-01", description="Shopify API version (only for Shopify, default: '2024-01')"
+    )
     ecommerce_consumer_key: Optional[str] = Field(
         None, description="WooCommerce REST API consumer key (only for WooCommerce, will be encrypted)"
     )
@@ -83,7 +86,7 @@ class TenantCreate(BaseModel):
     sync_on_validation: bool = Field(
         True, description="Sync order status to e-commerce platform when payment is validated"
     )
-    
+
     # === INVOICING ===
     efact_ruc: Optional[str] = Field(
         None,
@@ -185,6 +188,9 @@ class TenantUpdate(BaseModel):
     ecommerce_access_token: Optional[str] = Field(
         None, description="Shopify Admin API access token (only for Shopify, will be encrypted)"
     )
+    shopify_api_version: Optional[str] = Field(
+        None, description="Shopify API version (only for Shopify)"
+    )
     ecommerce_consumer_key: Optional[str] = Field(
         None, description="WooCommerce REST API consumer key (only for WooCommerce, will be encrypted)"
     )
@@ -194,7 +200,7 @@ class TenantUpdate(BaseModel):
     sync_on_validation: Optional[bool] = Field(
         None, description="Sync order status to e-commerce platform when payment is validated"
     )
-    
+
     # === INVOICING ===
     efact_ruc: Optional[str] = Field(
         None,

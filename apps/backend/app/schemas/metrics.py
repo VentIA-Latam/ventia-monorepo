@@ -54,7 +54,7 @@ class DashboardMetrics(BaseModel):
                 "pending_payment": 12,
                 "pending_dispatch": 8,
                 "total_sales": 4250.00,
-                "currency": "USD",
+                "currency": "PEN",
                 "period": "today",
                 "start_date": "2025-12-27",
                 "end_date": "2025-12-27"

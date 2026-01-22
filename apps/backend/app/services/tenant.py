@@ -165,7 +165,7 @@ class TenantService:
                 shopify=ShopifyCredentials(
                     store_url=tenant_in.ecommerce_store_url or "",
                     access_token=tenant_in.ecommerce_access_token,
-                    api_version="2024-01",
+                    api_version=tenant_in.shopify_api_version,
                 ),
             )
         elif tenant_in.ecommerce_platform == "woocommerce":
@@ -270,7 +270,8 @@ class TenantService:
         # Separate e-commerce fields from regular fields
         ecommerce_fields = {
             "ecommerce_platform", "ecommerce_store_url", "ecommerce_access_token",
-            "ecommerce_consumer_key", "ecommerce_consumer_secret", "sync_on_validation"
+            "shopify_api_version", "ecommerce_consumer_key", "ecommerce_consumer_secret",
+            "sync_on_validation"
         }
         
         has_ecommerce_update = any(f in update_data for f in ecommerce_fields)
@@ -317,15 +318,16 @@ class TenantService:
         if platform == "shopify":
             # Get current Shopify settings if available
             current_shopify = current_ecommerce.shopify if current_ecommerce else None
-            
+
             new_settings = EcommerceSettings(
                 sync_on_validation=sync_on_validation,
                 shopify=ShopifyCredentials(
-                    store_url=update_data.get("ecommerce_store_url") or 
+                    store_url=update_data.get("ecommerce_store_url") or
                               (current_shopify.store_url if current_shopify else ""),
                     access_token=update_data.get("ecommerce_access_token") or
                                  (current_shopify.access_token if current_shopify else None),
-                    api_version=(current_shopify.api_version if current_shopify else "2024-01"),
+                    api_version=update_data.get("shopify_api_version") or
+                                (current_shopify.api_version if current_shopify else "2024-01"),
                 ),
             )
             tenant.set_ecommerce_settings(new_settings)

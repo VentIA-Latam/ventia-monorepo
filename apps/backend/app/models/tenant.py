@@ -9,7 +9,7 @@ import logging
 from typing import Any
 
 from sqlalchemy import JSON, Boolean, Column, String
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import attributes, relationship
 
 from app.core.encryption import encryption_service
 from app.models.base import Base, TimestampMixin
@@ -56,24 +56,6 @@ class Tenant(Base, TimestampMixin):
         default=False,
         nullable=False,
         comment="True if this is the VentIA platform tenant (not a client)",
-    )
-
-    # Shopify credentials (per tenant)
-    shopify_store_url = Column(
-        String,
-        nullable=True,
-        comment="Shopify store URL (e.g., 'https://my-store.myshopify.com')",
-    )
-    _shopify_access_token_encrypted = Column(
-        String,
-        nullable=True,
-        comment="Encrypted Shopify Admin API access token (use shopify_access_token property)",
-    )
-    shopify_api_version = Column(
-        String,
-        default="2024-01",
-        nullable=True,
-        comment="Shopify API version (e.g., '2024-01')",
     )
 
     # Metadata
@@ -133,43 +115,6 @@ class Tenant(Base, TimestampMixin):
     api_keys = relationship("APIKey", back_populates="tenant", cascade="all, delete-orphan")
     invoices = relationship("Invoice", back_populates="tenant", cascade="all, delete-orphan")
     invoice_series = relationship("InvoiceSerie", back_populates="tenant", cascade="all, delete-orphan")
-
-    @property
-    def shopify_access_token(self) -> str | None:
-        """
-        Get decrypted Shopify access token.
-
-        This property transparently decrypts the token when accessed.
-        Returns None if token is not set.
-
-        Returns:
-            str: Decrypted access token or None
-        """
-        if not self._shopify_access_token_encrypted:
-            return None
-
-        try:
-            return encryption_service.decrypt(self._shopify_access_token_encrypted)
-        except Exception:
-            # If decryption fails, return None and log warning
-            # This can happen if SECRET_KEY changed or data is corrupted
-            return None
-
-    @shopify_access_token.setter
-    def shopify_access_token(self, value: str | None) -> None:
-        """
-        Set Shopify access token with automatic encryption.
-
-        This property transparently encrypts the token before storing it.
-        If value is None or empty, the encrypted field is set to None.
-
-        Args:
-            value: Plain text access token or None
-        """
-        if not value:
-            self._shopify_access_token_encrypted = None
-        else:
-            self._shopify_access_token_encrypted = encryption_service.encrypt(value)
 
     def get_settings(self) -> TenantSettings:
         """
@@ -287,6 +232,7 @@ class Tenant(Base, TimestampMixin):
             self.settings["ecommerce"] = {
                 "sync_on_validation": ecommerce.sync_on_validation if ecommerce else True
             }
+            attributes.flag_modified(self, "settings")
             return
 
         ecommerce_dict: dict[str, Any] = {
@@ -319,6 +265,9 @@ class Tenant(Base, TimestampMixin):
                 )
 
         self.settings["ecommerce"] = ecommerce_dict
+
+        # Mark settings as modified so SQLAlchemy detects the change
+        attributes.flag_modified(self, "settings")
 
     def __repr__(self) -> str:
         """String representation of Tenant."""
