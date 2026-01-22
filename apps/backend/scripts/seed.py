@@ -25,6 +25,11 @@ from app.models.order import Order
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.core.permissions import Role
+from app.schemas.tenant_settings import (
+    EcommerceSettings,
+    ShopifyCredentials,
+    WooCommerceCredentials,
+)
 
 
 def seed_database():
@@ -44,16 +49,15 @@ def seed_database():
         print("Starting database seed...")
         
         # ============ SEED TENANTS ============
+        # NOTE: E-commerce configuration is done via set_ecommerce_settings() after tenant creation.
+        # This uses the unified settings JSON field with encrypted credentials.
         print("\nCreating tenants...")
         tenants = [
-            # Tenant 1: VentIA Platform (SuperAdmin tenant)
+            # Tenant 1: VentIA Platform (SuperAdmin tenant) - No e-commerce config
             Tenant(
                 name="VentIA Platform",
                 slug="ventia",
                 company_id=None,
-                shopify_store_url=None,
-                shopify_access_token=None,  # Platform tenant doesn't need Shopify
-                shopify_api_version=None,
                 is_platform=True,  # This is the platform tenant
                 is_active=True,
                 efact_ruc="20100000001",
@@ -64,18 +68,15 @@ def seed_database():
                 emisor_provincia="LIMA",
                 emisor_distrito="LIMA",
                 emisor_direccion="AV. JAVIER PRADO ESTE 4600",
-                settings=None,
+                settings=None,  # Platform tenant - no e-commerce needed
                 created_at=datetime(2025, 12, 24, 12, 0, 0),
                 updated_at=datetime(2025, 12, 24, 12, 0, 0),
             ),
-            # Tenant 2: Nassau (Client)
+            # Tenant 2: Nassau (Client) - Shopify configuration (set via set_ecommerce_settings)
             Tenant(
                 name="Nassau",
                 slug="nassau-outlet",
                 company_id=None,
-                shopify_store_url=None,
-                shopify_access_token=None,
-                shopify_api_version=None,
                 is_active=True,
                 efact_ruc="20614382741",
                 # Datos del emisor para facturacion electronica
@@ -85,17 +86,15 @@ def seed_database():
                 emisor_provincia="LIMA",
                 emisor_distrito="SAN ISIDRO",
                 emisor_direccion="AV. CONQUISTADORES 1234",
-                settings=None,
+                settings=None,  # E-commerce set after commit
                 created_at=datetime(2025, 12, 24, 12, 27, 59),
                 updated_at=datetime(2025, 12, 24, 12, 27, 59),
             ),
+            # Tenant 3: La dore (Client) - WooCommerce configuration (set via set_ecommerce_settings)
             Tenant(
                 name="La dore",
                 slug="la-dore-outlet",
                 company_id=None,
-                shopify_store_url=None,
-                shopify_access_token=None,
-                shopify_api_version=None,
                 is_active=True,
                 efact_ruc="20614382741",
                 # Datos del emisor para facturacion electronica
@@ -105,17 +104,15 @@ def seed_database():
                 emisor_provincia="LIMA",
                 emisor_distrito="MIRAFLORES",
                 emisor_direccion="AV. LARCO 567",
-                settings=None,
+                settings=None,  # E-commerce set after commit
                 created_at=datetime(2025, 12, 24, 12, 27, 59),
                 updated_at=datetime(2025, 12, 24, 12, 27, 59),
             ),
+            # Tenant 4: Not peppers (Client) - Shopify configuration (set via set_ecommerce_settings)
             Tenant(
                 name="Not peppers",
                 slug="not-peppers-outlet",
                 company_id=None,
-                shopify_store_url=None,
-                shopify_access_token=None,
-                shopify_api_version=None,
                 is_active=True,
                 efact_ruc="20555666777",
                 # Datos del emisor para facturacion electronica
@@ -125,17 +122,15 @@ def seed_database():
                 emisor_provincia="LIMA",
                 emisor_distrito="SURCO",
                 emisor_direccion="AV. PRIMAVERA 890",
-                settings=None,
+                settings=None,  # E-commerce set after commit
                 created_at=datetime.now(),
                 updated_at=datetime.now(),
             ),
+            # Tenant 5: Lucano (Inactive Client) - WooCommerce configuration (set via set_ecommerce_settings)
             Tenant(
                 name="Lucano",
                 slug="lucano-outlet",
                 company_id=None,
-                shopify_store_url=None,
-                shopify_access_token=None,
-                shopify_api_version=None,
                 is_active=False,
                 efact_ruc="20444333222",
                 # Datos del emisor para facturacion electronica
@@ -145,14 +140,66 @@ def seed_database():
                 emisor_provincia="LIMA",
                 emisor_distrito="LA MOLINA",
                 emisor_direccion="AV. LA FONTANA 456",
-                settings=None,
+                settings=None,  # E-commerce set after commit
                 created_at=datetime.now(),
                 updated_at=datetime.now(),
             ),
         ]
         db.add_all(tenants)
         db.commit()
-        print(f"Created {len(tenants)} tenants")
+        print(f"✅ Created {len(tenants)} tenants")
+        
+        # ============ CONFIGURE E-COMMERCE SETTINGS ============
+        print("\n🔧 Configuring e-commerce settings for tenants...")
+        
+        # Tenant 2: Nassau - Shopify with sync enabled
+        # Note: access_token should be set via admin panel or environment
+        tenants[1].set_ecommerce_settings(EcommerceSettings(
+            sync_on_validation=True,
+            shopify=ShopifyCredentials(
+                store_url="https://nassau-outlet.myshopify.com",
+                access_token=None,  # Set in production via admin panel
+                api_version="2024-01",
+            ),
+        ))
+        print(f"   - Nassau: Shopify (sync=True)")
+        
+        # Tenant 3: La dore - WooCommerce with sync enabled
+        # Note: credentials should be set via admin panel or environment
+        tenants[2].set_ecommerce_settings(EcommerceSettings(
+            sync_on_validation=True,
+            woocommerce=WooCommerceCredentials(
+                store_url="https://ladore.com",
+                consumer_key=None,  # Set in production via admin panel
+                consumer_secret=None,  # Set in production via admin panel
+            ),
+        ))
+        print(f"   - La Dore: WooCommerce (sync=True)")
+        
+        # Tenant 4: Not Peppers - Shopify with sync disabled (for local orders)
+        tenants[3].set_ecommerce_settings(EcommerceSettings(
+            sync_on_validation=False,  # Local orders, no sync needed
+            shopify=ShopifyCredentials(
+                store_url="https://not-peppers.myshopify.com",
+                access_token=None,
+                api_version="2024-01",
+            ),
+        ))
+        print(f"   - Not Peppers: Shopify (sync=False)")
+        
+        # Tenant 5: Lucano - WooCommerce with sync disabled (inactive tenant)
+        tenants[4].set_ecommerce_settings(EcommerceSettings(
+            sync_on_validation=False,
+            woocommerce=WooCommerceCredentials(
+                store_url="https://lucano-store.com",
+                consumer_key=None,
+                consumer_secret=None,
+            ),
+        ))
+        print(f"   - Lucano: WooCommerce (sync=False, inactive)")
+        
+        db.commit()
+        print("✅ E-commerce settings configured")
         
         # ============ SEED USERS ============
         print("\nCreating users...")
