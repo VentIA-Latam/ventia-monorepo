@@ -3,6 +3,7 @@ node_modules/
 .pnp
 .pnp.js
 .claude/
+ventia-vm/
 
 # Python
 __pycache__/
@@ -61,11 +62,17 @@ lerna-debug.log*
 
 # Local env files
 .env
+.env.local
 .env*.local
+.env.dev
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
-
+.env.prod
+.env.dev
 # Vercel
 .vercel
 

@@ -9,8 +9,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Order } from "@/lib/types/order";
 import { useRouter } from "next/navigation";
+import { FileText } from "lucide-react";
 
 interface OrdersTableProps {
   orders: Order[];
@@ -46,7 +48,10 @@ export function OrdersTable({ orders }: OrdersTableProps) {
           <TableHeader>
             <TableRow className="bg-gray-50/80 border-b border-gray-200">
               <TableHead className="min-w-[120px]">
-                ID PEDIDO
+                ID DRAFT
+              </TableHead>
+              <TableHead className="min-w-[120px]">
+                ID ORDEN
               </TableHead>
               <TableHead className="min-w-[200px]">
                 CLIENTE
@@ -56,6 +61,9 @@ export function OrdersTable({ orders }: OrdersTableProps) {
               </TableHead>
               <TableHead className="text-right min-w-[100px]">
                 MONTO
+              </TableHead>
+              <TableHead className="text-center min-w-[120px]">
+                ACCIONES
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -75,6 +83,15 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                       {order.date}
                     </div>
                   </div>
+                </TableCell>
+                <TableCell className="min-w-[120px]">
+                  {order.shopifyOrderId ? (
+                    <div className="font-semibold text-green-600 text-sm">
+                      {order.shopifyOrderId}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-400 italic">Pendiente</span>
+                  )}
                 </TableCell>
                 <TableCell className="min-w-[200px]">
                   <div className="flex items-center gap-2 sm:gap-3">
@@ -105,6 +122,20 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                 </TableCell>
                 <TableCell className="text-right font-semibold text-sm text-gray-900 min-w-[100px]">
                   {order.currency}{order.amount.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </TableCell>
+                <TableCell className="text-center min-w-[120px]">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/dashboard/invoices/new?orderId=${order.dbId}`);
+                    }}
+                    className="gap-1.5"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Crear</span>
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}

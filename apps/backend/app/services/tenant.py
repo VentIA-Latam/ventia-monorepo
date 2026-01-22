@@ -10,6 +10,11 @@ from sqlalchemy.exc import IntegrityError
 
 from app.models.tenant import Tenant
 from app.schemas.tenant import TenantCreate, TenantUpdate
+from app.schemas.tenant_settings import (
+    EcommerceSettings,
+    ShopifyCredentials,
+    WooCommerceCredentials,
+)
 from app.repositories.tenant import tenant_repository
 
 
@@ -83,13 +88,16 @@ class TenantService:
         Validates that slug is unique before creation.
         Sets is_platform=False by default (new tenants are clients, not platform).
 
-        **Encryption**: shopify_access_token is sent as plaintext in request body
-        but is automatically encrypted by the Tenant model's @property setter
-        before being stored in the database.
+        **E-commerce Configuration:**
+        - Supports Shopify and WooCommerce via ecommerce_* fields
+        - Builds settings.ecommerce JSON with encrypted credentials
+
+        **Encryption**: All credentials (access_token, consumer_key, consumer_secret)
+        are automatically encrypted before being stored in the settings JSON field.
 
         Args:
             db: Database session
-            tenant_in: Tenant creation data (shopify_access_token in plaintext)
+            tenant_in: Tenant creation data
 
         Returns:
             Created tenant with ID
@@ -112,15 +120,15 @@ class TenantService:
             name=tenant_in.name,
             slug=slug,
             company_id=tenant_in.company_id,
-            shopify_store_url=tenant_in.shopify_store_url,
-            shopify_api_version=tenant_in.shopify_api_version or "2024-01",
             is_platform=False,  # New tenants are always clients, not platform
             is_active=True,
+            efact_ruc=tenant_in.efact_ruc,
         )
 
-        # Set Shopify token (required in TenantCreate)
-        # The @property setter automatically encrypts it before storing
-        tenant.shopify_access_token = tenant_in.shopify_access_token
+        # Build e-commerce settings if platform is specified
+        if tenant_in.ecommerce_platform:
+            ecommerce_settings = self._build_ecommerce_settings(tenant_in)
+            tenant.set_ecommerce_settings(ecommerce_settings)
 
         try:
             db.add(tenant)
@@ -140,6 +148,37 @@ class TenantService:
                 raise ValueError(f"Failed to create tenant: {str(e.orig)}")
 
         return tenant
+
+    def _build_ecommerce_settings(self, tenant_in: TenantCreate) -> EcommerceSettings:
+        """
+        Build EcommerceSettings from TenantCreate fields.
+        
+        Args:
+            tenant_in: TenantCreate with ecommerce_* fields
+            
+        Returns:
+            EcommerceSettings object ready for encryption and storage
+        """
+        if tenant_in.ecommerce_platform == "shopify":
+            return EcommerceSettings(
+                sync_on_validation=tenant_in.sync_on_validation,
+                shopify=ShopifyCredentials(
+                    store_url=tenant_in.ecommerce_store_url or "",
+                    access_token=tenant_in.ecommerce_access_token,
+                    api_version="2024-01",
+                ),
+            )
+        elif tenant_in.ecommerce_platform == "woocommerce":
+            return EcommerceSettings(
+                sync_on_validation=tenant_in.sync_on_validation,
+                woocommerce=WooCommerceCredentials(
+                    store_url=tenant_in.ecommerce_store_url or "",
+                    consumer_key=tenant_in.ecommerce_consumer_key,
+                    consumer_secret=tenant_in.ecommerce_consumer_secret,
+                ),
+            )
+        else:
+            return EcommerceSettings(sync_on_validation=tenant_in.sync_on_validation)
 
     def _generate_slug(self, name: str) -> str:
         """
@@ -194,16 +233,15 @@ class TenantService:
         Update tenant fields.
 
         **Updatable fields:**
-        - name, shopify_store_url, shopify_access_token, shopify_api_version, is_active
+        - name, is_active, efact_ruc
+        - E-commerce: ecommerce_platform, ecommerce_store_url, credentials, sync_on_validation
 
         **Immutable fields (cannot be changed):**
         - slug, id, is_platform (set at creation)
 
-        The updated_at timestamp is automatically updated by SQLAlchemy.
-
-        **Encryption**: shopify_access_token is sent as plaintext in request body
-        but is automatically encrypted by the Tenant model's @property setter
-        before being stored in the database.
+        **E-commerce Configuration:**
+        - If ecommerce_platform is provided, rebuilds settings.ecommerce
+        - Credentials are encrypted before storage
 
         Args:
             db: Database session
@@ -223,23 +261,96 @@ class TenantService:
         # Extract update data (only fields that were explicitly provided)
         update_data = tenant_in.model_dump(exclude_unset=True)
 
-        # Check if trying to update immutable fields (which schema shouldn't allow, but validate anyway)
+        # Check if trying to update immutable fields
         immutable_fields = {"slug", "id", "is_platform", "company_id"}
         attempted_immutable = set(update_data.keys()) & immutable_fields
         if attempted_immutable:
             raise ValueError(f"Cannot modify immutable fields: {', '.join(attempted_immutable)}")
 
-        # Update allowed fields
+        # Separate e-commerce fields from regular fields
+        ecommerce_fields = {
+            "ecommerce_platform", "ecommerce_store_url", "ecommerce_access_token",
+            "ecommerce_consumer_key", "ecommerce_consumer_secret", "sync_on_validation"
+        }
+        
+        has_ecommerce_update = any(f in update_data for f in ecommerce_fields)
+
+        # Update regular fields
         for field, value in update_data.items():
-            if field == "shopify_access_token":
-                # Use property setter for automatic encryption (plaintext -> encrypted)
-                # Even if value is None, this clears the encrypted token
-                tenant.shopify_access_token = value
-            else:
-                setattr(tenant, field, value)
+            if field in ecommerce_fields:
+                continue  # Handle separately
+            setattr(tenant, field, value)
+
+        # Handle e-commerce settings update
+        if has_ecommerce_update:
+            self._update_ecommerce_settings(tenant, update_data)
 
         db.commit()
         db.refresh(tenant)
+
+        return tenant
+
+    def _update_ecommerce_settings(
+        self, tenant: Tenant, update_data: dict
+    ) -> None:
+        """
+        Update e-commerce settings for a tenant.
+        
+        Args:
+            tenant: Tenant to update
+            update_data: Dictionary with ecommerce_* fields
+        """
+        # Get current settings or create new
+        current_settings = tenant.get_settings()
+        current_ecommerce = current_settings.ecommerce
+        
+        # Determine platform (new value or keep current)
+        platform = update_data.get("ecommerce_platform")
+        if platform is None and current_ecommerce:
+            platform = current_ecommerce.platform
+        
+        # Determine sync setting
+        sync_on_validation = update_data.get("sync_on_validation")
+        if sync_on_validation is None:
+            sync_on_validation = current_ecommerce.sync_on_validation if current_ecommerce else True
+        
+        if platform == "shopify":
+            # Get current Shopify settings if available
+            current_shopify = current_ecommerce.shopify if current_ecommerce else None
+            
+            new_settings = EcommerceSettings(
+                sync_on_validation=sync_on_validation,
+                shopify=ShopifyCredentials(
+                    store_url=update_data.get("ecommerce_store_url") or 
+                              (current_shopify.store_url if current_shopify else ""),
+                    access_token=update_data.get("ecommerce_access_token") or
+                                 (current_shopify.access_token if current_shopify else None),
+                    api_version=(current_shopify.api_version if current_shopify else "2024-01"),
+                ),
+            )
+            tenant.set_ecommerce_settings(new_settings)
+            
+        elif platform == "woocommerce":
+            # Get current WooCommerce settings if available
+            current_woo = current_ecommerce.woocommerce if current_ecommerce else None
+            
+            new_settings = EcommerceSettings(
+                sync_on_validation=sync_on_validation,
+                woocommerce=WooCommerceCredentials(
+                    store_url=update_data.get("ecommerce_store_url") or
+                              (current_woo.store_url if current_woo else ""),
+                    consumer_key=update_data.get("ecommerce_consumer_key") or
+                                 (current_woo.consumer_key if current_woo else None),
+                    consumer_secret=update_data.get("ecommerce_consumer_secret") or
+                                    (current_woo.consumer_secret if current_woo else None),
+                ),
+            )
+            tenant.set_ecommerce_settings(new_settings)
+            
+        else:
+            # No platform - just update sync setting
+            new_settings = EcommerceSettings(sync_on_validation=sync_on_validation)
+            tenant.set_ecommerce_settings(new_settings)
 
         return tenant
 

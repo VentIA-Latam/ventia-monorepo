@@ -3,6 +3,8 @@
  * Handles platform-wide data for super administrators
  */
 
+import { extractShopifyDraftOrderId } from "@/lib/utils";
+
 export interface TenantSummary {
   id: number;
   name: string;
@@ -72,7 +74,7 @@ export async function getGlobalOrders(limit: number = 20): Promise<GlobalOrder[]
   // Map backend response to frontend format
   return orders.map((order: any) => ({
     ...order,
-    order_number: order.shopify_order_id || order.shopify_draft_order_id || `#${order.id}`,
+    order_number: order.shopify_order_id || (order.shopify_draft_order_id ? extractShopifyDraftOrderId(order.shopify_draft_order_id) : null) || `#${order.id}`,
     total: order.total_price || 0,
     tenant_name: order.tenant?.name || `Tenant ${order.tenant_id}`,
   }));

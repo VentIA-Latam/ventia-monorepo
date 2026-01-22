@@ -86,6 +86,11 @@ class Invoice(Base, TimestampMixin):
         nullable=False,
         comment="Nombre o razón social del cliente",
     )
+    cliente_email = Column(
+        String(255),
+        nullable=True,
+        comment="Email del cliente para envío de comprobantes",
+    )
 
     # Amounts
     currency = Column(

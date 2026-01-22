@@ -186,6 +186,32 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
             .first()
         )
 
+    def get_by_woocommerce_order_id(
+        self,
+        db: Session,
+        tenant_id: int,
+        woocommerce_order_id: int,
+    ) -> Order | None:
+        """
+        Get order by WooCommerce order ID and tenant.
+
+        Args:
+            db: Database session
+            tenant_id: Tenant ID
+            woocommerce_order_id: WooCommerce order ID
+
+        Returns:
+            Order or None
+        """
+        return (
+            db.query(Order)
+            .filter(
+                Order.tenant_id == tenant_id,
+                Order.woocommerce_order_id == woocommerce_order_id,
+            )
+            .first()
+        )
+
     def get_pending_validation(
         self,
         db: Session,

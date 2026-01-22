@@ -210,7 +210,8 @@ export default function Plans() {
 
                   {/* --- BOTÓN --- */}
                   <a
-                    href="https://wa.me/51951752355?text=Hola!%20Quiero%20más%20información%20sobre%20los%20planes%20de%20VentIA."
+                    href="https://calendly.com/tarek-ventia-latam/ventia"
+                    //href="https://wa.me/51951752355?text=Hola!%20Quiero%20más%20información%20sobre%20los%20planes%20de%20VentIA."
                     target="_blank"
                     rel="noopener noreferrer"
                     className="

@@ -130,7 +130,7 @@ class ShopifyClient:
         }
         """
 
-        variables = {"id": f"gid://shopify/DraftOrder/{draft_order_id}"}
+        variables = {"id": draft_order_id}
 
 
         data = await self._execute_query(mutation, variables)
