@@ -20,66 +20,43 @@ export function formatCurrency(
 }
 
 /**
- * US-007: Helper para formatear fecha
+ * Helper para formatear fecha (solo fecha, sin hora)
  * @param isoDate - Fecha en formato ISO string
  * @returns String formateado "15/01/2024"
  */
 export function formatDate(isoDate: string): string {
-  return new Date(isoDate).toLocaleDateString('es-PE', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    timeZone: 'America/Lima'
-  });
+  const utcDate = new Date(isoDate + 'Z');
+
+  const peruDate = new Date(
+    utcDate.toLocaleString('en-US', { timeZone: 'America/Lima' })
+  );
+
+  const day = String(peruDate.getDate()).padStart(2, '0');
+  const month = String(peruDate.getMonth() + 1).padStart(2, '0');
+  const year = peruDate.getFullYear();
+
+  return `${day}/${month}/${year}`;
 }
 
 /**
- * Helper para formatear fecha y hora completa (24 horas, hora de Perú)
+ * Helper para formatear fecha y hora completa (24 horas, hora de Perú UTC-5)
  * @param isoDate - Fecha en formato ISO string
  * @returns String formateado "15/01/2024, 14:30"
  */
 export function formatDateTime(isoDate: string): string {
-  return new Date(isoDate).toLocaleString('es-PE', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: 'America/Lima'
-  });
-}
+  const utcDate = new Date(isoDate + 'Z');
 
-/**
- * Helper para formatear fecha y hora con segundos (24 horas, hora de Perú)
- * @param isoDate - Fecha en formato ISO string
- * @returns String formateado "15/01/2024, 14:30:45"
- */
-export function formatDateTimeWithSeconds(isoDate: string): string {
-  return new Date(isoDate).toLocaleString('es-PE', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-    timeZone: 'America/Lima'
-  });
-}
+  const peruDate = new Date(
+    utcDate.toLocaleString('en-US', { timeZone: 'America/Lima' })
+  );
 
-/**
- * Helper para formatear solo la hora (24 horas, hora de Perú)
- * @param isoDate - Fecha en formato ISO string
- * @returns String formateado "14:30"
- */
-export function formatTime(isoDate: string): string {
-  return new Date(isoDate).toLocaleTimeString('es-PE', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: 'America/Lima'
-  });
+  const day = String(peruDate.getDate()).padStart(2, '0');
+  const month = String(peruDate.getMonth() + 1).padStart(2, '0');
+  const year = peruDate.getFullYear();
+  const hours = String(peruDate.getHours()).padStart(2, '0');
+  const minutes = String(peruDate.getMinutes()).padStart(2, '0');
+
+  return `${day}/${month}/${year}, ${hours}:${minutes}`;
 }
 
 /**

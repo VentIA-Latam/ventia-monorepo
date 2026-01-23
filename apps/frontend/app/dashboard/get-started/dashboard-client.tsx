@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { ShoppingBag, AlertCircle, Truck, DollarSign } from "lucide-react";
 import { DashboardMetrics, PeriodType } from "@/lib/services/metrics-service";
+import { formatDate } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -99,7 +100,7 @@ export function DashboardClient({ initialMetrics }: DashboardClientProps) {
           icon={<ShoppingBag className="w-5 h-5" />}
           // change="+5%"  // TODO: Calcular cambio vs periodo anterior
           // changeType="positive"
-          comparison={`del ${new Date(initialMetrics.start_date).toLocaleDateString('es-ES')} al ${new Date(initialMetrics.end_date).toLocaleDateString('es-ES')}`}
+          comparison={`del ${formatDate(initialMetrics.start_date)} al ${formatDate(initialMetrics.end_date)}`}
         />
 
         <StatsCard

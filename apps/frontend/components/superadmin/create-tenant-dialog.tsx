@@ -12,8 +12,17 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+type EcommercePlatform = "shopify" | "woocommerce";
 
 interface CreateTenantDialogProps {
   open: boolean;
@@ -24,12 +33,18 @@ interface CreateTenantDialogProps {
 export function CreateTenantDialog({ open, onOpenChange, onSuccess }: CreateTenantDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [platform, setPlatform] = useState<EcommercePlatform>("shopify");
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
+    // Shopify fields
     shopify_store_url: "",
     shopify_access_token: "",
     shopify_api_version: "2024-01",
+    // WooCommerce fields
+    woocommerce_url: "",
+    woocommerce_consumer_key: "",
+    woocommerce_consumer_secret: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,10 +52,26 @@ export function CreateTenantDialog({ open, onOpenChange, onSuccess }: CreateTena
     setLoading(true);
 
     try {
+      // Preparar datos según la plataforma seleccionada
+      const submitData: any = {
+        name: formData.name,
+        slug: formData.slug,
+      };
+
+      if (platform === "shopify") {
+        submitData.shopify_store_url = formData.shopify_store_url;
+        submitData.shopify_access_token = formData.shopify_access_token;
+        submitData.shopify_api_version = formData.shopify_api_version;
+      } else if (platform === "woocommerce") {
+        submitData.woocommerce_url = formData.woocommerce_url;
+        submitData.woocommerce_consumer_key = formData.woocommerce_consumer_key;
+        submitData.woocommerce_consumer_secret = formData.woocommerce_consumer_secret;
+      }
+
       const response = await fetch('/api/superadmin/tenants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       if (!response.ok) {
@@ -60,7 +91,11 @@ export function CreateTenantDialog({ open, onOpenChange, onSuccess }: CreateTena
         shopify_store_url: "",
         shopify_access_token: "",
         shopify_api_version: "2024-01",
+        woocommerce_url: "",
+        woocommerce_consumer_key: "",
+        woocommerce_consumer_secret: "",
       });
+      setPlatform("shopify");
 
       onSuccess();
       onOpenChange(false);
@@ -117,45 +152,117 @@ export function CreateTenantDialog({ open, onOpenChange, onSuccess }: CreateTena
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="shopify_store_url">
-                URL de tienda Shopify <span className="text-red-500">*</span>
+              <Label htmlFor="platform">
+                Plataforma de E-commerce <span className="text-red-500">*</span>
               </Label>
-              <Input
-                id="shopify_store_url"
-                type="url"
-                placeholder="https://mi-tienda.myshopify.com"
-                value={formData.shopify_store_url}
-                onChange={(e) => setFormData({ ...formData, shopify_store_url: e.target.value })}
-              />
+              <Select value={platform} onValueChange={(value: EcommercePlatform) => setPlatform(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona una plataforma" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="shopify">Shopify</SelectItem>
+                  <SelectItem value="woocommerce">WooCommerce</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="shopify_access_token">
-                Token de acceso Shopify <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="shopify_access_token"
-                type="password"
-                placeholder="shpat_..."
-                value={formData.shopify_access_token}
-                onChange={(e) => setFormData({ ...formData, shopify_access_token: e.target.value })}
-              />
-              <p className="text-xs text-gray-500">
-                Token de Admin API de Shopify (se encriptará antes de guardarse)
-              </p>
-            </div>
+            {/* Shopify Fields */}
+            {platform === "shopify" && (
+              <>
+                <div className="grid gap-2">
+                  <Label htmlFor="shopify_store_url">
+                    URL de tienda Shopify <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="shopify_store_url"
+                    type="url"
+                    placeholder="https://mi-tienda.myshopify.com"
+                    value={formData.shopify_store_url}
+                    onChange={(e) => setFormData({ ...formData, shopify_store_url: e.target.value })}
+                    required
+                  />
+                </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="shopify_api_version">
-                Versión API Shopify
-              </Label>
-              <Input
-                id="shopify_api_version"
-                placeholder="2024-01"
-                value={formData.shopify_api_version}
-                onChange={(e) => setFormData({ ...formData, shopify_api_version: e.target.value })}
-              />
-            </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="shopify_access_token">
+                    Token de acceso Shopify <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="shopify_access_token"
+                    type="password"
+                    placeholder="shpat_..."
+                    value={formData.shopify_access_token}
+                    onChange={(e) => setFormData({ ...formData, shopify_access_token: e.target.value })}
+                    required
+                  />
+                  <p className="text-xs text-gray-500">
+                    Token de Admin API de Shopify (se encriptará antes de guardarse)
+                  </p>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="shopify_api_version">
+                    Versión API Shopify
+                  </Label>
+                  <Input
+                    id="shopify_api_version"
+                    placeholder="2024-01"
+                    value={formData.shopify_api_version}
+                    onChange={(e) => setFormData({ ...formData, shopify_api_version: e.target.value })}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* WooCommerce Fields */}
+            {platform === "woocommerce" && (
+              <>
+                <div className="grid gap-2">
+                  <Label htmlFor="woocommerce_url">
+                    URL de WooCommerce <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="woocommerce_url"
+                    type="url"
+                    placeholder="https://mi-tienda.com"
+                    value={formData.woocommerce_url}
+                    onChange={(e) => setFormData({ ...formData, woocommerce_url: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="woocommerce_consumer_key">
+                    Consumer Key <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="woocommerce_consumer_key"
+                    type="password"
+                    placeholder="ck_..."
+                    value={formData.woocommerce_consumer_key}
+                    onChange={(e) => setFormData({ ...formData, woocommerce_consumer_key: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="woocommerce_consumer_secret">
+                    Consumer Secret <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="woocommerce_consumer_secret"
+                    type="password"
+                    placeholder="cs_..."
+                    value={formData.woocommerce_consumer_secret}
+                    onChange={(e) => setFormData({ ...formData, woocommerce_consumer_secret: e.target.value })}
+                    required
+                  />
+                  <p className="text-xs text-gray-500">
+                    Credenciales de WooCommerce REST API (se encriptarán antes de guardarse)
+                  </p>
+                </div>
+              </>
+            )}
           </div>
 
           <DialogFooter>

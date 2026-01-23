@@ -17,6 +17,8 @@ export default function SuperAdminLayout({
     if (pathname.includes('/tenants')) return 'Gestión de Tenants';
     if (pathname.includes('/users')) return 'Gestión de Usuarios';
     if (pathname.includes('/api-keys')) return 'Gestión de API Keys';
+    if (pathname.includes('/invoices/series')) return 'Series de facturación';
+    if (pathname.includes('/settings/api-keys')) return 'Credenciales (API Key)';
     return 'SuperAdmin';
   };
 
@@ -25,7 +27,7 @@ export default function SuperAdminLayout({
       <SuperAdminSidebar />
       <SidebarInset>
         <header className="flex h-14 md:h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 border-b border-gray-100">
-          <div className="flex items-center gap-2 px-3 md:px-4 w-full">
+          <div className="flex items-center gap-2 px-3 md:px-4 w-full group-has-data-[collapsible=icon]/sidebar-wrapper:ml-5">
             <SidebarTrigger className="-ml-1" />
             <Separator
               orientation="vertical"
