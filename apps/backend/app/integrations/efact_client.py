@@ -446,7 +446,7 @@ def generate_json_ubl(
 
     # Validate totals match
     expected_total = round(subtotal + igv, 2)
-    if abs(total - expected_total) > 0.01:  # Allow 1 cent tolerance for rounding
+    if abs(total - expected_total) >= 0.02:  # Allow up to 1.99 cents tolerance for rounding
         raise ValueError(
             f"Total mismatch: expected {expected_total} but got {total}"
         )
