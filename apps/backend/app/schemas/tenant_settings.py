@@ -5,6 +5,7 @@ These schemas define the structure for the `settings` JSON field in the Tenant m
 providing typed configuration for multiple e-commerce platforms (Shopify, WooCommerce).
 """
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -12,28 +13,48 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 class ShopifyCredentials(BaseModel):
     """
-    Shopify store credentials for API integration.
+    Shopify store credentials for OAuth2 API integration.
 
     These credentials are used to authenticate with the Shopify Admin GraphQL API
-    for operations like completing draft orders.
+    for operations like completing draft orders. The system uses OAuth2 client credentials
+    to automatically generate and refresh access tokens.
 
     Attributes:
         store_url: Full URL of the Shopify store (e.g., 'https://my-store.myshopify.com')
-        access_token: Shopify Admin API access token (sensitive, will be encrypted)
-        api_version: Shopify API version to use (e.g., '2024-01')
+        api_version: Shopify API version to use (e.g., '2025-10')
+        client_id: OAuth2 client ID (sensitive, will be encrypted at rest)
+        client_secret: OAuth2 client secret (sensitive, will be encrypted at rest)
+        access_token: Shopify Admin API access token (auto-generated, encrypted at rest)
+        access_token_expires_at: UTC timestamp when the access token expires
     """
 
     store_url: str = Field(
         ...,
         description="Shopify store URL (e.g., 'https://my-store.myshopify.com')",
     )
+    api_version: str = Field(
+        default="2025-10",
+        description="Shopify API version (e.g., '2025-10')",
+    )
+
+    # OAuth2 credentials (nuevos)
+    client_id: str | None = Field(
+        None,
+        description="Shopify OAuth2 client ID (sensitive - encrypted at rest)",
+    )
+    client_secret: str | None = Field(
+        None,
+        description="Shopify OAuth2 client secret (sensitive - encrypted at rest)",
+    )
+
+    # Managed access token (auto-renewed)
     access_token: str | None = Field(
         None,
-        description="Shopify Admin API access token (sensitive - encrypted at rest)",
+        description="Shopify Admin API access token (auto-generated and renewed, encrypted at rest)",
     )
-    api_version: str = Field(
-        default="2024-01",
-        description="Shopify API version (e.g., '2024-01')",
+    access_token_expires_at: datetime | None = Field(
+        None,
+        description="UTC timestamp when the access token expires",
     )
 
     @field_validator("store_url")

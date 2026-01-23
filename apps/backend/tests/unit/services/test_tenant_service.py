@@ -85,7 +85,8 @@ class TestTenantServiceDuplicateValidation:
         """Create TenantService instance."""
         return TenantService()
 
-    def test_duplicate_slug_raises_error(self, tenant_service, mock_db):
+    @pytest.mark.asyncio
+    async def test_duplicate_slug_raises_error(self, tenant_service, mock_db):
         """Test: Creating tenant with existing slug raises ValueError."""
         with patch.object(tenant_service, "get_tenant_by_slug") as mock_get:
             mock_get.return_value = MagicMock(id=1)  # Existing tenant
@@ -97,12 +98,13 @@ class TestTenantServiceDuplicateValidation:
             )
 
             with pytest.raises(ValueError) as exc_info:
-                tenant_service.create_tenant(mock_db, tenant_create)
+                await tenant_service.create_tenant(mock_db, tenant_create)
 
             assert "already exists" in str(exc_info.value)
             assert "slug" in str(exc_info.value).lower()
 
-    def test_duplicate_company_id_raises_error(self, tenant_service, mock_db):
+    @pytest.mark.asyncio
+    async def test_duplicate_company_id_raises_error(self, tenant_service, mock_db):
         """Test: Creating tenant with existing company_id raises ValueError."""
         with patch.object(tenant_service, "get_tenant_by_slug") as mock_get:
             mock_get.return_value = None  # Slug is unique
@@ -120,12 +122,13 @@ class TestTenantServiceDuplicateValidation:
             )
 
             with pytest.raises(ValueError) as exc_info:
-                tenant_service.create_tenant(mock_db, tenant_create)
+                await tenant_service.create_tenant(mock_db, tenant_create)
 
             assert "company_id" in str(exc_info.value)
             assert "already exists" in str(exc_info.value)
 
-    def test_unique_slug_and_company_id_succeeds(self, tenant_service, mock_db):
+    @pytest.mark.asyncio
+    async def test_unique_slug_and_company_id_succeeds(self, tenant_service, mock_db):
         """Test: Creating tenant with unique slug and company_id succeeds."""
         with patch.object(tenant_service, "get_tenant_by_slug") as mock_get:
             mock_get.return_value = None  # Slug is unique
@@ -138,7 +141,7 @@ class TestTenantServiceDuplicateValidation:
             # No exception on commit
             mock_db.commit.return_value = None
 
-            result = tenant_service.create_tenant(mock_db, tenant_create)
+            result = await tenant_service.create_tenant(mock_db, tenant_create)
 
             mock_db.add.assert_called_once()
             mock_db.commit.assert_called_once()
@@ -153,14 +156,15 @@ class TestTenantServiceEcommerceSettings:
         return TenantService()
 
     def test_shopify_settings_built_correctly(self, tenant_service):
-        """Test: Shopify e-commerce settings are built correctly."""
+        """Test: Shopify e-commerce settings are built correctly with OAuth2."""
         tenant_create = TenantCreate(
             name="Shopify Store",
             company_id="auth0|shop1",
             ecommerce_platform="shopify",
             ecommerce_store_url="https://mystore.myshopify.com",
-            ecommerce_access_token="shpat_secret_token",
-            shopify_api_version="2024-01",
+            shopify_client_id="test_client_id",
+            shopify_client_secret="test_client_secret",
+            shopify_api_version="2025-10",
             sync_on_validation=True,
         )
 
@@ -169,8 +173,11 @@ class TestTenantServiceEcommerceSettings:
         assert settings.sync_on_validation is True
         assert settings.shopify is not None
         assert settings.shopify.store_url == "https://mystore.myshopify.com"
-        assert settings.shopify.access_token == "shpat_secret_token"
-        assert settings.shopify.api_version == "2024-01"
+        assert settings.shopify.client_id == "test_client_id"
+        assert settings.shopify.client_secret == "test_client_secret"
+        assert settings.shopify.api_version == "2025-10"
+        assert settings.shopify.access_token is None  # Not generated yet
+        assert settings.shopify.access_token_expires_at is None
         assert settings.woocommerce is None
 
     def test_woocommerce_settings_built_correctly(self, tenant_service):

@@ -162,13 +162,34 @@ class Tenant(Base, TimestampMixin):
 
         # Decrypt Shopify credentials
         if shopify_dict:
+            # Decrypt OAuth2 credentials
+            client_id = self._safe_decrypt(
+                shopify_dict.get("client_id_encrypted")
+            )
+            client_secret = self._safe_decrypt(
+                shopify_dict.get("client_secret_encrypted")
+            )
             access_token = self._safe_decrypt(
                 shopify_dict.get("access_token_encrypted")
             )
+
+            # Parse expires_at timestamp
+            expires_at_str = shopify_dict.get("access_token_expires_at")
+            access_token_expires_at = None
+            if expires_at_str:
+                try:
+                    from datetime import datetime
+                    access_token_expires_at = datetime.fromisoformat(expires_at_str)
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Failed to parse access_token_expires_at for tenant {self.id}: {e}")
+
             shopify_creds = ShopifyCredentials(
                 store_url=shopify_dict.get("store_url", ""),
+                api_version=shopify_dict.get("api_version", "2025-10"),
+                client_id=client_id,
+                client_secret=client_secret,
                 access_token=access_token,
-                api_version=shopify_dict.get("api_version", "2024-01"),
+                access_token_expires_at=access_token_expires_at,
             )
 
         # Decrypt WooCommerce credentials
@@ -245,9 +266,27 @@ class Tenant(Base, TimestampMixin):
                 "store_url": ecommerce.shopify.store_url,
                 "api_version": ecommerce.shopify.api_version,
             }
+
+            # Encrypt OAuth2 credentials
+            if ecommerce.shopify.client_id:
+                ecommerce_dict["shopify"]["client_id_encrypted"] = (
+                    encryption_service.encrypt(ecommerce.shopify.client_id)
+                )
+            if ecommerce.shopify.client_secret:
+                ecommerce_dict["shopify"]["client_secret_encrypted"] = (
+                    encryption_service.encrypt(ecommerce.shopify.client_secret)
+                )
+
+            # Encrypt access token
             if ecommerce.shopify.access_token:
                 ecommerce_dict["shopify"]["access_token_encrypted"] = (
                     encryption_service.encrypt(ecommerce.shopify.access_token)
+                )
+
+            # Store expires_at as ISO string
+            if ecommerce.shopify.access_token_expires_at:
+                ecommerce_dict["shopify"]["access_token_expires_at"] = (
+                    ecommerce.shopify.access_token_expires_at.isoformat()
                 )
 
         # Encrypt and store WooCommerce credentials

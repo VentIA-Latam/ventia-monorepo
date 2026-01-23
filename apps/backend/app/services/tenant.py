@@ -2,26 +2,24 @@
 Tenant service - business logic for tenant management.
 """
 
-from typing import Optional
-
 from sqlalchemy import func
-from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from app.models.tenant import Tenant
+from app.repositories.tenant import tenant_repository
 from app.schemas.tenant import TenantCreate, TenantUpdate
 from app.schemas.tenant_settings import (
     EcommerceSettings,
     ShopifyCredentials,
     WooCommerceCredentials,
 )
-from app.repositories.tenant import tenant_repository
 
 
 class TenantService:
     """Service for managing tenants (companies/clients)."""
 
-    def get_tenant(self, db: Session, tenant_id: int) -> Optional[Tenant]:
+    def get_tenant(self, db: Session, tenant_id: int) -> Tenant | None:
         """
         Get tenant by ID.
 
@@ -34,7 +32,7 @@ class TenantService:
         """
         return db.query(Tenant).filter(Tenant.id == tenant_id).first()
 
-    def get_tenant_by_slug(self, db: Session, slug: str) -> Optional[Tenant]:
+    def get_tenant_by_slug(self, db: Session, slug: str) -> Tenant | None:
         """
         Get tenant by slug.
 
@@ -52,7 +50,7 @@ class TenantService:
         db: Session,
         skip: int = 0,
         limit: int = 100,
-        is_active: Optional[bool] = None,
+        is_active: bool | None = None,
     ) -> tuple[list[Tenant], int]:
         """
         Get all tenants with pagination.
@@ -80,7 +78,7 @@ class TenantService:
 
         return tenants, total
 
-    def create_tenant(self, db: Session, tenant_in: TenantCreate) -> Tenant:
+    async def create_tenant(self, db: Session, tenant_in: TenantCreate) -> Tenant:
         """
         Create a new tenant.
 
@@ -94,6 +92,10 @@ class TenantService:
 
         **Encryption**: All credentials (access_token, consumer_key, consumer_secret)
         are automatically encrypted before being stored in the settings JSON field.
+
+        **OAuth2 Token Generation:**
+        - For Shopify tenants with OAuth credentials, automatically generates the
+          initial access token after tenant creation.
 
         Args:
             db: Database session
@@ -136,26 +138,49 @@ class TenantService:
             db.refresh(tenant)
         except IntegrityError as e:
             db.rollback()
-            
+
             # Handle unique constraint violations with user-friendly messages
             error_str = str(e.orig)
             if "company_id" in error_str:
-                raise ValueError(f"Tenant with company_id '{tenant_in.company_id}' already exists")
+                raise ValueError(
+                    f"Tenant with company_id '{tenant_in.company_id}' already exists"
+                ) from e
             elif "slug" in error_str:
-                raise ValueError(f"Tenant with slug '{slug}' already exists")
+                raise ValueError(f"Tenant with slug '{slug}' already exists") from e
             else:
                 # Re-raise for other integrity errors
-                raise ValueError(f"Failed to create tenant: {str(e.orig)}")
+                raise ValueError(f"Failed to create tenant: {str(e.orig)}") from e
+
+        # Generate initial access token for Shopify if OAuth credentials provided
+        if tenant_in.ecommerce_platform == "shopify" and tenant_in.shopify_client_id:
+            import logging
+
+            from app.integrations.shopify_token_manager import shopify_token_manager
+
+            logger = logging.getLogger(__name__)
+
+            try:
+                # This will generate and store the first access token
+                await shopify_token_manager.get_valid_access_token(db, tenant)
+                logger.info(f"Generated initial Shopify access token for tenant {tenant.id}")
+            except ValueError as e:
+                logger.error(
+                    f"Failed to generate initial Shopify token for tenant {tenant.id}: {str(e)}"
+                )
+                # Don't fail tenant creation, token can be regenerated later
 
         return tenant
 
     def _build_ecommerce_settings(self, tenant_in: TenantCreate) -> EcommerceSettings:
         """
         Build EcommerceSettings from TenantCreate fields.
-        
+
+        For Shopify: Uses OAuth2 (client_id/client_secret). Access token will be
+        generated automatically by ShopifyTokenManager after tenant creation.
+
         Args:
             tenant_in: TenantCreate with ecommerce_* fields
-            
+
         Returns:
             EcommerceSettings object ready for encryption and storage
         """
@@ -164,8 +189,11 @@ class TenantService:
                 sync_on_validation=tenant_in.sync_on_validation,
                 shopify=ShopifyCredentials(
                     store_url=tenant_in.ecommerce_store_url or "",
-                    access_token=tenant_in.ecommerce_access_token,
-                    api_version=tenant_in.shopify_api_version,
+                    api_version=tenant_in.shopify_api_version or "2025-10",
+                    client_id=tenant_in.shopify_client_id,
+                    client_secret=tenant_in.shopify_client_secret,
+                    access_token=None,  # Will be generated by TokenManager
+                    access_token_expires_at=None,
                 ),
             )
         elif tenant_in.ecommerce_platform == "woocommerce":
@@ -226,9 +254,7 @@ class TenantService:
 
         return slug
 
-    def update_tenant(
-        self, db: Session, tenant_id: int, tenant_in: TenantUpdate
-    ) -> Optional[Tenant]:
+    def update_tenant(self, db: Session, tenant_id: int, tenant_in: TenantUpdate) -> Tenant | None:
         """
         Update tenant fields.
 
@@ -269,11 +295,15 @@ class TenantService:
 
         # Separate e-commerce fields from regular fields
         ecommerce_fields = {
-            "ecommerce_platform", "ecommerce_store_url", "ecommerce_access_token",
-            "shopify_api_version", "ecommerce_consumer_key", "ecommerce_consumer_secret",
-            "sync_on_validation"
+            "ecommerce_platform",
+            "ecommerce_store_url",
+            "ecommerce_access_token",
+            "shopify_api_version",
+            "ecommerce_consumer_key",
+            "ecommerce_consumer_secret",
+            "sync_on_validation",
         }
-        
+
         has_ecommerce_update = any(f in update_data for f in ecommerce_fields)
 
         # Update regular fields
@@ -291,12 +321,10 @@ class TenantService:
 
         return tenant
 
-    def _update_ecommerce_settings(
-        self, tenant: Tenant, update_data: dict
-    ) -> None:
+    def _update_ecommerce_settings(self, tenant: Tenant, update_data: dict) -> None:
         """
         Update e-commerce settings for a tenant.
-        
+
         Args:
             tenant: Tenant to update
             update_data: Dictionary with ecommerce_* fields
@@ -304,17 +332,17 @@ class TenantService:
         # Get current settings or create new
         current_settings = tenant.get_settings()
         current_ecommerce = current_settings.ecommerce
-        
+
         # Determine platform (new value or keep current)
         platform = update_data.get("ecommerce_platform")
         if platform is None and current_ecommerce:
             platform = current_ecommerce.platform
-        
+
         # Determine sync setting
         sync_on_validation = update_data.get("sync_on_validation")
         if sync_on_validation is None:
             sync_on_validation = current_ecommerce.sync_on_validation if current_ecommerce else True
-        
+
         if platform == "shopify":
             # Get current Shopify settings if available
             current_shopify = current_ecommerce.shopify if current_ecommerce else None
@@ -322,33 +350,33 @@ class TenantService:
             new_settings = EcommerceSettings(
                 sync_on_validation=sync_on_validation,
                 shopify=ShopifyCredentials(
-                    store_url=update_data.get("ecommerce_store_url") or
-                              (current_shopify.store_url if current_shopify else ""),
-                    access_token=update_data.get("ecommerce_access_token") or
-                                 (current_shopify.access_token if current_shopify else None),
-                    api_version=update_data.get("shopify_api_version") or
-                                (current_shopify.api_version if current_shopify else "2024-01"),
+                    store_url=update_data.get("ecommerce_store_url")
+                    or (current_shopify.store_url if current_shopify else ""),
+                    access_token=update_data.get("ecommerce_access_token")
+                    or (current_shopify.access_token if current_shopify else None),
+                    api_version=update_data.get("shopify_api_version")
+                    or (current_shopify.api_version if current_shopify else "2024-01"),
                 ),
             )
             tenant.set_ecommerce_settings(new_settings)
-            
+
         elif platform == "woocommerce":
             # Get current WooCommerce settings if available
             current_woo = current_ecommerce.woocommerce if current_ecommerce else None
-            
+
             new_settings = EcommerceSettings(
                 sync_on_validation=sync_on_validation,
                 woocommerce=WooCommerceCredentials(
-                    store_url=update_data.get("ecommerce_store_url") or
-                              (current_woo.store_url if current_woo else ""),
-                    consumer_key=update_data.get("ecommerce_consumer_key") or
-                                 (current_woo.consumer_key if current_woo else None),
-                    consumer_secret=update_data.get("ecommerce_consumer_secret") or
-                                    (current_woo.consumer_secret if current_woo else None),
+                    store_url=update_data.get("ecommerce_store_url")
+                    or (current_woo.store_url if current_woo else ""),
+                    consumer_key=update_data.get("ecommerce_consumer_key")
+                    or (current_woo.consumer_key if current_woo else None),
+                    consumer_secret=update_data.get("ecommerce_consumer_secret")
+                    or (current_woo.consumer_secret if current_woo else None),
                 ),
             )
             tenant.set_ecommerce_settings(new_settings)
-            
+
         else:
             # No platform - just update sync setting
             new_settings = EcommerceSettings(sync_on_validation=sync_on_validation)
@@ -384,7 +412,7 @@ class TenantService:
 
         return True
 
-    def get_tenant_stats(self, db: Session, tenant_id: int) -> Optional[dict]:
+    def get_tenant_stats(self, db: Session, tenant_id: int) -> dict | None:
         """
         Get statistics for a tenant.
 
@@ -405,7 +433,7 @@ class TenantService:
         # Count active users
         user_count = (
             db.query(func.count(User.id))
-            .filter(User.tenant_id == tenant_id, User.is_active == True)
+            .filter(User.tenant_id == tenant_id, User.is_active)
             .scalar()
         )
 
