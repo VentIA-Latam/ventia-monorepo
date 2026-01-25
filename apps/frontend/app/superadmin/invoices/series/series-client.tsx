@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -38,13 +38,19 @@ import {
   INVOICE_TYPES,
   INVOICE_TYPE_LABELS,
 } from "@/lib/types/invoice";
+import { Tenant } from "@/lib/types/tenant";
 
 interface InvoiceSeriesClientViewProps {
   initialSeries: InvoiceSerie[];
 }
 
+interface InvoiceSerieFormData extends InvoiceSerieCreate {
+  tenant_id?: number;
+}
+
 export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientViewProps) {
   const [series, setSeries] = useState<InvoiceSerie[]>(initialSeries);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -52,12 +58,34 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
   const [isSaving, setIsSaving] = useState(false);
 
   // Form state
-  const [formData, setFormData] = useState<InvoiceSerieCreate>({
+  const [formData, setFormData] = useState<InvoiceSerieFormData>({
     invoice_type: INVOICE_TYPES.FACTURA,
     serie: "",
     description: "",
     is_active: true,
+    tenant_id: undefined,
   });
+
+  useEffect(() => {
+    fetchTenants();
+  }, []);
+
+  const fetchTenants = async () => {
+    try {
+      const response = await fetch("/api/superadmin/tenants?limit=100");
+      if (response.ok) {
+        const data = await response.json();
+        setTenants(data.items || []);
+      }
+    } catch (error) {
+      console.error("Error fetching tenants:", error);
+    }
+  };
+
+  const getTenantName = (tenantId: number): string => {
+    const tenant = tenants.find((t) => t.id === tenantId);
+    return tenant ? tenant.name : `Tenant #${tenantId}`;
+  };
 
   const loadSeries = async () => {
     try {
@@ -77,10 +105,21 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
       setIsSaving(true);
       setError(null);
 
-      const response = await fetch("/api/invoice-series", {
+      // Build URL with tenant_id query param if specified
+      let url = "/api/invoice-series";
+      if (formData.tenant_id) {
+        url += `?tenant_id=${formData.tenant_id}`;
+      }
+
+      const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          invoice_type: formData.invoice_type,
+          serie: formData.serie,
+          description: formData.description,
+          is_active: formData.is_active,
+        }),
       });
 
       if (!response.ok) {
@@ -178,6 +217,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
       serie: "",
       description: "",
       is_active: true,
+      tenant_id: undefined,
     });
     setError(null);
   };
@@ -245,6 +285,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Tenant</TableHead>
                     <TableHead>Serie</TableHead>
                     <TableHead>Tipo de Comprobante</TableHead>
                     <TableHead>Descripción</TableHead>
@@ -256,6 +297,9 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
                 <TableBody>
                   {series.map((serie) => (
                     <TableRow key={serie.id}>
+                      <TableCell className="font-medium text-sm">
+                        {getTenantName(serie.tenant_id)}
+                      </TableCell>
                       <TableCell className="font-mono font-bold">{serie.serie}</TableCell>
                       <TableCell>{INVOICE_TYPE_LABELS[serie.invoice_type] || serie.invoice_type}</TableCell>
                       <TableCell className="max-w-[200px] truncate">
@@ -317,6 +361,30 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="tenant_id">Tenant</Label>
+              <Select
+                value={formData.tenant_id?.toString() || ""}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, tenant_id: value ? parseInt(value) : undefined })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un tenant" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tenants.map((tenant) => (
+                    <SelectItem key={tenant.id} value={tenant.id.toString()}>
+                      {tenant.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                Selecciona el tenant para el cual se creará esta serie
+              </p>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="invoice_type">Tipo de Comprobante</Label>
               <Select
@@ -381,7 +449,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
             </Button>
             <Button
               onClick={handleCreate}
-              disabled={isSaving || !formData.serie || formData.serie.length !== 4}
+              disabled={isSaving || !formData.serie || formData.serie.length !== 4 || !formData.tenant_id}
             >
               {isSaving ? (
                 <>

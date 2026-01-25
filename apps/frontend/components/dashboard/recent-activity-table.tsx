@@ -3,7 +3,7 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { cn, formatDate, extractShopifyDraftOrderId } from "@/lib/utils"
+import { cn, formatDate, getEcommerceOrderId } from "@/lib/utils"
 import { Order } from "@/lib/services/order-service"
 import { useRouter } from "next/navigation"
 
@@ -67,7 +67,7 @@ export function RecentActivityTable({ orders }: RecentActivityTableProps) {
               orders.map((order) => (
                 <TableRow key={order.id} className="hover:bg-slate-50/60">
                   <TableCell className="font-medium text-sm pl-5">
-                    {extractShopifyDraftOrderId(order.shopify_draft_order_id)}
+                    {getEcommerceOrderId(order)}
                   </TableCell>
                   <TableCell className="text-sm text-gray-700">
                     {order.customer_name || 'Sin nombre'}

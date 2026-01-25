@@ -24,17 +24,27 @@ export interface TenantSettings {
   ecommerce?: EcommerceSettings;
 }
 
+// E-commerce settings response from backend (sanitized, no credentials)
+export interface EcommerceSettingsResponse {
+  platform: EcommercePlatform;
+  store_url: string | null;
+  sync_on_validation: boolean;
+  has_credentials: boolean;
+}
+
 export interface Tenant {
   id: number;
   name: string;
   slug: string;
   company_id: string | null;
   shopify_store_url: string | null; // Legacy field - kept for backward compatibility
+  efact_ruc: string | null;
   is_platform: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  settings?: TenantSettings;
+  settings?: TenantSettings; // Legacy field for compatibility
+  ecommerce_settings?: EcommerceSettingsResponse; // New field from backend
 }
 
 export interface TenantDetail extends Tenant {
@@ -50,20 +60,51 @@ export interface TenantListResponse {
 }
 
 export interface TenantCreate {
-  name: string;
-  slug?: string;
-  company_id?: string;
-  shopify_store_url: string;
-  shopify_access_token: string;
-  shopify_api_version?: string;
+  name: string;                                    // Required
+  slug?: string;                                   // Optional, auto-generated
+  company_id?: string;                             // Optional
+
+  // E-commerce platform configuration
+  ecommerce_platform?: "shopify" | "woocommerce";  // Platform selector
+  ecommerce_store_url?: string;                    // Unified store URL
+
+  // Shopify OAuth2 credentials
+  shopify_client_id?: string;
+  shopify_client_secret?: string;
+  shopify_api_version?: string;                    // Default: "2025-10"
+
+  // WooCommerce credentials
+  ecommerce_consumer_key?: string;
+  ecommerce_consumer_secret?: string;
+
+  // Sync settings
+  sync_on_validation?: boolean;                    // Default: true
+
+  // Electronic invoicing
+  efact_ruc?: string;                              // Peru RUC (11 digits)
 }
 
 export interface TenantUpdate {
   name?: string;
-  shopify_store_url?: string;
-  shopify_access_token?: string;
-  shopify_api_version?: string;
   is_active?: boolean;
+
+  // E-commerce configuration
+  ecommerce_platform?: "shopify" | "woocommerce" | null;
+  ecommerce_store_url?: string;
+
+  // Shopify OAuth2
+  shopify_client_id?: string;
+  shopify_client_secret?: string;
+  shopify_api_version?: string;
+
+  // WooCommerce
+  ecommerce_consumer_key?: string;
+  ecommerce_consumer_secret?: string;
+
+  sync_on_validation?: boolean;
+
+  // Electronic invoicing
+  efact_ruc?: string;
 }
 
 export interface TenantFilters {

@@ -68,7 +68,7 @@ const dataConfiguration = [
   },
   {
     title: "Credenciales (API Key)",
-    url: "/superadmin/settings/api-keys",
+    url: "/superadmin/api-keys",
     icon: Key,
   },
 ]

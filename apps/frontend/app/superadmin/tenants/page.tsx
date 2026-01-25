@@ -47,6 +47,11 @@ export default function TenantsPage() {
 
   // Helper para obtener plataforma del tenant
   const getTenantPlatform = (tenant: Tenant): EcommercePlatform => {
+    // Usar ecommerce_settings del backend (nueva forma)
+    if (tenant.ecommerce_settings?.platform) {
+      return tenant.ecommerce_settings.platform;
+    }
+    // Fallback a settings legacy
     if (tenant.settings?.ecommerce?.shopify) return "shopify";
     if (tenant.settings?.ecommerce?.woocommerce) return "woocommerce";
     if (tenant.shopify_store_url) return "shopify"; // Fallback legacy
@@ -55,6 +60,11 @@ export default function TenantsPage() {
 
   // Helper para obtener URL de la tienda
   const getStoreUrl = (tenant: Tenant): string | null => {
+    // Usar ecommerce_settings del backend (nueva forma)
+    if (tenant.ecommerce_settings?.store_url) {
+      return tenant.ecommerce_settings.store_url;
+    }
+    // Fallback a settings legacy
     if (tenant.settings?.ecommerce?.shopify) return tenant.settings.ecommerce.shopify.store_url;
     if (tenant.settings?.ecommerce?.woocommerce) return tenant.settings.ecommerce.woocommerce.store_url;
     return tenant.shopify_store_url; // Fallback legacy
@@ -62,7 +72,17 @@ export default function TenantsPage() {
 
   // Helper para obtener estado de sincronización
   const getSyncStatus = (tenant: Tenant): boolean => {
+    // Usar ecommerce_settings del backend (nueva forma)
+    if (tenant.ecommerce_settings) {
+      return tenant.ecommerce_settings.sync_on_validation;
+    }
+    // Fallback a settings legacy
     return tenant.settings?.ecommerce?.sync_on_validation ?? false;
+  };
+
+  // Helper para verificar si tiene credenciales
+  const hasCredentials = (tenant: Tenant): boolean => {
+    return tenant.ecommerce_settings?.has_credentials ?? false;
   };
 
   // Dialog states
@@ -227,6 +247,7 @@ export default function TenantsPage() {
                           const platform = getTenantPlatform(tenant);
                           const storeUrl = getStoreUrl(tenant);
                           const syncEnabled = getSyncStatus(tenant);
+                          const credentialsConfigured = hasCredentials(tenant);
 
                           if (!platform || !storeUrl) {
                             return (
@@ -238,39 +259,46 @@ export default function TenantsPage() {
                           }
 
                           return (
-                            <div className="flex items-center gap-2">
-                              {platform === "shopify" ? (
-                                <Badge variant="secondary" className="bg-green-100 text-green-700 border-0 rounded-md px-2 md:px-3 py-1 text-[10px] md:text-xs flex items-center gap-1">
-                                  <ShoppingBag className="h-3 w-3" />
-                                  <a
-                                    href={storeUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="hover:underline"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    Shopify
-                                  </a>
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-0 rounded-md px-2 md:px-3 py-1 text-[10px] md:text-xs flex items-center gap-1">
-                                  <Store className="h-3 w-3" />
-                                  <a
-                                    href={storeUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="hover:underline"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    WooCommerce
-                                  </a>
-                                </Badge>
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2">
+                                {platform === "shopify" ? (
+                                  <Badge variant="secondary" className="bg-green-100 text-green-700 border-0 rounded-md px-2 md:px-3 py-1 text-[10px] md:text-xs flex items-center gap-1">
+                                    <ShoppingBag className="h-3 w-3" />
+                                    <a
+                                      href={storeUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="hover:underline"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      Shopify
+                                    </a>
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-0 rounded-md px-2 md:px-3 py-1 text-[10px] md:text-xs flex items-center gap-1">
+                                    <Store className="h-3 w-3" />
+                                    <a
+                                      href={storeUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="hover:underline"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      WooCommerce
+                                    </a>
+                                  </Badge>
+                                )}
+                                <div
+                                  className={`h-2 w-2 rounded-full ${syncEnabled ? "bg-green-500" : "bg-gray-300"
+                                    }`}
+                                  title={syncEnabled ? "Sincronización activa" : "Sincronización desactivada"}
+                                />
+                              </div>
+                              {!credentialsConfigured && (
+                                <span className="text-[9px] md:text-[10px] text-gray-500 font-medium">
+                                  Credenciales pendientes
+                                </span>
                               )}
-                              <div
-                                className={`h-2 w-2 rounded-full ${syncEnabled ? "bg-green-500" : "bg-gray-300"
-                                  }`}
-                                title={syncEnabled ? "Sincronización activa" : "Sincronización desactivada"}
-                              />
                             </div>
                           );
                         })()}

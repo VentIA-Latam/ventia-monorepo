@@ -30,6 +30,8 @@ export function CreateAPIKeyDialog({ open, onOpenChange, onSuccess, apiEndpoint,
   const [createdKey, setCreatedKey] = useState<APIKeyCreateResponse | null>(null);
   const [copied, setCopied] = useState(false);
 
+  console.log('CreateAPIKeyDialog tenants:', tenants, 'length:', tenants.length);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -211,7 +213,7 @@ export function CreateAPIKeyDialog({ open, onOpenChange, onSuccess, apiEndpoint,
                   <SelectItem value="default">Mi tenant (predeterminado)</SelectItem>
                   {tenants.map((tenant) => (
                     <SelectItem key={tenant.id} value={tenant.id.toString()}>
-                      {tenant.name} ({tenant.slug})
+                      {tenant.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

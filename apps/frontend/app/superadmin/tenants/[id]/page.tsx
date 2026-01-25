@@ -21,6 +21,11 @@ export default function TenantDetailPage() {
   // Helper para obtener plataforma del tenant
   const getTenantPlatform = (): EcommercePlatform => {
     if (!tenant) return null;
+    // Usar ecommerce_settings del backend (nueva forma)
+    if (tenant.ecommerce_settings?.platform) {
+      return tenant.ecommerce_settings.platform;
+    }
+    // Fallback a settings legacy
     if (tenant.settings?.ecommerce?.shopify) return "shopify";
     if (tenant.settings?.ecommerce?.woocommerce) return "woocommerce";
     if (tenant.shopify_store_url) return "shopify"; // Fallback legacy
@@ -30,6 +35,11 @@ export default function TenantDetailPage() {
   // Helper para obtener URL de la tienda
   const getStoreUrl = (): string | null => {
     if (!tenant) return null;
+    // Usar ecommerce_settings del backend (nueva forma)
+    if (tenant.ecommerce_settings?.store_url) {
+      return tenant.ecommerce_settings.store_url;
+    }
+    // Fallback a settings legacy
     if (tenant.settings?.ecommerce?.shopify) return tenant.settings.ecommerce.shopify.store_url;
     if (tenant.settings?.ecommerce?.woocommerce) return tenant.settings.ecommerce.woocommerce.store_url;
     return tenant.shopify_store_url; // Fallback legacy
@@ -38,6 +48,11 @@ export default function TenantDetailPage() {
   // Helper para obtener estado de sincronización
   const getSyncStatus = (): boolean => {
     if (!tenant) return false;
+    // Usar ecommerce_settings del backend (nueva forma)
+    if (tenant.ecommerce_settings) {
+      return tenant.ecommerce_settings.sync_on_validation;
+    }
+    // Fallback a settings legacy
     return tenant.settings?.ecommerce?.sync_on_validation ?? false;
   };
 
@@ -360,12 +375,55 @@ export default function TenantDetailPage() {
                 </div>
 
                 <div>
-                  <div className="text-sm font-medium text-gray-500">Credenciales</div>
-                  <div className="mt-1">
-                    <span className="text-sm bg-gray-100 px-2 py-1 rounded text-gray-600">
-                      ••••••••••••••••
-                    </span>
-                    <p className="text-xs text-gray-500 mt-1">
+                  <div className="text-sm font-medium text-gray-500 mb-2">Credenciales</div>
+                  <div className="space-y-3">
+                    {getTenantPlatform() === "shopify" && (
+                      <>
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Client ID</div>
+                          <span className="text-sm bg-gray-100 px-2 py-1 rounded text-gray-600">
+                            ••••••••••••••••
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Client Secret</div>
+                          <span className="text-sm bg-gray-100 px-2 py-1 rounded text-gray-600">
+                            ••••••••••••••••
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Access Token</div>
+                          <span className="text-sm bg-gray-100 px-2 py-1 rounded text-gray-400">
+                            •••••••• (generado automáticamente)
+                          </span>
+                          <div className="mt-1">
+                            <Badge className="bg-green-100 text-green-700 border-0 text-xs">
+                              OAuth2 Activo
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Se renueva automáticamente cada 24 horas
+                          </p>
+                        </div>
+                      </>
+                    )}
+                    {getTenantPlatform() === "woocommerce" && (
+                      <>
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Consumer Key</div>
+                          <span className="text-sm bg-gray-100 px-2 py-1 rounded text-gray-600">
+                            ••••••••••••••••
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Consumer Secret</div>
+                          <span className="text-sm bg-gray-100 px-2 py-1 rounded text-gray-600">
+                            ••••••••••••••••
+                          </span>
+                        </div>
+                      </>
+                    )}
+                    <p className="text-xs text-gray-500 mt-2">
                       Por seguridad, las credenciales no se muestran
                     </p>
                   </div>

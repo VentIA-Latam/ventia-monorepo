@@ -13,20 +13,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import Image from "next/image";
 import {
   Alert,
   AlertDescription,
 } from "@/components/ui/alert";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tenant, EcommercePlatform } from "@/lib/types/tenant";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface EditTenantDialogProps {
   tenant: Tenant | null;
@@ -44,10 +44,12 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
   const [showPlatformWarning, setShowPlatformWarning] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
+    efact_ruc: "",
     // Shopify fields
     shopify_store_url: "",
-    shopify_access_token: "",
-    shopify_api_version: "2024-01",
+    shopify_client_id: "",
+    shopify_client_secret: "",
+    shopify_api_version: "2025-10",
     // WooCommerce fields
     woocommerce_url: "",
     woocommerce_consumer_key: "",
@@ -87,9 +89,11 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
 
       setFormData({
         name: tenant.name,
+        efact_ruc: tenant.efact_ruc || "",
         shopify_store_url: currentShopifyUrl,
-        shopify_access_token: "",
-        shopify_api_version: tenant.settings?.ecommerce?.shopify?.api_version || "2024-01",
+        shopify_client_id: "",
+        shopify_client_secret: "",
+        shopify_api_version: tenant.settings?.ecommerce?.shopify?.api_version || "2025-10",
         woocommerce_url: currentWooCommerceUrl,
         woocommerce_consumer_key: "",
         woocommerce_consumer_secret: "",
@@ -118,35 +122,26 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
       const updateData: any = {
         name: formData.name,
         is_active: formData.is_active,
+        efact_ruc: formData.efact_ruc || undefined,
       };
 
-      // Construir settings de e-commerce si hay una plataforma seleccionada
+      // Configurar plataforma y sync
       if (platform) {
-        updateData.settings = {
-          ecommerce: {
-            sync_on_validation: syncOnValidation,
-          },
-        };
+        updateData.ecommerce_platform = platform;
+        updateData.sync_on_validation = syncOnValidation;
 
         if (platform === "shopify") {
-          updateData.settings.ecommerce.shopify = {
-            store_url: formData.shopify_store_url,
-            api_version: formData.shopify_api_version,
-          };
+          updateData.ecommerce_store_url = formData.shopify_store_url;
+          updateData.shopify_api_version = formData.shopify_api_version;
 
-          // Solo incluir access_token si se proporcionó (para actualizar)
-          if (formData.shopify_access_token) {
-            updateData.shopify_access_token = formData.shopify_access_token;
+          // Solo incluir credenciales OAuth2 si se proporcionaron (para actualizar)
+          if (formData.shopify_client_id && formData.shopify_client_secret) {
+            updateData.shopify_client_id = formData.shopify_client_id;
+            updateData.shopify_client_secret = formData.shopify_client_secret;
           }
 
-          // Limpiar WooCommerce si se cambió de plataforma
-          if (initialPlatform === "woocommerce") {
-            updateData.settings.ecommerce.woocommerce = null;
-          }
         } else if (platform === "woocommerce") {
-          updateData.settings.ecommerce.woocommerce = {
-            store_url: formData.woocommerce_url,
-          };
+          updateData.ecommerce_store_url = formData.woocommerce_url;
 
           // Solo incluir credenciales si se proporcionaron (para actualizar)
           if (formData.woocommerce_consumer_key && formData.woocommerce_consumer_secret) {
@@ -154,18 +149,10 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
             updateData.woocommerce_consumer_secret = formData.woocommerce_consumer_secret;
           }
 
-          // Limpiar Shopify si se cambió de plataforma
-          if (initialPlatform === "shopify") {
-            updateData.settings.ecommerce.shopify = null;
-            updateData.shopify_access_token = null;
-          }
         }
       } else {
-        // Sin plataforma - limpiar toda la configuración de e-commerce
-        updateData.settings = {
-          ecommerce: null,
-        };
-        updateData.shopify_access_token = null;
+        // Sin plataforma
+        updateData.ecommerce_platform = null;
       }
 
       const response = await fetch(`/api/superadmin/tenants/${tenant.id}`, {
@@ -224,6 +211,23 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
             </div>
 
             <div className="grid gap-2">
+              <Label htmlFor="edit-efact_ruc">
+                RUC (Facturación Electrónica)
+              </Label>
+              <Input
+                id="edit-efact_ruc"
+                placeholder="12345678901 (11 dígitos)"
+                value={formData.efact_ruc}
+                onChange={(e) => setFormData({ ...formData, efact_ruc: e.target.value })}
+                pattern="^\d{11}$"
+                maxLength={11}
+              />
+              <p className="text-xs text-gray-500">
+                RUC del tenant para facturación electrónica en Perú (opcional, debe tener 11 dígitos)
+              </p>
+            </div>
+
+            <div className="grid gap-2">
               <Label>Slug (no editable)</Label>
               <Input value={tenant.slug} disabled className="bg-gray-100" />
               <p className="text-xs text-gray-500">
@@ -232,28 +236,138 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
             </div>
 
             {/* Selección de Plataforma */}
-            <div className="grid gap-2">
-              <Label htmlFor="platform">
-                Plataforma de E-commerce
-              </Label>
-              <Select
-                value={platform || "none"}
-                onValueChange={(value) => handlePlatformChange(value === "none" ? null : value as EcommercePlatform)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sin plataforma de e-commerce" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sin plataforma de e-commerce</SelectItem>
-                  <SelectItem value="shopify">Shopify</SelectItem>
-                  <SelectItem value="woocommerce">WooCommerce</SelectItem>
-                </SelectContent>
-              </Select>
-              {initialPlatform && (
-                <p className="text-xs text-gray-500">
-                  Plataforma actual: <span className="font-medium capitalize">{initialPlatform}</span>
-                </p>
-              )}
+            <div className="grid gap-3">
+              <div className="flex items-center justify-between">
+                <Label>Plataforma de E-commerce</Label>
+                {initialPlatform && (
+                  <span className="text-xs text-gray-500">
+                    Configurado: <span className="font-medium capitalize">{initialPlatform}</span>
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                {/* Sin Plataforma */}
+                <button
+                  type="button"
+                  onClick={() => handlePlatformChange(null)}
+                  className={cn(
+                    "relative flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all hover:shadow-md",
+                    platform === null
+                      ? "border-gray-500 bg-gray-50 shadow-md"
+                      : "border-gray-200 bg-white hover:border-gray-300"
+                  )}
+                >
+                  <div className="w-12 h-12 mb-2 flex items-center justify-center text-gray-400">
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                  <span className={cn(
+                    "font-medium text-xs",
+                    platform === null ? "text-gray-700" : "text-gray-500"
+                  )}>
+                    Ninguna
+                  </span>
+                  {platform === null && (
+                    <div className="absolute top-2 right-2">
+                      <div className="bg-gray-500 text-white rounded-full w-5 h-5 flex items-center justify-center">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    </div>
+                  )}
+                </button>
+
+                {/* Shopify Card */}
+                <button
+                  type="button"
+                  onClick={() => handlePlatformChange("shopify")}
+                  className={cn(
+                    "relative flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all hover:shadow-md",
+                    platform === "shopify"
+                      ? "border-green-500 bg-green-50 shadow-md ring-2 ring-green-200"
+                      : "border-gray-200 bg-white hover:border-gray-300",
+                    initialPlatform === "shopify" && platform === "shopify" && "animate-pulse"
+                  )}
+                >
+                  <div className="relative w-12 h-12 mb-2">
+                    <Image
+                      src="/external-icons/shopify-icon.png"
+                      alt="Shopify"
+                      fill
+                      className="object-contain"
+                    />
+                  </div>
+                  <span className={cn(
+                    "font-medium text-xs",
+                    platform === "shopify" ? "text-green-700" : "text-gray-600"
+                  )}>
+                    Shopify
+                  </span>
+                  {platform === "shopify" && (
+                    <div className="absolute top-2 right-2">
+                      <div className="bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    </div>
+                  )}
+                  {initialPlatform === "shopify" && (
+                    <div className="absolute -top-1 -left-1">
+                      <div className="bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
+                        Actual
+                      </div>
+                    </div>
+                  )}
+                </button>
+
+                {/* WooCommerce Card */}
+                <button
+                  type="button"
+                  onClick={() => handlePlatformChange("woocommerce")}
+                  className={cn(
+                    "relative flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all hover:shadow-md",
+                    platform === "woocommerce"
+                      ? "border-purple-500 bg-purple-50 shadow-md ring-2 ring-purple-200"
+                      : "border-gray-200 bg-white hover:border-gray-300",
+                    initialPlatform === "woocommerce" && platform === "woocommerce" && "animate-pulse"
+                  )}
+                >
+                  <div className="relative w-12 h-12 mb-2">
+                    <Image
+                      src="/external-icons/woo-icon.png"
+                      alt="WooCommerce"
+                      fill
+                      className="object-contain"
+                    />
+                  </div>
+                  <span className={cn(
+                    "font-medium text-xs",
+                    platform === "woocommerce" ? "text-purple-700" : "text-gray-600"
+                  )}>
+                    WooCommerce
+                  </span>
+                  {platform === "woocommerce" && (
+                    <div className="absolute top-2 right-2">
+                      <div className="bg-purple-500 text-white rounded-full w-5 h-5 flex items-center justify-center">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    </div>
+                  )}
+                  {initialPlatform === "woocommerce" && (
+                    <div className="absolute -top-1 -left-1">
+                      <div className="bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
+                        Actual
+                      </div>
+                    </div>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Advertencia de cambio de plataforma */}
@@ -301,22 +415,64 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-shopify_access_token">
-                    Token de acceso Shopify {showPlatformWarning ? <span className="text-red-500">*</span> : "(opcional)"}
+                  <Label htmlFor="edit-shopify_client_id" className="flex items-center gap-2">
+                    Client ID de Shopify {showPlatformWarning ? <span className="text-red-500">*</span> : "(opcional)"}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 text-gray-400 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Obtén el Client ID desde el panel de tu app de Shopify en Partners Dashboard</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </Label>
                   <Input
-                    id="edit-shopify_access_token"
-                    type="password"
+                    id="edit-shopify_client_id"
+                    type="text"
                     placeholder={showPlatformWarning ? "Requerido al cambiar de plataforma" : "Dejar vacío para mantener el actual"}
-                    value={formData.shopify_access_token}
-                    onChange={(e) => setFormData({ ...formData, shopify_access_token: e.target.value })}
+                    value={formData.shopify_client_id}
+                    onChange={(e) => setFormData({ ...formData, shopify_client_id: e.target.value })}
                     required={showPlatformWarning && initialPlatform !== "shopify"}
                   />
                   <p className="text-xs text-gray-500">
                     {showPlatformWarning
-                      ? "Debes proporcionar un nuevo token al cambiar de plataforma"
-                      : "Solo completa si deseas cambiar el token actual"
+                      ? "Debes proporcionar un nuevo Client ID al cambiar de plataforma"
+                      : "Solo completa si deseas cambiar las credenciales OAuth2"
                     }
+                  </p>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-shopify_client_secret" className="flex items-center gap-2">
+                    Client Secret de Shopify {showPlatformWarning ? <span className="text-red-500">*</span> : "(opcional)"}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 text-gray-400 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Obtén el Client Secret desde el panel de tu app de Shopify en Partners Dashboard</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </Label>
+                  <Input
+                    id="edit-shopify_client_secret"
+                    type="password"
+                    placeholder={showPlatformWarning ? "Requerido al cambiar de plataforma" : "Dejar vacío para mantener el actual"}
+                    value={formData.shopify_client_secret}
+                    onChange={(e) => setFormData({ ...formData, shopify_client_secret: e.target.value })}
+                    required={showPlatformWarning && initialPlatform !== "shopify"}
+                  />
+                  <p className="text-xs text-gray-500">
+                    {showPlatformWarning
+                      ? "Debes proporcionar un nuevo Client Secret al cambiar de plataforma"
+                      : "Solo completa si deseas cambiar las credenciales OAuth2"
+                    }
+                  </p>
+                </div>
+
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <p className="text-xs text-blue-800">
+                    ℹ️ El access token se genera automáticamente usando OAuth2
                   </p>
                 </div>
 

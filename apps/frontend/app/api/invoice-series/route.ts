@@ -53,7 +53,17 @@ export async function POST(request: Request) {
 
     const body = await request.json();
 
-    const response = await fetch(`${API_BASE_URL}/invoice-series`, {
+    // Extract query parameters from request
+    const { searchParams } = new URL(request.url);
+    const tenant_id = searchParams.get('tenant_id');
+
+    // Build backend URL with query parameters
+    const backendUrl = new URL(`${API_BASE_URL}/invoice-series`);
+    if (tenant_id) {
+      backendUrl.searchParams.set('tenant_id', tenant_id);
+    }
+
+    const response = await fetch(backendUrl.toString(), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

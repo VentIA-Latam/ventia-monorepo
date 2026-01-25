@@ -64,13 +64,51 @@ export function formatDateTime(isoDate: string): string {
  * @param gid - ID en formato "gid://shopify/DraftOrder/1026313977995"
  * @returns El ID numérico "1026313977995", o el valor original si no coincide
  */
-export function extractShopifyDraftOrderId(gid: string): string {
+export function extractShopifyDraftOrderId(gid: string | null): string {
+  if (!gid) return '';
   const match = gid.match(/gid:\/\/shopify\/DraftOrder\/(\d+)/);
   return match ? match[1] : gid;
 }
 
 
-export function extractShopifyOrderId(gid: string): string {
+export function extractShopifyOrderId(gid: string | null): string {
+  if (!gid) return '';
   const match = gid.match(/gid:\/\/shopify\/Order\/(\d+)/);
   return match ? match[1] : gid;
+}
+
+/**
+ * Obtiene el ID de e-commerce de una orden (Shopify o WooCommerce)
+ * @param order - Objeto de orden con shopify_draft_order_id o woocommerce_order_id
+ * @returns El ID de la plataforma de e-commerce correspondiente
+ */
+export function getEcommerceOrderId(order: {
+  shopify_draft_order_id: string | null;
+  woocommerce_order_id: number | null;
+}): string {
+  if (order.shopify_draft_order_id) {
+    return extractShopifyDraftOrderId(order.shopify_draft_order_id);
+  }
+  if (order.woocommerce_order_id) {
+    return order.woocommerce_order_id.toString();
+  }
+  return 'N/A';
+}
+
+/**
+ * Obtiene el ID de una orden completada (Shopify Order ID o WooCommerce Order ID)
+ * @param order - Objeto de orden con shopify_order_id o woocommerce_order_id
+ * @returns El ID de la orden completada
+ */
+export function getCompletedOrderId(order: {
+  shopify_order_id: string | null;
+  woocommerce_order_id: number | null;
+}): string {
+  if (order.shopify_order_id) {
+    return extractShopifyOrderId(order.shopify_order_id);
+  }
+  if (order.woocommerce_order_id) {
+    return order.woocommerce_order_id.toString();
+  }
+  return 'N/A';
 }

@@ -53,6 +53,10 @@ export default function SuperAdminAPIKeysPage() {
   useEffect(() => {
     fetchAPIKeys();
     fetchTenants();
+  }, []);
+
+  useEffect(() => {
+    fetchAPIKeys();
   }, [statusFilter, tenantFilter]);
 
   const fetchAPIKeys = async () => {
@@ -80,11 +84,17 @@ export default function SuperAdminAPIKeysPage() {
   };
 
   const fetchTenants = async () => {
+    console.log('fetchTenants called');
     try {
       const response = await fetch("/api/superadmin/tenants?limit=100");
+      console.log('Tenants response:', response);
       if (response.ok) {
         const data = await response.json();
+        console.log('Tenants fetched:', data);
+        console.log('Tenants items:', data.items);
         setTenants(data.items || []);
+      } else {
+        console.error('Failed to fetch tenants:', response.status);
       }
     } catch (error) {
       console.error("Error fetching tenants:", error);
@@ -114,6 +124,11 @@ export default function SuperAdminAPIKeysPage() {
       default:
         return 'bg-gray-100 text-gray-700';
     }
+  };
+
+  const getTenantName = (tenantId: number): string => {
+    const tenant = tenants.find((t) => t.id === tenantId);
+    return tenant ? tenant.name : `Tenant #${tenantId}`;
   };
 
   const getLastUsedBadge = (lastUsedAt: string | null) => {
@@ -201,14 +216,14 @@ export default function SuperAdminAPIKeysPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50/80 border-b border-gray-200">
-                  <TableHead className="text-xs md:text-sm min-w-[120px]">NOMBRE</TableHead>
-                  <TableHead className="text-xs md:text-sm min-w-[140px]">PREFIJO</TableHead>
-                  <TableHead className="text-xs md:text-sm min-w-[80px]">ROL</TableHead>
-                  <TableHead className="text-xs md:text-sm min-w-[100px]">TENANT ID</TableHead>
-                  <TableHead className="text-xs md:text-sm min-w-[140px]">ÚLTIMO USO</TableHead>
-                  <TableHead className="text-xs md:text-sm min-w-[90px]">ESTADO</TableHead>
-                  <TableHead className="text-xs md:text-sm min-w-[120px]">EXPIRA</TableHead>
-                  <TableHead className="text-xs md:text-sm min-w-[100px]">Acciones</TableHead>
+                  <TableHead>NOMBRE</TableHead>
+                  <TableHead>PREFIJO</TableHead>
+                  <TableHead>ROL</TableHead>
+                  <TableHead>TENANT</TableHead>
+                  <TableHead>ÚLTIMO USO</TableHead>
+                  <TableHead>ESTADO</TableHead>
+                  <TableHead>EXPIRA</TableHead>
+                  <TableHead>Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -238,7 +253,7 @@ export default function SuperAdminAPIKeysPage() {
                           {apiKey.role}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-xs md:text-sm text-gray-600">{apiKey.tenant_id}</TableCell>
+                      <TableCell className="text-xs md:text-sm text-gray-900 font-medium">{getTenantName(apiKey.tenant_id)}</TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           {getLastUsedBadge(apiKey.last_used_at)}
