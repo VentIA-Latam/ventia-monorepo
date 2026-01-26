@@ -101,7 +101,6 @@ export default function TenantsPage() {
       const response = await fetch('/api/superadmin/tenants');
       if (response.ok) {
         const data = await response.json();
-        console.log('Tenants data:', data.items); // Debug
         setTenants(data.items || []);
       }
     } catch (error) {

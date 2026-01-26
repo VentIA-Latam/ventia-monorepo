@@ -9,6 +9,7 @@ import { Tenant } from "@/lib/types/tenant";
 import { useState } from "react";
 import { Copy, Check, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { REGULAR_ROLES, getRoleLabel } from "@/lib/constants/roles";
 
 interface CreateAPIKeyDialogProps {
   open: boolean;
@@ -23,14 +24,12 @@ export function CreateAPIKeyDialog({ open, onOpenChange, onSuccess, apiEndpoint,
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<APIKeyCreate>({
     name: "",
-    role: "viewer",
+    role: "VIEWER",
     tenant_id: undefined,
     expires_at: null,
   });
   const [createdKey, setCreatedKey] = useState<APIKeyCreateResponse | null>(null);
   const [copied, setCopied] = useState(false);
-
-  console.log('CreateAPIKeyDialog tenants:', tenants, 'length:', tenants.length);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +80,7 @@ export function CreateAPIKeyDialog({ open, onOpenChange, onSuccess, apiEndpoint,
   };
 
   const handleClose = () => {
-    setFormData({ name: "", role: "viewer", tenant_id: undefined, expires_at: null });
+    setFormData({ name: "", role: "VIEWER", tenant_id: undefined, expires_at: null });
     setCreatedKey(null);
     setCopied(false);
     onOpenChange(false);
@@ -137,7 +136,7 @@ export function CreateAPIKeyDialog({ open, onOpenChange, onSuccess, apiEndpoint,
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Rol</Label>
-                <Input value={createdKey.role} disabled />
+                <Input value={getRoleLabel(createdKey.role)} disabled />
               </div>
               <div>
                 <Label>Prefijo (para identificar)</Label>
@@ -183,17 +182,18 @@ export function CreateAPIKeyDialog({ open, onOpenChange, onSuccess, apiEndpoint,
             <Label htmlFor="role">Rol *</Label>
             <Select
               value={formData.role}
-              onValueChange={(value) => setFormData({ ...formData, role: value as 'admin' | 'logistica' | 'ventas' | 'viewer' })}
+              onValueChange={(value) => setFormData({ ...formData, role: value as any })}
               disabled={loading}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona un rol" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="viewer">Viewer (Solo lectura)</SelectItem>
-                <SelectItem value="ventas">Ventas</SelectItem>
-                <SelectItem value="logistica">Logística</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
+                {REGULAR_ROLES.map((role) => (
+                  <SelectItem key={role.value} value={role.value}>
+                    {role.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

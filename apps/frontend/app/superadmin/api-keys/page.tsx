@@ -84,14 +84,10 @@ export default function SuperAdminAPIKeysPage() {
   };
 
   const fetchTenants = async () => {
-    console.log('fetchTenants called');
     try {
       const response = await fetch("/api/superadmin/tenants?limit=100");
-      console.log('Tenants response:', response);
       if (response.ok) {
         const data = await response.json();
-        console.log('Tenants fetched:', data);
-        console.log('Tenants items:', data.items);
         setTenants(data.items || []);
       } else {
         console.error('Failed to fetch tenants:', response.status);

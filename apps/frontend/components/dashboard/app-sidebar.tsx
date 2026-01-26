@@ -105,8 +105,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { user, isLoading, isSuperAdmin } = useAuth()
 
-  console.log('AppSidebar - isSuperAdmin:', isSuperAdmin); // Debug
-
   const isActive = (url: string) => {
     if (url === "/dashboard") return pathname === "/dashboard";
     return pathname.startsWith(url);

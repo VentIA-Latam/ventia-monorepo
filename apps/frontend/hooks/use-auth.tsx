@@ -36,8 +36,6 @@ export function useAuth() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('User data from API:', data); // Debug
-        console.log('User role:', data.role); // Debug
         setUserDetails(data);
         setUserRole(data.role);
       } else {

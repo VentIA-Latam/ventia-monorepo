@@ -5,12 +5,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { UserRole } from '@/lib/constants/roles';
 
 export interface User {
   id: number;
   email: string;
   name: string;
-  role: 'SUPER_ADMIN' | 'ADMIN' | 'LOGISTICA' | 'VENTAS' | 'VIEWER';
+  role: UserRole;
   tenant_id: number;
   is_active: boolean;
   auth0_user_id: string;

@@ -45,6 +45,13 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
   const [formData, setFormData] = useState({
     name: "",
     efact_ruc: "",
+    // Nuevos campos - Datos de emisor
+    emisor_nombre_comercial: "",
+    emisor_ubigeo: "",
+    emisor_departamento: "",
+    emisor_provincia: "",
+    emisor_distrito: "",
+    emisor_direccion: "",
     // Shopify fields
     shopify_store_url: "",
     shopify_client_id: "",
@@ -59,27 +66,15 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
 
   useEffect(() => {
     if (tenant) {
-      // Determinar plataforma actual desde settings o legacy
+      // Determinar plataforma actual desde ecommerce_settings
       let currentPlatform: EcommercePlatform = null;
       let currentSyncOnValidation = false;
-      let currentShopifyUrl = "";
-      let currentWooCommerceUrl = "";
+      let currentStoreUrl = "";
 
-      // Priorizar settings sobre campos legacy
-      if (tenant.settings?.ecommerce) {
-        currentSyncOnValidation = tenant.settings.ecommerce.sync_on_validation;
-
-        if (tenant.settings.ecommerce.shopify) {
-          currentPlatform = "shopify";
-          currentShopifyUrl = tenant.settings.ecommerce.shopify.store_url;
-        } else if (tenant.settings.ecommerce.woocommerce) {
-          currentPlatform = "woocommerce";
-          currentWooCommerceUrl = tenant.settings.ecommerce.woocommerce.store_url;
-        }
-      } else if (tenant.shopify_store_url) {
-        // Fallback a campo legacy
-        currentPlatform = "shopify";
-        currentShopifyUrl = tenant.shopify_store_url;
+      if (tenant.ecommerce_settings) {
+        currentPlatform = tenant.ecommerce_settings.platform;
+        currentSyncOnValidation = tenant.ecommerce_settings.sync_on_validation;
+        currentStoreUrl = tenant.ecommerce_settings.store_url || "";
       }
 
       setPlatform(currentPlatform);
@@ -90,11 +85,17 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
       setFormData({
         name: tenant.name,
         efact_ruc: tenant.efact_ruc || "",
-        shopify_store_url: currentShopifyUrl,
+        emisor_nombre_comercial: tenant.emisor_nombre_comercial || "",
+        emisor_ubigeo: tenant.emisor_ubigeo || "",
+        emisor_departamento: tenant.emisor_departamento || "",
+        emisor_provincia: tenant.emisor_provincia || "",
+        emisor_distrito: tenant.emisor_distrito || "",
+        emisor_direccion: tenant.emisor_direccion || "",
+        shopify_store_url: currentPlatform === "shopify" ? currentStoreUrl : "",
         shopify_client_id: "",
         shopify_client_secret: "",
-        shopify_api_version: tenant.settings?.ecommerce?.shopify?.api_version || "2025-10",
-        woocommerce_url: currentWooCommerceUrl,
+        shopify_api_version: "2025-10",
+        woocommerce_url: currentPlatform === "woocommerce" ? currentStoreUrl : "",
         woocommerce_consumer_key: "",
         woocommerce_consumer_secret: "",
         is_active: tenant.is_active,
@@ -123,6 +124,12 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
         name: formData.name,
         is_active: formData.is_active,
         efact_ruc: formData.efact_ruc || undefined,
+        emisor_nombre_comercial: formData.emisor_nombre_comercial || undefined,
+        emisor_ubigeo: formData.emisor_ubigeo || undefined,
+        emisor_departamento: formData.emisor_departamento || undefined,
+        emisor_provincia: formData.emisor_provincia || undefined,
+        emisor_distrito: formData.emisor_distrito || undefined,
+        emisor_direccion: formData.emisor_direccion || undefined,
       };
 
       // Configurar plataforma y sync
@@ -225,6 +232,88 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
               <p className="text-xs text-gray-500">
                 RUC del tenant para facturación electrónica en Perú (opcional, debe tener 11 dígitos)
               </p>
+            </div>
+
+            {/* Nombre Comercial */}
+            <div className="grid gap-2">
+              <Label htmlFor="edit-emisor_nombre_comercial">Nombre Comercial del Emisor</Label>
+              <Input
+                id="edit-emisor_nombre_comercial"
+                value={formData.emisor_nombre_comercial}
+                onChange={(e) => setFormData({ ...formData, emisor_nombre_comercial: e.target.value })}
+                placeholder="Ej: Tienda Example S.A.C."
+              />
+            </div>
+
+            {/* Sección: Ubicación Fiscal */}
+            <div className="rounded-lg border p-4 space-y-4 bg-gray-50">
+              <h3 className="font-semibold text-sm">Ubicación Fiscal (Emisor)</h3>
+
+              {/* UBIGEO */}
+              <div className="grid gap-2">
+                <Label htmlFor="edit-emisor_ubigeo" className="flex items-center gap-2">
+                  Código UBIGEO
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="inline-block w-4 h-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Código UBIGEO de 6 dígitos según INEI (Ej: 150101 para Lima)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </Label>
+                <Input
+                  id="edit-emisor_ubigeo"
+                  value={formData.emisor_ubigeo}
+                  onChange={(e) => setFormData({ ...formData, emisor_ubigeo: e.target.value })}
+                  placeholder="150101"
+                  maxLength={6}
+                />
+              </div>
+
+              {/* Grid 3 columnas: Departamento, Provincia, Distrito */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-emisor_departamento">Departamento</Label>
+                  <Input
+                    id="edit-emisor_departamento"
+                    value={formData.emisor_departamento}
+                    onChange={(e) => setFormData({ ...formData, emisor_departamento: e.target.value })}
+                    placeholder="LIMA"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-emisor_provincia">Provincia</Label>
+                  <Input
+                    id="edit-emisor_provincia"
+                    value={formData.emisor_provincia}
+                    onChange={(e) => setFormData({ ...formData, emisor_provincia: e.target.value })}
+                    placeholder="LIMA"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-emisor_distrito">Distrito</Label>
+                  <Input
+                    id="edit-emisor_distrito"
+                    value={formData.emisor_distrito}
+                    onChange={(e) => setFormData({ ...formData, emisor_distrito: e.target.value })}
+                    placeholder="LIMA"
+                  />
+                </div>
+              </div>
+
+              {/* Dirección */}
+              <div className="grid gap-2">
+                <Label htmlFor="edit-emisor_direccion">Dirección Fiscal</Label>
+                <Input
+                  id="edit-emisor_direccion"
+                  value={formData.emisor_direccion}
+                  onChange={(e) => setFormData({ ...formData, emisor_direccion: e.target.value })}
+                  placeholder="Av. Ejemplo 123, Lima, Perú"
+                />
+              </div>
             </div>
 
             <div className="grid gap-2">
