@@ -112,6 +112,7 @@ export interface InvoiceSerieCreate {
   serie: string; // 4 caracteres (ej: "F001", "B001")
   description?: string;
   is_active?: boolean;
+  last_correlativo?: number;
 }
 
 /**

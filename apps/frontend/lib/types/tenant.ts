@@ -39,6 +39,12 @@ export interface Tenant {
   company_id: string | null;
   shopify_store_url: string | null; // Legacy field - kept for backward compatibility
   efact_ruc: string | null;
+  emisor_nombre_comercial: string | null;
+  emisor_ubigeo: string | null;
+  emisor_departamento: string | null;
+  emisor_provincia: string | null;
+  emisor_distrito: string | null;
+  emisor_direccion: string | null;
   is_platform: boolean;
   is_active: boolean;
   created_at: string;
@@ -82,6 +88,12 @@ export interface TenantCreate {
 
   // Electronic invoicing
   efact_ruc?: string;                              // Peru RUC (11 digits)
+  emisor_nombre_comercial?: string;
+  emisor_ubigeo?: string;
+  emisor_departamento?: string;
+  emisor_provincia?: string;
+  emisor_distrito?: string;
+  emisor_direccion?: string;
 }
 
 export interface TenantUpdate {
@@ -105,6 +117,12 @@ export interface TenantUpdate {
 
   // Electronic invoicing
   efact_ruc?: string;
+  emisor_nombre_comercial?: string;
+  emisor_ubigeo?: string;
+  emisor_departamento?: string;
+  emisor_provincia?: string;
+  emisor_distrito?: string;
+  emisor_direccion?: string;
 }
 
 export interface TenantFilters {

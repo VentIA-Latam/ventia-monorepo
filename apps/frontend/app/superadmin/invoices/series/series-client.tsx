@@ -64,6 +64,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
     description: "",
     is_active: true,
     tenant_id: undefined,
+    last_correlativo: 0,
   });
 
   useEffect(() => {
@@ -119,6 +120,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
           serie: formData.serie,
           description: formData.description,
           is_active: formData.is_active,
+          last_correlativo: formData.last_correlativo || 0,
         }),
       });
 
@@ -168,6 +170,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
       serie: serie.serie,
       description: serie.description || "",
       is_active: serie.is_active,
+      last_correlativo: serie.last_correlativo || 0,
     });
     setIsEditDialogOpen(true);
   };
@@ -185,6 +188,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
         body: JSON.stringify({
           description: formData.description || null,
           is_active: formData.is_active,
+          last_correlativo: formData.last_correlativo || 0,
         }),
       });
 
@@ -218,6 +222,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
       description: "",
       is_active: true,
       tenant_id: undefined,
+      last_correlativo: 0,
     });
     setError(null);
   };
@@ -431,6 +436,24 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="last_correlativo">Último Correlativo Usado</Label>
+              <Input
+                id="last_correlativo"
+                type="number"
+                placeholder="0"
+                min="0"
+                value={formData.last_correlativo || 0}
+                onChange={(e) =>
+                  setFormData({ ...formData, last_correlativo: parseInt(e.target.value) || 0 })
+                }
+                className="font-mono"
+              />
+              <p className="text-xs text-gray-500">
+                Si ya usaste esta serie antes, ingresa el último número de comprobante. El próximo será este número + 1.
+              </p>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="description">Descripción (opcional)</Label>
               <Textarea
                 id="description"
@@ -492,6 +515,24 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
               />
               <p className="text-xs text-gray-500">
                 La serie no puede ser modificada una vez creada
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit_last_correlativo">Último Correlativo Usado</Label>
+              <Input
+                id="edit_last_correlativo"
+                type="number"
+                placeholder="0"
+                min="0"
+                value={formData.last_correlativo || 0}
+                onChange={(e) =>
+                  setFormData({ ...formData, last_correlativo: parseInt(e.target.value) || 0 })
+                }
+                className="font-mono"
+              />
+              <p className="text-xs text-gray-500">
+                ⚠️ Cuidado: el próximo comprobante será este número + 1. Úsalo solo si necesitas corregir el contador.
               </p>
             </div>
 
