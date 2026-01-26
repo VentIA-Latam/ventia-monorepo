@@ -297,7 +297,8 @@ class TenantService:
         ecommerce_fields = {
             "ecommerce_platform",
             "ecommerce_store_url",
-            "ecommerce_access_token",
+            "shopify_client_id",
+            "shopify_client_secret",
             "shopify_api_version",
             "ecommerce_consumer_key",
             "ecommerce_consumer_secret",
@@ -352,8 +353,10 @@ class TenantService:
                 shopify=ShopifyCredentials(
                     store_url=update_data.get("ecommerce_store_url")
                     or (current_shopify.store_url if current_shopify else ""),
-                    access_token=update_data.get("ecommerce_access_token")
-                    or (current_shopify.access_token if current_shopify else None),
+                    client_id=update_data.get("shopify_client_id")
+                    or (current_shopify.client_id if current_shopify else None),
+                    client_secret=update_data.get("shopify_client_secret")
+                    or (current_shopify.client_secret if current_shopify else None),
                     api_version=update_data.get("shopify_api_version")
                     or (current_shopify.api_version if current_shopify else "2024-01"),
                 ),

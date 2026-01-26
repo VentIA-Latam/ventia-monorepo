@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     EFACT_PASSWORD_REST: str  # Required: REST password for OAuth2 authentication
     EFACT_TOKEN_CACHE_HOURS: int = 1  # Token cache duration (eFact tokens last 12h)
 
+    # Email Configuration (Resend)
+    RESEND_API_KEY: str  # Required: Resend API key for sending emails
+    RESEND_FROM_EMAIL: str = "noreply@ventia.pe"  # Email address for sending invoices
+    RESEND_FROM_NAME: str = "VentIA - Facturación"  # Sender name for emails
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: str | List[str]) -> List[str]:

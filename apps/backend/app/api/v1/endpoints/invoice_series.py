@@ -29,7 +29,7 @@ router = APIRouter()
 )
 async def create_invoice_serie(
     serie_data: InvoiceSerieCreate,
-    current_user: User = Depends(require_role(Role.ADMIN, Role.SUPER_ADMIN)),
+    current_user: User = Depends(require_role(Role.ADMIN, Role.SUPERADMIN)),
     tenant_id: int | None = None,
     db: Session = Depends(get_database),
 ) -> InvoiceSerieResponse:
@@ -37,11 +37,11 @@ async def create_invoice_serie(
     Create a new invoice series for a tenant.
 
     - **ADMIN users**: Can only create series for their own tenant (tenant_id parameter ignored)
-    - **SUPER_ADMIN users**: Can create series for any tenant (optionally specify tenant_id)
+    - **SUPERADMIN users**: Can create series for any tenant (optionally specify tenant_id)
 
     Each series has its own correlativo counter for generating sequential invoice numbers.
 
-    **Permissions:** Requires ADMIN or SUPER_ADMIN role
+    **Permissions:** Requires ADMIN or SUPERADMIN role
 
     **Request Body:**
     - `invoice_type`: Type of invoice (01=Factura, 03=Boleta, 07=Nota de Crédito, 08=Nota de Débito)
@@ -50,7 +50,7 @@ async def create_invoice_serie(
     - `is_active`: (Optional) Whether series is active (defaults to True)
 
     **Query Parameters:**
-    - `tenant_id` (optional): Target tenant ID (SUPER_ADMIN only)
+    - `tenant_id` (optional): Target tenant ID (SUPERADMIN only)
 
     **Validations:**
     - Serie must be 4 alphanumeric characters
@@ -71,7 +71,7 @@ async def create_invoice_serie(
 
     **Examples:**
     - ADMIN creates for their tenant: `POST /api/v1/invoice-series` with body
-    - SUPER_ADMIN creates for any tenant: `POST /api/v1/invoice-series?tenant_id=3` with body
+    - SUPERADMIN creates for any tenant: `POST /api/v1/invoice-series?tenant_id=3` with body
 
     **Error Handling:**
     - `400 Bad Request`: Invalid serie format, duplicate serie, invalid invoice_type
@@ -81,8 +81,8 @@ async def create_invoice_serie(
 
     Args:
         serie_data: InvoiceSerieCreate schema
-        current_user: Current authenticated user (must be ADMIN or SUPER_ADMIN)
-        tenant_id: (Optional) Target tenant ID (SUPER_ADMIN only)
+        current_user: Current authenticated user (must be ADMIN or SUPERADMIN)
+        tenant_id: (Optional) Target tenant ID (SUPERADMIN only)
         db: Database session
 
     Returns:
@@ -93,8 +93,8 @@ async def create_invoice_serie(
     """
     try:
         # Determine target tenant
-        if current_user.role == Role.SUPER_ADMIN:
-            # SUPER_ADMIN can create for any tenant
+        if current_user.role == Role.SUPERADMIN:
+            # SUPERADMIN can create for any tenant
             target_tenant_id = tenant_id if tenant_id else current_user.tenant_id
         else:
             # ADMIN can only create for their own tenant
@@ -150,10 +150,10 @@ async def list_invoice_series(
     db: Session = Depends(get_database),
 ) -> list[InvoiceSerieResponse]:
     """
-    List invoice series for current user or specific tenant (SUPER_ADMIN only).
+    List invoice series for current user or specific tenant (SUPERADMIN only).
 
-    - **Non-SUPER_ADMIN users**: Lists series for their own tenant (tenant_id parameter ignored)
-    - **SUPER_ADMIN users**: Lists all series, optionally filtered by tenant_id
+    - **Non-SUPERADMIN users**: Lists series for their own tenant (tenant_id parameter ignored)
+    - **SUPERADMIN users**: Lists all series, optionally filtered by tenant_id
 
     This endpoint retrieves invoice series (factura, boleta, NC, ND) 
     that can be used to generate invoices.
@@ -161,7 +161,7 @@ async def list_invoice_series(
     **Permissions:** Requires authentication (all authenticated users)
 
     **Query Parameters:**
-    - `tenant_id` (optional): Filter series by tenant ID (SUPER_ADMIN only)
+    - `tenant_id` (optional): Filter series by tenant ID (SUPERADMIN only)
 
     **Response:**
     Returns a list of InvoiceSerieResponse objects with:
@@ -175,18 +175,18 @@ async def list_invoice_series(
     - `updated_at`: Last update timestamp
 
     **Examples:**
-    - Non-SUPER_ADMIN: `GET /api/v1/invoice-series` → lists their tenant's series
-    - SUPER_ADMIN (all): `GET /api/v1/invoice-series` → lists all series
-    - SUPER_ADMIN (filtered): `GET /api/v1/invoice-series?tenant_id=2` → lists series for tenant 2
+    - Non-SUPERADMIN: `GET /api/v1/invoice-series` → lists their tenant's series
+    - SUPERADMIN (all): `GET /api/v1/invoice-series` → lists all series
+    - SUPERADMIN (filtered): `GET /api/v1/invoice-series?tenant_id=2` → lists series for tenant 2
 
     **Error Handling:**
-    - `400 Bad Request`: Invalid request (e.g., non-SUPER_ADMIN with tenant_id parameter)
+    - `400 Bad Request`: Invalid request (e.g., non-SUPERADMIN with tenant_id parameter)
     - `401 Unauthorized`: User not authenticated
     - `500 Internal Server Error`: Failed to retrieve series
 
     Args:
         current_user: Current authenticated user
-        tenant_id: (Optional) Tenant ID to filter (SUPER_ADMIN only)
+        tenant_id: (Optional) Tenant ID to filter (SUPERADMIN only)
         db: Database session
 
     Returns:
@@ -197,11 +197,11 @@ async def list_invoice_series(
     """
     try:
         # Determine which tenant_id to use
-        if current_user.role == Role.SUPER_ADMIN:
-            # SUPER_ADMIN can filter by any tenant or see all
+        if current_user.role == Role.SUPERADMIN:
+            # SUPERADMIN can filter by any tenant or see all
             filter_tenant_id = tenant_id
         else:
-            # Non-SUPER_ADMIN can only see their own tenant
+            # Non-SUPERADMIN can only see their own tenant
             if tenant_id is not None and tenant_id != current_user.tenant_id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -221,7 +221,7 @@ async def list_invoice_series(
                 f"by user {current_user.id} ({current_user.role})"
             )
         else:
-            # SUPER_ADMIN getting all series from all tenants
+            # SUPERADMIN getting all series from all tenants
             from app.repositories.invoice_serie import invoice_serie_repository
             series = invoice_serie_repository.get_all(db)
             logger.info(
@@ -265,8 +265,8 @@ async def get_invoice_serie(
     """
     Get a specific invoice series by ID.
 
-    - **Non-SUPER_ADMIN users**: Can only view series from their own tenant
-    - **SUPER_ADMIN users**: Can view any series
+    - **Non-SUPERADMIN users**: Can only view series from their own tenant
+    - **SUPERADMIN users**: Can view any series
 
     **Permissions:** Requires authentication
 
@@ -309,8 +309,8 @@ async def get_invoice_serie(
                 detail=f"Invoice serie {serie_id} not found",
             )
 
-        # Validate access: non-SUPER_ADMIN can only access their own tenant
-        if current_user.role != Role.SUPER_ADMIN:
+        # Validate access: non-SUPERADMIN can only access their own tenant
+        if current_user.role != Role.SUPERADMIN:
             if serie.tenant_id != current_user.tenant_id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -344,7 +344,7 @@ async def get_invoice_serie(
 async def update_invoice_serie(
     serie_id: int,
     serie_update: InvoiceSerieUpdate,
-    current_user: User = Depends(require_role(Role.ADMIN, Role.SUPER_ADMIN)),
+    current_user: User = Depends(require_role(Role.ADMIN, Role.SUPERADMIN)),
     db: Session = Depends(get_database),
 ) -> InvoiceSerieResponse:
     """
@@ -354,9 +354,9 @@ async def update_invoice_serie(
     Series code and invoice type cannot be changed after creation.
 
     - **ADMIN users**: Can only update series from their own tenant
-    - **SUPER_ADMIN users**: Can update any series
+    - **SUPERADMIN users**: Can update any series
 
-    **Permissions:** Requires ADMIN or SUPER_ADMIN role
+    **Permissions:** Requires ADMIN or SUPERADMIN role
 
     **Path Parameters:**
     - `serie_id`: Invoice series ID
@@ -377,7 +377,7 @@ async def update_invoice_serie(
     Args:
         serie_id: Serie ID
         serie_update: InvoiceSerieUpdate schema
-        current_user: Current authenticated user (must be ADMIN or SUPER_ADMIN)
+        current_user: Current authenticated user (must be ADMIN or SUPERADMIN)
         db: Database session
 
     Returns:
@@ -395,8 +395,8 @@ async def update_invoice_serie(
                 detail=f"Invoice serie {serie_id} not found",
             )
 
-        # Validate access: non-SUPER_ADMIN can only update their own tenant
-        if current_user.role != Role.SUPER_ADMIN:
+        # Validate access: non-SUPERADMIN can only update their own tenant
+        if current_user.role != Role.SUPERADMIN:
             if serie.tenant_id != current_user.tenant_id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -443,7 +443,7 @@ async def update_invoice_serie(
 )
 async def delete_invoice_serie(
     serie_id: int,
-    current_user: User = Depends(require_role(Role.ADMIN, Role.SUPER_ADMIN)),
+    current_user: User = Depends(require_role(Role.ADMIN, Role.SUPERADMIN)),
     db: Session = Depends(get_database),
 ):
     """
@@ -453,9 +453,9 @@ async def delete_invoice_serie(
     If the series has been used, it will be deactivated instead of deleted.
 
     - **ADMIN users**: Can only delete series from their own tenant
-    - **SUPER_ADMIN users**: Can delete any series
+    - **SUPERADMIN users**: Can delete any series
 
-    **Permissions:** Requires ADMIN or SUPER_ADMIN role
+    **Permissions:** Requires ADMIN or SUPERADMIN role
 
     **Path Parameters:**
     - `serie_id`: Invoice series ID
@@ -474,7 +474,7 @@ async def delete_invoice_serie(
 
     Args:
         serie_id: Serie ID
-        current_user: Current authenticated user (must be ADMIN or SUPER_ADMIN)
+        current_user: Current authenticated user (must be ADMIN or SUPERADMIN)
         db: Database session
 
     Raises:
@@ -489,8 +489,8 @@ async def delete_invoice_serie(
                 detail=f"Invoice serie {serie_id} not found",
             )
 
-        # Validate access: non-SUPER_ADMIN can only delete their own tenant
-        if current_user.role != Role.SUPER_ADMIN:
+        # Validate access: non-SUPERADMIN can only delete their own tenant
+        if current_user.role != Role.SUPERADMIN:
             if serie.tenant_id != current_user.tenant_id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,

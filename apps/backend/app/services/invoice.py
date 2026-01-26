@@ -79,11 +79,11 @@ class InvoiceService:
             raise ValueError(f"Order {order_id} not found")
 
         # For SUPER_ADMIN, use the order's tenant; otherwise use provided tenant_id
-        if user_role == Role.SUPER_ADMIN:
+        if user_role == Role.SUPERADMIN:
             tenant_id = order.tenant_id
         
         # Validate order belongs to tenant (skip for SUPER_ADMIN)
-        if user_role != Role.SUPER_ADMIN and order.tenant_id != tenant_id:
+        if user_role != Role.SUPERADMIN and order.tenant_id != tenant_id:
             raise ValueError(f"Order {order_id} does not belong to tenant {tenant_id}")
 
         # Validate order is validated (payment confirmed)

@@ -152,7 +152,9 @@ async def create_tenant(
     **E-commerce Configuration (optional):**
     - ecommerce_platform: "shopify" | "woocommerce" | None
     - ecommerce_store_url: Store URL (required if platform is set)
-    - ecommerce_access_token: Shopify Admin API access token (only for Shopify, will be encrypted)
+    - shopify_client_id: Shopify OAuth2 client ID (only for Shopify, will be encrypted)
+    - shopify_client_secret: Shopify OAuth2 client secret (only for Shopify, will be encrypted)
+    - shopify_api_version: Shopify API version (default: '2025-10')
     - ecommerce_consumer_key: WooCommerce consumer key (only for WooCommerce, will be encrypted)
     - ecommerce_consumer_secret: WooCommerce consumer secret (only for WooCommerce, will be encrypted)
     - sync_on_validation: Whether to sync to e-commerce when validating payment (default: True)
@@ -188,7 +190,7 @@ async def create_tenant(
     but are automatically encrypted before storage in the settings JSON field.
     """
     try:
-        created_tenant = tenant_service.create_tenant(db, tenant_in)
+        created_tenant = await tenant_service.create_tenant(db, tenant_in)
         return TenantResponse.from_tenant(created_tenant)
     except ValueError as e:
         raise HTTPException(
@@ -219,7 +221,9 @@ async def update_tenant(
     **E-commerce Configuration:**
     - ecommerce_platform: "shopify" | "woocommerce" | None (change platform)
     - ecommerce_store_url: Store URL
-    - ecommerce_access_token: Shopify access token (will be encrypted)
+    - shopify_client_id: Shopify OAuth2 client ID (will be encrypted)
+    - shopify_client_secret: Shopify OAuth2 client secret (will be encrypted)
+    - shopify_api_version: Shopify API version
     - ecommerce_consumer_key: WooCommerce consumer key (will be encrypted)
     - ecommerce_consumer_secret: WooCommerce consumer secret (will be encrypted)
     - sync_on_validation: Sync to e-commerce on payment validation

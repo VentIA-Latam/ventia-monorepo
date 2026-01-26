@@ -108,6 +108,36 @@ class TenantCreate(BaseModel):
         pattern=r"^\d{11}$",
         description="RUC del tenant para facturación electrónica (optional, 11 dígitos)",
     )
+    emisor_nombre_comercial: str | None = Field(
+        None,
+        max_length=200,
+        description="Nombre comercial del emisor para facturas electrónicas"
+    )
+    emisor_ubigeo: str | None = Field(
+        None,
+        pattern=r"^\d{6}$",
+        description="Código UBIGEO del emisor (6 dígitos, estándar INEI Perú)"
+    )
+    emisor_departamento: str | None = Field(
+        None,
+        max_length=100,
+        description="Departamento del emisor (e.g., 'LIMA', 'AREQUIPA')"
+    )
+    emisor_provincia: str | None = Field(
+        None,
+        max_length=100,
+        description="Provincia del emisor"
+    )
+    emisor_distrito: str | None = Field(
+        None,
+        max_length=100,
+        description="Distrito del emisor"
+    )
+    emisor_direccion: str | None = Field(
+        None,
+        max_length=500,
+        description="Dirección fiscal del emisor"
+    )
 
     @field_validator("ecommerce_store_url", mode="before")
     @classmethod
@@ -231,6 +261,36 @@ class TenantUpdate(BaseModel):
         pattern=r"^\d{11}$",
         description="RUC del tenant para facturación electrónica (11 dígitos)",
     )
+    emisor_nombre_comercial: str | None = Field(
+        None,
+        max_length=200,
+        description="Nombre comercial del emisor para facturas electrónicas"
+    )
+    emisor_ubigeo: str | None = Field(
+        None,
+        pattern=r"^\d{6}$",
+        description="Código UBIGEO del emisor (6 dígitos, estándar INEI Perú)"
+    )
+    emisor_departamento: str | None = Field(
+        None,
+        max_length=100,
+        description="Departamento del emisor (e.g., 'LIMA', 'AREQUIPA')"
+    )
+    emisor_provincia: str | None = Field(
+        None,
+        max_length=100,
+        description="Provincia del emisor"
+    )
+    emisor_distrito: str | None = Field(
+        None,
+        max_length=100,
+        description="Distrito del emisor"
+    )
+    emisor_direccion: str | None = Field(
+        None,
+        max_length=500,
+        description="Dirección fiscal del emisor"
+    )
 
     @field_validator("ecommerce_store_url", mode="before")
     @classmethod
@@ -283,6 +343,12 @@ class TenantResponse(BaseModel):
     slug: str
     company_id: str | None
     efact_ruc: str | None
+    emisor_nombre_comercial: str | None
+    emisor_ubigeo: str | None
+    emisor_departamento: str | None
+    emisor_provincia: str | None
+    emisor_distrito: str | None
+    emisor_direccion: str | None
     is_platform: bool
     is_active: bool
     created_at: datetime
@@ -321,7 +387,8 @@ class TenantResponse(BaseModel):
 
                     if ecommerce.platform == "shopify" and ecommerce.shopify:
                         store_url = ecommerce.shopify.store_url
-                        has_credentials = bool(ecommerce.shopify.access_token)
+                        # OAuth2: Check for client_id and client_secret
+                        has_credentials = bool(ecommerce.shopify.client_id and ecommerce.shopify.client_secret)
                     elif ecommerce.platform == "woocommerce" and ecommerce.woocommerce:
                         store_url = ecommerce.woocommerce.store_url
                         has_credentials = bool(
@@ -345,6 +412,12 @@ class TenantResponse(BaseModel):
             slug=tenant.slug,
             company_id=tenant.company_id,
             efact_ruc=tenant.efact_ruc,
+            emisor_nombre_comercial=tenant.emisor_nombre_comercial,
+            emisor_ubigeo=tenant.emisor_ubigeo,
+            emisor_departamento=tenant.emisor_departamento,
+            emisor_provincia=tenant.emisor_provincia,
+            emisor_distrito=tenant.emisor_distrito,
+            emisor_direccion=tenant.emisor_direccion,
             is_platform=tenant.is_platform,
             is_active=tenant.is_active,
             created_at=tenant.created_at,

@@ -152,17 +152,18 @@ def seed_database():
         # ============ CONFIGURE E-COMMERCE SETTINGS ============
         print("\n🔧 Configuring e-commerce settings for tenants...")
         
-        # Tenant 2: Nassau - Shopify with sync enabled
-        # Note: access_token should be set via admin panel or environment
+        # Tenant 2: Nassau - Shopify with OAuth2 and sync enabled
+        # Note: OAuth2 credentials should be set via admin panel in production
         tenants[1].set_ecommerce_settings(EcommerceSettings(
             sync_on_validation=True,
             shopify=ShopifyCredentials(
                 store_url="https://nassau-outlet.myshopify.com",
-                access_token=None,  # Set in production via admin panel
+                client_id=None,  # Set in production via admin panel
+                client_secret=None,  # Set in production via admin panel
                 api_version="2024-01",
             ),
         ))
-        print(f"   - Nassau: Shopify (sync=True)")
+        print(f"   - Nassau: Shopify OAuth2 (sync=True)")
         
         # Tenant 3: La dore - WooCommerce with sync enabled
         # Note: credentials should be set via admin panel or environment
@@ -176,16 +177,17 @@ def seed_database():
         ))
         print(f"   - La Dore: WooCommerce (sync=True)")
         
-        # Tenant 4: Not Peppers - Shopify with sync disabled (for local orders)
+        # Tenant 4: Not Peppers - Shopify with OAuth2 and sync disabled (for local orders)
         tenants[3].set_ecommerce_settings(EcommerceSettings(
             sync_on_validation=False,  # Local orders, no sync needed
             shopify=ShopifyCredentials(
                 store_url="https://not-peppers.myshopify.com",
-                access_token=None,
+                client_id=None,  # Set in production via admin panel
+                client_secret=None,  # Set in production via admin panel
                 api_version="2024-01",
             ),
         ))
-        print(f"   - Not Peppers: Shopify (sync=False)")
+        print(f"   - Not Peppers: Shopify OAuth2 (sync=False)")
         
         # Tenant 5: Lucano - WooCommerce with sync disabled (inactive tenant)
         tenants[4].set_ecommerce_settings(EcommerceSettings(
@@ -253,7 +255,7 @@ def seed_database():
                 email="equipoventia@gmail.com",
                 name="Equipo Ventia",
                 tenant_id=1,  # Super admin for first tenant
-                role=Role.SUPER_ADMIN,
+                role=Role.SUPERADMIN,
                 is_active=True,
                 last_login=datetime.now(),
                 created_at=datetime.now(),

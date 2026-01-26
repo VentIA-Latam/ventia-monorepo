@@ -37,12 +37,12 @@ class UserCreate(UserBase):
             try:
                 role_obj = Role[str(v).upper()]
             except KeyError:
-                valid_roles = [r.name.lower() for r in Role if r != Role.SUPER_ADMIN]
+                valid_roles = [r.name.lower() for r in Role if r != Role.SUPERADMIN]
                 raise ValueError(f"Invalid role. Allowed roles: {', '.join(valid_roles)}")
 
         # Prevent SUPER_ADMIN
-        if role_obj == Role.SUPER_ADMIN:
-            valid_roles = [r.name.lower() for r in Role if r != Role.SUPER_ADMIN]
+        if role_obj == Role.SUPERADMIN:
+            valid_roles = [r.name.lower() for r in Role if r != Role.SUPERADMIN]
             raise ValueError(f"Cannot create SUPER_ADMIN users. Allowed roles: {', '.join(valid_roles)}")
 
         return role_obj
