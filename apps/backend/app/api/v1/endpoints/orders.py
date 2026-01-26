@@ -24,9 +24,14 @@ from app.schemas.order import (
 )
 from app.schemas.invoice import InvoiceCreate, InvoiceResponse
 from app.services.order import order_service
-from app.services.shopify import shopify_service
 from app.services.invoice import invoice_service
+from app.services.ecommerce import ecommerce_service
 from app.repositories.order import order_repository
+from app.integrations.woocommerce_client import (
+    WooCommerceAuthError,
+    WooCommerceNotFoundError,
+    WooCommerceError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -93,12 +98,12 @@ async def create_order(
 
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
-    SUPER_ADMIN, ADMIN and VENTAS roles can create orders.
+    SUPERADMIN, ADMIN and VENTAS roles can create orders.
     The order is created for the current user's tenant (tenant_id is obtained from current_user).
 
     Args:
         order_in: Order creation data (shopify_draft_order_id and other fields, tenant_id is NOT required)
-        current_user: Current authenticated user or API key (SUPER_ADMIN, ADMIN or VENTAS role required)
+        current_user: Current authenticated user or API key (SUPERADMIN, ADMIN or VENTAS role required)
         db: Database session
 
     Returns:
@@ -138,7 +143,7 @@ async def list_orders(
 
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
-    **SUPER_ADMIN Behavior:**
+    **SUPERADMIN Behavior:**
     - Can view all orders from all tenants
     - Optional query parameter `tenant_id` filters to specific tenant
     - If `tenant_id` not specified: returns all orders from all tenants
@@ -152,7 +157,7 @@ async def list_orders(
         skip: Number of records to skip (default: 0)
         limit: Maximum records to return (default: 100, max: 1000)
         validado: Filter by validation status (None = all orders)
-        tenant_id: SUPER_ADMIN only - filter by specific tenant (optional)
+        tenant_id: SUPERADMIN only - filter by specific tenant (optional)
         sort_by: Field to sort by (default: created_at)
         sort_order: Sort order 'asc' or 'desc' (default: desc)
         current_user: Current authenticated user
@@ -172,8 +177,8 @@ async def list_orders(
         )
 
     try:
-        # SUPER_ADMIN can see all orders
-        if current_user.role == Role.SUPER_ADMIN:
+        # SUPERADMIN can see all orders
+        if current_user.role == Role.SUPERADMIN:
             return order_service.get_all_orders(
                 db,
                 skip=skip,
@@ -212,7 +217,7 @@ async def get_order(
 
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
-    **SUPER_ADMIN Behavior:**
+    **SUPERADMIN Behavior:**
     - Can access any order by ID without tenant restrictions
     - Response includes `tenant` field with full tenant information
     - Access to orders from other tenants is logged for audit trail
@@ -223,7 +228,7 @@ async def get_order(
     - Returns 403 Forbidden if attempting to access order from another tenant
 
     **Response Tenant Field:**
-    - For SUPER_ADMIN: includes tenant details (id, name, slug, company_id, etc.)
+    - For SUPERADMIN: includes tenant details (id, name, slug, company_id, etc.)
     - For other roles: None (they already know their tenant)
     - Frontend can display tenant name to show which client the order belongs to
     
@@ -233,15 +238,15 @@ async def get_order(
         db: Database session
 
     Returns:
-        OrderResponse with tenant field populated for SUPER_ADMIN
+        OrderResponse with tenant field populated for SUPERADMIN
 
     Raises:
         HTTPException 404: If order not found
-        HTTPException 403: If non-SUPER_ADMIN user tries to access order from another tenant
+        HTTPException 403: If non-SUPERADMIN user tries to access order from another tenant
     """
     # Fetch order with appropriate strategy based on role
-    if current_user.role == Role.SUPER_ADMIN:
-        # SUPER_ADMIN: fetch with tenant info to show which customer
+    if current_user.role == Role.SUPERADMIN:
+        # SUPERADMIN: fetch with tenant info to show which customer
         order = order_service.get_order_with_tenant(db, order_id)
     else:
         # Other roles: regular fetch (tenant will be None)
@@ -254,12 +259,12 @@ async def get_order(
         )
 
     # Role-based access control
-    if current_user.role == Role.SUPER_ADMIN:
-        # SUPER_ADMIN can access any order
+    if current_user.role == Role.SUPERADMIN:
+        # SUPERADMIN can access any order
         # Log if accessing order from another tenant for audit trail
         if order.tenant_id is not current_user.tenant_id:
             logger.info(
-                f"SUPER_ADMIN '{current_user.email}' accessed order {order_id} from tenant {order.tenant_id} (not their tenant)"
+                f"SUPERADMIN '{current_user.email}' accessed order {order_id} from tenant {order.tenant_id} (not their tenant)"
             )
     else:
         # Other roles: verify order belongs to their tenant
@@ -285,20 +290,20 @@ async def update_order(
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
     **Access Control:**
-    - SUPER_ADMIN, ADMIN and VENTAS roles can update orders
-    - Tenant restriction applies to non-SUPER_ADMIN users
+    - SUPERADMIN, ADMIN and VENTAS roles can update orders
+    - Tenant restriction applies to non-SUPERADMIN users
     - ADMIN/VENTAS can only update orders from their own tenant
 
     **Behavior:**
     - ADMIN/VENTAS can only update orders from their own tenant
-    - SUPER_ADMIN can update orders from any tenant
-    - If order belongs to different tenant (non-SUPER_ADMIN): returns 403 Forbidden
+    - SUPERADMIN can update orders from any tenant
+    - If order belongs to different tenant (non-SUPERADMIN): returns 403 Forbidden
     - If order not found: returns 404 Not Found
 
     Args:
         order_id: Order ID to update
         order_in: Update data
-        current_user: Current authenticated user (SUPER_ADMIN, ADMIN or VENTAS required)
+        current_user: Current authenticated user (SUPERADMIN, ADMIN or VENTAS required)
         db: Database session
 
     Returns:
@@ -317,8 +322,8 @@ async def update_order(
             detail=f"Order {order_id} not found",
         )
 
-    # Verify order belongs to user's tenant (ADMIN/VENTAS only, SUPER_ADMIN can access any)
-    if current_user.role != Role.SUPER_ADMIN and order.tenant_id != current_user.tenant_id:
+    # Verify order belongs to user's tenant (ADMIN/VENTAS only, SUPERADMIN can access any)
+    if current_user.role != Role.SUPERADMIN and order.tenant_id != current_user.tenant_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this order",
@@ -342,23 +347,21 @@ async def validate_order(
     db: Session = Depends(get_database),
 ) -> OrderResponse:
     """
-    Validate payment and complete order in Shopify.
+    Validate payment and complete order in e-commerce platform (Shopify/WooCommerce).
 
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
     **Access Control:**
-    - SUPER_ADMIN, ADMIN and VENTAS roles can validate orders
+    - SUPERADMIN, ADMIN and VENTAS roles can validate orders
     - ADMIN/VENTAS can only validate orders from their own tenant
-    - SUPER_ADMIN can validate orders from any tenant
+    - SUPERADMIN can validate orders from any tenant
 
     **Validation Flow:**
-    1. Verify user has permission (SUPER_ADMIN, ADMIN or VENTAS)
-    2. Verify order belongs to user's tenant (for non-SUPER_ADMIN)
-    3. Check if order is already validated (409 if yes)
-    4. Check for idempotency (409 if already in Shopify)
-    5. Verify tenant has Shopify credentials (424 if missing)
-    6. Call Shopify API to complete draft order
-    7. Update order with validation info:
+    1. Verify user has permission (SUPERADMIN, ADMIN or VENTAS)
+    2. Verify order belongs to user's tenant (for non-SUPERADMIN)
+    3. Check platform coherence (Shopify needs shopify_draft_order_id, WooCommerce needs woocommerce_order_id)
+    4. Use unified ecommerce_service to validate and sync
+    5. Update order with validation info:
        - validado = True
        - status = "Pagado"
        - validated_at = current datetime
@@ -369,7 +372,7 @@ async def validate_order(
     Args:
         order_id: Order ID to validate
         validate_data: Optional validation data (payment method, notes)
-        current_user: Current authenticated user or API key (SUPER_ADMIN, ADMIN or VENTAS role required)
+        current_user: Current authenticated user or API key (SUPERADMIN, ADMIN or VENTAS role required)
         db: Database session
 
     Returns:
@@ -378,12 +381,10 @@ async def validate_order(
     Raises:
         HTTPException 404: If order not found
         HTTPException 403: If order belongs to different tenant OR insufficient role
-        HTTPException 400: If order already validated
-        HTTPException 409: If order already completed in Shopify (idempotency check)
-        HTTPException 424: If tenant lacks Shopify credentials
+        HTTPException 400: If platform/sync coherence check fails
+        HTTPException 401: If e-commerce credentials are invalid
+        HTTPException 502: For other e-commerce API errors
     """
-    from datetime import datetime
-
     # Get order to verify tenant
     order = order_service.get_order(db, order_id)
 
@@ -393,119 +394,121 @@ async def validate_order(
             detail=f"Order {order_id} not found",
         )
 
-    # Verify order belongs to user's tenant (ADMIN/VENTAS only, SUPER_ADMIN can access any)
-    if current_user.role != Role.SUPER_ADMIN and order.tenant_id != current_user.tenant_id:
+    # Verify order belongs to user's tenant (ADMIN/VENTAS only, SUPERADMIN can access any)
+    if current_user.role != Role.SUPERADMIN and order.tenant_id != current_user.tenant_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this order",
         )
 
-    # Check if already validated
-    if order.validado is True:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Order {order_id} has already been validated at {order.validated_at}",
-        )
-
-    # === SHOPIFY INTEGRATION ===
-    # Check idempotency: if order already has shopify_order_id, it was completed before
-    if order.shopify_order_id is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Order {order_id} already completed in Shopify (Order ID: {order.shopify_order_id})",
-        )
-
-    # Check if tenant has Shopify credentials configured
+    # Get tenant settings for platform and sync configuration
     tenant = order.tenant
-    if not tenant.shopify_access_token or not tenant.shopify_store_url:
-        # Log this event for admin awareness
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.warning(
-            f"Tenant {tenant.id} ({tenant.name}) attempted to validate order but lacks Shopify credentials"
-        )
+    settings = tenant.get_settings()
+    platform = settings.platform
+    sync_enabled = settings.ecommerce.sync_on_validation if settings.ecommerce else False
 
-        raise HTTPException(
-            status_code=status.HTTP_424_FAILED_DEPENDENCY,
-            detail=f"Tenant '{tenant.name}' does not have Shopify credentials configured. Please contact support.",
-        )
+    logger.info(
+        f"ecommerce_validate_start: order_id={order_id}, tenant_id={tenant.id}, "
+        f"platform={platform}, sync_enabled={sync_enabled}, order_source={order.source_platform}"
+    )
+
+    # === COHERENCE CHECKS ===
+    # If sync is enabled, verify order has the required platform ID
+    if sync_enabled and settings.has_ecommerce:
+        if platform == "shopify" and not order.shopify_draft_order_id:
+            logger.warning(
+                f"Coherence check failed: order_id={order_id}, platform=shopify but no shopify_draft_order_id"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Sync enabled for Shopify but order has no shopify_draft_order_id. "
+                       "Cannot sync order that was not created from Shopify.",
+            )
+        
+        if platform == "woocommerce" and not order.woocommerce_order_id:
+            logger.warning(
+                f"Coherence check failed: order_id={order_id}, platform=woocommerce but no woocommerce_order_id"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Sync enabled for WooCommerce but order has no woocommerce_order_id. "
+                       "Cannot sync order that was not created from WooCommerce.",
+            )
 
     try:
-        # Call Shopify service to complete draft order
-        import logging
-        logger = logging.getLogger(__name__)
+        # Extract payment method and notes from validate_data
+        payment_method = validate_data.payment_method if validate_data else None
+        notes = validate_data.notes if validate_data else None
 
-        logger.info(f"shopify_validate_start: order_id={order_id}, tenant_id={tenant.id}")
-
-        validated_order = await shopify_service.validate_and_complete_order(
-            db,
-            order_id,
-            validate_data,
+        # Use unified e-commerce service for validation
+        validated_order = await ecommerce_service.validate_order(
+            db=db,
+            order=order,
+            payment_method=payment_method,
+            notes=notes,
         )
 
         logger.info(
-            f"shopify_validate_success: order_id={order_id}, "
-            f"shopify_order_id={validated_order.shopify_order_id}"
+            f"ecommerce_validate_success: order_id={order_id}, platform={platform}, "
+            f"shopify_order_id={validated_order.shopify_order_id}, "
+            f"woocommerce_order_id={validated_order.woocommerce_order_id}"
         )
 
         return validated_order
 
-    except HTTPException:
-        # Re-raise HTTP exceptions as-is
-        raise
-    except Exception as e:
-        # Log Shopify errors
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(
-            f"shopify_validate_error: order_id={order_id}, error={str(e)}"
-        )
-
-        # Return appropriate error based on exception type
-        error_msg = str(e)
-
-        if "401" in error_msg or "Unauthorized" in error_msg:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Shopify authentication failed. Invalid access token.",
-            )
-        elif "404" in error_msg or "not found" in error_msg.lower():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Draft order not found in Shopify: {error_msg}",
-            )
-        elif "422" in error_msg or "already completed" in error_msg.lower():
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Draft order already completed in Shopify: {error_msg}",
-            )
-        elif "429" in error_msg or "rate limit" in error_msg.lower():
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Shopify API rate limit exceeded. Please try again later.",
-            )
-        elif "timeout" in error_msg.lower() or "connection" in error_msg.lower():
-            raise HTTPException(
-                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-                detail=f"Shopify API timeout or connection error: {error_msg}",
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to complete order in Shopify: {error_msg}",
-            )
-
     except ValueError as e:
-        db.rollback()
+        # Coherence errors from ecommerce_service
+        logger.error(
+            f"ecommerce_validate_error: order_id={order_id}, error=ValueError: {str(e)}"
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+    except WooCommerceAuthError as e:
+        # WooCommerce authentication failed (401)
+        logger.error(
+            f"ecommerce_validate_error: order_id={order_id}, error=WooCommerceAuthError: {str(e)}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciales de e-commerce inválidas. Verifique la configuración de WooCommerce.",
+        )
+
+    except WooCommerceNotFoundError as e:
+        # WooCommerce order not found (404)
+        logger.error(
+            f"ecommerce_validate_error: order_id={order_id}, error=WooCommerceNotFoundError: {str(e)}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Orden no encontrada en e-commerce (WooCommerce ID: {order.woocommerce_order_id})",
+        )
+
+    except WooCommerceError as e:
+        # Other WooCommerce API errors
+        logger.error(
+            f"ecommerce_validate_error: order_id={order_id}, error=WooCommerceError: {str(e)}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Error al comunicarse con e-commerce: {str(e)}",
+        )
+
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+
     except Exception as e:
-        db.rollback()
+        # Catch-all for unexpected errors
+        logger.error(
+            f"ecommerce_validate_error: order_id={order_id}, error=Exception: {str(e)}",
+            exc_info=True,
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to validate order: {str(e)}",
+            detail=f"Error inesperado al validar orden: {str(e)}",
         )
 
 
@@ -522,8 +525,8 @@ async def delete_order(
 
     **Access Control:**
     - Only ADMIN role can delete orders
-    - Tenant restriction applies to ALL users, including SUPER_ADMIN
-    - A SUPER_ADMIN cannot delete orders from other tenants without being assigned to that tenant
+    - Tenant restriction applies to ALL users, including SUPERADMIN
+    - A SUPERADMIN cannot delete orders from other tenants without being assigned to that tenant
     - This is a security measure to prevent accidental order deletions
 
     **Behavior:**
@@ -534,7 +537,7 @@ async def delete_order(
     - If order not found: returns 404 Not Found
 
     **Future Enhancement:**
-    - If SUPER_ADMIN order deletion is needed, separate history with additional confirmations required
+    - If SUPERADMIN order deletion is needed, separate history with additional confirmations required
 
     Args:
         order_id: Order ID to delete
@@ -554,8 +557,8 @@ async def delete_order(
             detail=f"Order {order_id} not found",
         )
 
-    # Verify order belongs to user's tenant (ADMIN only, SUPER_ADMIN can access any)
-    if current_user.role != Role.SUPER_ADMIN and order.tenant_id != current_user.tenant_id:
+    # Verify order belongs to user's tenant (ADMIN only, SUPERADMIN can access any)
+    if current_user.role != Role.SUPERADMIN and order.tenant_id != current_user.tenant_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this order",
@@ -593,9 +596,9 @@ async def create_invoice_for_order(
     This endpoint generates a new electronic invoice for SUNAT submission.
     The invoice is immediately submitted to eFact-OSE for processing.
 
-    **Permissions:** Requires SUPER_ADMIN, ADMIN or VENTAS role
+    **Permissions:** Requires SUPERADMIN, ADMIN or VENTAS role
 
-    SUPER_ADMIN: Can create invoices for any tenant
+    SUPERADMIN: Can create invoices for any tenant
     ADMIN/VENTAS: Can only create for orders in their tenant
 
     **Request Body:**
@@ -638,7 +641,7 @@ async def create_invoice_for_order(
     Args:
         order_id: Order ID to create invoice for
         invoice_data: Invoice creation data (InvoiceCreate)
-        current_user: Current authenticated user (must be SUPER_ADMIN, ADMIN or VENTAS)
+        current_user: Current authenticated user (must be SUPERADMIN, ADMIN or VENTAS)
         db: Database session
 
     Returns:
@@ -655,7 +658,7 @@ async def create_invoice_for_order(
                 )
 
         # Create the invoice using the service
-        tenant_id = None if current_user.role == Role.SUPER_ADMIN else current_user.tenant_id
+        tenant_id = None if current_user.role == Role.SUPERADMIN else current_user.tenant_id
 
         invoice = invoice_service.create_invoice(
             db=db,
@@ -710,7 +713,7 @@ async def get_invoices_for_order(
 
     **Permissions:**
     - All authenticated users can view invoices from their tenant's orders
-    - SUPER_ADMIN can view invoices from any tenant's orders
+    - SUPERADMIN can view invoices from any tenant's orders
 
     Args:
         order_id: Order ID to retrieve invoices for
@@ -729,15 +732,15 @@ async def get_invoices_for_order(
                 detail=f"Order {order_id} not found",
             )
 
-        # For non-SUPER_ADMIN users, validate order belongs to their tenant
-        if current_user.role != Role.SUPER_ADMIN and order.tenant_id != current_user.tenant_id:
+        # For non-SUPERADMIN users, validate order belongs to their tenant
+        if current_user.role != Role.SUPERADMIN and order.tenant_id != current_user.tenant_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You can only view invoices for orders in your tenant",
             )
 
         # Get all invoices for the order
-        tenant_id = order.tenant_id if current_user.role == Role.SUPER_ADMIN else current_user.tenant_id
+        tenant_id = order.tenant_id if current_user.role == Role.SUPERADMIN else current_user.tenant_id
 
         invoices = invoice_service.get_invoices_by_order(
             db=db,

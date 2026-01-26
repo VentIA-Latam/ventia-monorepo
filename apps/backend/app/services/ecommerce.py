@@ -68,9 +68,7 @@ class EcommerceService:
         """
         # 1. Check if already validated
         if order.validado:
-            raise ValueError(
-                f"Order {order.id} has already been validated at {order.validated_at}"
-            )
+            raise ValueError(f"Order {order.id} has already been validated at {order.validated_at}")
 
         # 2. Get tenant and settings
         tenant = order.tenant
@@ -104,13 +102,9 @@ class EcommerceService:
 
             # Sync based on platform
             if platform == "shopify":
-                shopify_order_id = await self._sync_shopify(
-                    order, settings.ecommerce.shopify
-                )
+                shopify_order_id = await self._sync_shopify(db, order, settings.ecommerce.shopify)
             elif platform == "woocommerce":
-                await self._sync_woocommerce(
-                    order, settings.ecommerce.woocommerce
-                )
+                await self._sync_woocommerce(order, settings.ecommerce.woocommerce)
 
         # 4. Update order locally via repository
         update_data: dict = {
@@ -134,28 +128,41 @@ class EcommerceService:
 
     async def _sync_shopify(
         self,
+        db: Session,
         order: Order,
         credentials: ShopifyCredentials,
     ) -> str | None:
         """
         Sync order validation to Shopify by completing the draft order.
 
+        Automatically obtains a valid access token using ShopifyTokenManager,
+        which handles token refresh if needed.
+
         Args:
+            db: Database session
             order: Order with shopify_draft_order_id
-            credentials: Shopify API credentials
+            credentials: Shopify API credentials (used for store_url and api_version)
 
         Returns:
             Shopify order ID if successful
 
         Raises:
-            ValueError: If Shopify API call fails
+            ValueError: If Shopify API call fails or token cannot be obtained
         """
-        if not credentials.access_token:
-            raise ValueError("Shopify access token not configured")
+        from app.integrations.shopify_token_manager import shopify_token_manager
+
+        # Get a valid access token (auto-refreshes if needed)
+        try:
+            access_token = await shopify_token_manager.get_valid_access_token(
+                db=db,
+                tenant=order.tenant,
+            )
+        except ValueError as e:
+            raise ValueError(f"Failed to get Shopify access token: {str(e)}") from e
 
         client = ShopifyClient(
             store_url=credentials.store_url,
-            access_token=credentials.access_token,
+            access_token=access_token,
             api_version=credentials.api_version,
         )
 

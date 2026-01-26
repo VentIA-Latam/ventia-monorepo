@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-VentIA is a multitenant SaaS platform for managing Shopify orders with electronic invoicing integration (Peru). The monorepo contains a Next.js frontend and FastAPI backend.
+VentIA is a multitenant SaaS platform for managing ecommerce orders (Shopify & WooCommerce) with electronic invoicing integration (Peru/SUNAT). The monorepo contains a Next.js frontend and FastAPI backend.
 
 ## Commands
 
@@ -37,6 +37,15 @@ docker exec ventia-backend uv run alembic revision --autogenerate -m "descriptio
 
 # Seed test data
 docker exec ventia-backend uv run python scripts/seed.py
+
+# Reset database (removes volume)
+docker-compose -f docker-compose.dev.yml down -v && docker-compose -f docker-compose.dev.yml up -d
+```
+
+### Docker Shell Access
+```bash
+docker exec -it ventia-backend sh     # Backend shell
+docker exec -it ventia-postgres psql -U ventia_user -d ventia_db  # Database shell
 ```
 
 ### Backend Testing & Linting
@@ -69,7 +78,7 @@ apps/backend/app/
 ├── models/             # SQLAlchemy ORM models
 ├── schemas/            # Pydantic request/response schemas
 ├── core/               # Config, database, auth, permissions
-└── integrations/       # External API clients (Shopify GraphQL)
+└── integrations/       # External API clients (Shopify, WooCommerce, eFact)
 ```
 
 ### Frontend Structure
@@ -90,7 +99,7 @@ apps/frontend/
 
 ### Multitenancy
 - Every business data table has a `tenant_id` foreign key
-- Shopify credentials are stored **per tenant** in the database, NOT in .env
+- Ecommerce credentials (Shopify/WooCommerce) are stored **per tenant** in the database, NOT in .env
 - Data isolation is automatic - all queries filter by tenant
 - Users belong to exactly one tenant
 
@@ -101,19 +110,26 @@ apps/frontend/
 4. Backend validates JWT against Auth0 JWKS and extracts user
 
 ### Role-Based Access Control
-Roles: `ADMIN`, `LOGISTICA`, `VENTAS`, `VIEWER`
+Roles: `SUPERADMIN`, `ADMIN`, `LOGISTICA`, `VENTAS`, `VIEWER`
 - Permissions defined in `apps/backend/app/core/permissions.py`
+- SUPERADMIN: Platform-wide admin (manage all tenants)
 - ADMIN: Full tenant access
 - LOGISTICA: Order management + validation
 - VENTAS: Order viewing
 - VIEWER: Read-only
 
-### Order Flow
+### Order Flow (Shopify)
 1. n8n (external automation) creates draft orders in Shopify
 2. n8n inserts orders into database with `shopify_draft_order_id`
 3. User validates payment via frontend
 4. Backend calls Shopify GraphQL `draftOrderComplete` mutation
 5. Draft order becomes official Shopify order
+
+### Order Flow (WooCommerce)
+1. Orders are synced from WooCommerce via API
+2. Orders stored in database with `woocommerce_order_id`
+3. User validates payment via frontend
+4. Backend updates order status in WooCommerce
 
 ## Adding New Features
 
@@ -140,8 +156,9 @@ Roles: `ADMIN`, `LOGISTICA`, `VENTAS`, `VIEWER`
 ## External Integrations
 
 - **Auth0**: Authentication and JWT validation
-- **Shopify GraphQL Admin API**: Draft order completion
-- **eFact-OSE**: Peru electronic invoicing (configured in `app/core/config.py`)
+- **Shopify GraphQL Admin API**: Draft order completion, store data
+- **WooCommerce REST API**: Order sync and management
+- **eFact-OSE**: Peru electronic invoicing/SUNAT (configured in `app/core/config.py`)
 - **n8n**: External automation for order creation
 
 ## Environment Variables
@@ -151,3 +168,19 @@ Key variables needed (see `.env.example` files):
 - Auth0: `AUTH0_DOMAIN`, `AUTH0_AUDIENCE`, `AUTH0_ISSUER`
 - Frontend Auth0: `NEXT_PUBLIC_AUTH0_*`, `AUTH0_SECRET`, `AUTH0_CLIENT_SECRET`
 - Backend: `SECRET_KEY`, `CORS_ORIGINS`
+- eFact: `EFACT_BASE_URL`, `EFACT_RUC_VENTIA`, `EFACT_PASSWORD_REST`
+
+## Key Files
+
+### Backend Entry Points
+- `app/main.py` - FastAPI application setup
+- `app/core/config.py` - All settings and env vars
+- `app/core/auth.py` - Auth0 JWT validation
+- `app/core/permissions.py` - RBAC definitions
+- `app/api/v1/api.py` - Main router aggregation
+
+### Frontend Entry Points
+- `app/layout.tsx` - Root layout with Auth0 provider
+- `app/dashboard/layout.tsx` - Protected dashboard layout
+- `lib/services/api.ts` - Backend API client
+- `middleware.ts` - Auth middleware for protected routes

@@ -102,7 +102,7 @@ class APIKeyService:
             ValueError: If name already exists in tenant or role is SUPER_ADMIN
         """
         # Validation: Cannot create SUPER_ADMIN API keys
-        if api_key_in.role == Role.SUPER_ADMIN:
+        if api_key_in.role == Role.SUPERADMIN:
             raise ValueError("Cannot create API keys with SUPER_ADMIN role")
 
         # Check if name already exists for this tenant
@@ -169,7 +169,7 @@ class APIKeyService:
         # Determine target tenant
         if api_key_in.tenant_id is not None:
             # User specified a tenant_id
-            if current_user.role != Role.SUPER_ADMIN:
+            if current_user.role != Role.SUPERADMIN:
                 raise ValueError("Only SUPER_ADMIN can create API keys for other tenants")
 
             target_tenant_id = api_key_in.tenant_id

@@ -29,8 +29,18 @@ class OrderBase(BaseModel):
 
     customer_email: EmailStr = Field(..., description="Customer email")
     customer_name: str | None = Field(None, description="Customer name")
-    customer_document_type: str | None = Field(None, description="Tipo de documento: DNI o RUC")
-    customer_document_number: str | None = Field(None, description="Número de DNI o RUC del cliente")
+    customer_document_type: str | None = Field(
+        None,
+        description=(
+            "Tipo de documento SUNAT (catálogo 06): "
+            "1=DNI, 6=RUC, 4=Carnet extranjería, 7=Pasaporte, "
+            "0=Sin documento, A=Cédula diplomática"
+        )
+    )
+    customer_document_number: str | None = Field(
+        None,
+        description="Número de documento del cliente (8 dígitos para DNI, 11 para RUC)"
+    )
     total_price: float | None = Field(None, description="Total price (calculated if not provided)")
     currency: str = Field(default="USD", description="Currency code")
     line_items: list[LineItemBase] | None = Field(None, description="Order line items (products)")

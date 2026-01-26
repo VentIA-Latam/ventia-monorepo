@@ -156,6 +156,40 @@ class InvoiceSerieRepository(CRUDBase[InvoiceSerie, InvoiceSerieCreate, InvoiceS
             .all()
         )
 
+    def get_all(
+        self,
+        db: Session,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        tenant_id: int | None = None,
+    ) -> list[InvoiceSerie]:
+        """
+        Get all invoice series from all tenants (for SUPER_ADMIN).
+
+        Args:
+            db: Database session
+            skip: Number to skip
+            limit: Max results
+            tenant_id: Optional filter by tenant ID
+
+        Returns:
+            List of invoice series
+        """
+        query = db.query(InvoiceSerie)
+
+        # Optional tenant filter (for SUPER_ADMIN with specific tenant)
+        if tenant_id is not None:
+            query = query.filter(InvoiceSerie.tenant_id == tenant_id)
+
+        return (
+            query
+            .order_by(InvoiceSerie.tenant_id, InvoiceSerie.invoice_type, InvoiceSerie.serie)
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
 
 # Global repository instance
 invoice_serie_repository = InvoiceSerieRepository(InvoiceSerie)

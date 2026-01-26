@@ -9,7 +9,7 @@ import logging
 from typing import Any
 
 from sqlalchemy import JSON, Boolean, Column, String
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import attributes, relationship
 
 from app.core.encryption import encryption_service
 from app.models.base import Base, TimestampMixin
@@ -56,24 +56,6 @@ class Tenant(Base, TimestampMixin):
         default=False,
         nullable=False,
         comment="True if this is the VentIA platform tenant (not a client)",
-    )
-
-    # Shopify credentials (per tenant)
-    shopify_store_url = Column(
-        String,
-        nullable=True,
-        comment="Shopify store URL (e.g., 'https://my-store.myshopify.com')",
-    )
-    _shopify_access_token_encrypted = Column(
-        String,
-        nullable=True,
-        comment="Encrypted Shopify Admin API access token (use shopify_access_token property)",
-    )
-    shopify_api_version = Column(
-        String,
-        default="2024-01",
-        nullable=True,
-        comment="Shopify API version (e.g., '2024-01')",
     )
 
     # Metadata
@@ -134,43 +116,6 @@ class Tenant(Base, TimestampMixin):
     invoices = relationship("Invoice", back_populates="tenant", cascade="all, delete-orphan")
     invoice_series = relationship("InvoiceSerie", back_populates="tenant", cascade="all, delete-orphan")
 
-    @property
-    def shopify_access_token(self) -> str | None:
-        """
-        Get decrypted Shopify access token.
-
-        This property transparently decrypts the token when accessed.
-        Returns None if token is not set.
-
-        Returns:
-            str: Decrypted access token or None
-        """
-        if not self._shopify_access_token_encrypted:
-            return None
-
-        try:
-            return encryption_service.decrypt(self._shopify_access_token_encrypted)
-        except Exception:
-            # If decryption fails, return None and log warning
-            # This can happen if SECRET_KEY changed or data is corrupted
-            return None
-
-    @shopify_access_token.setter
-    def shopify_access_token(self, value: str | None) -> None:
-        """
-        Set Shopify access token with automatic encryption.
-
-        This property transparently encrypts the token before storing it.
-        If value is None or empty, the encrypted field is set to None.
-
-        Args:
-            value: Plain text access token or None
-        """
-        if not value:
-            self._shopify_access_token_encrypted = None
-        else:
-            self._shopify_access_token_encrypted = encryption_service.encrypt(value)
-
     def get_settings(self) -> TenantSettings:
         """
         Get tenant settings with decrypted credentials.
@@ -217,13 +162,34 @@ class Tenant(Base, TimestampMixin):
 
         # Decrypt Shopify credentials
         if shopify_dict:
+            # Decrypt OAuth2 credentials
+            client_id = self._safe_decrypt(
+                shopify_dict.get("client_id_encrypted")
+            )
+            client_secret = self._safe_decrypt(
+                shopify_dict.get("client_secret_encrypted")
+            )
             access_token = self._safe_decrypt(
                 shopify_dict.get("access_token_encrypted")
             )
+
+            # Parse expires_at timestamp
+            expires_at_str = shopify_dict.get("access_token_expires_at")
+            access_token_expires_at = None
+            if expires_at_str:
+                try:
+                    from datetime import datetime
+                    access_token_expires_at = datetime.fromisoformat(expires_at_str)
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Failed to parse access_token_expires_at for tenant {self.id}: {e}")
+
             shopify_creds = ShopifyCredentials(
                 store_url=shopify_dict.get("store_url", ""),
+                api_version=shopify_dict.get("api_version", "2025-10"),
+                client_id=client_id,
+                client_secret=client_secret,
                 access_token=access_token,
-                api_version=shopify_dict.get("api_version", "2024-01"),
+                access_token_expires_at=access_token_expires_at,
             )
 
         # Decrypt WooCommerce credentials
@@ -287,6 +253,7 @@ class Tenant(Base, TimestampMixin):
             self.settings["ecommerce"] = {
                 "sync_on_validation": ecommerce.sync_on_validation if ecommerce else True
             }
+            attributes.flag_modified(self, "settings")
             return
 
         ecommerce_dict: dict[str, Any] = {
@@ -299,9 +266,27 @@ class Tenant(Base, TimestampMixin):
                 "store_url": ecommerce.shopify.store_url,
                 "api_version": ecommerce.shopify.api_version,
             }
+
+            # Encrypt OAuth2 credentials
+            if ecommerce.shopify.client_id:
+                ecommerce_dict["shopify"]["client_id_encrypted"] = (
+                    encryption_service.encrypt(ecommerce.shopify.client_id)
+                )
+            if ecommerce.shopify.client_secret:
+                ecommerce_dict["shopify"]["client_secret_encrypted"] = (
+                    encryption_service.encrypt(ecommerce.shopify.client_secret)
+                )
+
+            # Encrypt access token
             if ecommerce.shopify.access_token:
                 ecommerce_dict["shopify"]["access_token_encrypted"] = (
                     encryption_service.encrypt(ecommerce.shopify.access_token)
+                )
+
+            # Store expires_at as ISO string
+            if ecommerce.shopify.access_token_expires_at:
+                ecommerce_dict["shopify"]["access_token_expires_at"] = (
+                    ecommerce.shopify.access_token_expires_at.isoformat()
                 )
 
         # Encrypt and store WooCommerce credentials
@@ -319,6 +304,9 @@ class Tenant(Base, TimestampMixin):
                 )
 
         self.settings["ecommerce"] = ecommerce_dict
+
+        # Mark settings as modified so SQLAlchemy detects the change
+        attributes.flag_modified(self, "settings")
 
     def __repr__(self) -> str:
         """String representation of Tenant."""

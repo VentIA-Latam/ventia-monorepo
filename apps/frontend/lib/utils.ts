@@ -20,66 +20,43 @@ export function formatCurrency(
 }
 
 /**
- * US-007: Helper para formatear fecha
+ * Helper para formatear fecha (solo fecha, sin hora)
  * @param isoDate - Fecha en formato ISO string
  * @returns String formateado "15/01/2024"
  */
 export function formatDate(isoDate: string): string {
-  return new Date(isoDate).toLocaleDateString('es-PE', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    timeZone: 'America/Lima'
-  });
+  const utcDate = new Date(isoDate + 'Z');
+
+  const peruDate = new Date(
+    utcDate.toLocaleString('en-US', { timeZone: 'America/Lima' })
+  );
+
+  const day = String(peruDate.getDate()).padStart(2, '0');
+  const month = String(peruDate.getMonth() + 1).padStart(2, '0');
+  const year = peruDate.getFullYear();
+
+  return `${day}/${month}/${year}`;
 }
 
 /**
- * Helper para formatear fecha y hora completa (24 horas, hora de Perú)
+ * Helper para formatear fecha y hora completa (24 horas, hora de Perú UTC-5)
  * @param isoDate - Fecha en formato ISO string
  * @returns String formateado "15/01/2024, 14:30"
  */
 export function formatDateTime(isoDate: string): string {
-  return new Date(isoDate).toLocaleString('es-PE', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: 'America/Lima'
-  });
-}
+  const utcDate = new Date(isoDate + 'Z');
 
-/**
- * Helper para formatear fecha y hora con segundos (24 horas, hora de Perú)
- * @param isoDate - Fecha en formato ISO string
- * @returns String formateado "15/01/2024, 14:30:45"
- */
-export function formatDateTimeWithSeconds(isoDate: string): string {
-  return new Date(isoDate).toLocaleString('es-PE', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-    timeZone: 'America/Lima'
-  });
-}
+  const peruDate = new Date(
+    utcDate.toLocaleString('en-US', { timeZone: 'America/Lima' })
+  );
 
-/**
- * Helper para formatear solo la hora (24 horas, hora de Perú)
- * @param isoDate - Fecha en formato ISO string
- * @returns String formateado "14:30"
- */
-export function formatTime(isoDate: string): string {
-  return new Date(isoDate).toLocaleTimeString('es-PE', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: 'America/Lima'
-  });
+  const day = String(peruDate.getDate()).padStart(2, '0');
+  const month = String(peruDate.getMonth() + 1).padStart(2, '0');
+  const year = peruDate.getFullYear();
+  const hours = String(peruDate.getHours()).padStart(2, '0');
+  const minutes = String(peruDate.getMinutes()).padStart(2, '0');
+
+  return `${day}/${month}/${year}, ${hours}:${minutes}`;
 }
 
 /**
@@ -87,13 +64,51 @@ export function formatTime(isoDate: string): string {
  * @param gid - ID en formato "gid://shopify/DraftOrder/1026313977995"
  * @returns El ID numérico "1026313977995", o el valor original si no coincide
  */
-export function extractShopifyDraftOrderId(gid: string): string {
+export function extractShopifyDraftOrderId(gid: string | null): string {
+  if (!gid) return '';
   const match = gid.match(/gid:\/\/shopify\/DraftOrder\/(\d+)/);
   return match ? match[1] : gid;
 }
 
 
-export function extractShopifyOrderId(gid: string): string {
+export function extractShopifyOrderId(gid: string | null): string {
+  if (!gid) return '';
   const match = gid.match(/gid:\/\/shopify\/Order\/(\d+)/);
   return match ? match[1] : gid;
+}
+
+/**
+ * Obtiene el ID de e-commerce de una orden (Shopify o WooCommerce)
+ * @param order - Objeto de orden con shopify_draft_order_id o woocommerce_order_id
+ * @returns El ID de la plataforma de e-commerce correspondiente
+ */
+export function getEcommerceOrderId(order: {
+  shopify_draft_order_id: string | null;
+  woocommerce_order_id: number | null;
+}): string {
+  if (order.shopify_draft_order_id) {
+    return extractShopifyDraftOrderId(order.shopify_draft_order_id);
+  }
+  if (order.woocommerce_order_id) {
+    return order.woocommerce_order_id.toString();
+  }
+  return 'N/A';
+}
+
+/**
+ * Obtiene el ID de una orden completada (Shopify Order ID o WooCommerce Order ID)
+ * @param order - Objeto de orden con shopify_order_id o woocommerce_order_id
+ * @returns El ID de la orden completada
+ */
+export function getCompletedOrderId(order: {
+  shopify_order_id: string | null;
+  woocommerce_order_id: number | null;
+}): string {
+  if (order.shopify_order_id) {
+    return extractShopifyOrderId(order.shopify_order_id);
+  }
+  if (order.woocommerce_order_id) {
+    return order.woocommerce_order_id.toString();
+  }
+  return 'N/A';
 }

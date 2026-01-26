@@ -2,7 +2,7 @@ import { Order as UIOrder } from "@/lib/types/order";
 import { fetchOrders, Order as BackendOrder } from "@/lib/services/order-service";
 import { getAccessToken } from "@/lib/auth0";
 import { OrdersClientView } from "./orders-client";
-import { extractShopifyDraftOrderId, extractShopifyOrderId } from "@/lib/utils";
+import { formatDate, getEcommerceOrderId, extractShopifyOrderId } from "@/lib/utils";
 
 /**
  * Server Component - Carga de datos segura
@@ -32,18 +32,15 @@ function getCurrencySymbol(currency: string): string {
 // Map backend order to UI order format
 function mapBackendOrderToUI(backendOrder: BackendOrder): UIOrder {
   return {
-    id: backendOrder.shopify_draft_order_id
-      ? extractShopifyDraftOrderId(backendOrder.shopify_draft_order_id)
-      : backendOrder.id.toString(),
+    id: getEcommerceOrderId({
+      shopify_draft_order_id: backendOrder.shopify_draft_order_id,
+      woocommerce_order_id: backendOrder.woocommerce_order_id
+    }),
     dbId: backendOrder.id, // ID real de la base de datos
     shopifyOrderId: backendOrder.shopify_order_id
       ? extractShopifyOrderId(backendOrder.shopify_order_id)
       : null,
-    date: new Date(backendOrder.created_at).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    }),
+    date: formatDate(backendOrder.created_at),
     client: {
       name: backendOrder.customer_name || 'Sin nombre',
       email: backendOrder.customer_email,

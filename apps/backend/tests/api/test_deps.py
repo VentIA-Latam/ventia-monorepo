@@ -225,14 +225,14 @@ class TestRequirePermissionDual:
 
     @pytest.mark.asyncio
     async def test_super_admin_has_all_permissions(self):
-        """Test that SUPER_ADMIN role has access to all endpoints."""
-        mock_user = self._create_mock_user(role=Role.SUPER_ADMIN)
+        """Test that SUPERADMIN role has access to all endpoints."""
+        mock_user = self._create_mock_user(role=Role.SUPERADMIN)
         mock_request = self._create_mock_request("/api/v1/invoices")
         mock_credentials = MagicMock(spec=HTTPAuthorizationCredentials)
         mock_credentials.credentials = "valid_jwt_token"
         mock_db = MagicMock()
 
-        # SUPER_ADMIN should have POST access to /invoices
+        # SUPERADMIN should have POST access to /invoices
         dependency = require_permission_dual("POST", "/invoices")
 
         with patch(
@@ -248,7 +248,7 @@ class TestRequirePermissionDual:
             )
 
         assert result == mock_user
-        assert result.role == Role.SUPER_ADMIN
+        assert result.role == Role.SUPERADMIN
 
     @pytest.mark.asyncio
     async def test_ventas_can_create_invoices(self):
@@ -354,7 +354,7 @@ class TestPermissionsTableIntegrity:
         from app.core.permissions import can_access, Role
 
         # All roles should be able to GET invoices
-        assert can_access(Role.SUPER_ADMIN, "GET", "/invoices") is True
+        assert can_access(Role.SUPERADMIN, "GET", "/invoices") is True
         assert can_access(Role.ADMIN, "GET", "/invoices") is True
         assert can_access(Role.LOGISTICA, "GET", "/invoices") is True
         assert can_access(Role.VENTAS, "GET", "/invoices") is True
@@ -364,8 +364,8 @@ class TestPermissionsTableIntegrity:
         """Test that POST /invoices has correct permissions."""
         from app.core.permissions import can_access, Role
 
-        # Only SUPER_ADMIN, ADMIN, VENTAS can POST invoices
-        assert can_access(Role.SUPER_ADMIN, "POST", "/invoices") is True
+        # Only SUPERADMIN, ADMIN, VENTAS can POST invoices
+        assert can_access(Role.SUPERADMIN, "POST", "/invoices") is True
         assert can_access(Role.ADMIN, "POST", "/invoices") is True
         assert can_access(Role.VENTAS, "POST", "/invoices") is True
         assert can_access(Role.LOGISTICA, "POST", "/invoices") is False
@@ -376,7 +376,7 @@ class TestPermissionsTableIntegrity:
         from app.core.permissions import can_access, Role
 
         # All roles should be able to GET invoice details
-        assert can_access(Role.SUPER_ADMIN, "GET", "/invoices/123/pdf") is True
+        assert can_access(Role.SUPERADMIN, "GET", "/invoices/123/pdf") is True
         assert can_access(Role.ADMIN, "GET", "/invoices/123/xml") is True
         assert can_access(Role.LOGISTICA, "GET", "/invoices/456/status") is True
         assert can_access(Role.VENTAS, "GET", "/invoices/789/pdf") is True
@@ -387,20 +387,20 @@ class TestPermissionsTableIntegrity:
         from app.core.permissions import can_access, Role
 
         # GET: All roles
-        assert can_access(Role.SUPER_ADMIN, "GET", "/invoice-series") is True
+        assert can_access(Role.SUPERADMIN, "GET", "/invoice-series") is True
         assert can_access(Role.VIEWER, "GET", "/invoice-series") is True
 
-        # POST: Only SUPER_ADMIN, ADMIN
-        assert can_access(Role.SUPER_ADMIN, "POST", "/invoice-series") is True
+        # POST: Only SUPERADMIN, ADMIN
+        assert can_access(Role.SUPERADMIN, "POST", "/invoice-series") is True
         assert can_access(Role.ADMIN, "POST", "/invoice-series") is True
         assert can_access(Role.VENTAS, "POST", "/invoice-series") is False
 
-        # PATCH: Only SUPER_ADMIN, ADMIN
-        assert can_access(Role.SUPER_ADMIN, "PATCH", "/invoice-series/1") is True
+        # PATCH: Only SUPERADMIN, ADMIN
+        assert can_access(Role.SUPERADMIN, "PATCH", "/invoice-series/1") is True
         assert can_access(Role.ADMIN, "PATCH", "/invoice-series/1") is True
         assert can_access(Role.VENTAS, "PATCH", "/invoice-series/1") is False
 
-        # DELETE: Only SUPER_ADMIN, ADMIN
-        assert can_access(Role.SUPER_ADMIN, "DELETE", "/invoice-series/1") is True
+        # DELETE: Only SUPERADMIN, ADMIN
+        assert can_access(Role.SUPERADMIN, "DELETE", "/invoice-series/1") is True
         assert can_access(Role.ADMIN, "DELETE", "/invoice-series/1") is True
         assert can_access(Role.VENTAS, "DELETE", "/invoice-series/1") is False

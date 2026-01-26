@@ -6,6 +6,7 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.core.permissions import Role
+from app.integrations.auth0_client import auth0_client
 from app.models.user import User
 from app.repositories.tenant import tenant_repository
 from app.repositories.user import user_repository
@@ -70,7 +71,7 @@ class UserService:
             except KeyError:
                 raise ValueError(f"Invalid role: {role}. Must be one of: {', '.join([r.name for r in Role])}")
 
-        if current_user.role == Role.SUPER_ADMIN:
+        if current_user.role == Role.SUPERADMIN:
             # SUPER_ADMIN with advanced filters and metadata
             users, total = user_repository.get_all_with_filters(
                 db,
@@ -118,7 +119,7 @@ class UserService:
             raise ValueError(f"User with ID {user_id} not found")
 
         # SUPER_ADMIN can access any user
-        if current_user.role == Role.SUPER_ADMIN:
+        if current_user.role == Role.SUPERADMIN:
             return user
 
         # Other roles: verify same tenant
@@ -129,7 +130,7 @@ class UserService:
 
     # ==================== CREATE USER ====================
 
-    def create_user_for_role(
+    async def create_user_for_role(
         self,
         db: Session,
         user_in: UserCreate,
@@ -137,6 +138,14 @@ class UserService:
     ) -> User:
         """
         Create user with validations based on current user's role.
+
+        Flow:
+        1. Validate role is not SUPERADMIN
+        2. Validate tenant access
+        3. Check uniqueness (email only, since auth0_user_id will be generated)
+        4. Create user in Auth0 Management API
+        5. Create user in local database with Auth0 user_id
+        6. Send invitation email
 
         SUPER_ADMIN:
         - Can create users in any tenant
@@ -160,11 +169,11 @@ class UserService:
         """
         # === ROLE VALIDATION ===
         # No one can create SUPER_ADMIN users
-        if user_in.role == Role.SUPER_ADMIN:
+        if user_in.role == Role.SUPERADMIN:
             raise ValueError("Cannot create users with SUPER_ADMIN role")
 
         # === TENANT VALIDATION ===
-        if current_user.role == Role.SUPER_ADMIN:
+        if current_user.role == Role.SUPERADMIN:
             # SUPER_ADMIN: validate tenant exists and is active
             tenant = tenant_repository.get(db, user_in.tenant_id)
             if not tenant:
@@ -182,16 +191,47 @@ class UserService:
         if existing_user:
             raise ValueError(f"User with email {user_in.email} already exists")
 
-        # Auth0 ID must be unique
-        existing_auth0_user = user_repository.get_by_auth0_id(db, user_in.auth0_user_id)
-        if existing_auth0_user:
-            raise ValueError(f"User with Auth0 ID {user_in.auth0_user_id} already exists")
+        # === CREATE USER IN AUTH0 ===
+        try:
+            auth0_user = await auth0_client.create_user(
+                email=user_in.email,
+                name=user_in.name,
+                email_verified=False,
+                needs_invitation=True,
+            )
+            auth0_user_id = auth0_user["user_id"]
 
-        return user_repository.create(db, obj_in=user_in)
+        except RuntimeError as e:
+            logger.error(f"Failed to create Auth0 user: {str(e)}")
+            raise ValueError(f"Failed to create user in Auth0: {str(e)}")
+
+        # === CREATE USER IN DATABASE ===
+        try:
+            # Update user_in with Auth0 user_id
+            user_data = user_in.model_dump()
+            user_data["auth0_user_id"] = auth0_user_id
+
+            user = user_repository.create(db, obj_in=UserCreate(**user_data))
+
+        except Exception as e:
+            logger.error(f"Failed to create user in database: {str(e)}")
+            # TODO: Consider rollback - delete Auth0 user if DB creation fails
+            raise ValueError(f"Failed to create user in database: {str(e)}")
+
+        # === SEND INVITATION EMAIL ===
+        try:
+            await auth0_client.send_invitation_email(user.email)
+            logger.info(f"Sent invitation email to {user.email}")
+
+        except RuntimeError as e:
+            logger.warning(f"User created but failed to send invitation: {str(e)}")
+            # Don't fail - user was created successfully
+
+        return user
 
     # ==================== UPDATE USER ====================
 
-    def update_user_for_role(
+    async def update_user_for_role(
         self,
         db: Session,
         user_id: int,
@@ -200,6 +240,8 @@ class UserService:
     ) -> tuple[User, str | None]:
         """
         Update user with role-based access control and validations.
+
+        If is_active is changed, syncs blocked status with Auth0.
 
         SUPER_ADMIN:
         - Can update any user from any tenant
@@ -233,7 +275,7 @@ class UserService:
             raise ValueError(f"User with ID {user_id} not found")
 
         # === VALIDATE ACCESS ===
-        if current_user.role == Role.SUPER_ADMIN:
+        if current_user.role == Role.SUPERADMIN:
             # SUPER_ADMIN can update any user
             # But cannot deactivate themselves
             if user_in.is_active is False and user_id == current_user.id:
@@ -244,7 +286,7 @@ class UserService:
                 raise ValueError("Can only update users in your own tenant")
 
             # Cannot deactivate SUPER_ADMIN users
-            if user_in.is_active is False and user.role == Role.SUPER_ADMIN:
+            if user_in.is_active is False and user.role == Role.SUPERADMIN:
                 raise ValueError("Cannot deactivate SUPER_ADMIN users")
 
             # Cannot deactivate ADMIN users (only other ADMINs in the tenant can)
@@ -256,7 +298,7 @@ class UserService:
                 raise ValueError("Cannot deactivate yourself")
 
         # === PREVENT SUPER_ADMIN ROLE ASSIGNMENT ===
-        if user_in.role == Role.SUPER_ADMIN:
+        if user_in.role == Role.SUPERADMIN:
             raise ValueError("Cannot assign SUPER_ADMIN role to users")
 
         # === WARN IF ROLE CHANGED AND USER IS INACTIVE ===
@@ -264,18 +306,33 @@ class UserService:
         if user_in.role is not None and user_in.role != user.role:
             # Determine if user will be inactive after update
             will_be_inactive = user_in.is_active is False or (user_in.is_active is None and not user.is_active)
-            
+
             if will_be_inactive:
                 warning = f"User {user_id} role changed from {user.role.name} to {user_in.role.name}, but user is inactive"
                 logger.warning(f"{warning} by {current_user.email}")
 
         # Update user with only allowed fields
         updated_user = user_repository.update(db, db_obj=user, obj_in=user_in)
+
+        # === SYNC BLOCKED STATUS WITH AUTH0 ===
+        if user_in.is_active is not None:
+            try:
+                if user_in.is_active:
+                    await auth0_client.unblock_user(updated_user.auth0_user_id)
+                    logger.info(f"Unblocked Auth0 user {updated_user.auth0_user_id}")
+                else:
+                    await auth0_client.block_user(updated_user.auth0_user_id)
+                    logger.info(f"Blocked Auth0 user {updated_user.auth0_user_id}")
+
+            except RuntimeError as e:
+                logger.warning(f"Failed to sync block status with Auth0: {str(e)}")
+                warning = "User updated locally but failed to sync with Auth0"
+
         return updated_user, warning
 
     # ==================== DELETE USER ====================
 
-    def delete_user_for_access(
+    async def delete_user_for_access(
         self,
         db: Session,
         user_id: int,
@@ -283,6 +340,8 @@ class UserService:
     ) -> User:
         """
         Deactivate user with access control based on role (soft delete).
+
+        Also blocks user in Auth0.
 
         SUPER_ADMIN only: Can deactivate any user (except themselves).
         - Cannot deactivate the last active SUPER_ADMIN in the system
@@ -300,7 +359,7 @@ class UserService:
             ValueError: If validation fails
         """
         # === RESTRICT TO SUPER_ADMIN ONLY ===
-        if current_user.role != Role.SUPER_ADMIN:
+        if current_user.role != Role.SUPERADMIN:
             raise ValueError("Only SUPER_ADMIN can deactivate users")
 
         # === PREVENT SELF-DEACTIVATION ===
@@ -313,10 +372,10 @@ class UserService:
             raise ValueError(f"User with ID {user_id} not found")
 
         # === PREVENT DEACTIVATING LAST ACTIVE SUPER_ADMIN ===
-        if user.role == Role.SUPER_ADMIN:
+        if user.role == Role.SUPERADMIN:
             # Count active SUPER_ADMIN users (excluding the one being deactivated)
             active_superadmins = db.query(User).filter(
-                User.role == Role.SUPER_ADMIN,
+                User.role == Role.SUPERADMIN,
                 User.is_active == True,
                 User.id != user_id
             ).count()
@@ -328,8 +387,17 @@ class UserService:
         # Mark user as inactive instead of deleting from database
         user_in = UserUpdate(is_active=False)
         deactivated_user = user_repository.update(db, db_obj=user, obj_in=user_in)
-        
+
         logger.info(f"User {user_id} deactivated by {current_user.email}")
+
+        # === BLOCK USER IN AUTH0 ===
+        try:
+            await auth0_client.block_user(deactivated_user.auth0_user_id)
+            logger.info(f"Blocked Auth0 user {deactivated_user.auth0_user_id}")
+
+        except RuntimeError as e:
+            logger.warning(f"User deactivated locally but failed to block in Auth0: {str(e)}")
+
         return deactivated_user
 
     # ==================== UTILITY METHODS ====================

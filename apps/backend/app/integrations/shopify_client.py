@@ -148,9 +148,11 @@ class ShopifyClient:
             raise ValueError(f"Shopify user errors: {'; '.join(error_messages)}")
 
         # Return completed draft order with order info
-        draft_order = result.get("draftOrder", {})
-        order = draft_order.get("order")
+        draft_order = result.get("draftOrder")
+        if not draft_order:
+            raise ValueError("Draft order completed but no draft order data returned")
 
+        order = draft_order.get("order")
         if not order:
             raise ValueError("Draft order completed but no order was created")
 

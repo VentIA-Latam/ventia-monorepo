@@ -396,3 +396,40 @@ export async function deleteInvoiceSerie(
     throw new Error(error.detail || "Failed to delete invoice series");
   }
 }
+
+/**
+ * Send invoice by email
+ * POST /invoices/{invoiceId}/send-email
+ */
+export async function sendInvoiceEmail(
+  accessToken: string,
+  invoiceId: number,
+  recipientEmail?: string,
+  includeXml?: boolean
+): Promise<{
+  success: boolean;
+  email_id?: string;
+  sent_to: string;
+  message: string;
+}> {
+  const response = await fetch(`${API_URL}/invoices/${invoiceId}/send-email`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      recipient_email: recipientEmail,
+      include_xml: includeXml || false,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({
+      detail: "Failed to send invoice email",
+    }));
+    throw new Error(error.detail || "Failed to send invoice email");
+  }
+
+  return response.json();
+}

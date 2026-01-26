@@ -23,9 +23,11 @@ import {
 } from "@/components/ui/dialog";
 import { InvoiceSuccessDialog } from "@/components/invoices/invoice-success-dialog";
 import { InvoiceErrorDialog } from "@/components/invoices/invoice-error-dialog";
+import { SendEmailDialog } from "@/components/invoices/send-email-dialog";
+import { useToast } from "@/hooks/use-toast";
 import type { Order } from "@/lib/services/order-service";
 import type { Invoice, InvoiceSerie, InvoiceCreate } from "@/lib/types/invoice";
-import { extractShopifyDraftOrderId, extractShopifyOrderId } from "@/lib/utils";
+import { getCompletedOrderId } from "@/lib/utils";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -36,6 +38,7 @@ interface NewInvoiceFormProps {
 
 export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps) {
   const router = useRouter();
+  const { toast } = useToast();
 
   // Estados del formulario
   const [invoiceType, setInvoiceType] = useState<string>("");
@@ -70,6 +73,10 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [createdInvoice, setCreatedInvoice] = useState<Invoice | null>(null);
   const [errorDetails, setErrorDetails] = useState<string>("");
+
+  // Estados para envío de email
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   // Determinar si el cliente tiene RUC (usar estado editable)
   const hasRUC = customerDocumentType === "6" && customerDocumentNumber?.length === 11;
@@ -351,6 +358,7 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
       // Cerrar modal de carga y mostrar modal de resultado
       setShowLoadingDialog(false);
       setCreatedInvoice(newInvoice);
+      setSubmitting(false);
 
       // Mostrar modal de éxito o error según el estado
       if (newInvoice.efact_status === "success") {
@@ -371,6 +379,72 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
     }
   };
 
+  // Handler para abrir el dialog de email
+  const handleOpenEmailDialog = () => {
+    if (!createdInvoice) return;
+
+    // Validar que el comprobante fue exitoso
+    if (createdInvoice.efact_status !== "success") {
+      toast({
+        title: "No se puede enviar",
+        description: "Solo se pueden enviar comprobantes con estado exitoso.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validar que tenga email
+    if (!createdInvoice.cliente_email) {
+      toast({
+        title: "Email no disponible",
+        description: "El comprobante no tiene un email de cliente registrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setEmailDialogOpen(true);
+  };
+
+  // Handler para confirmar envío de email
+  const handleConfirmSendEmail = async (email: string, includeXml: boolean) => {
+    if (!createdInvoice) return;
+
+    setSendingEmail(true);
+    try {
+      const response = await fetch(`/api/invoices/send-email/${createdInvoice.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipient_email: email,
+          include_xml: includeXml,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Error al enviar el email");
+      }
+
+      toast({
+        title: "Email enviado",
+        description: `El comprobante ha sido enviado a ${data.sent_to}`,
+      });
+
+      setEmailDialogOpen(false);
+    } catch (err) {
+      console.error("Error sending email:", err);
+      toast({
+        title: "Error al enviar email",
+        description: err instanceof Error ? err.message : "Error desconocido",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -384,7 +458,7 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
           </Link>
           <h1 className="text-3xl font-bold mt-2">Crear Comprobante</h1>
           <p className="text-muted-foreground">
-            Orden #{order.shopify_order_id ? extractShopifyOrderId(order.shopify_order_id) : order.shopify_order_id!.toString()} • {order.customer_name}
+            Orden #{getCompletedOrderId(order)} • {order.customer_name}
           </p>
         </div>
         <FileText className="h-12 w-12 text-muted-foreground" />
@@ -652,7 +726,7 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
             <CardContent className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground">Número de Orden</p>
-                <p className="font-medium">{order.shopify_order_id ? extractShopifyOrderId(order.shopify_order_id) : order.shopify_order_id!.toString()}</p>
+                <p className="font-medium">{getCompletedOrderId(order)}</p>
               </div>
 
               <Separator />
@@ -821,7 +895,13 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
       </div>
 
       {/* Modal de Confirmación */}
-      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+      <Dialog open={showConfirmDialog} onOpenChange={(open) => {
+        setShowConfirmDialog(open);
+        if (!open) {
+          // Si el usuario cierra el modal sin confirmar, resetear submitting
+          setSubmitting(false);
+        }
+      }}>
         <DialogContent className="max-w-[95vw] sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">Confirmar Creación de Comprobante</DialogTitle>
@@ -972,7 +1052,13 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
       {/* Modal de Éxito */}
       <InvoiceSuccessDialog
         open={showSuccessDialog}
-        onOpenChange={setShowSuccessDialog}
+        onOpenChange={(open) => {
+          setShowSuccessDialog(open);
+          if (!open) {
+            // Cuando se cierra el modal de éxito, asegurar que submitting está en false
+            setSubmitting(false);
+          }
+        }}
         invoice={createdInvoice}
         onViewInvoice={() => {
           if (createdInvoice) {
@@ -1003,6 +1089,7 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
             }
           }
         }}
+        onSendEmail={handleOpenEmailDialog}
       />
 
       {/* Modal de Error */}
@@ -1017,6 +1104,15 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
           setErrorDetails("");
           handleConfirmCreate();
         }}
+      />
+
+      {/* Modal de Envío de Email */}
+      <SendEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        invoice={createdInvoice}
+        onConfirm={handleConfirmSendEmail}
+        loading={sendingEmail}
       />
     </div>
   );
