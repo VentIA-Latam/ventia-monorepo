@@ -4,7 +4,7 @@ Application settings and configuration.
 
 from typing import List
 
-from pydantic import PostgresDsn, field_validator
+from pydantic import Field, PostgresDsn, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -34,6 +34,18 @@ class Settings(BaseSettings):
     AUTH0_AUDIENCE: str
     AUTH0_ISSUER: str
     AUTH0_ALGORITHM: str = "RS256"
+
+    # Auth0 Management API (for user creation and management)
+    AUTH0_MANAGEMENT_CLIENT_ID: str = Field(..., description="Auth0 Management API Client ID")
+    AUTH0_MANAGEMENT_CLIENT_SECRET: str = Field(..., description="Auth0 Management API Client Secret")
+    AUTH0_MANAGEMENT_AUDIENCE: str = Field(
+        ...,
+        description="Auth0 Management API Audience (https://{domain}/api/v2/)"
+    )
+    AUTH0_CONNECTION: str = Field(
+        ...,
+        description="Auth0 database connection name (REQUIRED - no default to prevent production errors)"
+    )
 
     # eFact-OSE (Electronic Invoicing - Peru SUNAT)
     EFACT_BASE_URL: str = "https://ose-gw1.efact.pe:443/api-efact-ose"
