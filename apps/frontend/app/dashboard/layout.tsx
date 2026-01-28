@@ -22,6 +22,7 @@ export default function DashboardLayout({
     if (pathname.includes('/invoices/series')) return 'Series de facturación';
     if (pathname.includes('/invoices')) return 'Facturación';
     if (pathname.includes('/settings/api-keys')) return 'Credenciales (API Key)';
+    if (pathname.includes('/chatwoot')) return 'Chatwoot';
     return 'Dashboard';
   };
 
