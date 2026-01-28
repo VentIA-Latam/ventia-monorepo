@@ -243,6 +243,9 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
                 onChange={(e) => setFormData({ ...formData, emisor_nombre_comercial: e.target.value })}
                 placeholder="Ej: Tienda Example S.A.C."
               />
+              <p className="text-xs text-gray-500">
+                RUC del tenant para facturación electrónica en Perú (opcional, debe tener 11 dígitos)
+              </p>
             </div>
 
             {/* Sección: Ubicación Fiscal */}
