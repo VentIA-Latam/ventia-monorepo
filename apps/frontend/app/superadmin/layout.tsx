@@ -17,6 +17,7 @@ export default function SuperAdminLayout({
     if (pathname.includes('/tenants')) return 'Gestión de Tenants';
     if (pathname.includes('/users')) return 'Gestión de Usuarios';
     if (pathname.includes('/api-keys')) return 'Gestión de API Keys';
+    if (pathname.includes('/chatwoot')) return 'Chatwoot';
     return 'SuperAdmin';
   };
 

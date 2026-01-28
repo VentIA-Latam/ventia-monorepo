@@ -12,6 +12,7 @@ import {
   Key,
   Shield,
   ArrowLeft,
+  MessageSquare,
 } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Image from "next/image"
@@ -61,6 +62,11 @@ const dataSuperAdmin = [
     title: "API Keys",
     url: "/superadmin/api-keys",
     icon: Key,
+  },
+  {
+    title: "Chatwoot",
+    url: "/superadmin/chatwoot",
+    icon: MessageSquare,
   },
 ]
 
