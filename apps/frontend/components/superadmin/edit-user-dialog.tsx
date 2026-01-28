@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { updateUser, getTenants } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

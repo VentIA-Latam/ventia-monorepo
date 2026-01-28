@@ -38,16 +38,8 @@ export function ToggleTenantStatusDialog({
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/superadmin/tenants/${tenant.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active: !tenant.is_active }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Error al actualizar estado');
-      }
+      // ✅ Usa Client API Layer
+      await toggleTenantStatus(tenant.id, !tenant.is_active);
 
       toast({
         title: tenant.is_active ? "Tenant desactivado" : "Tenant activado",

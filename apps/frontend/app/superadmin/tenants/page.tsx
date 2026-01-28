@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Building2, Plus, Search, MoreHorizontal, Eye, Edit, Power, Store, ShoppingBag } from "lucide-react";
+import { getTenants } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -78,12 +79,10 @@ export default function TenantsPage() {
   const fetchTenants = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/superadmin/tenants');
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Tenants data:', data.items); // Debug
-        setTenants(data.items || []);
-      }
+      // ✅ Usa Client API Layer
+      const data = await getTenants({ limit: 100 });
+      console.log('Tenants data:', data.items); // Debug
+      setTenants(data.items || []);
     } catch (error) {
       console.error('Error fetching tenants:', error);
     } finally {

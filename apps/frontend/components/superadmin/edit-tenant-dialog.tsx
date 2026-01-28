@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { updateTenant } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -168,16 +169,8 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
         updateData.shopify_access_token = null;
       }
 
-      const response = await fetch(`/api/superadmin/tenants/${tenant.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updateData),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Error al actualizar tenant');
-      }
+      // ✅ Usa Client API Layer
+      await updateTenant(tenant.id, updateData);
 
       toast({
         title: "Tenant actualizado",

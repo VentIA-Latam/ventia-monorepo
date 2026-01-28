@@ -55,11 +55,9 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/superadmin/users");
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data.items || []);
-      }
+      // ✅ Usa Client API Layer
+      const data = await getUsers({ limit: 100 });
+      setUsers(data.items || []);
     } catch {
       // handle error
     } finally {
@@ -69,11 +67,9 @@ export default function UsersPage() {
 
   const fetchTenants = async () => {
     try {
-      const response = await fetch("/api/superadmin/tenants");
-      if (response.ok) {
-        const data = await response.json();
-        setTenants(data.items || []);
-      }
+      // ✅ Usa Client API Layer
+      const data = await getTenants({ limit: 100 });
+      setTenants(data.items || []);
     } catch {
       // handle error
     }
