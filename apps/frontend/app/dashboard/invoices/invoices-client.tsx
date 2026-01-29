@@ -124,16 +124,8 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
       });
     }
   };
-  document.body.appendChild(a);
-  a.click();
-  window.URL.revokeObjectURL(url);
-  document.body.removeChild(a);
-} catch (error) {
-  console.error("Error downloading XML:", error);
-}
-  };
 
-return (
+  return (
   <div className="space-y-6">
     {/* Header */}
     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
