@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Users, Plus, Eye, Power, MoreHorizontal, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getUsers, getTenants } from "@/lib/api-client";
 import {
   Card,
   CardContent,

@@ -44,6 +44,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { downloadInvoicePdf, downloadInvoiceXml } from "@/lib/api-client/invoices";
+import { useToast } from "@/hooks/use-toast";
 
 interface InvoicesClientViewProps {
   initialInvoices: Invoice[];
@@ -53,6 +55,7 @@ interface InvoicesClientViewProps {
  * Client Component - Interactividad y filtros
  */
 export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps) {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -126,176 +129,176 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
   };
 
   return (
-  <div className="space-y-6">
-    {/* Header */}
-    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <FileText className="h-6 w-6" />
-          Comprobantes Electrónicos
-        </h1>
-        <p className="text-sm text-gray-600 mt-1">
-          Gestiona facturas, boletas y comprobantes electrónicos
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <FileText className="h-6 w-6" />
+            Comprobantes Electrónicos
+          </h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Gestiona facturas, boletas y comprobantes electrónicos
+          </p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Buscar por serie, cliente, RUC/DNI..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Tipo de comprobante" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los tipos</SelectItem>
+                <SelectItem value="01">Factura</SelectItem>
+                <SelectItem value="03">Boleta</SelectItem>
+                <SelectItem value="07">Nota de Crédito</SelectItem>
+                <SelectItem value="08">Nota de Débito</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger>
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los estados</SelectItem>
+                <SelectItem value="pending">Pendiente</SelectItem>
+                <SelectItem value="processing">Procesando</SelectItem>
+                <SelectItem value="success">Exitoso</SelectItem>
+                <SelectItem value="error">Error</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Results Summary */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-600">
+          Mostrando <span className="font-semibold">{filteredInvoices.length}</span> de{" "}
+          <span className="font-semibold">{initialInvoices.length}</span> comprobantes
         </p>
       </div>
-    </div>
 
-    {/* Filters */}
-    <Card>
-      <CardContent className="pt-6">
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Buscar por serie, cliente, RUC/DNI..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger>
-              <SelectValue placeholder="Tipo de comprobante" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los tipos</SelectItem>
-              <SelectItem value="01">Factura</SelectItem>
-              <SelectItem value="03">Boleta</SelectItem>
-              <SelectItem value="07">Nota de Crédito</SelectItem>
-              <SelectItem value="08">Nota de Débito</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger>
-              <SelectValue placeholder="Estado" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los estados</SelectItem>
-              <SelectItem value="pending">Pendiente</SelectItem>
-              <SelectItem value="processing">Procesando</SelectItem>
-              <SelectItem value="success">Exitoso</SelectItem>
-              <SelectItem value="error">Error</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </CardContent>
-    </Card>
-
-    {/* Results Summary */}
-    <div className="flex items-center justify-between">
-      <p className="text-sm text-gray-600">
-        Mostrando <span className="font-semibold">{filteredInvoices.length}</span> de{" "}
-        <span className="font-semibold">{initialInvoices.length}</span> comprobantes
-      </p>
-    </div>
-
-    {/* Invoices Table */}
-    <Card>
-      <CardHeader>
-        <CardTitle>Lista de Comprobantes</CardTitle>
-        <CardDescription>
-          Comprobantes electrónicos generados desde órdenes
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Serie - Número</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Documento</TableHead>
-                <TableHead className="text-right">Monto</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredInvoices.length === 0 ? (
+      {/* Invoices Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de Comprobantes</CardTitle>
+          <CardDescription>
+            Comprobantes electrónicos generados desde órdenes
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                    No se encontraron comprobantes
-                  </TableCell>
+                  <TableHead>Serie - Número</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Documento</TableHead>
+                  <TableHead className="text-right">Monto</TableHead>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
-              ) : (
-                filteredInvoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
-                    <TableCell className="font-mono font-medium">
-                      {invoice.full_number}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {INVOICE_TYPE_NAMES[invoice.invoice_type]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {invoice.cliente_razon_social || <span className="text-gray-400">-</span>}
-                    </TableCell>
-                    <TableCell>
-                      {invoice.cliente_numero_documento || <span className="text-gray-400">-</span>}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {invoice.currency} {invoice.total.toFixed(2)}
-                    </TableCell>
-                    <TableCell>
-                      {formatDate(invoice.created_at)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={INVOICE_STATUS_COLORS[invoice.efact_status] || ""}
-                      >
-                        <span className="flex items-center gap-1">
-                          {getStatusIcon(invoice.efact_status)}
-                          {INVOICE_STATUS_NAMES[invoice.efact_status]}
-                        </span>
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <Link href={`/dashboard/invoices/${invoice.id}`}>
-                            <DropdownMenuItem>
-                              <Eye className="h-4 w-4 mr-2" />
-                              Ver detalles
-                            </DropdownMenuItem>
-                          </Link>
-                          {invoice.efact_status === "success" && (
-                            <>
-                              <DropdownMenuItem
-                                onClick={() => handleDownloadPDF(invoice.id)}
-                              >
-                                <FileDown className="h-4 w-4 mr-2" />
-                                Descargar PDF
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleDownloadXML(invoice.id)}
-                              >
-                                <Download className="h-4 w-4 mr-2" />
-                                Descargar XML
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+              </TableHeader>
+              <TableBody>
+                {filteredInvoices.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                      No se encontraron comprobantes
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
-  </div>
-);
+                ) : (
+                  filteredInvoices.map((invoice) => (
+                    <TableRow key={invoice.id}>
+                      <TableCell className="font-mono font-medium">
+                        {invoice.full_number}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {INVOICE_TYPE_NAMES[invoice.invoice_type]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {invoice.cliente_razon_social || <span className="text-gray-400">-</span>}
+                      </TableCell>
+                      <TableCell>
+                        {invoice.cliente_numero_documento || <span className="text-gray-400">-</span>}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {invoice.currency} {invoice.total.toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        {formatDate(invoice.created_at)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={INVOICE_STATUS_COLORS[invoice.efact_status] || ""}
+                        >
+                          <span className="flex items-center gap-1">
+                            {getStatusIcon(invoice.efact_status)}
+                            {INVOICE_STATUS_NAMES[invoice.efact_status]}
+                          </span>
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <Link href={`/dashboard/invoices/${invoice.id}`}>
+                              <DropdownMenuItem>
+                                <Eye className="h-4 w-4 mr-2" />
+                                Ver detalles
+                              </DropdownMenuItem>
+                            </Link>
+                            {invoice.efact_status === "success" && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={() => handleDownloadPDF(invoice.id)}
+                                >
+                                  <FileDown className="h-4 w-4 mr-2" />
+                                  Descargar PDF
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDownloadXML(invoice.id)}
+                                >
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Descargar XML
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }

@@ -26,3 +26,10 @@ export interface OrderFilters {
   channel: string;
   dateRange: string;
 }
+
+export interface OrderListResponse {
+  items: Order[];
+  total: number;
+  skip: number;
+  limit: number;
+}

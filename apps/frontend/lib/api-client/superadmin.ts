@@ -8,9 +8,9 @@
  */
 
 import { apiGet, apiPost, apiPut, apiPatch } from './client';
-import type { Tenant } from '@/lib/types/tenant';
+import type { Tenant, TenantDetail } from '@/lib/types/tenant';
 import type { User } from '@/lib/types/user';
-import type { ApiKey } from '@/lib/types/api-key';
+import type { APIKey } from '@/lib/types/api-key';
 
 export interface TenantSummary {
   id: number;
@@ -43,11 +43,15 @@ export interface SuperAdminStats {
   total_users: number;
   total_orders: number;
   total_revenue: number;
+  active_api_keys?: number;
+  total_super_admins?: number;
 }
 
 export interface RecentActivity {
   id: string;
-  type: 'order' | 'user' | 'tenant';
+  type?: 'order' | 'user' | 'tenant';
+  entity_type: string;
+  operation: string;
   description: string;
   timestamp: string;
   tenant_name?: string;
@@ -70,7 +74,7 @@ export async function getTenants(params?: {
  * Obtener un tenant por ID
  * GET /api/superadmin/tenants/:id
  */
-export async function getTenant(tenantId: number): Promise<Tenant> {
+export async function getTenant(tenantId: number): Promise<TenantDetail> {
   return apiGet(`/api/superadmin/tenants/${tenantId}`);
 }
 
@@ -199,7 +203,7 @@ export async function getRecentActivity(
  * Obtener API keys
  * GET /api/superadmin/api-keys
  */
-export async function getApiKeys(tenantId?: number): Promise<ApiKey[]> {
+export async function getApiKeys(tenantId?: number): Promise<APIKey[]> {
   const params = tenantId ? { tenant_id: tenantId } : undefined;
   return apiGet('/api/superadmin/api-keys', params as Record<string, number>);
 }
@@ -211,7 +215,7 @@ export async function getApiKeys(tenantId?: number): Promise<ApiKey[]> {
 export async function createApiKey(data: {
   name: string;
   tenant_id?: number;
-}): Promise<ApiKey> {
+}): Promise<APIKey> {
   return apiPost('/api/superadmin/api-keys', data);
 }
 
