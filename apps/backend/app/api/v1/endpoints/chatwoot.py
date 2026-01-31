@@ -25,55 +25,55 @@ class ChatwootSSOError(BaseModel):
 
 
 
-from fastapi import Query
-
 @router.get(
-    "/sso",
+    "/sso/{user_id}",
     response_model=ChatwootSSOResponse,
     responses={
         400: {"model": ChatwootSSOError},
         503: {"model": ChatwootSSOError},
     },
     summary="Get Chatwoot SSO login URL",
-    description="Get a single-sign-on URL for a user to access Chatwoot. user_id es obligatorio.",
+    description="Get a single-sign-on URL for a user to access Chatwoot.",
+    tags=["chatwoot"],
 )
 async def get_chatwoot_sso_url(
-    db: Session = Depends(get_db),
+    user_id: int,
     current_user: User = Depends(get_current_user),
-    user_id: int = Query(..., description="ID del usuario para SSO (obligatorio)"),
+    db: Session = Depends(get_db),
 ):
     """
-    Get Chatwoot SSO login URL for the user_id provided as query param. user_id es obligatorio.
+    Get Chatwoot SSO login URL for a specific user.
+    
+    Args:
+        user_id: User ID to get SSO login URL for
+        current_user: Current authenticated user
+        db: Database session
+        
+    Returns:
+        ChatwootSSOResponse with the SSO login URL
+        
+    Raises:
+        HTTPException 400: If user not found or Chatwoot not configured
+        HTTPException 503: If Chatwoot service is unavailable
     """
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(
-            status_code=400,
-            detail={
-                "error": "user_not_found",
-                "detail": f"No existe un usuario con id {user_id}."
-            }
+            status_code=404,
+            detail=f"User with ID {user_id} not found"
         )
 
-    # Validar campos de Chatwoot
+    # Validate Chatwoot configuration
     if not getattr(user, "chatwoot_user_id", None):
         raise HTTPException(
             status_code=400,
-            detail={
-                "error": "chatwoot_not_configured",
-                "detail": "Este usuario no tiene configurado un ID de usuario de Chatwoot. "
-                         "Contacta al administrador para configurar la integración."
-            }
+            detail="User does not have a Chatwoot user ID configured. Contact administrator."
         )
 
     if not getattr(user, "chatwoot_account_id", None):
         raise HTTPException(
             status_code=400,
-            detail={
-                "error": "chatwoot_account_not_configured",
-                "detail": "Este usuario no tiene configurado un ID de cuenta de Chatwoot. "
-                         "Contacta al administrador para configurar la integración."
-            }
+            detail="User does not have a Chatwoot account ID configured. Contact administrator."
         )
 
     # Get SSO URL from Chatwoot
@@ -84,11 +84,7 @@ async def get_chatwoot_sso_url(
     if not sso_url:
         raise HTTPException(
             status_code=503,
-            detail={
-                "error": "chatwoot_unavailable",
-                "detail": "No se pudo obtener el enlace de acceso a Chatwoot. "
-                         "El servicio puede estar temporalmente no disponible."
-            }
+            detail="Chatwoot service is temporarily unavailable"
         )
 
     return ChatwootSSOResponse(url=sso_url)
@@ -98,6 +94,7 @@ async def get_chatwoot_sso_url(
     "/config",
     summary="Get Chatwoot configuration status",
     description="Check if the current user has Chatwoot SSO configured.",
+    tags=["chatwoot"],
 )
 async def get_chatwoot_config(
     current_user: User = Depends(get_current_user),

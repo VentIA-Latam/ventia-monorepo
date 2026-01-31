@@ -73,7 +73,7 @@ export default function ChatwootPage() {
             throw new Error("No se puede obtener SSO: user_id es obligatorio");
         }
         try {
-            const url = `/api/chatwoot/sso?user_id=${userId}`;
+            const url = `/api/chatwoot/sso/${userId}`;
             const response = await fetch(url);
 
             if (response.ok) {
