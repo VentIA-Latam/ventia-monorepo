@@ -58,6 +58,10 @@ class Settings(BaseSettings):
     RESEND_FROM_EMAIL: str = "noreply@ventia.pe"  # Email address for sending invoices
     RESEND_FROM_NAME: str = "VentIA - Facturación"  # Sender name for emails
 
+    # Chatwoot Platform API (for SSO)
+    CHATWOOT_PLATFORM_API_TOKEN: str = ""  # Platform App token for SSO
+    CHATWOOT_BASE_URL: str = "http://localhost:3001"  # Chatwoot base URL
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: str | List[str]) -> List[str]:
