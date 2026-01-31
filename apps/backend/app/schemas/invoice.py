@@ -3,10 +3,9 @@ Invoice and InvoiceSerie schemas for electronic invoicing (eFact-OSE).
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
-
 
 # ============================================================================
 # INVOICE SCHEMAS
@@ -39,6 +38,11 @@ class InvoiceCreate(InvoiceBase):
     Optional fields (for Credit/Debit Notes):
     - reference_invoice_id: ID of the referenced invoice (for NC/ND)
     - reference_reason: Reason for the credit/debit note
+
+    Optional fields (customer data override):
+    - cliente_tipo_documento: Customer document type (1=DNI, 6=RUC). If not provided, uses order data
+    - cliente_numero_documento: Customer document number. If not provided, uses order data
+    - cliente_razon_social: Customer name/business name. If not provided, uses order data
     """
 
     serie: str = Field(
@@ -46,26 +50,54 @@ class InvoiceCreate(InvoiceBase):
         pattern=r"^[A-Z0-9]{4}$",
         description="Invoice series (4 characters, e.g., 'F001', 'B001')"
     )
-    reference_invoice_id: Optional[int] = Field(
+    reference_invoice_id: int | None = Field(
         None,
         description="Referenced invoice ID (required for NC/ND)"
     )
-    reference_reason: Optional[str] = Field(
+    reference_reason: str | None = Field(
         None,
         max_length=200,
         description="Reason for credit/debit note"
+    )
+
+    # Customer data override (optional)
+    cliente_tipo_documento: str | None = Field(
+        None,
+        pattern=r"^[0-9A]{1}$",
+        description=(
+            "Customer document type (SUNAT catálogo 06): "
+            "0=Sin documento, 1=DNI, 4=Carnet extranjería, 6=RUC, 7=Pasaporte, A=Cédula diplomática. "
+            "Note: Factura (01) requires tipo_documento=6 (RUC). "
+            "(overrides order customer_document_type)"
+        )
+    )
+    cliente_numero_documento: str | None = Field(
+        None,
+        min_length=8,
+        max_length=11,
+        description="Customer document number: DNI (8 digits) or RUC (11 digits) (overrides order customer_document_number)"
+    )
+    cliente_razon_social: str | None = Field(
+        None,
+        max_length=200,
+        description="Customer name or business name (overrides order customer_name)"
+    )
+    cliente_email: str | None = Field(
+        None,
+        max_length=255,
+        description="Customer email for invoice delivery (overrides order customer_email)"
     )
 
 
 class InvoiceUpdate(BaseModel):
     """Schema for updating an Invoice (typically internal status updates)."""
 
-    efact_status: Optional[str] = Field(
+    efact_status: str | None = Field(
         None,
         pattern=r"^(pending|processing|success|error)$",
         description="eFact processing status"
     )
-    efact_error: Optional[str] = Field(
+    efact_error: str | None = Field(
         None,
         max_length=500,
         description="Error message from eFact"
@@ -96,6 +128,7 @@ class InvoiceResponse(InvoiceBase):
     cliente_tipo_documento: str
     cliente_numero_documento: str
     cliente_razon_social: str
+    cliente_email: str | None
 
     # Totals
     subtotal: float
@@ -106,19 +139,19 @@ class InvoiceResponse(InvoiceBase):
     items: list[dict[str, Any]]
 
     # Reference fields (for NC/ND)
-    reference_invoice_id: Optional[int]
-    reference_type: Optional[str]
-    reference_serie: Optional[str]
-    reference_correlativo: Optional[int]
-    reference_reason: Optional[str]
+    reference_invoice_id: int | None
+    reference_type: str | None
+    reference_serie: str | None
+    reference_correlativo: int | None
+    reference_reason: str | None
 
     # eFact integration
-    efact_ticket: Optional[str]
+    efact_ticket: str | None
     efact_status: str
-    efact_response: Optional[dict[str, Any]]
-    efact_error: Optional[str]
-    efact_sent_at: Optional[datetime]
-    efact_processed_at: Optional[datetime]
+    efact_response: dict[str, Any] | None
+    efact_error: str | None
+    efact_sent_at: datetime | None
+    efact_processed_at: datetime | None
 
     # Timestamps
     created_at: datetime
@@ -153,8 +186,8 @@ class TicketStatusResponse(BaseModel):
         pattern=r"^(pending|processing|success|error)$",
         description="Current status"
     )
-    message: Optional[str] = Field(None, description="Status message")
-    cdr_response: Optional[dict[str, Any]] = Field(
+    message: str | None = Field(None, description="Status message")
+    cdr_response: dict[str, Any] | None = Field(
         None,
         description="SUNAT CDR response (only on success)"
     )
@@ -180,7 +213,7 @@ class InvoiceSerieBase(BaseModel):
         pattern=r"^[A-Z0-9]{4}$",
         description="Series code (4 characters, e.g., 'F001', 'B001')"
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None,
         max_length=100,
         description="Optional description of the series"
@@ -198,25 +231,36 @@ class InvoiceSerieCreate(InvoiceSerieBase):
     Optional fields:
     - description: Human-readable description
     - is_active: Whether series is active (defaults to True)
+    - last_correlativo: Starting correlativo number for existing series (defaults to 0)
     """
 
     is_active: bool = Field(
         default=True,
         description="Whether the series is active"
     )
+    last_correlativo: int = Field(
+        default=0,
+        ge=0,
+        description="Starting correlativo number (use when migrating existing series)"
+    )
 
 
 class InvoiceSerieUpdate(BaseModel):
     """Schema for updating an InvoiceSerie."""
 
-    is_active: Optional[bool] = Field(
+    is_active: bool | None = Field(
         None,
         description="Whether the series is active"
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None,
         max_length=100,
         description="Optional description"
+    )
+    last_correlativo: int | None = Field(
+        None,
+        ge=0,
+        description="Update correlativo number (use with caution - affects next invoice number)"
     )
 
 
@@ -239,3 +283,30 @@ class InvoiceSerieListResponse(BaseModel):
     items: list[InvoiceSerieResponse] = Field(..., description="List of invoice series")
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ============================================================================
+# EMAIL INVOICE SCHEMAS
+# ============================================================================
+
+
+class InvoiceSendEmailRequest(BaseModel):
+    """Schema for sending invoice email request."""
+
+    recipient_email: str | None = Field(
+        None,
+        description="Override email address. If not provided, uses invoice.cliente_email"
+    )
+    include_xml: bool = Field(
+        default=False,
+        description="Include signed XML file as attachment"
+    )
+
+
+class InvoiceSendEmailResponse(BaseModel):
+    """Schema for email send response."""
+
+    success: bool
+    email_id: str | None = Field(None, description="Resend email ID for tracking")
+    sent_to: str = Field(..., description="Email address where invoice was sent")
+    message: str

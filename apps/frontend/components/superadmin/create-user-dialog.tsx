@@ -23,6 +23,7 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { UserCreate } from "@/lib/types/user";
 import { Tenant } from "@/lib/types/tenant";
+import { REGULAR_ROLES } from "@/lib/constants/roles";
 
 interface CreateUserDialogProps {
   open: boolean;
@@ -37,9 +38,10 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess, tenants }: Cre
   const [formData, setFormData] = useState<Partial<UserCreate>>({
     name: "",
     email: "",
-    auth0_user_id: "",
     role: "ADMIN",
     tenant_id: undefined,
+    chatwoot_user_id: undefined,
+    chatwoot_account_id: undefined,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -59,7 +61,7 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess, tenants }: Cre
         title: "Usuario creado",
         description: "El usuario se ha creado correctamente",
       });
-      setFormData({ name: "", email: "", auth0_user_id: "", role: "ADMIN", tenant_id: undefined });
+      setFormData({ name: "", email: "", role: "ADMIN", tenant_id: undefined, chatwoot_user_id: undefined, chatwoot_account_id: undefined });
       onSuccess();
       onOpenChange(false);
     } catch (error) {
@@ -91,22 +93,6 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess, tenants }: Cre
             <div className="grid gap-2">
               <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
               <Input id="email" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required />
-              <p className="text-xs text-gray-500">
-                Debe coincidir con el email del usuario en Auth0
-              </p>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="auth0_user_id">Auth0 User ID <span className="text-red-500">*</span></Label>
-              <Input
-                id="auth0_user_id"
-                value={formData.auth0_user_id || ""}
-                onChange={e => setFormData({ ...formData, auth0_user_id: e.target.value })}
-                required
-                placeholder="auth0|..."
-              />
-              <p className="text-xs text-gray-500">
-                ID del usuario creado manualmente en Auth0. Formato: auth0|xxxxx o google-oauth2|xxxxx
-              </p>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="tenant">Tenant/Empresa <span className="text-red-500">*</span></Label>
@@ -140,11 +126,45 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess, tenants }: Cre
                   <SelectValue placeholder="Seleccionar rol" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
-                  <SelectItem value="ADMIN">Admin</SelectItem>
-                  <SelectItem value="LOGISTICA">Logística</SelectItem>
+                  {REGULAR_ROLES.map((role) => (
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Chatwoot Integration - Required fields */}
+            <div className="border-t pt-4 mt-2">
+              <p className="text-sm font-medium text-gray-700 mb-3">Integración Chatwoot (Requerido)</p>
+              <p className="text-xs text-gray-500 mb-3">
+                El usuario debe existir previamente en Chatwoot. Obtén estos IDs desde la plataforma de Chatwoot.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="chatwoot_user_id">User ID <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="chatwoot_user_id"
+                    type="number"
+                    placeholder="Ej: 1"
+                    value={formData.chatwoot_user_id || ""}
+                    onChange={e => setFormData({ ...formData, chatwoot_user_id: e.target.value ? parseInt(e.target.value) : undefined })}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="chatwoot_account_id">Account ID <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="chatwoot_account_id"
+                    type="number"
+                    placeholder="Ej: 1"
+                    value={formData.chatwoot_account_id || ""}
+                    onChange={e => setFormData({ ...formData, chatwoot_account_id: e.target.value ? parseInt(e.target.value) : undefined })}
+                    required
+                  />
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>

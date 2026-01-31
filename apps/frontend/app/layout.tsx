@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Auth0Provider } from '@auth0/nextjs-auth0/client';
+import { Toaster } from "@/components/ui/toaster";
 
 // Google Fonts
 import { Inter, Libre_Franklin, Source_Sans_3 } from "next/font/google";
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       >
         <Auth0Provider>
           {children}
+          <Toaster />
         </Auth0Provider>
       </body>
     </html>

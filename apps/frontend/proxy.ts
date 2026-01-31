@@ -37,7 +37,6 @@ export async function proxy(request: Request) {
 
         // If not SUPER_ADMIN, redirect to dashboard
         if (userRole !== 'SUPER_ADMIN' && userRole !== 'SUPERADMIN') {
-          console.log(`Access denied to ${url.pathname} for user with role: ${userRole}`);
           return Response.redirect(new URL('/dashboard', request.url));
         }
       } else {
@@ -84,7 +83,6 @@ export async function proxy(request: Request) {
 
         // If SUPER_ADMIN, redirect to superadmin dashboard
         if (userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN') {
-          console.log(`Redirecting SUPER_ADMIN from ${url.pathname} to /superadmin`);
           return Response.redirect(new URL('/superadmin', request.url));
         }
       }

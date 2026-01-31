@@ -20,12 +20,7 @@ import { cn } from "@/lib/utils"
 
 /* -------------------- COLUMNAS -------------------- */
 
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("es-PE", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  })
+import { formatDate } from "@/lib/utils";
 
 export const paymentColumns: ColumnDef<PaymentRecord>[] = [
   {
@@ -200,9 +195,9 @@ export function DataTable<TData, TValue>({
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
                   </TableHead>
                 ))}
               </TableRow>

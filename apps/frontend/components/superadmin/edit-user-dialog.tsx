@@ -23,6 +23,7 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { User, UserUpdate } from "@/lib/types/user";
 import { Tenant } from "@/lib/types/tenant";
+import { REGULAR_ROLES } from "@/lib/constants/roles";
 
 interface EditUserDialogProps {
   user: User | null;
@@ -139,9 +140,11 @@ export function EditUserDialog({ user, open, onOpenChange, onSuccess, tenants }:
                   <SelectValue placeholder="Seleccionar rol" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
-                  <SelectItem value="ADMIN">Admin</SelectItem>
-                  <SelectItem value="LOGISTICA">Logística</SelectItem>
+                  {REGULAR_ROLES.map((role) => (
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

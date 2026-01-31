@@ -7,8 +7,9 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1
 export interface Order {
   id: number;
   tenant_id: number;
-  shopify_draft_order_id: string;
+  shopify_draft_order_id: string | null;
   shopify_order_id: string | null;
+  woocommerce_order_id: number | null;
   customer_document_type: string | null;  // DNI o RUC
   customer_document_number: string | null;
   customer_email: string;

@@ -13,33 +13,32 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen">
       {/* Left Side - Brand Section */}
-      <div className="hidden lg:flex lg:w-1/2 bg-linear-to-br from-[#0a2f3f] via-[#0f4a5f] to-[#1a6f7f] relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-[url('/images/imagen-hero-desktop.avif')] bg-cover relative overflow-hidden">
         {/* Background Pattern/Image - Replace with your image */}
-        <div className="absolute inset-0 opacity-20">
+        <div className="absolute inset-0 opacity-80">
           {/* Placeholder for background pattern image */}
-          {/* <Image
-            src="/images/auth/login-background.png"
+          <Image
+            src="/images/logo-ventia-blanco.png"
             alt="Background pattern"
             fill
             className="object-cover"
-          /> */}
-          <div className="w-full h-full bg-[url('/images/auth/login-background.png')] bg-cover bg-center"></div>
+          />
+          <div className="w-full h-full bg-[url('/images/logo-ventia-blanco.png')] bg-cover bg-center"></div>
         </div>
 
         {/* Content */}
-        <div className="relative z-10 flex flex-col justify-between p-12 text-white w-full h-full">
+        <div className="relative z-10 flex flex-col justify-between p-12 text-gray-500 w-full h-full">
           {/* Logo and Brand */}
           <div className="flex items-center gap-1">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden">
+            <div className="rounded-lg flex items-center justify-center overflow-hidden">
               <Image
-                src="/images/auth/Logos-06.png"
+                src="/images/logo-ventia-header.png"
                 alt="Ventia Logo"
-                width={40}
-                height={40}
+                width={180}
+                height={60}
                 className="object-contain"
               />
             </div>
-            <span className="text-2xl font-bold">Ventia</span>
           </div>
 
           {/* Description */}
@@ -84,7 +83,7 @@ export default function LoginPage() {
           <div className="space-y-6">
             <Button
               onClick={handleLogin}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg"
+              className="w-full bg-[#48c1ec] hover:bg-[#379acb] text-white py-6 text-lg"
             >
               Iniciar Sesión
             </Button>

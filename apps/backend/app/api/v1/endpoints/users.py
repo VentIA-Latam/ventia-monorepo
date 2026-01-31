@@ -5,7 +5,7 @@ User management endpoints (ADMIN only).
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_database, require_permission, require_role
+from app.api.deps import get_current_user, get_database, require_permission_dual
 from app.core.permissions import Role
 from app.models.user import User
 from app.schemas.user import UserCreate, UserResponse, UserUpdate, UsersListResponse, UserUpdateResponse
@@ -14,7 +14,7 @@ from app.services.user import user_service
 router = APIRouter()
 
 
-@router.get("/", response_model=UsersListResponse | list[UserResponse], tags=["users"])
+@router.get("", response_model=UsersListResponse | list[UserResponse], tags=["users"])
 async def list_users(
     skip: int = 0,
     limit: int = 100,
@@ -22,11 +22,13 @@ async def list_users(
     role: str | None = None,
     is_active: bool | None = None,
     search: str | None = None,
-    current_user: User = Depends(require_permission("GET", "/users")),
+    current_user: User = Depends(require_permission_dual("GET", "/users")),
     db: Session = Depends(get_database),
 ) -> UsersListResponse | list[UserResponse]:
     """
     List all users.
+
+    **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
     SUPER_ADMIN: All users with advanced filters and metadata.
     - tenant_id: Filter by specific tenant
@@ -81,11 +83,13 @@ async def get_current_user_info(
 @router.get("/{user_id}", response_model=UserResponse, tags=["users"])
 async def get_user(
     user_id: int,
-    current_user: User = Depends(require_permission("GET", "/users")),
+    current_user: User = Depends(require_permission_dual("GET", "/users/*")),
     db: Session = Depends(get_database),
 ) -> UserResponse:
     """
     Get user by ID.
+
+    **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
     SUPER_ADMIN: Can access any user.
     Other roles: Can only access users from their own tenant.
@@ -105,23 +109,25 @@ async def get_user(
             )
 
 
-@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED, tags=["users"])
+@router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED, tags=["users"])
 async def create_user(
     user_in: UserCreate,
-    current_user: User = Depends(require_permission("POST", "/users")),
+    current_user: User = Depends(require_permission_dual("POST", "/users")),
     db: Session = Depends(get_database),
 ) -> UserResponse:
     """
-    Create a new user.
+    Create a new user and sync with Auth0.
+
+    **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
     SUPER_ADMIN: Can create users in any tenant. Validates tenant exists and is active.
     Other roles: Can only create users in their own tenant.
-    
+
     Both: Cannot create SUPER_ADMIN role users.
-    Request body: email, name, role, auth0_user_id, tenant_id
+    Request body: email, name, role, tenant_id (auth0_user_id is automatically generated)
     """
     try:
-        return user_service.create_user_for_role(db, user_in, current_user)
+        return await user_service.create_user_for_role(db, user_in, current_user)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -133,11 +139,13 @@ async def create_user(
 async def update_user(
     user_id: int,
     user_in: UserUpdate,
-    current_user: User = Depends(require_permission("PUT", "/users")),
+    current_user: User = Depends(require_permission_dual("PUT", "/users/*")),
     db: Session = Depends(get_database),
 ) -> UserUpdateResponse:
     """
-    Update user.
+    Update user and sync blocked status with Auth0.
+
+    **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
     SUPER_ADMIN: Can update any user. Cannot deactivate themselves.
     Other roles: Can only update users from their own tenant.
@@ -150,7 +158,7 @@ async def update_user(
     Returns: 200 with updated user and optional warning message
     """
     try:
-        updated_user, warning = user_service.update_user_for_role(db, user_id, user_in, current_user)
+        updated_user, warning = await user_service.update_user_for_role(db, user_id, user_in, current_user)
         return UserUpdateResponse(user=updated_user, warning=warning)
     except ValueError as e:
         if "not found" in str(e):
@@ -168,18 +176,21 @@ async def update_user(
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["users"])
 async def delete_user(
     user_id: int,
-    current_user: User = Depends(require_permission("DELETE", "/users")),
+    current_user: User = Depends(require_permission_dual("DELETE", "/users/*")),
     db: Session = Depends(get_database),
 ) -> None:
     """
-    Deactivate user (soft delete).
+    Deactivate user (soft delete) and block in Auth0.
+
+    **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
     SUPER_ADMIN only: Can deactivate any user (except themselves).
     - Cannot deactivate the last active SUPER_ADMIN in the system
     - User is marked as inactive (is_active=False) instead of deleted
+    - User is also blocked in Auth0
     """
     try:
-        user_service.delete_user_for_access(db, user_id, current_user)
+        await user_service.delete_user_for_access(db, user_id, current_user)
     except ValueError as e:
         if "not found" in str(e):
             raise HTTPException(

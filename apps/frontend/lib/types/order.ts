@@ -1,6 +1,7 @@
 export interface Order {
-  id: string; // ID visual (ej: "ORD-3920" o "123")
+  id: string; // ID visual del draft (ej: "1026313977995")
   dbId: number; // ID real de la base de datos
+  shopifyOrderId: string | null; // ID de orden Shopify (después de validar pago)
   date: string;
   client: {
     name: string;
@@ -14,10 +15,10 @@ export interface Order {
 }
 
 /**
- * FakeOrder - Para datos mock/fake sin dbId real
+ * FakeOrder - Para datos mock/fake sin dbId ni shopifyOrderId real
  * Usado en tests, mock data, y páginas de ejemplo
  */
-export type FakeOrder = Omit<Order, 'dbId'>;
+export type FakeOrder = Omit<Order, 'dbId' | 'shopifyOrderId'>;
 
 export interface OrderFilters {
   search: string;

@@ -19,8 +19,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Add SUPER_ADMIN to the role enum
-    op.execute("ALTER TYPE role ADD VALUE 'SUPER_ADMIN' BEFORE 'ADMIN'")
+    # Add SUPERADMIN to the role enum
+    op.execute("ALTER TYPE role ADD VALUE 'SUPERADMIN' BEFORE 'ADMIN'")
 
 
 def downgrade() -> None:

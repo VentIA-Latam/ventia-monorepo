@@ -9,55 +9,110 @@ from typing import Dict, List, Tuple
 class Role(str, Enum):
     """User roles in the system."""
 
-    SUPER_ADMIN = "superadmin"  # Platform admin with access to all tenants
-    ADMIN = "admin"  # Full access to all resources
-    LOGISTICA = "logistica"  # Can manage orders and validate payments
-    VENTAS = "ventas"  # Can view and create orders
-    VIEWER = "viewer"  # Read-only access
+    SUPERADMIN = "SUPERADMIN"  # Platform admin with access to all tenants
+    ADMIN = "ADMIN"  # Full access to all resources within tenant
+    LOGISTICA = "LOGISTICA"  # Read-only access to orders and invoices (for dispatch)
+    VENTAS = "VENTAS"  # Can create, edit orders, validate payments and create invoices
+    VIEWER = "VIEWER"  # Read-only access
 
 
 # Permissions map: (HTTP method, path pattern) -> allowed roles
 PERMISSIONS: Dict[Tuple[str, str], List[Role]] = {
     # ORDERS ENDPOINTS
-    ("GET", "/orders"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
-    ("GET", "/orders/*"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
-    ("POST", "/orders"): [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS],
-    ("PUT", "/orders/*"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA],
-    ("POST", "/orders/*/validate"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA],
-    ("DELETE", "/orders/*"): [Role.SUPER_ADMIN, Role.ADMIN],
+    ("GET", "/orders"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("GET", "/orders/*"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("POST", "/orders"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
+    ("PUT", "/orders/*"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
+    ("POST", "/orders/*/validate"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
+    ("DELETE", "/orders/*"): [Role.SUPERADMIN, Role.ADMIN],
 
     # USERS ENDPOINTS (only ADMIN and SUPER_ADMIN)
-    ("GET", "/users"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("GET", "/users/*"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("POST", "/users"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("PUT", "/users/*"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("DELETE", "/users/*"): [Role.SUPER_ADMIN, Role.ADMIN],
+    ("GET", "/users"): [Role.SUPERADMIN, Role.ADMIN],
+    ("GET", "/users/*"): [Role.SUPERADMIN, Role.ADMIN],
+    ("POST", "/users"): [Role.SUPERADMIN, Role.ADMIN],
+    ("PUT", "/users/*"): [Role.SUPERADMIN, Role.ADMIN],
+    ("DELETE", "/users/*"): [Role.SUPERADMIN, Role.ADMIN],
 
     # TENANTS ENDPOINTS (only SUPER_ADMIN)
-    ("GET", "/tenants"): [Role.SUPER_ADMIN],
-    ("GET", "/tenants/*"): [Role.SUPER_ADMIN],
-    ("POST", "/tenants"): [Role.SUPER_ADMIN],
-    ("PUT", "/tenants/*"): [Role.SUPER_ADMIN],
-    ("DELETE", "/tenants/*"): [Role.SUPER_ADMIN],
+    ("GET", "/tenants"): [Role.SUPERADMIN],
+    ("GET", "/tenants/*"): [Role.SUPERADMIN],
+    ("POST", "/tenants"): [Role.SUPERADMIN],
+    ("PUT", "/tenants/*"): [Role.SUPERADMIN],
+    ("DELETE", "/tenants/*"): [Role.SUPERADMIN],
 
     # STATS ENDPOINTS (only SUPER_ADMIN)
-    ("GET", "/stats"): [Role.SUPER_ADMIN],
-    ("GET", "/stats/*"): [Role.SUPER_ADMIN],
+    ("GET", "/stats"): [Role.SUPERADMIN],
+    ("GET", "/stats/*"): [Role.SUPERADMIN],
 
     # API KEYS ENDPOINTS (SUPER_ADMIN and ADMIN)
     # SUPER_ADMIN can create API keys for any tenant
     # ADMIN can create API keys for their own tenant
-    ("GET", "/api-keys"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("GET", "/api-keys/*"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("POST", "/api-keys"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("PATCH", "/api-keys/*"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("DELETE", "/api-keys/*"): [Role.SUPER_ADMIN, Role.ADMIN],
+    ("GET", "/api-keys"): [Role.SUPERADMIN, Role.ADMIN],
+    ("GET", "/api-keys/*"): [Role.SUPERADMIN, Role.ADMIN],
+    ("POST", "/api-keys"): [Role.SUPERADMIN, Role.ADMIN],
+    ("PATCH", "/api-keys/*"): [Role.SUPERADMIN, Role.ADMIN],
+    ("DELETE", "/api-keys/*"): [Role.SUPERADMIN, Role.ADMIN],
     
-    # INVOICES ENDPOINTS
-    ("POST", "/orders/*/invoice"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA],
-    ("GET", "/orders/*/invoices"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
-    ("GET", "/orders/invoices"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    # INVOICES ENDPOINTS (RESTful paths under /orders/{id}/invoices)
+    ("POST", "/orders/*/invoices"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
+    ("GET", "/orders/*/invoices"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+
+    # INVOICES ENDPOINTS (new unified paths)
+    ("POST", "/invoices"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
+    ("POST", "/invoices/*"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
+    ("GET", "/invoices"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("GET", "/invoices/*"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+
+    # INVOICE SERIES ENDPOINTS
+    ("GET", "/invoice-series"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("GET", "/invoice-series/*"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("POST", "/invoice-series"): [Role.SUPERADMIN, Role.ADMIN],
+    ("PATCH", "/invoice-series/*"): [Role.SUPERADMIN, Role.ADMIN],
+    ("DELETE", "/invoice-series/*"): [Role.SUPERADMIN, Role.ADMIN],
 }
+
+
+def _match_path_pattern(pattern: str, path: str) -> bool:
+    """
+    Match a path against a pattern with wildcard support.
+
+    Wildcards:
+    - `*` matches a single path segment (e.g., `/orders/*/invoices` matches `/orders/123/invoices`)
+    - Pattern ending with `/*` matches any path starting with that prefix
+
+    Examples:
+        >>> _match_path_pattern("/orders/*", "/orders/123")
+        True
+        >>> _match_path_pattern("/orders/*/invoices", "/orders/123/invoices")
+        True
+        >>> _match_path_pattern("/orders/*", "/orders/123/invoices")
+        True
+    """
+    # Handle trailing wildcard (matches anything after prefix)
+    if pattern.endswith("/*"):
+        prefix = pattern[:-1]  # Remove trailing *
+        return path.startswith(prefix)
+
+    # Handle wildcards in the middle of the pattern
+    if "*" in pattern:
+        pattern_parts = pattern.split("/")
+        path_parts = path.split("/")
+
+        # If pattern has fewer parts than path, no match (unless trailing /*)
+        if len(pattern_parts) != len(path_parts):
+            return False
+
+        # Compare each segment
+        for pattern_part, path_part in zip(pattern_parts, path_parts):
+            if pattern_part == "*":
+                continue  # Wildcard matches any single segment
+            if pattern_part != path_part:
+                return False
+
+        return True
+
+    # No wildcards - exact match
+    return pattern == path
 
 
 def can_access(role: Role, method: str, path: str) -> bool:
@@ -88,11 +143,8 @@ def can_access(role: Role, method: str, path: str) -> bool:
 
     # Try wildcard match
     for (perm_method, perm_path), allowed_roles in PERMISSIONS.items():
-        if perm_method == method and perm_path.endswith("/*"):
-            # Convert "/orders/*" to "/orders/"
-            pattern_prefix = perm_path[:-1]  # Remove *
-            if normalized_path.startswith(pattern_prefix):
-                return role in allowed_roles
+        if perm_method == method and _match_path_pattern(perm_path, normalized_path):
+            return role in allowed_roles
 
     # No permission found - deny by default
     return False
@@ -118,9 +170,7 @@ def get_allowed_roles(method: str, path: str) -> List[Role]:
 
     # Try wildcard match
     for (perm_method, perm_path), allowed_roles in PERMISSIONS.items():
-        if perm_method == method and perm_path.endswith("/*"):
-            pattern_prefix = perm_path[:-1]
-            if normalized_path.startswith(pattern_prefix):
-                return allowed_roles
+        if perm_method == method and _match_path_pattern(perm_path, normalized_path):
+            return allowed_roles
 
     return []

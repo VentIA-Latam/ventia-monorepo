@@ -63,7 +63,7 @@ class StatsRepository:
         Returns:
             Total count of super admin users
         """
-        return db.query(User).filter(User.role == Role.SUPER_ADMIN).count()
+        return db.query(User).filter(User.role == Role.SUPERADMIN).count()
 
 
 # Create singleton instance
