@@ -7,14 +7,14 @@ services:
     container_name: ventia-postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-ventia_db}
-      POSTGRES_USER: ${POSTGRES_USER:-ventia_user}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ventia_password_dev}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ventia_user}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -28,7 +28,7 @@ services:
       dockerfile: docker/backend.Dockerfile
     container_name: ventia-backend
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-ventia_user}:${POSTGRES_PASSWORD:-ventia_password_dev}@postgres:5432/${POSTGRES_DB:-ventia_db}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-ventia_password_dev}@postgres:5432/${POSTGRES_DB:-ventia_db}
       ENVIRONMENT: ${ENVIRONMENT:-development}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000"]}
@@ -37,10 +37,23 @@ services:
       AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
       AUTH0_ISSUER: ${AUTH0_ISSUER}
       AUTH0_ALGORITHM: ${AUTH0_ALGORITHM:-RS256}
+      # Auth0 Management API
+      AUTH0_MANAGEMENT_CLIENT_ID: ${AUTH0_MANAGEMENT_CLIENT_ID}
+      AUTH0_MANAGEMENT_CLIENT_SECRET: ${AUTH0_MANAGEMENT_CLIENT_SECRET}
+      AUTH0_MANAGEMENT_AUDIENCE: ${AUTH0_MANAGEMENT_AUDIENCE}
+      AUTH0_CONNECTION: ${AUTH0_CONNECTION:-Username-Password-Authentication}
+      # eFact-OSE
       EFACT_BASE_URL: ${EFACT_BASE_URL:-https://ose-gw1.efact.pe/api-efact-ose}
       EFACT_RUC_VENTIA: ${EFACT_RUC_VENTIA}
       EFACT_PASSWORD_REST: ${EFACT_PASSWORD_REST}
       EFACT_TOKEN_CACHE_HOURS: ${EFACT_TOKEN_CACHE_HOURS:-11}
+      # Resend (Email)
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-noreply@ventia-latam.com}
+      RESEND_FROM_NAME: ${RESEND_FROM_NAME:-VentIA - Facturación}
+      # Chatwoot SSO
+      CHATWOOT_PLATFORM_API_TOKEN: ${CHATWOOT_PLATFORM_API_TOKEN}
+      CHATWOOT_BASE_URL: ${CHATWOOT_BASE_URL:-http://chatwoot-rails:3000}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
@@ -121,6 +134,9 @@ services:
       NODE_ENV: production
       SECRET_KEY_BASE: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2
       FRONTEND_URL: http://localhost:3001
+      # URL configuration for proper redirects
+      ROOT_URL: http://localhost:3001
+      INSTALLATION_ENV: docker
       # Database
       POSTGRES_HOST: chatwoot-postgres
       POSTGRES_PORT: 5432
@@ -133,12 +149,21 @@ services:
       RAILS_LOG_TO_STDOUT: "true"
       LOG_LEVEL: info
       RAILS_SERVE_STATIC_FILES: "true"
+      ENABLE_ACCOUNT_SIGNUP: "true"
+      RACK_ATTACK_ALLOWED_IPS: "172.18.0.1,127.0.0.1"
+      ENABLE_API_CORS: "true"
       # Deshabilitar SSL para desarrollo local
       FORCE_SSL: "false"
-      # Permitir iframes desde localhost:3000 (Ventia frontend)
-      FRAME_ANCESTORS: "http://localhost:3000 http://localhost:3001"
-    entrypoint: docker/entrypoints/rails.sh
-    command: bundle exec rails s -p 3000 -b 0.0.0.0
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "🚀 Initializing Chatwoot..."
+        bundle exec rails db:create || echo "DB already exists"
+        bundle exec rails db:schema:load || echo "Schema already loaded, running migrations..."
+        bundle exec rails db:migrate || echo "Migrations done"
+        bundle exec rails db:seed || echo "Seed skipped"
+        echo "✅ Starting Chatwoot server..."
+        bundle exec rails s -p 3000 -b 0.0.0.0
     networks:
       - ventia-network
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import {
     MessageSquare,
@@ -8,6 +8,7 @@ import {
     RefreshCw,
     Maximize2,
     Minimize2,
+    AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,52 +22,105 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * Chatwoot Integration Page
+ * Chatwoot Integration Page with SSO
  *
  * Esta página integra Chatwoot directamente en el dashboard de Ventia.
- * Utiliza un iframe para mostrar la interfaz de Chatwoot.
+ * Utiliza SSO para autenticar automáticamente al usuario.
  * El proxy nginx elimina X-Frame-Options para permitir el embedding.
  */
+
+interface ChatwootConfig {
+    configured: boolean;
+    chatwoot_user_id: number | null;
+    chatwoot_account_id: number | null;
+}
+
+interface SSOResponse {
+    url: string;
+}
 
 export default function ChatwootPage() {
     const { user, isLoading: authLoading } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [ssoUrl, setSsoUrl] = useState<string | null>(null);
+    const [chatwootConfig, setChatwootConfig] = useState<ChatwootConfig | null>(null);
     const iframeRef = useRef<HTMLIFrameElement>(null);
 
-    // Get Chatwoot URL from environment variables
+    // Get Chatwoot URL from environment variables (fallback)
     const chatwootBaseUrl = process.env.NEXT_PUBLIC_CHATWOOT_BASE_URL || "";
-    const chatwootAccountId = process.env.NEXT_PUBLIC_CHATWOOT_ACCOUNT_ID || "";
 
-    // Build the Chatwoot dashboard URL
-    const getChatwootUrl = () => {
-        if (!chatwootBaseUrl) {
-            return null;
+    // Fetch Chatwoot configuration for current user
+    const fetchChatwootConfig = useCallback(async () => {
+        try {
+            const response = await fetch("/api/chatwoot/config");
+
+            if (response.ok) {
+                const config: ChatwootConfig = await response.json();
+                setChatwootConfig(config);
+                return config;
+            }
+        } catch (err) {
+            console.error("Error fetching Chatwoot config:", err);
         }
+        return null;
+    }, []);
 
-        if (chatwootAccountId) {
-            return `${chatwootBaseUrl}/app/accounts/${chatwootAccountId}/dashboard`;
+    // Fetch SSO URL from backend
+    const fetchSSOUrl = useCallback(async (userId: number | null | undefined) => {
+        if (!userId) {
+            throw new Error("No se puede obtener SSO: user_id es obligatorio");
         }
+        try {
+            const url = `/api/chatwoot/sso/${userId}`;
+            const response = await fetch(url);
 
-        return `${chatwootBaseUrl}/app`;
-    };
+            if (response.ok) {
+                const data: SSOResponse = await response.json();
+                return data.url;
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.detail?.detail || errorData.error || "Error al obtener SSO");
+            }
+        } catch (err) {
+            console.error("Error fetching SSO URL:", err);
+            throw err;
+        }
+    }, []);
 
-    const chatwootUrl = getChatwootUrl();
+    // Initialize Chatwoot with SSO
+    const initializeChatwoot = useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            // First check config
+            const config = await fetchChatwootConfig();
+
+            if (!config?.configured) {
+                setError("Tu cuenta no está configurada para Chatwoot. Contacta al administrador.");
+                setIsLoading(false);
+                return;
+            }
+
+            // Get SSO URL
+            const url = await fetchSSOUrl(config?.chatwoot_user_id);
+            if (url) {
+                setSsoUrl(url);
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Error al conectar con Chatwoot");
+        } finally {
+            setIsLoading(false);
+        }
+    }, [fetchChatwootConfig, fetchSSOUrl]);
 
     useEffect(() => {
-        if (!chatwootBaseUrl) {
-            setError("Chatwoot no está configurado. Contacta al administrador.");
-            setIsLoading(false);
-            return;
+        if (!authLoading && user) {
+            initializeChatwoot();
         }
-
-        const timer = setTimeout(() => {
-            setIsLoading(false);
-        }, 500);
-
-        return () => clearTimeout(timer);
-    }, [chatwootBaseUrl]);
+    }, [authLoading, user, initializeChatwoot]);
 
     const handleIframeLoad = () => {
         setIsLoading(false);
@@ -79,17 +133,23 @@ export default function ChatwootPage() {
         setIsLoading(false);
     };
 
-    const handleRefresh = () => {
-        setIsLoading(true);
-        setError(null);
-        if (iframeRef.current) {
-            iframeRef.current.src = chatwootUrl || "";
+    const handleRefresh = async () => {
+        // Get a new SSO URL and reload
+        await initializeChatwoot();
+        if (iframeRef.current && ssoUrl) {
+            iframeRef.current.src = ssoUrl;
         }
     };
 
-    const handleOpenExternal = () => {
-        if (chatwootUrl) {
-            window.open(chatwootUrl, "_blank", "noopener,noreferrer");
+    const handleOpenExternal = async () => {
+        try {
+            const url = await fetchSSOUrl(chatwootConfig?.chatwoot_user_id);
+            if (url) {
+                window.open(url, "_blank", "noopener,noreferrer");
+            }
+        } catch {
+            // Fallback to base URL
+            window.open(chatwootBaseUrl, "_blank", "noopener,noreferrer");
         }
     };
 
@@ -97,7 +157,7 @@ export default function ChatwootPage() {
         setIsFullscreen(!isFullscreen);
     };
 
-    // Si no hay URL configurada, mostrar mensaje de configuración
+    // Si no hay URL de Chatwoot configurada
     if (!chatwootBaseUrl) {
         return (
             <div className="space-y-6">
@@ -145,6 +205,48 @@ export default function ChatwootPage() {
                     <Skeleton className="h-4 w-72" />
                 </div>
                 <Skeleton className="h-[calc(100vh-200px)] w-full rounded-lg" />
+            </div>
+        );
+    }
+
+    // User not configured for Chatwoot
+    if (chatwootConfig && !chatwootConfig.configured) {
+        return (
+            <div className="space-y-6">
+                <div className="flex flex-col gap-2">
+                    <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                        <MessageSquare className="h-6 w-6 text-blue-600" />
+                        Chatwoot
+                    </h1>
+                    <p className="text-gray-500">
+                        Centro de mensajería y atención al cliente
+                    </p>
+                </div>
+
+                <Card className="border-orange-200 bg-orange-50">
+                    <CardHeader>
+                        <CardTitle className="text-orange-800 flex items-center gap-2">
+                            <AlertCircle className="h-5 w-5" />
+                            Cuenta no configurada
+                        </CardTitle>
+                        <CardDescription className="text-orange-700">
+                            Tu cuenta no está vinculada a Chatwoot.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-orange-800 space-y-4">
+                        <p>
+                            Para acceder a Chatwoot, un administrador debe configurar tu
+                            cuenta con los siguientes datos:
+                        </p>
+                        <ul className="list-disc list-inside space-y-1">
+                            <li>ID de usuario de Chatwoot</li>
+                            <li>ID de cuenta de Chatwoot</li>
+                        </ul>
+                        <p className="text-sm">
+                            Contacta al administrador del sistema para completar la configuración.
+                        </p>
+                    </CardContent>
+                </Card>
             </div>
         );
     }
@@ -232,16 +334,16 @@ export default function ChatwootPage() {
                     <div className="absolute inset-0 bg-gray-50 flex items-center justify-center z-10">
                         <div className="text-center space-y-4">
                             <RefreshCw className="h-8 w-8 animate-spin text-blue-600 mx-auto" />
-                            <p className="text-gray-500">Cargando Chatwoot...</p>
+                            <p className="text-gray-500">Conectando con Chatwoot...</p>
                         </div>
                     </div>
                 )}
 
-                {/* Iframe */}
-                {chatwootUrl && !error && (
+                {/* Iframe with SSO URL */}
+                {ssoUrl && !error && (
                     <iframe
                         ref={iframeRef}
-                        src={chatwootUrl}
+                        src={ssoUrl}
                         title="Chatwoot"
                         className="w-full h-full border-0"
                         onLoad={handleIframeLoad}
@@ -256,6 +358,7 @@ export default function ChatwootPage() {
             <div className="text-xs text-gray-400 text-center">
                 Conectado a: {chatwootBaseUrl}
                 {user?.email && ` • Usuario: ${user.email}`}
+                {chatwootConfig?.chatwoot_user_id && ` • Chatwoot ID: ${chatwootConfig.chatwoot_user_id}`}
             </div>
         </div>
     );

@@ -7,7 +7,7 @@ services:
     container_name: ventia-postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-ventia_db}
-      POSTGRES_USER: ${POSTGRES_USER:-ventia_user}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ventia_password_dev}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
