@@ -1,23 +1,13 @@
 /**
  * Hook to get current authenticated user from backend
+ * ✅ Refactorizado para usar Client API Layer
  */
 
 'use client';
 
 import { useEffect, useState } from 'react';
-import { UserRole } from '@/lib/constants/roles';
-
-export interface User {
-  id: number;
-  email: string;
-  name: string;
-  role: UserRole;
-  tenant_id: number;
-  is_active: boolean;
-  auth0_user_id: string;
-  created_at: string;
-  updated_at: string;
-}
+import { getCurrentUser } from '@/lib/api-client';
+import type { User } from '@/lib/types/user';
 
 interface UseCurrentUserReturn {
   user: User | null;
@@ -38,15 +28,8 @@ export function useCurrentUser(): UseCurrentUserReturn {
       setIsLoading(true);
       setError(null);
 
-      // Call our API route which handles auth0 token
-      const response = await fetch('/api/user/me');
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to fetch user' }));
-        throw new Error(errorData.error || 'Failed to fetch current user');
-      }
-
-      const userData = await response.json();
+      // ✅ Usa Client API Layer
+      const userData = await getCurrentUser();
       setUser(userData);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Unknown error'));

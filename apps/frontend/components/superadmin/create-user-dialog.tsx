@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createUser } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -46,15 +47,9 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess, tenants }: Cre
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await fetch('/api/superadmin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Error al crear usuario');
-      }
+      // ✅ Usa Client API Layer
+      await createUser(formData);
+
       toast({
         title: "Usuario creado",
         description: "El usuario se ha creado correctamente",
