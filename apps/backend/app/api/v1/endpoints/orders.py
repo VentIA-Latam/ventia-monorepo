@@ -41,7 +41,7 @@ router = APIRouter()
 @router.get("/recent", response_model=OrderListResponse, tags=["orders"])
 async def get_recent_orders(
     limit: int = 5,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_or_api_key),
     db: Session = Depends(get_database),
 ) -> OrderListResponse:
     """
@@ -90,7 +90,7 @@ async def get_recent_orders(
 @router.post("", response_model=OrderResponse, tags=["orders"])
 async def create_order(
     order_in: OrderCreate,
-    current_user: User = Depends(require_permission_dual("POST", "/orders")),
+    current_user: User = Depends(get_current_user_or_api_key),
     db: Session = Depends(get_database),
 ) -> OrderResponse:
     """

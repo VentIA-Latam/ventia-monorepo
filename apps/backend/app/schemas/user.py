@@ -28,6 +28,8 @@ class UserCreate(UserBase):
     tenant_id: int = Field(..., description="Tenant ID this user belongs to")
     name: str = Field(..., description="User full name (required)")
     role: Role = Field(..., description="User role (required)")
+    chatwoot_user_id: int = Field(..., description="Chatwoot user ID (required for SSO)")
+    chatwoot_account_id: int = Field(..., description="Chatwoot account ID (required for SSO)")
 
     @field_validator("role", mode="before")
     @classmethod
@@ -57,6 +59,8 @@ class UserUpdate(BaseModel):
     name: str | None = None
     role: Role | None = None
     is_active: bool | None = None
+    chatwoot_user_id: int | None = None
+    chatwoot_account_id: int | None = None
 
 
 class UserResponse(UserBase):
@@ -68,6 +72,8 @@ class UserResponse(UserBase):
     last_login: datetime | None
     created_at: datetime
     updated_at: datetime
+    chatwoot_user_id: int | None = None
+    chatwoot_account_id: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

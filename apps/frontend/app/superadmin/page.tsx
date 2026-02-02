@@ -6,15 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { getPlatformStats, getRecentActivity, type PlatformStats, type Activity as ActivityType } from "@/lib/services/stats";
-import { getAllTenants, getGlobalOrders, type TenantSummary, type GlobalOrder } from "@/lib/services/superadmin";
+import { getStats, getRecentActivity, getGlobalOrders, getTenants, type SuperAdminStats, type RecentActivity, type GlobalOrder } from "@/lib/api-client/superadmin";
+import { type Tenant } from "@/lib/types/tenant";
 import { formatDateTime } from "@/lib/utils";
 
 export default function SuperAdminDashboard() {
-  const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
-  const [tenants, setTenants] = useState<TenantSummary[]>([]);
+  const [platformStats, setPlatformStats] = useState<SuperAdminStats | null>(null);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [globalOrders, setGlobalOrders] = useState<GlobalOrder[]>([]);
-  const [activities, setActivities] = useState<ActivityType[]>([]);
+  const [activities, setActivities] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,17 +26,17 @@ export default function SuperAdminDashboard() {
         setError(null);
 
         // Fetch all data in parallel
-        const [statsData, tenantsData, ordersData, activityData] = await Promise.all([
-          getPlatformStats(),
-          getAllTenants(),
+        const [statsData, tenantsResponse, ordersData, activityData] = await Promise.all([
+          getStats(),
+          getTenants({ limit: 100 }),
           getGlobalOrders(15),
           getRecentActivity(10),
         ]);
 
         setPlatformStats(statsData);
-        setTenants(tenantsData);
+        setTenants(tenantsResponse.items);
         setGlobalOrders(ordersData);
-        setActivities(activityData.activities);
+        setActivities(activityData);
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
         setError(err instanceof Error ? err.message : "Failed to load data");
@@ -154,7 +154,7 @@ export default function SuperAdminDashboard() {
               <Key className="h-4 w-4 md:h-5 md:w-5 text-purple-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl md:text-3xl font-bold">{platformStats.active_api_keys}</div>
+              <div className="text-2xl md:text-3xl font-bold">{platformStats.active_api_keys ?? 0}</div>
               <p className="text-xs text-gray-500 mt-1">
                 Credenciales en uso
               </p>
@@ -169,7 +169,7 @@ export default function SuperAdminDashboard() {
               <Shield className="h-4 w-4 md:h-5 md:w-5 text-orange-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl md:text-3xl font-bold">{platformStats.total_super_admins}</div>
+              <div className="text-2xl md:text-3xl font-bold">{platformStats.total_super_admins ?? 0}</div>
               <p className="text-xs text-gray-500 mt-1">
                 Administradores de sistema
               </p>
@@ -307,7 +307,7 @@ export default function SuperAdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-2 grid-cols-1 md:grid-cols-2 md:gap-3">
-              {activities.map((activity) => {
+              {(activities || []).map((activity) => {
                 const getIcon = () => {
                   const type = activity.entity_type.toLowerCase();
                   if (type === 'user') return <Users className="h-4 w-4" />;

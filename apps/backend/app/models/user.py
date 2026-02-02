@@ -58,6 +58,20 @@ class User(Base, TimestampMixin):
     is_active = Column(Boolean, default=True, nullable=False, comment="Is user active")
     last_login = Column(DateTime, nullable=True, comment="Last login timestamp")
 
+    # Chatwoot integration (for SSO)
+    chatwoot_user_id = Column(
+        Integer,
+        nullable=True,
+        index=True,
+        comment="Chatwoot user ID for SSO login",
+    )
+    chatwoot_account_id = Column(
+        Integer,
+        nullable=True,
+        index=True,
+        comment="Chatwoot account ID for SSO login",
+    )
+
     def __repr__(self) -> str:
         """String representation of User."""
         return f"<User(id={self.id}, email='{self.email}', role='{self.role}')>"

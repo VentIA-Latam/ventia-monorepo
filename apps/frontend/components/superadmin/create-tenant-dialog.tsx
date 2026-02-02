@@ -21,6 +21,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { createTenant } from "@/lib/api-client";
 
 type EcommercePlatform = "shopify" | "woocommerce";
 
@@ -134,16 +135,8 @@ export function CreateTenantDialog({ open, onOpenChange, onSuccess }: CreateTena
         submitData.sync_on_validation = true;
       }
 
-      const response = await fetch('/api/superadmin/tenants', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(submitData),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Error al crear tenant');
-      }
+      // ✅ Usa Client API Layer
+      await createTenant(submitData);
 
       toast({
         title: "Tenant creado",

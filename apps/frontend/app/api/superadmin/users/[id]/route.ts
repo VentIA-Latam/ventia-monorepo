@@ -124,9 +124,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
     const body = await req.json();
-    // PATCH to /users/:id to update user information
+    // PUT to /users/:id to update user information (backend uses PUT, not PATCH)
     const response = await fetch(`${API_URL}/users/${userId}`, {
-      method: 'PATCH',
+      method: 'PUT',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createUser } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -40,26 +41,22 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess, tenants }: Cre
     email: "",
     role: "ADMIN",
     tenant_id: undefined,
+    chatwoot_user_id: undefined,
+    chatwoot_account_id: undefined,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await fetch('/api/superadmin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Error al crear usuario');
-      }
+      // ✅ Usa Client API Layer
+      await createUser(formData);
+
       toast({
         title: "Usuario creado",
         description: "El usuario se ha creado correctamente",
       });
-      setFormData({ name: "", email: "", role: "ADMIN", tenant_id: undefined });
+      setFormData({ name: "", email: "", role: "ADMIN", tenant_id: undefined, chatwoot_user_id: undefined, chatwoot_account_id: undefined });
       onSuccess();
       onOpenChange(false);
     } catch (error) {
@@ -131,6 +128,38 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess, tenants }: Cre
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Chatwoot Integration - Required fields */}
+            <div className="border-t pt-4 mt-2">
+              <p className="text-sm font-medium text-gray-700 mb-3">Integración Chatwoot (Requerido)</p>
+              <p className="text-xs text-gray-500 mb-3">
+                El usuario debe existir previamente en Chatwoot. Obtén estos IDs desde la plataforma de Chatwoot.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="chatwoot_user_id">User ID <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="chatwoot_user_id"
+                    type="number"
+                    placeholder="Ej: 1"
+                    value={formData.chatwoot_user_id || ""}
+                    onChange={e => setFormData({ ...formData, chatwoot_user_id: e.target.value ? parseInt(e.target.value) : undefined })}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="chatwoot_account_id">Account ID <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="chatwoot_account_id"
+                    type="number"
+                    placeholder="Ej: 1"
+                    value={formData.chatwoot_account_id || ""}
+                    onChange={e => setFormData({ ...formData, chatwoot_account_id: e.target.value ? parseInt(e.target.value) : undefined })}
+                    required
+                  />
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>

@@ -73,8 +73,8 @@ const dataConfiguration = [
     icon: Key,
   },
   {
-    title: "Chatwoot",
-    url: "/superadmin/chatwoot",
+    title: "Conversaciones",
+    url: "/superadmin/conversations",
     icon: MessageSquare,
   },
 ]

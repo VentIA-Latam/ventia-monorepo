@@ -72,8 +72,8 @@ const dataPlatform = [
     icon: Receipt,
   },
   {
-    title: "Chatwoot",
-    url: "/dashboard/chatwoot",
+    title: "Conversaciones",
+    url: "/dashboard/conversations",
     icon: MessageSquare,
   },
   /*   {
