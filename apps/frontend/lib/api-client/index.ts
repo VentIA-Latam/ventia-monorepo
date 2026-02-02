@@ -22,6 +22,9 @@ export * from './superadmin';
 // User
 export * from './user';
 
+// Chatwoot
+export * from './chatwoot';
+
 // Client helpers
 export { ClientApiError } from './client';
 export type { ApiError } from './client';

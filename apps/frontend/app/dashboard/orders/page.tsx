@@ -4,6 +4,9 @@ import { getAccessToken } from "@/lib/auth0";
 import { OrdersClientView } from "./orders-client";
 import { formatDate, getEcommerceOrderId, extractShopifyOrderId } from "@/lib/utils";
 
+// Forzar renderizado dinámico (SSR) porque usa cookies para auth
+export const dynamic = 'force-dynamic';
+
 /**
  * Server Component - Carga de datos segura
  * 

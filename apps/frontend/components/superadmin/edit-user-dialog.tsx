@@ -43,6 +43,8 @@ export function EditUserDialog({ user, open, onOpenChange, onSuccess, tenants }:
     role: "ADMIN",
     is_active: true,
     tenant_id: null,
+    chatwoot_user_id: undefined,
+    chatwoot_account_id: undefined,
   });
 
   useEffect(() => {
@@ -53,6 +55,8 @@ export function EditUserDialog({ user, open, onOpenChange, onSuccess, tenants }:
         role: user.role,
         is_active: user.is_active,
         tenant_id: user.tenant_id,
+        chatwoot_user_id: user.chatwoot_user_id,
+        chatwoot_account_id: user.chatwoot_account_id,
       });
     }
   }, [user]);
@@ -148,6 +152,38 @@ export function EditUserDialog({ user, open, onOpenChange, onSuccess, tenants }:
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Chatwoot Integration - Required fields */}
+            <div className="border-t pt-4 mt-2">
+              <p className="text-sm font-medium text-gray-700 mb-3">Integración Chatwoot (Requerido)</p>
+              <p className="text-xs text-gray-500 mb-3">
+                El usuario debe existir previamente en Chatwoot. Obtén estos IDs desde la plataforma de Chatwoot.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="chatwoot_user_id">User ID <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="chatwoot_user_id"
+                    type="number"
+                    placeholder="Ej: 1"
+                    value={formData.chatwoot_user_id || ""}
+                    onChange={e => setFormData({ ...formData, chatwoot_user_id: e.target.value ? parseInt(e.target.value) : undefined })}
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="chatwoot_account_id">Account ID <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="chatwoot_account_id"
+                    type="number"
+                    placeholder="Ej: 1"
+                    value={formData.chatwoot_account_id || ""}
+                    onChange={e => setFormData({ ...formData, chatwoot_account_id: e.target.value ? parseInt(e.target.value) : undefined })}
+                    required
+                  />
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>

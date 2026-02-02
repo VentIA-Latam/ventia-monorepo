@@ -258,7 +258,7 @@ def seed_database():
                 role=Role.SUPERADMIN,
                 is_active=True,
                 last_login=datetime.now(),
-                chatwoot_user_id=5,
+                chatwoot_user_id=1,
                 chatwoot_account_id=1,
                 created_at=datetime.now(),
                 updated_at=datetime.now(),
