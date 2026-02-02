@@ -94,7 +94,7 @@ export async function updateTenant(
   tenantId: number,
   data: Partial<Tenant>
 ): Promise<Tenant> {
-  return apiPut(`/api/superadmin/tenants/${tenantId}`, data);
+  return apiPatch(`/api/superadmin/tenants/${tenantId}`, data);
 }
 
 /**
