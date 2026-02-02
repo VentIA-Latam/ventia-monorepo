@@ -125,6 +125,13 @@ class TenantService:
             is_platform=False,  # New tenants are always clients, not platform
             is_active=True,
             efact_ruc=tenant_in.efact_ruc,
+            # Emisor data for electronic invoicing
+            emisor_nombre_comercial=tenant_in.emisor_nombre_comercial,
+            emisor_ubigeo=tenant_in.emisor_ubigeo,
+            emisor_departamento=tenant_in.emisor_departamento,
+            emisor_provincia=tenant_in.emisor_provincia,
+            emisor_distrito=tenant_in.emisor_distrito,
+            emisor_direccion=tenant_in.emisor_direccion,
         )
 
         # Build e-commerce settings if platform is specified
