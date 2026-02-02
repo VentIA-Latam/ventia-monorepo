@@ -99,10 +99,8 @@ export default function TenantsPage() {
   const fetchTenants = async () => {
     try {
       setLoading(true);
-
       // ✅ Usa Client API Layer
       const data = await getTenants({ limit: 100 });
-      console.log('Tenants data:', data.items); // Debug
       setTenants(data.items || []);
     } catch (error) {
       console.error('Error fetching tenants:', error);
