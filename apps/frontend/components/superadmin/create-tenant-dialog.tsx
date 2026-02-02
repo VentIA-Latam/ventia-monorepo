@@ -218,7 +218,7 @@ export function CreateTenantDialog({ open, onOpenChange, onSuccess }: CreateTena
                 {/* Slug */}
                 <div className="space-y-2">
                   <Label htmlFor="slug" className="flex items-center gap-2">
-                    Slug (URL)
+                    Slug (Etiqueta)
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Info className="inline-block w-4 h-4 text-muted-foreground cursor-help" />
