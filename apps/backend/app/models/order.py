@@ -13,6 +13,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
@@ -126,6 +127,11 @@ class Order(Base, TimestampMixin):
         String,
         nullable=True,
         comment="Dispatch time window (e.g., '09:00-12:00')",
+    )
+    shipping_address = Column(
+        Text,
+        nullable=True,
+        comment="Shipping address: address1, city",
     )
 
     # Relationships

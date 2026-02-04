@@ -57,6 +57,12 @@ class ShopifyCredentials(BaseModel):
         description="UTC timestamp when the access token expires",
     )
 
+    # Webhook configuration
+    webhook_secret: str | None = Field(
+        None,
+        description="Secret for webhook HMAC signature validation (auto-generated if not provided, encrypted at rest)",
+    )
+
     @field_validator("store_url")
     @classmethod
     def validate_store_url(cls, v: str) -> str:
@@ -92,6 +98,10 @@ class WooCommerceCredentials(BaseModel):
     consumer_secret: str | None = Field(
         None,
         description="WooCommerce REST API consumer secret (sensitive - encrypted at rest)",
+    )
+    webhook_secret: str | None = Field(
+        None,
+        description="Secret for webhook HMAC signature validation (auto-generated if not provided, encrypted at rest)",
     )
 
     @field_validator("store_url")

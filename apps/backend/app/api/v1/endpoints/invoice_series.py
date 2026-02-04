@@ -9,8 +9,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_database, require_role
-from app.core.permissions import Role
+from app.api.deps import get_current_user, get_database, require_permission_dual
 from app.models.user import User
 from app.repositories.invoice_serie import invoice_serie_repository
 from app.schemas.invoice import InvoiceSerieCreate, InvoiceSerieResponse, InvoiceSerieUpdate
@@ -29,7 +28,7 @@ router = APIRouter()
 )
 async def create_invoice_serie(
     serie_data: InvoiceSerieCreate,
-    current_user: User = Depends(require_role(Role.ADMIN, Role.SUPERADMIN)),
+    current_user: User = Depends(require_permission_dual("POST", "/invoice-series")),
     tenant_id: int | None = None,
     db: Session = Depends(get_database),
 ) -> InvoiceSerieResponse:
@@ -344,7 +343,7 @@ async def get_invoice_serie(
 async def update_invoice_serie(
     serie_id: int,
     serie_update: InvoiceSerieUpdate,
-    current_user: User = Depends(require_role(Role.ADMIN, Role.SUPERADMIN)),
+    current_user: User = Depends(require_permission_dual("PUT", "/invoice-series/*")),
     db: Session = Depends(get_database),
 ) -> InvoiceSerieResponse:
     """
@@ -443,7 +442,7 @@ async def update_invoice_serie(
 )
 async def delete_invoice_serie(
     serie_id: int,
-    current_user: User = Depends(require_role(Role.ADMIN, Role.SUPERADMIN)),
+    current_user: User = Depends(require_permission_dual("DELETE", "/invoice-series/*")),
     db: Session = Depends(get_database),
 ):
     """

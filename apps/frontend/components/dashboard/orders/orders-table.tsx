@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -10,9 +11,19 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Order } from "@/lib/types/order";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Order } from "@/lib/services/order-service";
+import { getEcommerceOrderId, extractShopifyOrderId, formatDateTime, getCurrencySymbol } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { FileText } from "lucide-react";
+import { FileText, MoreVertical, Eye, Ban } from "lucide-react";
+import { CancelOrderDialog } from "./cancel-order-dialog";
 
 interface OrdersTableProps {
   orders: Order[];
@@ -36,9 +47,9 @@ const getAvatarColor = (name: string) => {
 export function OrdersTable({ orders }: OrdersTableProps) {
   const router = useRouter();
 
-  const handleOrderClick = (orderDbId: number) => {
+  const handleOrderClick = (orderId: number) => {
     // Navigate to order detail page usando el ID real de la BD
-    router.push(`/dashboard/orders/${orderDbId}`);
+    router.push(`/dashboard/orders/${orderId}`);
   };
 
   return (
@@ -72,22 +83,32 @@ export function OrdersTable({ orders }: OrdersTableProps) {
               <TableRow
                 key={order.id}
                 className="hover:bg-gray-50/50 cursor-pointer transition-colors border-b border-gray-100 last:border-0"
-                onClick={() => handleOrderClick(order.dbId)}
+                onClick={() => handleOrderClick(order.id)}
               >
                 <TableCell className="min-w-[120px]">
                   <div>
                     <div className="font-semibold text-blue-600 hover:underline cursor-pointer text-sm">
-                      {order.id}
+                      {getEcommerceOrderId({
+                        shopify_draft_order_id: order.shopify_draft_order_id,
+                        woocommerce_order_id: order.woocommerce_order_id
+                      })}
                     </div>
                     <div className="text-xs text-gray-500 mt-0.5">
-                      {order.date}
+                      {formatDateTime(order.created_at)}
                     </div>
                   </div>
                 </TableCell>
                 <TableCell className="min-w-[120px]">
-                  {order.shopifyOrderId ? (
-                    <div className="font-semibold text-green-600 text-sm">
-                      {order.shopifyOrderId}
+                  {order.shopify_order_id ? (
+                    <div>
+                      <div className="font-semibold text-green-600 text-sm">
+                        {extractShopifyOrderId(order.shopify_order_id)}
+                      </div>
+                      {order.validated_at && (
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {formatDateTime(order.validated_at)}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <span className="text-xs text-gray-400 italic">Pendiente</span>
@@ -95,13 +116,15 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                 </TableCell>
                 <TableCell className="min-w-[200px]">
                   <div className="flex items-center gap-2 sm:gap-3">
-                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold text-xs sm:text-sm ${getAvatarColor(order.client.name)}`}>
-                      {order.client.name.substring(0, 2).toUpperCase()}
+                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold text-xs sm:text-sm ${getAvatarColor(order.customer_name || 'Sin nombre')}`}>
+                      {(order.customer_name || 'SN').substring(0, 2).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="font-medium text-sm text-gray-900 truncate">{order.client.name}</div>
+                      <div className="font-medium text-sm text-gray-900 truncate">
+                        {order.customer_name || 'Sin nombre'}
+                      </div>
                       <div className="text-xs text-gray-500 mt-0.5 truncate">
-                        {order.client.email}
+                        {order.customer_email}
                       </div>
                     </div>
                   </div>
@@ -110,32 +133,68 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                   <Badge
                     variant="secondary"
                     className={
-                      order.paymentStatus === 'Pagado'
+                      order.status === 'Pagado'
                         ? 'bg-green-100 text-green-700 border-0 hover:bg-green-100 rounded-md px-2 sm:px-3 py-1 text-xs'
-                        : order.paymentStatus === 'Pendiente'
+                        : order.status === 'Pendiente'
                           ? 'bg-yellow-100 text-yellow-700 border-0 hover:bg-yellow-100 rounded-md px-2 sm:px-3 py-1 text-xs'
                           : 'bg-red-100 text-red-700 border-0 hover:bg-red-100 rounded-md px-2 sm:px-3 py-1 text-xs'
                     }
                   >
-                    {order.paymentStatus}
+                    {order.status}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right font-semibold text-sm text-gray-900 min-w-[100px]">
-                  {order.currency}{order.amount.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {getCurrencySymbol(order.currency)}{order.total_price.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </TableCell>
-                <TableCell className="text-center min-w-[120px]">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/dashboard/invoices/new?orderId=${order.dbId}`);
-                    }}
-                    className="gap-1.5"
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Crear</span>
-                  </Button>
+                <TableCell className="text-center min-w-[80px]">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <Link href={`/dashboard/orders/${order.id}`}>
+                        <DropdownMenuItem>
+                          <Eye className="h-4 w-4 mr-2" />
+                          Ver detalles
+                        </DropdownMenuItem>
+                      </Link>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/dashboard/invoices/new?orderId=${order.id}`);
+                        }}
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Ir a Facturación
+                      </DropdownMenuItem>
+                      {order.status !== 'Cancelado' && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <CancelOrderDialog
+                            order={order}
+                            onCancelled={() => router.refresh()}
+                            trigger={
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onSelect={(e) => e.preventDefault()}
+                              >
+                                <Ban className="h-4 w-4 mr-2" />
+                                Cancelar Pedido
+                              </DropdownMenuItem>
+                            }
+                          />
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}

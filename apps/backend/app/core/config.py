@@ -58,6 +58,12 @@ class Settings(BaseSettings):
     RESEND_FROM_EMAIL: str = "noreply@ventia.pe"  # Email address for sending invoices
     RESEND_FROM_NAME: str = "VentIA - Facturación"  # Sender name for emails
 
+    # Webhooks
+    WEBHOOK_BASE_URL: str = Field(
+        default="",
+        description="Base URL for webhook callbacks (e.g., https://api.ventia.pe). Falls back to first CORS origin if not set."
+    )
+    
     # Chatwoot Platform API (for SSO)
     CHATWOOT_PLATFORM_API_TOKEN: str = ""  # Platform App token for SSO
     CHATWOOT_BASE_URL: str = "http://localhost:3001"  # Chatwoot base URL

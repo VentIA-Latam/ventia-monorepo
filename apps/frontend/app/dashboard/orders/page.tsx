@@ -1,15 +1,13 @@
-import { Order as UIOrder } from "@/lib/types/order";
-import { fetchOrders, Order as BackendOrder } from "@/lib/services/order-service";
+import { fetchOrders, Order } from "@/lib/services/order-service";
 import { getAccessToken } from "@/lib/auth0";
 import { OrdersClientView } from "./orders-client";
-import { formatDate, getEcommerceOrderId, extractShopifyOrderId } from "@/lib/utils";
 
 // Forzar renderizado dinámico (SSR) porque usa cookies para auth
 export const dynamic = 'force-dynamic';
 
 /**
  * Server Component - Carga de datos segura
- * 
+ *
  * Esta página es un Server Component (sin "use client"), lo que significa:
  * 1. Se ejecuta SOLO en el servidor de Next.js
  * 2. Puede usar getAccessToken() directamente de Auth0
@@ -18,48 +16,8 @@ export const dynamic = 'force-dynamic';
  * 5. Pasa los datos ya cargados al Client Component para la interactividad
  */
 
-// Convert currency code to symbol
-function getCurrencySymbol(currency: string): string {
-  const symbols: Record<string, string> = {
-    'USD': '$',
-    'EUR': '€',
-    'GBP': '£',
-    'PEN': 'S/',
-    'MXN': '$',
-    'ARS': '$',
-    'CLP': '$',
-  };
-  return symbols[currency.toUpperCase()] || currency;
-}
-
-// Map backend order to UI order format
-function mapBackendOrderToUI(backendOrder: BackendOrder): UIOrder {
-  return {
-    id: getEcommerceOrderId({
-      shopify_draft_order_id: backendOrder.shopify_draft_order_id,
-      woocommerce_order_id: backendOrder.woocommerce_order_id
-    }),
-    dbId: backendOrder.id, // ID real de la base de datos
-    shopifyOrderId: backendOrder.shopify_order_id
-      ? extractShopifyOrderId(backendOrder.shopify_order_id)
-      : null,
-    date: formatDate(backendOrder.created_at),
-    client: {
-      name: backendOrder.customer_name || 'Sin nombre',
-      email: backendOrder.customer_email,
-    },
-    channel: 'Portal B2B',
-    paymentStatus: backendOrder.status as 'Pagado' | 'Pendiente' | 'Rechazado',
-    logisticsStatus: 'Procesando',
-    amount: backendOrder.total_price,
-    currency: getCurrencySymbol(backendOrder.currency),
-  };
-}
-
 export default async function OrdersPage() {
-  // Usamos getAccessToken() directamente desde el servidor
-
-  let orders: UIOrder[] = [];
+  let orders: Order[] = [];
   let error: string | null = null;
 
   try {
@@ -76,8 +34,8 @@ export default async function OrdersPage() {
       limit: 100,
     });
 
-    // 3. Mapear las órdenes al formato de UI
-    orders = response.items.map(mapBackendOrderToUI);
+    // 3. Usar datos del backend directamente (sin transformación innecesaria)
+    orders = response.items;
 
   } catch (err) {
     console.error('Error loading orders:', err);

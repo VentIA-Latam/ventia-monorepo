@@ -2,6 +2,9 @@
 Tenant service - business logic for tenant management.
 """
 
+import logging
+import secrets
+
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -14,6 +17,8 @@ from app.schemas.tenant_settings import (
     ShopifyCredentials,
     WooCommerceCredentials,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class TenantService:
@@ -204,12 +209,19 @@ class TenantService:
                 ),
             )
         elif tenant_in.ecommerce_platform == "woocommerce":
+            # Generate webhook_secret if not provided
+            webhook_secret = getattr(tenant_in, "webhook_secret", None)
+            if not webhook_secret:
+                webhook_secret = secrets.token_urlsafe(32)
+                logger.info("Generated new webhook_secret for new WooCommerce tenant")
+
             return EcommerceSettings(
                 sync_on_validation=tenant_in.sync_on_validation,
                 woocommerce=WooCommerceCredentials(
                     store_url=tenant_in.ecommerce_store_url or "",
                     consumer_key=tenant_in.ecommerce_consumer_key,
                     consumer_secret=tenant_in.ecommerce_consumer_secret,
+                    webhook_secret=webhook_secret,
                 ),
             )
         else:
@@ -261,7 +273,7 @@ class TenantService:
 
         return slug
 
-    def update_tenant(self, db: Session, tenant_id: int, tenant_in: TenantUpdate) -> Tenant | None:
+    async def update_tenant(self, db: Session, tenant_id: int, tenant_in: TenantUpdate) -> Tenant | None:
         """
         Update tenant fields.
 
@@ -322,14 +334,14 @@ class TenantService:
 
         # Handle e-commerce settings update
         if has_ecommerce_update:
-            self._update_ecommerce_settings(tenant, update_data)
+            await self._update_ecommerce_settings(db, tenant, update_data)
 
         db.commit()
         db.refresh(tenant)
 
         return tenant
 
-    def _update_ecommerce_settings(self, tenant: Tenant, update_data: dict) -> None:
+    async def _update_ecommerce_settings(self, db: Session, tenant: Tenant, update_data: dict) -> None:
         """
         Update e-commerce settings for a tenant.
 
@@ -370,9 +382,23 @@ class TenantService:
             )
             tenant.set_ecommerce_settings(new_settings)
 
+            # Auto-subscribe to Shopify webhooks if credentials are complete
+            await self._auto_subscribe_shopify_webhooks(db, tenant, new_settings.shopify)
+
         elif platform == "woocommerce":
             # Get current WooCommerce settings if available
             current_woo = current_ecommerce.woocommerce if current_ecommerce else None
+
+            # Generate webhook_secret if not provided
+            webhook_secret = update_data.get("webhook_secret")
+            if not webhook_secret:
+                if current_woo and current_woo.webhook_secret:
+                    # Keep existing secret
+                    webhook_secret = current_woo.webhook_secret
+                else:
+                    # Generate new secure secret
+                    webhook_secret = secrets.token_urlsafe(32)
+                    logger.info(f"Generated new webhook_secret for WooCommerce tenant {tenant.id}")
 
             new_settings = EcommerceSettings(
                 sync_on_validation=sync_on_validation,
@@ -383,9 +409,13 @@ class TenantService:
                     or (current_woo.consumer_key if current_woo else None),
                     consumer_secret=update_data.get("ecommerce_consumer_secret")
                     or (current_woo.consumer_secret if current_woo else None),
+                    webhook_secret=webhook_secret,
                 ),
             )
             tenant.set_ecommerce_settings(new_settings)
+
+            # Auto-subscribe to WooCommerce webhooks if credentials are complete
+            await self._auto_subscribe_woocommerce_webhooks(db, tenant, new_settings.woocommerce)
 
         else:
             # No platform - just update sync setting
@@ -454,6 +484,119 @@ class TenantService:
             "user_count": user_count or 0,
             "order_count": order_count or 0,
         }
+
+    async def _auto_subscribe_shopify_webhooks(
+        self,
+        db: Session,
+        tenant: Tenant,
+        shopify_credentials: ShopifyCredentials | None,
+    ) -> None:
+        """
+        Automatically subscribe to Shopify webhooks after credentials are saved.
+
+        Args:
+            db: Database session
+            tenant: Tenant with updated credentials
+            shopify_credentials: Shopify credentials (may be None if incomplete)
+        """
+        # Skip if credentials are incomplete
+        if not shopify_credentials or not shopify_credentials.client_id or not shopify_credentials.client_secret:
+            logger.info(f"Skipping Shopify webhook subscription for tenant {tenant.id}: incomplete credentials")
+            return
+
+        # Skip if store_url is missing
+        if not shopify_credentials.store_url:
+            logger.info(f"Skipping Shopify webhook subscription for tenant {tenant.id}: missing store_url")
+            return
+
+        try:
+            from app.integrations.shopify_client import ShopifyClient
+            from app.integrations.shopify_token_manager import shopify_token_manager
+            from app.services.webhook_subscription_service import WebhookSubscriptionService
+
+            # Get valid access token
+            access_token = await shopify_token_manager.get_valid_access_token(db, tenant)
+
+            # Create Shopify client
+            shopify_client = ShopifyClient(
+                store_url=shopify_credentials.store_url,
+                access_token=access_token,
+                api_version=shopify_credentials.api_version or "2024-01",
+            )
+
+            # Subscribe to webhooks
+            webhook_service = WebhookSubscriptionService(db)
+            result = await webhook_service.subscribe_shopify_webhooks(
+                tenant_id=tenant.id,
+                shopify_client=shopify_client,
+            )
+
+            logger.info(
+                f"Shopify webhook subscription result for tenant {tenant.id}: "
+                f"created={result['created']}, skipped={result['skipped']}, failed={result['failed']}"
+            )
+
+        except Exception as e:
+            # Don't fail the whole operation if webhook subscription fails
+            logger.error(
+                f"Failed to auto-subscribe Shopify webhooks for tenant {tenant.id}: {str(e)}",
+                exc_info=True,
+            )
+
+    async def _auto_subscribe_woocommerce_webhooks(
+        self,
+        db: Session,
+        tenant: Tenant,
+        woo_credentials: WooCommerceCredentials | None,
+    ) -> None:
+        """
+        Automatically subscribe to WooCommerce webhooks after credentials are saved.
+
+        Args:
+            db: Database session
+            tenant: Tenant with updated credentials
+            woo_credentials: WooCommerce credentials (may be None if incomplete)
+        """
+        # Skip if credentials are incomplete
+        if not woo_credentials or not woo_credentials.consumer_key or not woo_credentials.consumer_secret:
+            logger.info(f"Skipping WooCommerce webhook subscription for tenant {tenant.id}: incomplete credentials")
+            return
+
+        # Skip if store_url or webhook_secret is missing
+        if not woo_credentials.store_url or not woo_credentials.webhook_secret:
+            logger.info(f"Skipping WooCommerce webhook subscription for tenant {tenant.id}: missing store_url or webhook_secret")
+            return
+
+        try:
+            from app.integrations.woocommerce_client import WooCommerceClient
+            from app.services.webhook_subscription_service import WebhookSubscriptionService
+
+            # Create WooCommerce client
+            woo_client = WooCommerceClient(
+                store_url=woo_credentials.store_url,
+                consumer_key=woo_credentials.consumer_key,
+                consumer_secret=woo_credentials.consumer_secret,
+            )
+
+            # Subscribe to webhooks
+            webhook_service = WebhookSubscriptionService(db)
+            result = await webhook_service.subscribe_woocommerce_webhooks(
+                tenant_id=tenant.id,
+                woocommerce_client=woo_client,
+                webhook_secret=woo_credentials.webhook_secret,
+            )
+
+            logger.info(
+                f"WooCommerce webhook subscription result for tenant {tenant.id}: "
+                f"created={result['created']}, skipped={result['skipped']}, failed={result['failed']}"
+            )
+
+        except Exception as e:
+            # Don't fail the whole operation if webhook subscription fails
+            logger.error(
+                f"Failed to auto-subscribe WooCommerce webhooks for tenant {tenant.id}: {str(e)}",
+                exc_info=True,
+            )
 
 
 # Singleton instance

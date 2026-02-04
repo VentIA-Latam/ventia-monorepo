@@ -200,10 +200,14 @@ class Tenant(Base, TimestampMixin):
             consumer_secret = self._safe_decrypt(
                 woocommerce_dict.get("consumer_secret_encrypted")
             )
+            webhook_secret = self._safe_decrypt(
+                woocommerce_dict.get("webhook_secret_encrypted")
+            )
             woocommerce_creds = WooCommerceCredentials(
                 store_url=woocommerce_dict.get("store_url", ""),
                 consumer_key=consumer_key,
                 consumer_secret=consumer_secret,
+                webhook_secret=webhook_secret,
             )
 
         return EcommerceSettings(
@@ -301,6 +305,10 @@ class Tenant(Base, TimestampMixin):
             if ecommerce.woocommerce.consumer_secret:
                 ecommerce_dict["woocommerce"]["consumer_secret_encrypted"] = (
                     encryption_service.encrypt(ecommerce.woocommerce.consumer_secret)
+                )
+            if ecommerce.woocommerce.webhook_secret:
+                ecommerce_dict["woocommerce"]["webhook_secret_encrypted"] = (
+                    encryption_service.encrypt(ecommerce.woocommerce.webhook_secret)
                 )
 
         self.settings["ecommerce"] = ecommerce_dict

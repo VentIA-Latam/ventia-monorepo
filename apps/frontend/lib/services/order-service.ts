@@ -20,6 +20,7 @@ export interface Order {
   validado: boolean;
   validated_at: string | null;
   payment_method: string | null;
+  shipping_address: string | null;
   notes: string | null;
   status: string;
   created_at: string;
@@ -46,6 +47,14 @@ export interface LineItem {
 export interface OrderValidateRequest {
   payment_method?: string;
   notes?: string;
+}
+
+export interface OrderCancelRequest {
+  reason: string;
+  restock?: boolean;
+  notify_customer?: boolean;
+  refund_method?: string | null;
+  staff_note?: string | null;
 }
 
 /**
@@ -167,6 +176,31 @@ export async function validateOrder(
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: 'Failed to validate order' }));
     throw new Error(error.detail || 'Failed to validate order');
+  }
+
+  return response.json();
+}
+
+/**
+ * Cancel order and sync with ecommerce platform (Shopify / WooCommerce)
+ */
+export async function cancelOrder(
+  accessToken: string,
+  orderId: number,
+  data: OrderCancelRequest
+): Promise<Order> {
+  const response = await fetch(`${API_URL}/orders/${orderId}/cancel`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Failed to cancel order' }));
+    throw new Error(error.detail || 'Failed to cancel order');
   }
 
   return response.json();

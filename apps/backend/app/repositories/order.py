@@ -186,6 +186,35 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
             .first()
         )
 
+    def get_by_shopify_order_id(
+        self,
+        db: Session,
+        tenant_id: int,
+        shopify_order_id: str,
+    ) -> Order | None:
+        """
+        Get order by Shopify order ID and tenant.
+
+        Used when processing webhooks for completed orders (e.g., orders/paid).
+        The order ID is the final Shopify order ID (not draft order ID).
+
+        Args:
+            db: Database session
+            tenant_id: Tenant ID
+            shopify_order_id: Shopify order ID (gid://shopify/Order/...)
+
+        Returns:
+            Order or None
+        """
+        return (
+            db.query(Order)
+            .filter(
+                Order.tenant_id == tenant_id,
+                Order.shopify_order_id == shopify_order_id,
+            )
+            .first()
+        )
+
     def get_by_woocommerce_order_id(
         self,
         db: Session,

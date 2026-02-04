@@ -20,6 +20,24 @@ export function formatCurrency(
 }
 
 /**
+ * Convert currency code to symbol
+ * @param currency - Currency code (USD, PEN, EUR, etc.)
+ * @returns Currency symbol ($, S/, €, etc.)
+ */
+export function getCurrencySymbol(currency: string): string {
+  const symbols: Record<string, string> = {
+    'USD': '$',
+    'EUR': '€',
+    'GBP': '£',
+    'PEN': 'S/',
+    'MXN': '$',
+    'ARS': '$',
+    'CLP': '$',
+  };
+  return symbols[currency.toUpperCase()] || currency;
+}
+
+/**
  * Helper para formatear fecha (solo fecha, sin hora)
  * @param isoDate - Fecha en formato ISO string
  * @returns String formateado "15/01/2024"
@@ -41,7 +59,7 @@ export function formatDate(isoDate: string): string {
 /**
  * Helper para formatear fecha y hora completa (24 horas, hora de Perú UTC-5)
  * @param isoDate - Fecha en formato ISO string
- * @returns String formateado "15/01/2024, 14:30"
+ * @returns String formateado "15/01/2024 14:30"
  */
 export function formatDateTime(isoDate: string): string {
   const utcDate = new Date(isoDate + 'Z');
@@ -53,11 +71,18 @@ export function formatDateTime(isoDate: string): string {
   const day = String(peruDate.getDate()).padStart(2, '0');
   const month = String(peruDate.getMonth() + 1).padStart(2, '0');
   const year = peruDate.getFullYear();
-  const hours = String(peruDate.getHours()).padStart(2, '0');
+
+  let hours = peruDate.getHours();
   const minutes = String(peruDate.getMinutes()).padStart(2, '0');
 
-  return `${day}/${month}/${year}, ${hours}:${minutes}`;
+  const period = hours >= 12 ? 'pm' : 'am';
+  hours = hours % 12 || 12; // convierte 0 → 12
+
+  const formattedHours = String(hours).padStart(2, '0');
+
+  return `${day}/${month}/${year} ${formattedHours}:${minutes} ${period}`;
 }
+
 
 /**
  * Extrae el ID numérico de un Shopify GraphQL ID

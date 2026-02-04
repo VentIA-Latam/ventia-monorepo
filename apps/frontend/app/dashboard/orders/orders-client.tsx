@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { OrdersTable } from "@/components/dashboard/orders/orders-table";
-import { Order as UIOrder, OrderFilters } from "@/lib/types/order";
+import { Order } from "@/lib/services/order-service";
 import {
   Download,
   Plus,
@@ -20,8 +20,15 @@ import {
   ChevronRight
 } from "lucide-react";
 
+export interface OrderFilters {
+  search: string;
+  paymentStatus: string;
+  channel: string;
+  dateRange: string;
+}
+
 interface OrdersClientViewProps {
-  initialOrders: UIOrder[];
+  initialOrders: Order[];
 }
 
 /**
@@ -48,17 +55,18 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
   // Filter orders based on current filters
   const filteredOrders = initialOrders.filter((order) => {
     const matchesSearch =
-      order.id.toLowerCase().includes(filters.search.toLowerCase()) ||
-      order.client.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-      order.client.email.toLowerCase().includes(filters.search.toLowerCase());
+      (order.shopify_draft_order_id?.toLowerCase().includes(filters.search.toLowerCase()) ||
+       order.woocommerce_order_id?.toString().includes(filters.search) ||
+       order.customer_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
+       order.customer_email.toLowerCase().includes(filters.search.toLowerCase())) ?? false;
 
     const matchesPaymentStatus =
       filters.paymentStatus === "all" ||
-      order.paymentStatus === filters.paymentStatus;
+      order.status === filters.paymentStatus;
 
     const matchesChannel =
-      filters.channel === "all" ||
-      order.channel === filters.channel;
+      filters.channel === "all";
+      // Note: channel filtering removed as it's not in backend Order type
 
     return matchesSearch && matchesPaymentStatus && matchesChannel;
   });
@@ -116,7 +124,7 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
             <SelectItem value="all">Estado de Pago</SelectItem>
             <SelectItem value="Pagado">Pagado</SelectItem>
             <SelectItem value="Pendiente">Pendiente</SelectItem>
-            <SelectItem value="Rechazado">Rechazado</SelectItem>
+            <SelectItem value="Cancelado">Cancelado</SelectItem>
           </SelectContent>
         </Select>
 

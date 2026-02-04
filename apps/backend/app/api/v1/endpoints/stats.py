@@ -9,9 +9,8 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import (
     get_database,
-    require_permission,
+    require_permission_dual,
 )
-from app.core.permissions import Role
 from app.models.user import User
 from app.schemas.activity import RecentActivityResponse
 from app.schemas.stats import StatsResponse
@@ -25,7 +24,7 @@ router = APIRouter()
 
 @router.get("", response_model=StatsResponse, tags=["stats"])
 async def get_platform_stats(
-    current_user: User = Depends(require_permission("GET", "/stats")),
+    current_user: User = Depends(require_permission_dual("GET", "/stats")),
     db: Session = Depends(get_database),
 ) -> StatsResponse:
     """
@@ -66,7 +65,7 @@ async def get_platform_stats(
 
 @router.get("/activity/recent", response_model=RecentActivityResponse, tags=["stats"])
 async def get_recent_activity(
-    current_user: User = Depends(require_permission("GET", "/stats")),
+    current_user: User = Depends(require_permission_dual("GET", "/stats")),
     db: Session = Depends(get_database),
 ) -> RecentActivityResponse:
     """

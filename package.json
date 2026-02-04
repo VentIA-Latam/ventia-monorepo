@@ -7,7 +7,7 @@
     "dev": "pnpm run --parallel dev",
     "dev:frontend": "pnpm --filter frontend dev",
     "dev2:frontend": "pnpm --filter frontend dev2",
-    "dev:backend": "cd apps/backend && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "dev:backend": "cd apps/backend && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --log-level info",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",

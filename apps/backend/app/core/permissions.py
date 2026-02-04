@@ -24,6 +24,7 @@ PERMISSIONS: Dict[Tuple[str, str], List[Role]] = {
     ("POST", "/orders"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
     ("PUT", "/orders/*"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
     ("POST", "/orders/*/validate"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
+    ("POST", "/orders/*/cancel"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
     ("DELETE", "/orders/*"): [Role.SUPERADMIN, Role.ADMIN],
 
     # USERS ENDPOINTS (only ADMIN and SUPER_ADMIN)

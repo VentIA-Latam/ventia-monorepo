@@ -228,3 +228,89 @@ class WooCommerceClient:
             WooCommerceError: For API errors
         """
         return await self._request("POST", "/orders", data=order_data)
+
+    async def create_webhook(
+        self,
+        topic: str,
+        delivery_url: str,
+        secret: str,
+    ) -> dict[str, Any]:
+        """
+        Create a webhook subscription in WooCommerce.
+
+        Reference: https://woocommerce.github.io/woocommerce-rest-api-docs/#webhooks
+
+        Args:
+            topic: Webhook topic in lowercase format (e.g., "order.created", "order.updated")
+            delivery_url: Full HTTPS URL where webhook will be sent
+            secret: Webhook secret for HMAC signature validation
+
+        Returns:
+            dict: Created webhook data with numeric ID
+            {
+                "id": 123,
+                "name": "Order created",
+                "status": "active",
+                "topic": "order.created",
+                "delivery_url": "https://api.ventia.pe/api/v1/webhooks/woocommerce/1",
+                "secret": "webhook_secret_here",
+                "date_created": "2026-01-27T00:00:00",
+                ...
+            }
+
+        Raises:
+            WooCommerceError: For API errors
+        """
+        webhook_data = {
+            "name": f"VentIA - {topic}",
+            "topic": topic,
+            "delivery_url": delivery_url,
+            "secret": secret,
+            "status": "active",
+        }
+
+        return await self._request("POST", "/webhooks", data=webhook_data)
+
+    async def get_webhook(self, webhook_id: int) -> dict[str, Any]:
+        """
+        Get webhook details from WooCommerce.
+
+        Args:
+            webhook_id: WooCommerce webhook ID (numeric)
+
+        Returns:
+            dict: Webhook data
+
+        Raises:
+            WooCommerceNotFoundError: If webhook doesn't exist
+            WooCommerceError: For other API errors
+        """
+        return await self._request("GET", f"/webhooks/{webhook_id}")
+
+    async def delete_webhook(self, webhook_id: int) -> dict[str, Any]:
+        """
+        Delete a webhook subscription in WooCommerce.
+
+        Args:
+            webhook_id: WooCommerce webhook ID (numeric)
+
+        Returns:
+            dict: Deleted webhook data
+
+        Raises:
+            WooCommerceNotFoundError: If webhook doesn't exist
+            WooCommerceError: For other API errors
+        """
+        return await self._request("DELETE", f"/webhooks/{webhook_id}", data={"force": True})
+
+    async def list_webhooks(self) -> list[dict[str, Any]]:
+        """
+        List all webhooks in WooCommerce.
+
+        Returns:
+            list: List of webhook objects
+
+        Raises:
+            WooCommerceError: For API errors
+        """
+        return await self._request("GET", "/webhooks")

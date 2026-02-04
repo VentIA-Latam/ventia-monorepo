@@ -16,6 +16,7 @@ from app.api.deps import (
 from app.core.permissions import Role
 from app.models.user import User
 from app.schemas.order import (
+    OrderCancel,
     OrderCreate,
     OrderListResponse,
     OrderResponse,
@@ -509,6 +510,129 @@ async def validate_order(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error inesperado al validar orden: {str(e)}",
+        )
+
+
+@router.post("/{order_id}/cancel", response_model=OrderResponse, tags=["orders"])
+async def cancel_order(
+    order_id: int,
+    cancel_data: OrderCancel,
+    current_user: User = Depends(require_permission_dual("POST", "/orders/*/cancel")),
+    db: Session = Depends(get_database),
+) -> OrderResponse:
+    """
+    Cancel an order and sync cancellation to e-commerce platform (Shopify/WooCommerce).
+
+    **Authentication:** Accepts JWT token OR API key (X-API-Key header).
+
+    **Access Control:**
+    - SUPERADMIN, ADMIN and VENTAS roles can cancel orders
+    - ADMIN/VENTAS can only cancel orders from their own tenant
+    - SUPERADMIN can cancel orders from any tenant
+
+    **Cancel Flow:**
+    - Shopify draft (not validated): permanently deletes the draft order
+    - Shopify completed (validated): cancels with reason, refund method, restock and notify options
+    - WooCommerce: sets order status to cancelled via REST API
+    - In all cases: local order status is set to "Cancelado"
+
+    Args:
+        order_id: Order ID to cancel
+        cancel_data: Cancellation options (reason, restock, refund method, staff note)
+        current_user: Current authenticated user or API key
+        db: Database session
+
+    Returns:
+        Cancelled order with status="Cancelado"
+
+    Raises:
+        HTTPException 404: If order not found
+        HTTPException 403: If order belongs to different tenant
+        HTTPException 400: If order is already cancelled or sync fails
+        HTTPException 401: If e-commerce credentials are invalid
+        HTTPException 502: For other e-commerce API errors
+    """
+    order = order_service.get_order(db, order_id)
+
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Order {order_id} not found",
+        )
+
+    if current_user.role != Role.SUPERADMIN and order.tenant_id != current_user.tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this order",
+        )
+
+    if order.status == "Cancelado":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Order {order_id} is already cancelled",
+        )
+
+    try:
+        cancelled_order = await ecommerce_service.cancel_order(
+            db=db,
+            order=order,
+            cancel_data=cancel_data,
+        )
+
+        logger.info(
+            f"ecommerce_cancel_success: order_id={order_id}, "
+            f"platform={order.source_platform}"
+        )
+
+        return cancelled_order
+
+    except ValueError as e:
+        logger.error(
+            f"ecommerce_cancel_error: order_id={order_id}, error=ValueError: {str(e)}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+    except WooCommerceAuthError as e:
+        logger.error(
+            f"ecommerce_cancel_error: order_id={order_id}, error=WooCommerceAuthError: {str(e)}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciales de e-commerce inválidas. Verifique la configuración de WooCommerce.",
+        )
+
+    except WooCommerceNotFoundError as e:
+        logger.error(
+            f"ecommerce_cancel_error: order_id={order_id}, error=WooCommerceNotFoundError: {str(e)}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Orden no encontrada en e-commerce (WooCommerce ID: {order.woocommerce_order_id})",
+        )
+
+    except WooCommerceError as e:
+        logger.error(
+            f"ecommerce_cancel_error: order_id={order_id}, error=WooCommerceError: {str(e)}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Error al comunicarse con e-commerce: {str(e)}",
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        logger.error(
+            f"ecommerce_cancel_error: order_id={order_id}, error=Exception: {str(e)}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error inesperado al cancelar orden: {str(e)}",
         )
 
 
