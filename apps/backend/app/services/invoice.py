@@ -60,7 +60,7 @@ class InvoiceService:
         Args:
             db: Database session
             order_id: Order ID to create invoice for
-            tenant_id: Tenant ID (company). If None, SUPER_ADMIN will use order's tenant
+            tenant_id: Tenant ID (company). If None, SUPERADMIN will use order's tenant
             invoice_data: InvoiceCreate schema with invoice_type, serie, etc.
             user_role: Role of the user creating the invoice
 
@@ -78,12 +78,12 @@ class InvoiceService:
         if not order:
             raise ValueError(f"Order {order_id} not found")
 
-        # For SUPER_ADMIN, use the order's tenant; otherwise use provided tenant_id
-        if user_role == Role.SUPER_ADMIN:
+        # For SUPERADMIN, use the order's tenant; otherwise use provided tenant_id
+        if user_role == Role.SUPERADMIN:
             tenant_id = order.tenant_id
         
-        # Validate order belongs to tenant (skip for SUPER_ADMIN)
-        if user_role != Role.SUPER_ADMIN and order.tenant_id != tenant_id:
+        # Validate order belongs to tenant (skip for SUPERADMIN)
+        if user_role != Role.SUPERADMIN and order.tenant_id != tenant_id:
             raise ValueError(f"Order {order_id} does not belong to tenant {tenant_id}")
 
         # Validate order is validated (payment confirmed)
@@ -435,7 +435,7 @@ class InvoiceService:
         Args:
             db: Database session
             invoice_id: Invoice ID
-            tenant_id: Tenant ID (for verification). If None, skips tenant validation (SUPER_ADMIN)
+            tenant_id: Tenant ID (for verification). If None, skips tenant validation (SUPERADMIN)
 
         Returns:
             Invoice: Updated invoice object with latest eFact status
@@ -449,7 +449,7 @@ class InvoiceService:
         if not invoice:
             raise ValueError(f"Invoice {invoice_id} not found")
 
-        # Validate tenant ownership if tenant_id is provided (non-SUPER_ADMIN)
+        # Validate tenant ownership if tenant_id is provided (non-SUPERADMIN)
         if tenant_id is not None and invoice.tenant_id != tenant_id:
             raise ValueError(f"Invoice {invoice_id} does not belong to tenant {tenant_id}")
 
@@ -546,14 +546,14 @@ class InvoiceService:
 
         Args:
             db: Database session
-            tenant_id: Tenant ID. If None, returns invoices from all tenants (for SUPER_ADMIN)
+            tenant_id: Tenant ID. If None, returns invoices from all tenants (for SUPERADMIN)
             skip: Number of records to skip
             limit: Maximum number of records
 
         Returns:
             Tuple of (invoices list, total count)
         """
-        # SUPER_ADMIN: get all invoices from all tenants
+        # SUPERADMIN: get all invoices from all tenants
         if tenant_id is None:
             invoices = invoice_repository.get_all(db, skip=skip, limit=limit)
             total = invoice_repository.count_all(db)

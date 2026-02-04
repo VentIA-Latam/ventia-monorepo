@@ -99,11 +99,11 @@ class APIKeyService:
             Tuple of (APIKey model, plain_text_key)
 
         Raises:
-            ValueError: If name already exists in tenant or role is SUPER_ADMIN
+            ValueError: If name already exists in tenant or role is SUPERADMIN
         """
-        # Validation: Cannot create SUPER_ADMIN API keys
-        if api_key_in.role == Role.SUPER_ADMIN:
-            raise ValueError("Cannot create API keys with SUPER_ADMIN role")
+        # Validation: Cannot create SUPERADMIN API keys
+        if api_key_in.role == Role.SUPERADMIN:
+            raise ValueError("Cannot create API keys with SUPERADMIN role")
 
         # Check if name already exists for this tenant
         if api_key_repository.check_name_exists(db, tenant_id, api_key_in.name):
@@ -145,7 +145,7 @@ class APIKeyService:
         """
         Create API key with role-based validation.
 
-        SUPER_ADMIN:
+        SUPERADMIN:
         - Can create API keys for any tenant (if tenant_id provided)
         - If no tenant_id provided, uses their own tenant
 
@@ -169,8 +169,8 @@ class APIKeyService:
         # Determine target tenant
         if api_key_in.tenant_id is not None:
             # User specified a tenant_id
-            if current_user.role != Role.SUPER_ADMIN:
-                raise ValueError("Only SUPER_ADMIN can create API keys for other tenants")
+            if current_user.role != Role.SUPERADMIN:
+                raise ValueError("Only SUPERADMIN can create API keys for other tenants")
 
             target_tenant_id = api_key_in.tenant_id
 
@@ -210,7 +210,7 @@ class APIKeyService:
         limit: int = 100,
         is_active: bool | None = None,
     ) -> list[APIKey]:
-        """Get all API keys across all tenants (SUPER_ADMIN only)."""
+        """Get all API keys across all tenants (SUPERADMIN only)."""
         return api_key_repository.get_all(
             db,
             skip=skip,
@@ -241,7 +241,7 @@ class APIKeyService:
         db: Session,
         is_active: bool | None = None,
     ) -> int:
-        """Count all API keys across all tenants (SUPER_ADMIN only)."""
+        """Count all API keys across all tenants (SUPERADMIN only)."""
         return api_key_repository.count_all(db, is_active=is_active)
 
     def count_api_keys_by_tenant(

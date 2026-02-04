@@ -84,7 +84,7 @@ class OrderResponse(OrderBase):
     **Tenant Information:**
     - `tenant` field is Optional[TenantResponse]
     - Populated automatically when order is retrieved via SQL join
-    - For SUPER_ADMIN: includes full tenant info (id, name, slug, etc.)
+    - For SUPERADMIN: includes full tenant info (id, name, slug, etc.)
     - For other roles: typically None (they only see orders from their own tenant)
     - Frontend can display tenant name/slug when available to show which customer the order belongs to
 
@@ -112,7 +112,7 @@ class OrderResponse(OrderBase):
     status: str
     created_at: datetime
     updated_at: datetime
-    tenant: Optional[TenantResponse] = Field(None, description="Optional tenant info (populated via join for SUPER_ADMIN)")
+    tenant: Optional[TenantResponse] = Field(None, description="Optional tenant info (populated via join for SUPERADMIN)")
     invoices: Optional[list[InvoiceResponse]] = Field(None, description="Optional list of invoices for this order (populated via eager loading)")
 
     model_config = ConfigDict(from_attributes=True)

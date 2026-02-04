@@ -55,11 +55,11 @@ class OrderService:
 
         **Purpose:**
         - Loads the related Tenant object to populate the `tenant` field in OrderResponse
-        - Used when SUPER_ADMIN needs to see which client an order belongs to
+        - Used when SUPERADMIN needs to see which client an order belongs to
         - Prevents N+1 query problem by using eager loading (joinedload)
 
         **Usage in Endpoints:**
-        - SUPER_ADMIN: Call this when responding with order details
+        - SUPERADMIN: Call this when responding with order details
         - Other roles: Can use regular get_order() since they only see their own tenant
 
         **Response Schema:**
@@ -147,7 +147,7 @@ class OrderService:
         sort_order: str = "desc",
     ) -> OrderListResponse:
         """
-        Get all orders from all tenants (SUPER_ADMIN only).
+        Get all orders from all tenants (SUPERADMIN only).
 
         Args:
             db: Database session

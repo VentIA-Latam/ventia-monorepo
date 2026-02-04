@@ -30,9 +30,9 @@ async def list_users(
 
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
-    SUPER_ADMIN: All users with advanced filters and metadata.
+    SUPERADMIN: All users with advanced filters and metadata.
     - tenant_id: Filter by specific tenant
-    - role: Filter by user role (SUPER_ADMIN, ADMIN, LOGISTICA, VENTAS, VIEWER)
+    - role: Filter by user role (SUPERADMIN, ADMIN, LOGISTICA, VENTAS, VIEWER)
     - is_active: Filter by active status (true/false)
     - search: Search in user name or email
     - skip/limit: Pagination
@@ -91,7 +91,7 @@ async def get_user(
 
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
-    SUPER_ADMIN: Can access any user.
+    SUPERADMIN: Can access any user.
     Other roles: Can only access users from their own tenant.
     """
     try:
@@ -120,10 +120,10 @@ async def create_user(
 
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
-    SUPER_ADMIN: Can create users in any tenant. Validates tenant exists and is active.
+    SUPERADMIN: Can create users in any tenant. Validates tenant exists and is active.
     Other roles: Can only create users in their own tenant.
 
-    Both: Cannot create SUPER_ADMIN role users.
+    Both: Cannot create SUPERADMIN role users.
     Request body: email, name, role, auth0_user_id, tenant_id
     """
     try:
@@ -147,9 +147,9 @@ async def update_user(
 
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
-    SUPER_ADMIN: Can update any user. Cannot deactivate themselves.
+    SUPERADMIN: Can update any user. Cannot deactivate themselves.
     Other roles: Can only update users from their own tenant.
-    - Cannot deactivate SUPER_ADMIN or ADMIN users
+    - Cannot deactivate SUPERADMIN or ADMIN users
     - Cannot deactivate themselves
 
     Updatable fields: name, role, is_active
@@ -184,8 +184,8 @@ async def delete_user(
 
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
-    SUPER_ADMIN only: Can deactivate any user (except themselves).
-    - Cannot deactivate the last active SUPER_ADMIN in the system
+    SUPERADMIN only: Can deactivate any user (except themselves).
+    - Cannot deactivate the last active SUPERADMIN in the system
     - User is marked as inactive (is_active=False) instead of deleted
     """
     try:
@@ -196,7 +196,7 @@ async def delete_user(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=str(e),
             )
-        elif "Only SUPER_ADMIN" in str(e):
+        elif "Only SUPERADMIN" in str(e):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=str(e),

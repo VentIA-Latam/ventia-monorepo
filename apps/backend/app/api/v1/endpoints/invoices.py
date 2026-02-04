@@ -50,7 +50,7 @@ async def check_invoice_status(
 
     **Permissions:**
     - All authenticated users can check status of their tenant's invoices
-    - SUPER_ADMIN can check status of any tenant's invoices
+    - SUPERADMIN can check status of any tenant's invoices
 
     **Process:**
     1. Validates invoice exists and user has access
@@ -83,7 +83,7 @@ async def check_invoice_status(
     Raises:
         HTTPException:
             - 400 Bad Request: Invoice has no eFact ticket
-            - 403 Forbidden: Invoice doesn't belong to user's tenant (non-SUPER_ADMIN)
+            - 403 Forbidden: Invoice doesn't belong to user's tenant (non-SUPERADMIN)
             - 404 Not Found: Invoice not found
             - 500 Internal Server Error: Unexpected error
     """
@@ -101,8 +101,8 @@ async def check_invoice_status(
                 detail=f"Invoice {invoice_id} not found",
             )
 
-        # 2. Validate tenant access (skip for SUPER_ADMIN)
-        if current_user.role != Role.SUPER_ADMIN and invoice.tenant_id != current_user.tenant_id:
+        # 2. Validate tenant access (skip for SUPERADMIN)
+        if current_user.role != Role.SUPERADMIN and invoice.tenant_id != current_user.tenant_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied to this invoice",
@@ -204,7 +204,7 @@ async def download_invoice_pdf(
 
     **Permissions:** 
     - All authenticated users can download PDFs of their tenant's invoices
-    - SUPER_ADMIN can download PDFs of any tenant's invoices
+    - SUPERADMIN can download PDFs of any tenant's invoices
 
     **Requirements:**
     - Invoice must exist
@@ -234,7 +234,7 @@ async def download_invoice_pdf(
     Raises:
         HTTPException: 
             - 400 Bad Request: Invoice has no ticket or not successful
-            - 403 Forbidden: Invoice doesn't belong to user's tenant (non-SUPER_ADMIN)
+            - 403 Forbidden: Invoice doesn't belong to user's tenant (non-SUPERADMIN)
             - 404 Not Found: Invoice not found
             - 500 Internal Server Error: eFact API error or unexpected error
     """
@@ -249,8 +249,8 @@ async def download_invoice_pdf(
                 detail=f"Invoice {invoice_id} not found",
             )
 
-        # Validate tenant access (skip for SUPER_ADMIN)
-        if current_user.role != Role.SUPER_ADMIN and invoice.tenant_id != current_user.tenant_id:
+        # Validate tenant access (skip for SUPERADMIN)
+        if current_user.role != Role.SUPERADMIN and invoice.tenant_id != current_user.tenant_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You can only download PDFs for invoices in your tenant",
@@ -368,7 +368,7 @@ async def download_invoice_xml(
 
     **Permissions:** 
     - All authenticated users can download XMLs of their tenant's invoices
-    - SUPER_ADMIN can download XMLs of any tenant's invoices
+    - SUPERADMIN can download XMLs of any tenant's invoices
 
     **Requirements:**
     - Invoice must exist
@@ -398,7 +398,7 @@ async def download_invoice_xml(
     Raises:
         HTTPException: 
             - 400 Bad Request: Invoice has no ticket or not successful
-            - 403 Forbidden: Invoice doesn't belong to user's tenant (non-SUPER_ADMIN)
+            - 403 Forbidden: Invoice doesn't belong to user's tenant (non-SUPERADMIN)
             - 404 Not Found: Invoice not found
             - 500 Internal Server Error: eFact API error or unexpected error
     """
@@ -413,8 +413,8 @@ async def download_invoice_xml(
                 detail=f"Invoice {invoice_id} not found",
             )
 
-        # Validate tenant access (skip for SUPER_ADMIN)
-        if current_user.role != Role.SUPER_ADMIN and invoice.tenant_id != current_user.tenant_id:
+        # Validate tenant access (skip for SUPERADMIN)
+        if current_user.role != Role.SUPERADMIN and invoice.tenant_id != current_user.tenant_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You can only download XMLs for invoices in your tenant",
@@ -533,7 +533,7 @@ async def list_invoices(
 
     **Permissions:** 
     - All authenticated users can view their tenant's invoices
-    - SUPER_ADMIN can view invoices from all tenants
+    - SUPERADMIN can view invoices from all tenants
 
     **Query Parameters:**
     - skip: Number of records to skip (default: 0)
@@ -568,9 +568,9 @@ async def list_invoices(
         )
 
     try:
-        # SUPER_ADMIN can view invoices from all tenants (tenant_id=None)
+        # SUPERADMIN can view invoices from all tenants (tenant_id=None)
         # Other users can only view their tenant's invoices
-        tenant_id = None if current_user.role == Role.SUPER_ADMIN else current_user.tenant_id
+        tenant_id = None if current_user.role == Role.SUPERADMIN else current_user.tenant_id
         
         invoices, total = invoice_service.get_invoices_by_tenant(
             db=db,
@@ -595,7 +595,7 @@ async def list_invoices(
     except Exception as e:
         logger.error(
             f"Error retrieving invoices for "
-            f"{'all tenants' if current_user.role == Role.SUPER_ADMIN else f'tenant {current_user.tenant_id}'}: "
+            f"{'all tenants' if current_user.role == Role.SUPERADMIN else f'tenant {current_user.tenant_id}'}: "
             f"{str(e)}",
             exc_info=True,
         )

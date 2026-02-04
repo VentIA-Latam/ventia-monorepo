@@ -42,7 +42,7 @@ class UserService:
         """
         List users based on current user's role.
 
-        SUPER_ADMIN: Gets all users with optional filters and metadata.
+        SUPERADMIN: Gets all users with optional filters and metadata.
         Other roles: Gets users from their own tenant (no filters).
 
         Args:
@@ -50,13 +50,13 @@ class UserService:
             current_user: Current authenticated user
             skip: Number to skip
             limit: Max results
-            tenant_id: Filter by tenant (SUPER_ADMIN only)
-            role: Filter by role as string (SUPER_ADMIN only, e.g., "ADMIN", "VIEWER")
-            is_active: Filter by active status (SUPER_ADMIN only)
-            search: Search term (SUPER_ADMIN only)
+            tenant_id: Filter by tenant (SUPERADMIN only)
+            role: Filter by role as string (SUPERADMIN only, e.g., "ADMIN", "VIEWER")
+            is_active: Filter by active status (SUPERADMIN only)
+            search: Search term (SUPERADMIN only)
 
         Returns:
-            For SUPER_ADMIN: UsersListResponse with metadata
+            For SUPERADMIN: UsersListResponse with metadata
             For others: list of User objects
 
         Raises:
@@ -70,8 +70,8 @@ class UserService:
             except KeyError:
                 raise ValueError(f"Invalid role: {role}. Must be one of: {', '.join([r.name for r in Role])}")
 
-        if current_user.role == Role.SUPER_ADMIN:
-            # SUPER_ADMIN with advanced filters and metadata
+        if current_user.role == Role.SUPERADMIN:
+            # SUPERADMIN with advanced filters and metadata
             users, total = user_repository.get_all_with_filters(
                 db,
                 tenant_id=tenant_id,
@@ -99,7 +99,7 @@ class UserService:
         """
         Get user with access control based on role.
 
-        SUPER_ADMIN: Can access any user.
+        SUPERADMIN: Can access any user.
         Other roles: Can only access users from their own tenant.
 
         Args:
@@ -117,8 +117,8 @@ class UserService:
         if not user:
             raise ValueError(f"User with ID {user_id} not found")
 
-        # SUPER_ADMIN can access any user
-        if current_user.role == Role.SUPER_ADMIN:
+        # SUPERADMIN can access any user
+        if current_user.role == Role.SUPERADMIN:
             return user
 
         # Other roles: verify same tenant
@@ -138,14 +138,14 @@ class UserService:
         """
         Create user with validations based on current user's role.
 
-        SUPER_ADMIN:
+        SUPERADMIN:
         - Can create users in any tenant
         - Validates tenant exists and is active
-        - Cannot create SUPER_ADMIN role users
+        - Cannot create SUPERADMIN role users
 
         Other roles:
         - Can only create users in their own tenant
-        - Cannot create SUPER_ADMIN role users
+        - Cannot create SUPERADMIN role users
 
         Args:
             db: Database session
@@ -159,13 +159,13 @@ class UserService:
             ValueError: If validation fails
         """
         # === ROLE VALIDATION ===
-        # No one can create SUPER_ADMIN users
-        if user_in.role == Role.SUPER_ADMIN:
-            raise ValueError("Cannot create users with SUPER_ADMIN role")
+        # No one can create SUPERADMIN users
+        if user_in.role == Role.SUPERADMIN:
+            raise ValueError("Cannot create users with SUPERADMIN role")
 
         # === TENANT VALIDATION ===
-        if current_user.role == Role.SUPER_ADMIN:
-            # SUPER_ADMIN: validate tenant exists and is active
+        if current_user.role == Role.SUPERADMIN:
+            # SUPERADMIN: validate tenant exists and is active
             tenant = tenant_repository.get(db, user_in.tenant_id)
             if not tenant:
                 raise ValueError(f"Tenant with ID {user_in.tenant_id} does not exist")
@@ -201,15 +201,15 @@ class UserService:
         """
         Update user with role-based access control and validations.
 
-        SUPER_ADMIN:
+        SUPERADMIN:
         - Can update any user from any tenant
         - Cannot deactivate themselves
-        - Cannot change role to SUPER_ADMIN (already prevented in schema)
+        - Cannot change role to SUPERADMIN (already prevented in schema)
 
         Other roles:
         - Can only update users from their own tenant
-        - Cannot deactivate users with SUPER_ADMIN or ADMIN role
-        - Cannot change role to SUPER_ADMIN (already prevented in schema)
+        - Cannot deactivate users with SUPERADMIN or ADMIN role
+        - Cannot change role to SUPERADMIN (already prevented in schema)
 
         For both:
         - Only name, role, is_active can be updated (email, auth0_user_id, tenant_id are immutable)
@@ -233,19 +233,19 @@ class UserService:
             raise ValueError(f"User with ID {user_id} not found")
 
         # === VALIDATE ACCESS ===
-        if current_user.role == Role.SUPER_ADMIN:
-            # SUPER_ADMIN can update any user
+        if current_user.role == Role.SUPERADMIN:
+            # SUPERADMIN can update any user
             # But cannot deactivate themselves
             if user_in.is_active is False and user_id == current_user.id:
-                raise ValueError("SUPER_ADMIN cannot deactivate themselves")
+                raise ValueError("SUPERADMIN cannot deactivate themselves")
         else:
             # Other roles: only update users from their own tenant
             if user.tenant_id != current_user.tenant_id:
                 raise ValueError("Can only update users in your own tenant")
 
-            # Cannot deactivate SUPER_ADMIN users
-            if user_in.is_active is False and user.role == Role.SUPER_ADMIN:
-                raise ValueError("Cannot deactivate SUPER_ADMIN users")
+            # Cannot deactivate SUPERADMIN users
+            if user_in.is_active is False and user.role == Role.SUPERADMIN:
+                raise ValueError("Cannot deactivate SUPERADMIN users")
 
             # Cannot deactivate ADMIN users (only other ADMINs in the tenant can)
             if user_in.is_active is False and user.role == Role.ADMIN:
@@ -255,9 +255,9 @@ class UserService:
             if user_in.is_active is False and user_id == current_user.id:
                 raise ValueError("Cannot deactivate yourself")
 
-        # === PREVENT SUPER_ADMIN ROLE ASSIGNMENT ===
-        if user_in.role == Role.SUPER_ADMIN:
-            raise ValueError("Cannot assign SUPER_ADMIN role to users")
+        # === PREVENT SUPERADMIN ROLE ASSIGNMENT ===
+        if user_in.role == Role.SUPERADMIN:
+            raise ValueError("Cannot assign SUPERADMIN role to users")
 
         # === WARN IF ROLE CHANGED AND USER IS INACTIVE ===
         warning = None
@@ -284,9 +284,9 @@ class UserService:
         """
         Deactivate user with access control based on role (soft delete).
 
-        SUPER_ADMIN only: Can deactivate any user (except themselves).
-        - Cannot deactivate the last active SUPER_ADMIN in the system
-        - Verification ensures at least one active SUPER_ADMIN remains
+        SUPERADMIN only: Can deactivate any user (except themselves).
+        - Cannot deactivate the last active SUPERADMIN in the system
+        - Verification ensures at least one active SUPERADMIN remains
 
         Args:
             db: Database session
@@ -299,9 +299,9 @@ class UserService:
         Raises:
             ValueError: If validation fails
         """
-        # === RESTRICT TO SUPER_ADMIN ONLY ===
-        if current_user.role != Role.SUPER_ADMIN:
-            raise ValueError("Only SUPER_ADMIN can deactivate users")
+        # === RESTRICT TO SUPERADMIN ONLY ===
+        if current_user.role != Role.SUPERADMIN:
+            raise ValueError("Only SUPERADMIN can deactivate users")
 
         # === PREVENT SELF-DEACTIVATION ===
         if user_id == current_user.id:
@@ -312,17 +312,17 @@ class UserService:
         if not user:
             raise ValueError(f"User with ID {user_id} not found")
 
-        # === PREVENT DEACTIVATING LAST ACTIVE SUPER_ADMIN ===
-        if user.role == Role.SUPER_ADMIN:
-            # Count active SUPER_ADMIN users (excluding the one being deactivated)
+        # === PREVENT DEACTIVATING LAST ACTIVE SUPERADMIN ===
+        if user.role == Role.SUPERADMIN:
+            # Count active SUPERADMIN users (excluding the one being deactivated)
             active_superadmins = db.query(User).filter(
-                User.role == Role.SUPER_ADMIN,
+                User.role == Role.SUPERADMIN,
                 User.is_active == True,
                 User.id != user_id
             ).count()
 
             if active_superadmins == 0:
-                raise ValueError("Cannot deactivate the last active SUPER_ADMIN in the system")
+                raise ValueError("Cannot deactivate the last active SUPERADMIN in the system")
 
         # === PERFORM SOFT DELETE ===
         # Mark user as inactive instead of deleting from database
@@ -350,7 +350,7 @@ class UserService:
         skip: int = 0,
         limit: int = 100,
     ) -> list[User]:
-        """Get all users across all tenants (SUPER_ADMIN only)."""
+        """Get all users across all tenants (SUPERADMIN only)."""
         return user_repository.get_multi(db, skip=skip, limit=limit)
 
     def update_last_login(self, db: Session, user: User) -> User:

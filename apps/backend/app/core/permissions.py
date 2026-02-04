@@ -9,7 +9,7 @@ from typing import Dict, List, Tuple
 class Role(str, Enum):
     """User roles in the system."""
 
-    SUPER_ADMIN = "superadmin"  # Platform admin with access to all tenants
+    SUPERADMIN = "superadmin"  # Platform admin with access to all tenants
     ADMIN = "admin"  # Full access to all resources within tenant
     LOGISTICA = "logistica"  # Read-only access to orders and invoices (for dispatch)
     VENTAS = "ventas"  # Can create, edit orders, validate payments and create invoices
@@ -19,56 +19,56 @@ class Role(str, Enum):
 # Permissions map: (HTTP method, path pattern) -> allowed roles
 PERMISSIONS: Dict[Tuple[str, str], List[Role]] = {
     # ORDERS ENDPOINTS
-    ("GET", "/orders"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
-    ("GET", "/orders/*"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
-    ("POST", "/orders"): [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS],
-    ("PUT", "/orders/*"): [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS],
-    ("POST", "/orders/*/validate"): [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS],
-    ("DELETE", "/orders/*"): [Role.SUPER_ADMIN, Role.ADMIN],
+    ("GET", "/orders"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("GET", "/orders/*"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("POST", "/orders"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
+    ("PUT", "/orders/*"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
+    ("POST", "/orders/*/validate"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
+    ("DELETE", "/orders/*"): [Role.SUPERADMIN, Role.ADMIN],
 
-    # USERS ENDPOINTS (only ADMIN and SUPER_ADMIN)
-    ("GET", "/users"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("GET", "/users/*"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("POST", "/users"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("PUT", "/users/*"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("DELETE", "/users/*"): [Role.SUPER_ADMIN, Role.ADMIN],
+    # USERS ENDPOINTS (only ADMIN and SUPERADMIN)
+    ("GET", "/users"): [Role.SUPERADMIN, Role.ADMIN],
+    ("GET", "/users/*"): [Role.SUPERADMIN, Role.ADMIN],
+    ("POST", "/users"): [Role.SUPERADMIN, Role.ADMIN],
+    ("PUT", "/users/*"): [Role.SUPERADMIN, Role.ADMIN],
+    ("DELETE", "/users/*"): [Role.SUPERADMIN, Role.ADMIN],
 
-    # TENANTS ENDPOINTS (only SUPER_ADMIN)
-    ("GET", "/tenants"): [Role.SUPER_ADMIN],
-    ("GET", "/tenants/*"): [Role.SUPER_ADMIN],
-    ("POST", "/tenants"): [Role.SUPER_ADMIN],
-    ("PUT", "/tenants/*"): [Role.SUPER_ADMIN],
-    ("DELETE", "/tenants/*"): [Role.SUPER_ADMIN],
+    # TENANTS ENDPOINTS (only SUPERADMIN)
+    ("GET", "/tenants"): [Role.SUPERADMIN],
+    ("GET", "/tenants/*"): [Role.SUPERADMIN],
+    ("POST", "/tenants"): [Role.SUPERADMIN],
+    ("PUT", "/tenants/*"): [Role.SUPERADMIN],
+    ("DELETE", "/tenants/*"): [Role.SUPERADMIN],
 
-    # STATS ENDPOINTS (only SUPER_ADMIN)
-    ("GET", "/stats"): [Role.SUPER_ADMIN],
-    ("GET", "/stats/*"): [Role.SUPER_ADMIN],
+    # STATS ENDPOINTS (only SUPERADMIN)
+    ("GET", "/stats"): [Role.SUPERADMIN],
+    ("GET", "/stats/*"): [Role.SUPERADMIN],
 
-    # API KEYS ENDPOINTS (SUPER_ADMIN and ADMIN)
-    # SUPER_ADMIN can create API keys for any tenant
+    # API KEYS ENDPOINTS (SUPERADMIN and ADMIN)
+    # SUPERADMIN can create API keys for any tenant
     # ADMIN can create API keys for their own tenant
-    ("GET", "/api-keys"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("GET", "/api-keys/*"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("POST", "/api-keys"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("PATCH", "/api-keys/*"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("DELETE", "/api-keys/*"): [Role.SUPER_ADMIN, Role.ADMIN],
+    ("GET", "/api-keys"): [Role.SUPERADMIN, Role.ADMIN],
+    ("GET", "/api-keys/*"): [Role.SUPERADMIN, Role.ADMIN],
+    ("POST", "/api-keys"): [Role.SUPERADMIN, Role.ADMIN],
+    ("PATCH", "/api-keys/*"): [Role.SUPERADMIN, Role.ADMIN],
+    ("DELETE", "/api-keys/*"): [Role.SUPERADMIN, Role.ADMIN],
     
     # INVOICES ENDPOINTS (RESTful paths under /orders/{id}/invoices)
-    ("POST", "/orders/*/invoices"): [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS],
-    ("GET", "/orders/*/invoices"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("POST", "/orders/*/invoices"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
+    ("GET", "/orders/*/invoices"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
 
     # INVOICES ENDPOINTS (new unified paths)
-    ("POST", "/invoices"): [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS],
-    ("POST", "/invoices/*"): [Role.SUPER_ADMIN, Role.ADMIN, Role.VENTAS],
-    ("GET", "/invoices"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
-    ("GET", "/invoices/*"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("POST", "/invoices"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
+    ("POST", "/invoices/*"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
+    ("GET", "/invoices"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("GET", "/invoices/*"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
 
     # INVOICE SERIES ENDPOINTS
-    ("GET", "/invoice-series"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
-    ("GET", "/invoice-series/*"): [Role.SUPER_ADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
-    ("POST", "/invoice-series"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("PATCH", "/invoice-series/*"): [Role.SUPER_ADMIN, Role.ADMIN],
-    ("DELETE", "/invoice-series/*"): [Role.SUPER_ADMIN, Role.ADMIN],
+    ("GET", "/invoice-series"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("GET", "/invoice-series/*"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("POST", "/invoice-series"): [Role.SUPERADMIN, Role.ADMIN],
+    ("PATCH", "/invoice-series/*"): [Role.SUPERADMIN, Role.ADMIN],
+    ("DELETE", "/invoice-series/*"): [Role.SUPERADMIN, Role.ADMIN],
 }
 
 

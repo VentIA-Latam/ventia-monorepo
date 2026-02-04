@@ -73,7 +73,7 @@ class InvoiceRepository(CRUDBase[Invoice, InvoiceCreate, InvoiceUpdate]):
         limit: int = 100,
     ) -> list[Invoice]:
         """
-        Get all invoices from all tenants with pagination (for SUPER_ADMIN).
+        Get all invoices from all tenants with pagination (for SUPERADMIN).
 
         Args:
             db: Database session
@@ -113,7 +113,7 @@ class InvoiceRepository(CRUDBase[Invoice, InvoiceCreate, InvoiceUpdate]):
         db: Session,
     ) -> int:
         """
-        Count total number of invoices from all tenants (for SUPER_ADMIN).
+        Count total number of invoices from all tenants (for SUPERADMIN).
 
         Args:
             db: Database session

@@ -33,13 +33,13 @@ async def list_tenants(
     """
     List all tenants with pagination.
 
-    SUPER_ADMIN only: Can retrieve all tenants without filters.
+    SUPERADMIN only: Can retrieve all tenants without filters.
     Other roles: Access denied (403 Forbidden).
 
     Args:
         skip: Number of records to skip (default: 0)
         limit: Maximum records to return (default: 100, max: 100)
-        current_user: Current authenticated user (SUPER_ADMIN role required)
+        current_user: Current authenticated user (SUPERADMIN role required)
         db: Database session
 
     Returns:
@@ -280,7 +280,7 @@ async def deactivate_tenant(
 
     **Access Control:**
     - Requires DELETE permission on /tenants/* route
-    - Future: Will be restricted to SUPER_ADMIN only
+    - Future: Will be restricted to SUPERADMIN only
 
     **Behavior:**
     - Tenant is marked inactive but remains in database

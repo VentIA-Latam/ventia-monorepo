@@ -65,7 +65,7 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         sort_order: str = "desc",
     ) -> list[Order]:
         """
-        Get all orders from all tenants (for SUPER_ADMIN).
+        Get all orders from all tenants (for SUPERADMIN).
 
         Args:
             db: Database session
@@ -81,7 +81,7 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         """
         query = db.query(Order)
 
-        # Optional tenant filter (for SUPER_ADMIN with specific tenant)
+        # Optional tenant filter (for SUPERADMIN with specific tenant)
         if tenant_id is not None:
             query = query.filter(Order.tenant_id == tenant_id)
 
@@ -137,7 +137,7 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         **Usage:**
         - Call when response needs to include tenant information
         - Populates the `tenant` field in OrderResponse schema
-        - Used by endpoints that serve SUPER_ADMIN (who needs to see all tenants)
+        - Used by endpoints that serve SUPERADMIN (who needs to see all tenants)
 
         **Return Data:**
         Order object with order.tenant populated:

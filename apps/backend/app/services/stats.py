@@ -20,7 +20,7 @@ class StatsService:
         - total_tenants: All tenants created on the platform
         - total_users: All users registered across all tenants
         - active_api_keys: API keys currently active (is_active=True)
-        - total_super_admins: Users with SUPER_ADMIN role
+        - total_super_admins: Users with SUPERADMIN role
 
         Args:
             db: Database session

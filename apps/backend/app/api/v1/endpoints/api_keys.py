@@ -35,8 +35,8 @@ async def create_api_key(
     """
     Create a new API key.
 
-    **SUPER_ADMIN and ADMIN users can create API keys.**
-    - SUPER_ADMIN: Can create API keys for any tenant
+    **SUPERADMIN and ADMIN users can create API keys.**
+    - SUPERADMIN: Can create API keys for any tenant
     - ADMIN: Can create API keys for their own tenant
 
     ⚠️ **IMPORTANT**: The complete API key is returned ONLY ONCE.
@@ -47,14 +47,14 @@ async def create_api_key(
 
     Args:
         api_key_in: API key creation data
-        current_user: Current authenticated user (SUPER_ADMIN or ADMIN)
+        current_user: Current authenticated user (SUPERADMIN or ADMIN)
         db: Database session
 
     Returns:
         Created API key with the complete key value
 
     Raises:
-        HTTPException: If name already exists or role is SUPER_ADMIN
+        HTTPException: If name already exists or role is SUPERADMIN
     """
     try:
         # Create API key
@@ -96,9 +96,9 @@ async def list_api_keys(
     """
     List API keys.
 
-    **SUPER_ADMIN and ADMIN users can list API keys.**
+    **SUPERADMIN and ADMIN users can list API keys.**
 
-    SUPER_ADMIN behavior:
+    SUPERADMIN behavior:
     - If no tenant_id specified: Returns API keys from ALL tenants
     - If tenant_id specified: Returns API keys from that specific tenant only
 
@@ -109,15 +109,15 @@ async def list_api_keys(
         skip: Number of records to skip (pagination)
         limit: Maximum records to return (max 100)
         is_active: Filter by active status (optional)
-        tenant_id: Tenant ID to filter by (SUPER_ADMIN only, optional)
-        current_user: Current authenticated user (SUPER_ADMIN or ADMIN)
+        tenant_id: Tenant ID to filter by (SUPERADMIN only, optional)
+        current_user: Current authenticated user (SUPERADMIN or ADMIN)
         db: Database session
 
     Returns:
         Paginated list of API keys (without complete key, only prefix)
     """
     # Determine which tenant to query
-    if current_user.role == Role.SUPER_ADMIN:
+    if current_user.role == Role.SUPERADMIN:
         # SuperAdmin can query all tenants or a specific tenant
         query_tenant_id = tenant_id  # None means all tenants
     else:
@@ -126,7 +126,7 @@ async def list_api_keys(
 
     # Get API keys
     if query_tenant_id is None:
-        # SUPER_ADMIN querying all tenants
+        # SUPERADMIN querying all tenants
         api_keys = api_key_service.get_all_api_keys(
             db,
             skip=skip,
@@ -166,14 +166,14 @@ async def get_api_key(
     """
     Get API key details by ID.
 
-    **SUPER_ADMIN and ADMIN users can access this endpoint.**
+    **SUPERADMIN and ADMIN users can access this endpoint.**
 
     Regular admins can only view API keys from their own tenant.
     SuperAdmins can view API keys from any tenant.
 
     Args:
         api_key_id: API key ID
-        current_user: Current authenticated user (SUPER_ADMIN or ADMIN)
+        current_user: Current authenticated user (SUPERADMIN or ADMIN)
         db: Database session
 
     Returns:
@@ -192,7 +192,7 @@ async def get_api_key(
 
     # Verify access: user must be from same tenant OR be SuperAdmin
     if (
-        current_user.role != Role.SUPER_ADMIN
+        current_user.role != Role.SUPERADMIN
         and api_key.tenant_id != current_user.tenant_id
     ):
         raise HTTPException(
@@ -213,7 +213,7 @@ async def update_api_key(
     """
     Update an API key.
 
-    **SUPER_ADMIN and ADMIN users can update API keys.**
+    **SUPERADMIN and ADMIN users can update API keys.**
 
     You can update the name, active status, and expiration date.
     You cannot change the role or regenerate the key itself.
@@ -224,7 +224,7 @@ async def update_api_key(
     Args:
         api_key_id: API key ID
         api_key_update: Update data
-        current_user: Current authenticated user (SUPER_ADMIN or ADMIN)
+        current_user: Current authenticated user (SUPERADMIN or ADMIN)
         db: Database session
 
     Returns:
@@ -243,7 +243,7 @@ async def update_api_key(
 
     # Verify access
     if (
-        current_user.role != Role.SUPER_ADMIN
+        current_user.role != Role.SUPERADMIN
         and api_key.tenant_id != current_user.tenant_id
     ):
         raise HTTPException(
@@ -275,7 +275,7 @@ async def revoke_api_key(
     """
     Revoke (deactivate) an API key.
 
-    **SUPER_ADMIN and ADMIN users can revoke API keys.**
+    **SUPERADMIN and ADMIN users can revoke API keys.**
 
     This marks the API key as inactive. It cannot be reactivated -
     you must create a new key if needed.
@@ -287,7 +287,7 @@ async def revoke_api_key(
 
     Args:
         api_key_id: API key ID to revoke
-        current_user: Current authenticated user (SUPER_ADMIN or ADMIN)
+        current_user: Current authenticated user (SUPERADMIN or ADMIN)
         db: Database session
 
     Raises:
@@ -303,7 +303,7 @@ async def revoke_api_key(
 
     # Verify access
     if (
-        current_user.role != Role.SUPER_ADMIN
+        current_user.role != Role.SUPERADMIN
         and api_key.tenant_id != current_user.tenant_id
     ):
         raise HTTPException(

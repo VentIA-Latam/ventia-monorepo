@@ -93,12 +93,12 @@ async def create_order(
 
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
-    SUPER_ADMIN, ADMIN and VENTAS roles can create orders.
+    SUPERADMIN, ADMIN and VENTAS roles can create orders.
     The order is created for the current user's tenant (tenant_id is obtained from current_user).
 
     Args:
         order_in: Order creation data (shopify_draft_order_id and other fields, tenant_id is NOT required)
-        current_user: Current authenticated user or API key (SUPER_ADMIN, ADMIN or VENTAS role required)
+        current_user: Current authenticated user or API key (SUPERADMIN, ADMIN or VENTAS role required)
         db: Database session
 
     Returns:
@@ -138,7 +138,7 @@ async def list_orders(
 
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
-    **SUPER_ADMIN Behavior:**
+    **SUPERADMIN Behavior:**
     - Can view all orders from all tenants
     - Optional query parameter `tenant_id` filters to specific tenant
     - If `tenant_id` not specified: returns all orders from all tenants
@@ -152,7 +152,7 @@ async def list_orders(
         skip: Number of records to skip (default: 0)
         limit: Maximum records to return (default: 100, max: 1000)
         validado: Filter by validation status (None = all orders)
-        tenant_id: SUPER_ADMIN only - filter by specific tenant (optional)
+        tenant_id: SUPERADMIN only - filter by specific tenant (optional)
         sort_by: Field to sort by (default: created_at)
         sort_order: Sort order 'asc' or 'desc' (default: desc)
         current_user: Current authenticated user
@@ -172,8 +172,8 @@ async def list_orders(
         )
 
     try:
-        # SUPER_ADMIN can see all orders
-        if current_user.role == Role.SUPER_ADMIN:
+        # SUPERADMIN can see all orders
+        if current_user.role == Role.SUPERADMIN:
             return order_service.get_all_orders(
                 db,
                 skip=skip,
@@ -212,7 +212,7 @@ async def get_order(
 
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
-    **SUPER_ADMIN Behavior:**
+    **SUPERADMIN Behavior:**
     - Can access any order by ID without tenant restrictions
     - Response includes `tenant` field with full tenant information
     - Access to orders from other tenants is logged for audit trail
@@ -223,7 +223,7 @@ async def get_order(
     - Returns 403 Forbidden if attempting to access order from another tenant
 
     **Response Tenant Field:**
-    - For SUPER_ADMIN: includes tenant details (id, name, slug, company_id, etc.)
+    - For SUPERADMIN: includes tenant details (id, name, slug, company_id, etc.)
     - For other roles: None (they already know their tenant)
     - Frontend can display tenant name to show which client the order belongs to
     
@@ -233,15 +233,15 @@ async def get_order(
         db: Database session
 
     Returns:
-        OrderResponse with tenant field populated for SUPER_ADMIN
+        OrderResponse with tenant field populated for SUPERADMIN
 
     Raises:
         HTTPException 404: If order not found
-        HTTPException 403: If non-SUPER_ADMIN user tries to access order from another tenant
+        HTTPException 403: If non-SUPERADMIN user tries to access order from another tenant
     """
     # Fetch order with appropriate strategy based on role
-    if current_user.role == Role.SUPER_ADMIN:
-        # SUPER_ADMIN: fetch with tenant info to show which customer
+    if current_user.role == Role.SUPERADMIN:
+        # SUPERADMIN: fetch with tenant info to show which customer
         order = order_service.get_order_with_tenant(db, order_id)
     else:
         # Other roles: regular fetch (tenant will be None)
@@ -254,12 +254,12 @@ async def get_order(
         )
 
     # Role-based access control
-    if current_user.role == Role.SUPER_ADMIN:
-        # SUPER_ADMIN can access any order
+    if current_user.role == Role.SUPERADMIN:
+        # SUPERADMIN can access any order
         # Log if accessing order from another tenant for audit trail
         if order.tenant_id is not current_user.tenant_id:
             logger.info(
-                f"SUPER_ADMIN '{current_user.email}' accessed order {order_id} from tenant {order.tenant_id} (not their tenant)"
+                f"SUPERADMIN '{current_user.email}' accessed order {order_id} from tenant {order.tenant_id} (not their tenant)"
             )
     else:
         # Other roles: verify order belongs to their tenant
@@ -285,20 +285,20 @@ async def update_order(
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
     **Access Control:**
-    - SUPER_ADMIN, ADMIN and VENTAS roles can update orders
-    - Tenant restriction applies to non-SUPER_ADMIN users
+    - SUPERADMIN, ADMIN and VENTAS roles can update orders
+    - Tenant restriction applies to non-SUPERADMIN users
     - ADMIN/VENTAS can only update orders from their own tenant
 
     **Behavior:**
     - ADMIN/VENTAS can only update orders from their own tenant
-    - SUPER_ADMIN can update orders from any tenant
-    - If order belongs to different tenant (non-SUPER_ADMIN): returns 403 Forbidden
+    - SUPERADMIN can update orders from any tenant
+    - If order belongs to different tenant (non-SUPERADMIN): returns 403 Forbidden
     - If order not found: returns 404 Not Found
 
     Args:
         order_id: Order ID to update
         order_in: Update data
-        current_user: Current authenticated user (SUPER_ADMIN, ADMIN or VENTAS required)
+        current_user: Current authenticated user (SUPERADMIN, ADMIN or VENTAS required)
         db: Database session
 
     Returns:
@@ -317,8 +317,8 @@ async def update_order(
             detail=f"Order {order_id} not found",
         )
 
-    # Verify order belongs to user's tenant (ADMIN/VENTAS only, SUPER_ADMIN can access any)
-    if current_user.role != Role.SUPER_ADMIN and order.tenant_id != current_user.tenant_id:
+    # Verify order belongs to user's tenant (ADMIN/VENTAS only, SUPERADMIN can access any)
+    if current_user.role != Role.SUPERADMIN and order.tenant_id != current_user.tenant_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this order",
@@ -347,13 +347,13 @@ async def validate_order(
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
     **Access Control:**
-    - SUPER_ADMIN, ADMIN and VENTAS roles can validate orders
+    - SUPERADMIN, ADMIN and VENTAS roles can validate orders
     - ADMIN/VENTAS can only validate orders from their own tenant
-    - SUPER_ADMIN can validate orders from any tenant
+    - SUPERADMIN can validate orders from any tenant
 
     **Validation Flow:**
-    1. Verify user has permission (SUPER_ADMIN, ADMIN or VENTAS)
-    2. Verify order belongs to user's tenant (for non-SUPER_ADMIN)
+    1. Verify user has permission (SUPERADMIN, ADMIN or VENTAS)
+    2. Verify order belongs to user's tenant (for non-SUPERADMIN)
     3. Check if order is already validated (409 if yes)
     4. Check for idempotency (409 if already in Shopify)
     5. Verify tenant has Shopify credentials (424 if missing)
@@ -369,7 +369,7 @@ async def validate_order(
     Args:
         order_id: Order ID to validate
         validate_data: Optional validation data (payment method, notes)
-        current_user: Current authenticated user or API key (SUPER_ADMIN, ADMIN or VENTAS role required)
+        current_user: Current authenticated user or API key (SUPERADMIN, ADMIN or VENTAS role required)
         db: Database session
 
     Returns:
@@ -393,8 +393,8 @@ async def validate_order(
             detail=f"Order {order_id} not found",
         )
 
-    # Verify order belongs to user's tenant (ADMIN/VENTAS only, SUPER_ADMIN can access any)
-    if current_user.role != Role.SUPER_ADMIN and order.tenant_id != current_user.tenant_id:
+    # Verify order belongs to user's tenant (ADMIN/VENTAS only, SUPERADMIN can access any)
+    if current_user.role != Role.SUPERADMIN and order.tenant_id != current_user.tenant_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this order",
@@ -522,8 +522,8 @@ async def delete_order(
 
     **Access Control:**
     - Only ADMIN role can delete orders
-    - Tenant restriction applies to ALL users, including SUPER_ADMIN
-    - A SUPER_ADMIN cannot delete orders from other tenants without being assigned to that tenant
+    - Tenant restriction applies to ALL users, including SUPERADMIN
+    - A SUPERADMIN cannot delete orders from other tenants without being assigned to that tenant
     - This is a security measure to prevent accidental order deletions
 
     **Behavior:**
@@ -534,7 +534,7 @@ async def delete_order(
     - If order not found: returns 404 Not Found
 
     **Future Enhancement:**
-    - If SUPER_ADMIN order deletion is needed, separate history with additional confirmations required
+    - If SUPERADMIN order deletion is needed, separate history with additional confirmations required
 
     Args:
         order_id: Order ID to delete
@@ -554,8 +554,8 @@ async def delete_order(
             detail=f"Order {order_id} not found",
         )
 
-    # Verify order belongs to user's tenant (ADMIN only, SUPER_ADMIN can access any)
-    if current_user.role != Role.SUPER_ADMIN and order.tenant_id != current_user.tenant_id:
+    # Verify order belongs to user's tenant (ADMIN only, SUPERADMIN can access any)
+    if current_user.role != Role.SUPERADMIN and order.tenant_id != current_user.tenant_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this order",
@@ -593,9 +593,9 @@ async def create_invoice_for_order(
     This endpoint generates a new electronic invoice for SUNAT submission.
     The invoice is immediately submitted to eFact-OSE for processing.
 
-    **Permissions:** Requires SUPER_ADMIN, ADMIN or VENTAS role
+    **Permissions:** Requires SUPERADMIN, ADMIN or VENTAS role
 
-    SUPER_ADMIN: Can create invoices for any tenant
+    SUPERADMIN: Can create invoices for any tenant
     ADMIN/VENTAS: Can only create for orders in their tenant
 
     **Request Body:**
@@ -638,7 +638,7 @@ async def create_invoice_for_order(
     Args:
         order_id: Order ID to create invoice for
         invoice_data: Invoice creation data (InvoiceCreate)
-        current_user: Current authenticated user (must be SUPER_ADMIN, ADMIN or VENTAS)
+        current_user: Current authenticated user (must be SUPERADMIN, ADMIN or VENTAS)
         db: Database session
 
     Returns:
@@ -655,7 +655,7 @@ async def create_invoice_for_order(
                 )
 
         # Create the invoice using the service
-        tenant_id = None if current_user.role == Role.SUPER_ADMIN else current_user.tenant_id
+        tenant_id = None if current_user.role == Role.SUPERADMIN else current_user.tenant_id
 
         invoice = invoice_service.create_invoice(
             db=db,
@@ -710,7 +710,7 @@ async def get_invoices_for_order(
 
     **Permissions:**
     - All authenticated users can view invoices from their tenant's orders
-    - SUPER_ADMIN can view invoices from any tenant's orders
+    - SUPERADMIN can view invoices from any tenant's orders
 
     Args:
         order_id: Order ID to retrieve invoices for
@@ -729,15 +729,15 @@ async def get_invoices_for_order(
                 detail=f"Order {order_id} not found",
             )
 
-        # For non-SUPER_ADMIN users, validate order belongs to their tenant
-        if current_user.role != Role.SUPER_ADMIN and order.tenant_id != current_user.tenant_id:
+        # For non-SUPERADMIN users, validate order belongs to their tenant
+        if current_user.role != Role.SUPERADMIN and order.tenant_id != current_user.tenant_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You can only view invoices for orders in your tenant",
             )
 
         # Get all invoices for the order
-        tenant_id = order.tenant_id if current_user.role == Role.SUPER_ADMIN else current_user.tenant_id
+        tenant_id = order.tenant_id if current_user.role == Role.SUPERADMIN else current_user.tenant_id
 
         invoices = invoice_service.get_invoices_by_order(
             db=db,

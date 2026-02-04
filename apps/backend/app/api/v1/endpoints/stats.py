@@ -34,7 +34,7 @@ async def get_platform_stats(
     **Authentication:** Requires JWT token (Auth0).
 
     **Access Control:**
-    - SUPER_ADMIN: Can access platform statistics
+    - SUPERADMIN: Can access platform statistics
     - Other roles: Access denied (403 Forbidden)
 
     **Statistics Included:**
@@ -44,14 +44,14 @@ async def get_platform_stats(
     - `total_super_admins`: Total number of super admin users
 
     Args:
-        current_user: Current authenticated user (SUPER_ADMIN only)
+        current_user: Current authenticated user (SUPERADMIN only)
         db: Database session
 
     Returns:
         StatsResponse with platform statistics
 
     Raises:
-        HTTPException 403: If user is not SUPER_ADMIN
+        HTTPException 403: If user is not SUPERADMIN
         HTTPException 500: If statistics retrieval fails
     """
     try:
@@ -75,7 +75,7 @@ async def get_recent_activity(
     **Authentication:** Requires JWT token (Auth0).
 
     **Access Control:**
-    - SUPER_ADMIN: Can access activity logs
+    - SUPERADMIN: Can access activity logs
     - Other roles: Access denied (403 Forbidden)
 
     **Activity Tracked:**
@@ -92,14 +92,14 @@ async def get_recent_activity(
     - Includes operation type (CREATED or UPDATED) and human-readable description
 
     Args:
-        current_user: Current authenticated user (SUPER_ADMIN only)
+        current_user: Current authenticated user (SUPERADMIN only)
         db: Database session
 
     Returns:
         RecentActivityResponse with 3 most recent activities across all tables
 
     Raises:
-        HTTPException 403: If user is not SUPER_ADMIN
+        HTTPException 403: If user is not SUPERADMIN
         HTTPException 500: If activity retrieval fails
     """
     try:

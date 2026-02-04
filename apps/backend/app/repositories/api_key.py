@@ -34,7 +34,7 @@ class APIKeyRepository(CRUDBase[APIKey, APIKeyCreate, APIKeyUpdate]):
         is_active: bool | None = None,
     ) -> list[APIKey]:
         """
-        Get all API keys across all tenants (SUPER_ADMIN only).
+        Get all API keys across all tenants (SUPERADMIN only).
 
         Args:
             db: Database session
@@ -58,7 +58,7 @@ class APIKeyRepository(CRUDBase[APIKey, APIKeyCreate, APIKeyUpdate]):
         is_active: bool | None = None,
     ) -> int:
         """
-        Count total API keys across all tenants (SUPER_ADMIN only).
+        Count total API keys across all tenants (SUPERADMIN only).
 
         Args:
             db: Database session

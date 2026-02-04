@@ -29,7 +29,7 @@ class UserCreate(UserBase):
     @field_validator("role", mode="before")
     @classmethod
     def validate_role(cls, v) -> Role:
-        """Validate role: prevent SUPER_ADMIN and show only allowed roles."""
+        """Validate role: prevent SUPERADMIN and show only allowed roles."""
         if isinstance(v, Role):
             role_obj = v
         else:
@@ -37,13 +37,13 @@ class UserCreate(UserBase):
             try:
                 role_obj = Role[str(v).upper()]
             except KeyError:
-                valid_roles = [r.name.lower() for r in Role if r != Role.SUPER_ADMIN]
+                valid_roles = [r.name.lower() for r in Role if r != Role.SUPERADMIN]
                 raise ValueError(f"Invalid role. Allowed roles: {', '.join(valid_roles)}")
 
-        # Prevent SUPER_ADMIN
-        if role_obj == Role.SUPER_ADMIN:
-            valid_roles = [r.name.lower() for r in Role if r != Role.SUPER_ADMIN]
-            raise ValueError(f"Cannot create SUPER_ADMIN users. Allowed roles: {', '.join(valid_roles)}")
+        # Prevent SUPERADMIN
+        if role_obj == Role.SUPERADMIN:
+            valid_roles = [r.name.lower() for r in Role if r != Role.SUPERADMIN]
+            raise ValueError(f"Cannot create SUPERADMIN users. Allowed roles: {', '.join(valid_roles)}")
 
         return role_obj
 
