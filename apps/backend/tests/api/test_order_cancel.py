@@ -293,6 +293,7 @@ class TestCancelOrderService:
     ):
         """Test: WooCommerce → update_order_status llamado con woocommerce_order_id y 'cancelled'."""
         mock_client = AsyncMock()
+        mock_client.update_order_status.return_value = {"status": "cancelled"}
 
         with patch("app.services.ecommerce.order_repository") as mock_repo, \
              patch("app.services.ecommerce.WooCommerceClient", return_value=mock_client):
@@ -310,6 +311,7 @@ class TestCancelOrderService:
     ):
         """Test: WooCommerce cancellation updates local status to Cancelado."""
         mock_client = AsyncMock()
+        mock_client.update_order_status.return_value = {"status": "cancelled"}
 
         with patch("app.services.ecommerce.order_repository") as mock_repo, \
              patch("app.services.ecommerce.WooCommerceClient", return_value=mock_client):
