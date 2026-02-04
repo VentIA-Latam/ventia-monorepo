@@ -1,3 +1,5 @@
+import { UserRole } from "../constants/roles";
+
 export interface APIKey {
   id: number;
   name: string;
@@ -22,7 +24,7 @@ export interface APIKeyWithCreator extends APIKey {
 
 export interface APIKeyCreate {
   name: string;
-  role: 'admin' | 'logistica' | 'ventas' | 'viewer';
+  role: UserRole;
   tenant_id?: number;
   expires_at?: string | null;
 }
@@ -32,7 +34,7 @@ export interface APIKeyCreateResponse {
   name: string;
   key: string; // Complete API key - only shown once!
   key_prefix: string;
-  role: 'admin' | 'logistica' | 'ventas' | 'viewer';
+  role: UserRole;
   tenant_id: number;
   expires_at: string | null;
   created_at: string;

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Building2, Plus, Search, MoreHorizontal, Eye, Edit, Power } from "lucide-react";
+import { Building2, Plus, Search, MoreHorizontal, Eye, Edit, Power, Store, ShoppingBag } from "lucide-react";
+import { getTenants } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tenant, TenantFilters } from "@/lib/types/tenant";
+import { Tenant, TenantFilters, EcommercePlatform } from "@/lib/types/tenant";
 import { useRouter } from "next/navigation";
 import { CreateTenantDialog } from "@/components/superadmin/create-tenant-dialog";
 import { EditTenantDialog } from "@/components/superadmin/edit-tenant-dialog";
@@ -45,6 +46,46 @@ export default function TenantsPage() {
     isPlatform: "all",
   });
 
+  // Helper para obtener plataforma del tenant
+  const getTenantPlatform = (tenant: Tenant): EcommercePlatform => {
+    // Usar ecommerce_settings del backend (nueva forma)
+    if (tenant.ecommerce_settings?.platform) {
+      return tenant.ecommerce_settings.platform;
+    }
+    // Fallback a settings legacy
+    if (tenant.settings?.ecommerce?.shopify) return "shopify";
+    if (tenant.settings?.ecommerce?.woocommerce) return "woocommerce";
+    if (tenant.shopify_store_url) return "shopify"; // Fallback legacy
+    return null;
+  };
+
+  // Helper para obtener URL de la tienda
+  const getStoreUrl = (tenant: Tenant): string | null => {
+    // Usar ecommerce_settings del backend (nueva forma)
+    if (tenant.ecommerce_settings?.store_url) {
+      return tenant.ecommerce_settings.store_url;
+    }
+    // Fallback a settings legacy
+    if (tenant.settings?.ecommerce?.shopify) return tenant.settings.ecommerce.shopify.store_url;
+    if (tenant.settings?.ecommerce?.woocommerce) return tenant.settings.ecommerce.woocommerce.store_url;
+    return tenant.shopify_store_url; // Fallback legacy
+  };
+
+  // Helper para obtener estado de sincronización
+  const getSyncStatus = (tenant: Tenant): boolean => {
+    // Usar ecommerce_settings del backend (nueva forma)
+    if (tenant.ecommerce_settings) {
+      return tenant.ecommerce_settings.sync_on_validation;
+    }
+    // Fallback a settings legacy
+    return tenant.settings?.ecommerce?.sync_on_validation ?? false;
+  };
+
+  // Helper para verificar si tiene credenciales
+  const hasCredentials = (tenant: Tenant): boolean => {
+    return tenant.ecommerce_settings?.has_credentials ?? false;
+  };
+
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -58,12 +99,9 @@ export default function TenantsPage() {
   const fetchTenants = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/superadmin/tenants');
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Tenants data:', data.items); // Debug
-        setTenants(data.items || []);
-      }
+      // ✅ Usa Client API Layer
+      const data = await getTenants({ limit: 100 });
+      setTenants(data.items || []);
     } catch (error) {
       console.error('Error fetching tenants:', error);
     } finally {
@@ -187,7 +225,7 @@ export default function TenantsPage() {
                   <TableRow className="bg-gray-50/80 border-b border-gray-200">
                     <TableHead className="text-xs md:text-sm min-w-[150px]">NOMBRE</TableHead>
                     <TableHead className="text-xs md:text-sm min-w-[120px]">IDENTIFICADOR</TableHead>
-                    <TableHead className="text-xs md:text-sm min-w-[180px]">TIENDA SHOPIFY</TableHead>
+                    <TableHead className="text-xs md:text-sm min-w-[200px]">E-COMMERCE</TableHead>
                     <TableHead className="text-xs md:text-sm min-w-[100px]">TIPO</TableHead>
                     <TableHead className="text-xs md:text-sm min-w-[100px]">ESTADO</TableHead>
                     <TableHead className="text-xs md:text-sm min-w-[100px]">ACCIONES</TableHead>
@@ -203,18 +241,65 @@ export default function TenantsPage() {
                         </code>
                       </TableCell>
                       <TableCell>
-                        {tenant.shopify_store_url ? (
-                          <a
-                            href={tenant.shopify_store_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline text-xs md:text-sm"
-                          >
-                            {new URL(tenant.shopify_store_url).hostname}
-                          </a>
-                        ) : (
-                          <span className="text-gray-400 text-xs md:text-sm">—</span>
-                        )}
+                        {(() => {
+                          const platform = getTenantPlatform(tenant);
+                          const storeUrl = getStoreUrl(tenant);
+                          const syncEnabled = getSyncStatus(tenant);
+                          const credentialsConfigured = hasCredentials(tenant);
+
+                          if (!platform || !storeUrl) {
+                            return (
+                              <Badge variant="secondary" className="bg-gray-100 text-gray-500 border-0 rounded-md px-2 md:px-3 py-1 text-[10px] md:text-xs">
+                                <Store className="mr-1 h-3 w-3" />
+                                Sin configurar
+                              </Badge>
+                            );
+                          }
+
+                          return (
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2">
+                                {platform === "shopify" ? (
+                                  <Badge variant="secondary" className="bg-green-100 text-green-700 border-0 rounded-md px-2 md:px-3 py-1 text-[10px] md:text-xs flex items-center gap-1">
+                                    <ShoppingBag className="h-3 w-3" />
+                                    <a
+                                      href={storeUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="hover:underline"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      Shopify
+                                    </a>
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-0 rounded-md px-2 md:px-3 py-1 text-[10px] md:text-xs flex items-center gap-1">
+                                    <Store className="h-3 w-3" />
+                                    <a
+                                      href={storeUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="hover:underline"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      WooCommerce
+                                    </a>
+                                  </Badge>
+                                )}
+                                <div
+                                  className={`h-2 w-2 rounded-full ${syncEnabled ? "bg-green-500" : "bg-gray-300"
+                                    }`}
+                                  title={syncEnabled ? "Sincronización activa" : "Sincronización desactivada"}
+                                />
+                              </div>
+                              {!credentialsConfigured && (
+                                <span className="text-[9px] md:text-[10px] text-gray-500 font-medium">
+                                  Credenciales pendientes
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         {tenant.is_platform ? (

@@ -237,20 +237,34 @@ class OrderService:
             Created order
 
         Raises:
-            ValueError: If order with same draft_order_id already exists for tenant
+            ValueError: If order with same platform ID already exists for tenant
             ValueError: If order has no line items or total_price <= 0
         """
-        # Check if order with same draft_order_id already exists for tenant
-        existing = order_repository.get_by_shopify_draft_id(
-            db,
-            tenant_id,
-            order_in.shopify_draft_order_id,
-        )
-        if existing:
-            raise ValueError(
-                f"Order with draft order ID {order_in.shopify_draft_order_id} "
-                f"already exists for tenant {tenant_id}"
+        # Check for duplicate Shopify order
+        if order_in.shopify_draft_order_id:
+            existing = order_repository.get_by_shopify_draft_id(
+                db,
+                tenant_id,
+                order_in.shopify_draft_order_id,
             )
+            if existing:
+                raise ValueError(
+                    f"Order with Shopify draft order ID {order_in.shopify_draft_order_id} "
+                    f"already exists for tenant {tenant_id}"
+                )
+
+        # Check for duplicate WooCommerce order
+        if order_in.woocommerce_order_id:
+            existing = order_repository.get_by_woocommerce_order_id(
+                db,
+                tenant_id,
+                order_in.woocommerce_order_id,
+            )
+            if existing:
+                raise ValueError(
+                    f"Order with WooCommerce order ID {order_in.woocommerce_order_id} "
+                    f"already exists for tenant {tenant_id}"
+                )
 
         # Calculate line_items subtotals and total_price
         line_items_data = (

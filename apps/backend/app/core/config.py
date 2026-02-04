@@ -4,7 +4,7 @@ Application settings and configuration.
 
 from typing import List
 
-from pydantic import PostgresDsn, field_validator
+from pydantic import Field, PostgresDsn, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,11 +35,38 @@ class Settings(BaseSettings):
     AUTH0_ISSUER: str
     AUTH0_ALGORITHM: str = "RS256"
 
+    # Auth0 Management API (for user creation and management)
+    AUTH0_MANAGEMENT_CLIENT_ID: str = Field(..., description="Auth0 Management API Client ID")
+    AUTH0_MANAGEMENT_CLIENT_SECRET: str = Field(..., description="Auth0 Management API Client Secret")
+    AUTH0_MANAGEMENT_AUDIENCE: str = Field(
+        ...,
+        description="Auth0 Management API Audience (https://{domain}/api/v2/)"
+    )
+    AUTH0_CONNECTION: str = Field(
+        ...,
+        description="Auth0 database connection name (REQUIRED - no default to prevent production errors)"
+    )
+
     # eFact-OSE (Electronic Invoicing - Peru SUNAT)
     EFACT_BASE_URL: str = "https://ose-gw1.efact.pe:443/api-efact-ose"
     EFACT_RUC_VENTIA: str  # Required: RUC of Ventia for OAuth2 username
     EFACT_PASSWORD_REST: str  # Required: REST password for OAuth2 authentication
     EFACT_TOKEN_CACHE_HOURS: int = 1  # Token cache duration (eFact tokens last 12h)
+
+    # Email Configuration (Resend)
+    RESEND_API_KEY: str  # Required: Resend API key for sending emails
+    RESEND_FROM_EMAIL: str = "noreply@ventia.pe"  # Email address for sending invoices
+    RESEND_FROM_NAME: str = "VentIA - Facturación"  # Sender name for emails
+
+    # Webhooks
+    WEBHOOK_BASE_URL: str = Field(
+        default="",
+        description="Base URL for webhook callbacks (e.g., https://api.ventia.pe). Falls back to first CORS origin if not set."
+    )
+    
+    # Chatwoot Platform API (for SSO)
+    CHATWOOT_PLATFORM_API_TOKEN: str = ""  # Platform App token for SSO
+    CHATWOOT_BASE_URL: str = "http://localhost:3001"  # Chatwoot base URL
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod

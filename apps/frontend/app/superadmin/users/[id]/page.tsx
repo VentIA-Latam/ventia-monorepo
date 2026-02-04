@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { User } from "@/lib/types/user";
+import { formatDate, formatDateTime } from "@/lib/utils";
+import { getRoleLabel } from "@/lib/constants/roles";
 
 export default function UserDetailPage() {
   const params = useParams();
@@ -83,12 +85,16 @@ export default function UserDetailPage() {
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'SUPER_ADMIN':
+      case 'SUPERADMIN':
         return 'bg-purple-100 text-purple-700';
       case 'ADMIN':
         return 'bg-blue-100 text-blue-700';
       case 'LOGISTICA':
         return 'bg-orange-100 text-orange-700';
+      case 'VENTAS':
+        return 'bg-green-100 text-green-700';
+      case 'VIEWER':
+        return 'bg-gray-100 text-gray-700';
       default:
         return 'bg-gray-100 text-gray-700';
     }
@@ -113,7 +119,7 @@ export default function UserDetailPage() {
               )}
               <Badge className={getRoleBadgeColor(user.role)}>
                 <Shield className="mr-1 h-3 w-3" />
-                {user.role}
+                {getRoleLabel(user.role)}
               </Badge>
             </div>
             <p className="text-gray-600 mt-1 flex items-center gap-2">
@@ -132,7 +138,7 @@ export default function UserDetailPage() {
             <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{user.role}</div>
+            <div className="text-2xl font-bold">{getRoleLabel(user.role)}</div>
             <p className="text-xs text-muted-foreground">
               Nivel de acceso
             </p>
@@ -165,14 +171,10 @@ export default function UserDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {new Date(user.created_at).toLocaleDateString('es-ES', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric'
-              })}
+              {formatDate(user.created_at)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Última actualización: {new Date(user.updated_at).toLocaleDateString('es-ES')}
+              Última actualización: {formatDate(user.updated_at)}
             </p>
           </CardContent>
         </Card>
@@ -206,7 +208,7 @@ export default function UserDetailPage() {
               <div className="mt-1">
                 <Badge className={getRoleBadgeColor(user.role)}>
                   <Shield className="mr-1 h-3 w-3" />
-                  {user.role}
+                  {getRoleLabel(user.role)}
                 </Badge>
               </div>
             </div>
@@ -243,19 +245,13 @@ export default function UserDetailPage() {
             <div className="flex justify-between">
               <span className="text-gray-500">Creado:</span>
               <span>
-                {new Date(user.created_at).toLocaleString('es-ES', {
-                  dateStyle: 'medium',
-                  timeStyle: 'short'
-                })}
+                {formatDateTime(user.created_at)}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Última actualización:</span>
               <span>
-                {new Date(user.updated_at).toLocaleString('es-ES', {
-                  dateStyle: 'medium',
-                  timeStyle: 'short'
-                })}
+                {formatDateTime(user.updated_at)}
               </span>
             </div>
           </div>

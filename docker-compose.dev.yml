@@ -2,24 +2,24 @@ version: '3.8'
 
 services:
   # PostgreSQL Database
-  postgres:
-    image: postgres:16-alpine
-    container_name: ventia-postgres
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-ventia_db}
-      POSTGRES_USER: ${POSTGRES_USER:-ventia_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ventia_password_dev}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ventia_user}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - ventia-network
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: ventia-postgres
+  #   environment:
+  #     POSTGRES_DB: ${POSTGRES_DB:-ventia_db}
+  #     POSTGRES_USER: ${POSTGRES_USER:-postgres}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ventia_password_dev}
+  #   ports:
+  #     - "${POSTGRES_PORT:-5432}:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks:
+  #     - ventia-network
 
   # Backend FastAPI
   backend:
@@ -28,7 +28,7 @@ services:
       dockerfile: docker/backend.Dockerfile
     container_name: ventia-backend
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-ventia_user}:${POSTGRES_PASSWORD:-ventia_password_dev}@postgres:5432/${POSTGRES_DB:-ventia_db}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-ventia_password_dev}@postgres:5432/${POSTGRES_DB:-ventia_db}
       ENVIRONMENT: ${ENVIRONMENT:-development}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000"]}
@@ -37,10 +37,23 @@ services:
       AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
       AUTH0_ISSUER: ${AUTH0_ISSUER}
       AUTH0_ALGORITHM: ${AUTH0_ALGORITHM:-RS256}
+      # Auth0 Management API
+      AUTH0_MANAGEMENT_CLIENT_ID: ${AUTH0_MANAGEMENT_CLIENT_ID}
+      AUTH0_MANAGEMENT_CLIENT_SECRET: ${AUTH0_MANAGEMENT_CLIENT_SECRET}
+      AUTH0_MANAGEMENT_AUDIENCE: ${AUTH0_MANAGEMENT_AUDIENCE}
+      AUTH0_CONNECTION: ${AUTH0_CONNECTION:-Username-Password-Authentication}
+      # eFact-OSE
       EFACT_BASE_URL: ${EFACT_BASE_URL:-https://ose-gw1.efact.pe/api-efact-ose}
       EFACT_RUC_VENTIA: ${EFACT_RUC_VENTIA}
       EFACT_PASSWORD_REST: ${EFACT_PASSWORD_REST}
       EFACT_TOKEN_CACHE_HOURS: ${EFACT_TOKEN_CACHE_HOURS:-11}
+      # Resend (Email)
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-noreply@ventia-latam.com}
+      RESEND_FROM_NAME: ${RESEND_FROM_NAME:-VentIA - Facturación}
+      # Chatwoot SSO
+      CHATWOOT_PLATFORM_API_TOKEN: ${CHATWOOT_PLATFORM_API_TOKEN}
+      CHATWOOT_BASE_URL: ${CHATWOOT_BASE_URL:-http://chatwoot-rails:3000}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:

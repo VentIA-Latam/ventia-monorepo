@@ -1,14 +1,26 @@
 """
-Tenant (Company) model - represents a client company with their own Shopify store.
+Tenant (Company) model - represents a client company with their own e-commerce store.
+
+Supports multiple e-commerce platforms (Shopify, WooCommerce) with credentials
+stored encrypted in the `settings` JSON field.
 """
 
-from typing import Optional
+import logging
+from typing import Any
 
-from sqlalchemy import Boolean, Column, JSON, String
-from sqlalchemy.orm import relationship
+from sqlalchemy import JSON, Boolean, Column, String
+from sqlalchemy.orm import attributes, relationship
 
 from app.core.encryption import encryption_service
 from app.models.base import Base, TimestampMixin
+from app.schemas.tenant_settings import (
+    EcommerceSettings,
+    ShopifyCredentials,
+    TenantSettings,
+    WooCommerceCredentials,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class Tenant(Base, TimestampMixin):
@@ -44,24 +56,6 @@ class Tenant(Base, TimestampMixin):
         default=False,
         nullable=False,
         comment="True if this is the VentIA platform tenant (not a client)",
-    )
-
-    # Shopify credentials (per tenant)
-    shopify_store_url = Column(
-        String,
-        nullable=True,
-        comment="Shopify store URL (e.g., 'https://my-store.myshopify.com')",
-    )
-    _shopify_access_token_encrypted = Column(
-        String,
-        nullable=True,
-        comment="Encrypted Shopify Admin API access token (use shopify_access_token property)",
-    )
-    shopify_api_version = Column(
-        String,
-        default="2024-01",
-        nullable=True,
-        comment="Shopify API version (e.g., '2024-01')",
     )
 
     # Metadata
@@ -122,42 +116,205 @@ class Tenant(Base, TimestampMixin):
     invoices = relationship("Invoice", back_populates="tenant", cascade="all, delete-orphan")
     invoice_series = relationship("InvoiceSerie", back_populates="tenant", cascade="all, delete-orphan")
 
-    @property
-    def shopify_access_token(self) -> Optional[str]:
+    def get_settings(self) -> TenantSettings:
         """
-        Get decrypted Shopify access token.
+        Get tenant settings with decrypted credentials.
 
-        This property transparently decrypts the token when accessed.
-        Returns None if token is not set.
+        Reads the `settings` JSON field and decrypts any encrypted credentials.
 
         Returns:
-            str: Decrypted access token or None
+            TenantSettings: Typed settings object with decrypted credentials.
+                           Returns empty TenantSettings if no configuration exists.
+
+        Note:
+            Decryption errors are handled gracefully (credentials set to None).
         """
-        if not self._shopify_access_token_encrypted:
+        if not self.settings:
+            return TenantSettings()
+
+        settings_dict: dict[str, Any] = self.settings
+        ecommerce_dict = settings_dict.get("ecommerce")
+
+        if not ecommerce_dict:
+            return TenantSettings()
+
+        ecommerce_settings = self._decrypt_ecommerce_settings(ecommerce_dict)
+        return TenantSettings(ecommerce=ecommerce_settings)
+
+    def _decrypt_ecommerce_settings(
+        self, ecommerce_dict: dict[str, Any]
+    ) -> EcommerceSettings:
+        """
+        Decrypt credentials in ecommerce settings dictionary.
+
+        Args:
+            ecommerce_dict: Raw ecommerce settings from JSON with encrypted fields.
+
+        Returns:
+            EcommerceSettings: Settings object with decrypted credentials.
+        """
+        sync_on_validation = ecommerce_dict.get("sync_on_validation", True)
+        shopify_dict = ecommerce_dict.get("shopify")
+        woocommerce_dict = ecommerce_dict.get("woocommerce")
+
+        shopify_creds = None
+        woocommerce_creds = None
+
+        # Decrypt Shopify credentials
+        if shopify_dict:
+            # Decrypt OAuth2 credentials
+            client_id = self._safe_decrypt(
+                shopify_dict.get("client_id_encrypted")
+            )
+            client_secret = self._safe_decrypt(
+                shopify_dict.get("client_secret_encrypted")
+            )
+            access_token = self._safe_decrypt(
+                shopify_dict.get("access_token_encrypted")
+            )
+
+            # Parse expires_at timestamp
+            expires_at_str = shopify_dict.get("access_token_expires_at")
+            access_token_expires_at = None
+            if expires_at_str:
+                try:
+                    from datetime import datetime
+                    access_token_expires_at = datetime.fromisoformat(expires_at_str)
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Failed to parse access_token_expires_at for tenant {self.id}: {e}")
+
+            shopify_creds = ShopifyCredentials(
+                store_url=shopify_dict.get("store_url", ""),
+                api_version=shopify_dict.get("api_version", "2025-10"),
+                client_id=client_id,
+                client_secret=client_secret,
+                access_token=access_token,
+                access_token_expires_at=access_token_expires_at,
+            )
+
+        # Decrypt WooCommerce credentials
+        if woocommerce_dict:
+            consumer_key = self._safe_decrypt(
+                woocommerce_dict.get("consumer_key_encrypted")
+            )
+            consumer_secret = self._safe_decrypt(
+                woocommerce_dict.get("consumer_secret_encrypted")
+            )
+            webhook_secret = self._safe_decrypt(
+                woocommerce_dict.get("webhook_secret_encrypted")
+            )
+            woocommerce_creds = WooCommerceCredentials(
+                store_url=woocommerce_dict.get("store_url", ""),
+                consumer_key=consumer_key,
+                consumer_secret=consumer_secret,
+                webhook_secret=webhook_secret,
+            )
+
+        return EcommerceSettings(
+            sync_on_validation=sync_on_validation,
+            shopify=shopify_creds,
+            woocommerce=woocommerce_creds,
+        )
+
+    def _safe_decrypt(self, encrypted_value: str | None) -> str | None:
+        """
+        Safely decrypt a value, returning None on any error.
+
+        Args:
+            encrypted_value: The encrypted string to decrypt.
+
+        Returns:
+            Decrypted string or None if decryption fails or value is empty.
+        """
+        if not encrypted_value:
             return None
 
         try:
-            return encryption_service.decrypt(self._shopify_access_token_encrypted)
-        except Exception:
-            # If decryption fails, return None and log warning
-            # This can happen if SECRET_KEY changed or data is corrupted
+            return encryption_service.decrypt(encrypted_value)
+        except Exception as e:
+            logger.warning(f"Failed to decrypt credential for tenant {self.id}: {e}")
             return None
 
-    @shopify_access_token.setter
-    def shopify_access_token(self, value: Optional[str]) -> None:
+    def set_ecommerce_settings(self, ecommerce: EcommerceSettings) -> None:
         """
-        Set Shopify access token with automatic encryption.
+        Set e-commerce settings with automatic encryption of credentials.
 
-        This property transparently encrypts the token before storing it.
-        If value is None or empty, the encrypted field is set to None.
+        Takes an EcommerceSettings object with plaintext credentials and stores
+        them encrypted in the `settings` JSON field.
 
         Args:
-            value: Plain text access token or None
+            ecommerce: EcommerceSettings with plaintext credentials.
+
+        Note:
+            - Sensitive fields are stored with `_encrypted` suffix
+            - Plaintext credentials are NEVER stored in the database
         """
-        if not value:
-            self._shopify_access_token_encrypted = None
-        else:
-            self._shopify_access_token_encrypted = encryption_service.encrypt(value)
+        if self.settings is None:
+            self.settings = {}
+
+        # Handle None or empty ecommerce settings
+        if ecommerce is None or not ecommerce.has_ecommerce:
+            self.settings["ecommerce"] = {
+                "sync_on_validation": ecommerce.sync_on_validation if ecommerce else True
+            }
+            attributes.flag_modified(self, "settings")
+            return
+
+        ecommerce_dict: dict[str, Any] = {
+            "sync_on_validation": ecommerce.sync_on_validation,
+        }
+
+        # Encrypt and store Shopify credentials
+        if ecommerce.shopify:
+            ecommerce_dict["shopify"] = {
+                "store_url": ecommerce.shopify.store_url,
+                "api_version": ecommerce.shopify.api_version,
+            }
+
+            # Encrypt OAuth2 credentials
+            if ecommerce.shopify.client_id:
+                ecommerce_dict["shopify"]["client_id_encrypted"] = (
+                    encryption_service.encrypt(ecommerce.shopify.client_id)
+                )
+            if ecommerce.shopify.client_secret:
+                ecommerce_dict["shopify"]["client_secret_encrypted"] = (
+                    encryption_service.encrypt(ecommerce.shopify.client_secret)
+                )
+
+            # Encrypt access token
+            if ecommerce.shopify.access_token:
+                ecommerce_dict["shopify"]["access_token_encrypted"] = (
+                    encryption_service.encrypt(ecommerce.shopify.access_token)
+                )
+
+            # Store expires_at as ISO string
+            if ecommerce.shopify.access_token_expires_at:
+                ecommerce_dict["shopify"]["access_token_expires_at"] = (
+                    ecommerce.shopify.access_token_expires_at.isoformat()
+                )
+
+        # Encrypt and store WooCommerce credentials
+        if ecommerce.woocommerce:
+            ecommerce_dict["woocommerce"] = {
+                "store_url": ecommerce.woocommerce.store_url,
+            }
+            if ecommerce.woocommerce.consumer_key:
+                ecommerce_dict["woocommerce"]["consumer_key_encrypted"] = (
+                    encryption_service.encrypt(ecommerce.woocommerce.consumer_key)
+                )
+            if ecommerce.woocommerce.consumer_secret:
+                ecommerce_dict["woocommerce"]["consumer_secret_encrypted"] = (
+                    encryption_service.encrypt(ecommerce.woocommerce.consumer_secret)
+                )
+            if ecommerce.woocommerce.webhook_secret:
+                ecommerce_dict["woocommerce"]["webhook_secret_encrypted"] = (
+                    encryption_service.encrypt(ecommerce.woocommerce.webhook_secret)
+                )
+
+        self.settings["ecommerce"] = ecommerce_dict
+
+        # Mark settings as modified so SQLAlchemy detects the change
+        attributes.flag_modified(self, "settings")
 
     def __repr__(self) -> str:
         """String representation of Tenant."""

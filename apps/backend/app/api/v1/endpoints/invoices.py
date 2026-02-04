@@ -11,7 +11,8 @@ See: apps/backend/app/api/v1/endpoints/orders.py
 import asyncio
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from email_validator import EmailNotValidError, validate_email
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -20,8 +21,17 @@ from app.api.deps import (
     require_permission_dual,
 )
 from app.core.permissions import Role
+from app.integrations.efact_client import efact_client
 from app.models.user import User
-from app.schemas.invoice import InvoiceListResponse, InvoiceResponse
+from app.repositories.invoice import invoice_repository
+from app.repositories.tenant import tenant_repository
+from app.schemas.invoice import (
+    InvoiceListResponse,
+    InvoiceResponse,
+    InvoiceSendEmailRequest,
+    InvoiceSendEmailResponse,
+)
+from app.services.email_service import EmailError, email_service
 from app.services.invoice import invoice_service
 
 logger = logging.getLogger(__name__)
@@ -602,5 +612,159 @@ async def list_invoices(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve invoices: {str(e)}",
+        )
+
+
+@router.post(
+    "/{invoice_id}/send-email",
+    response_model=InvoiceSendEmailResponse,
+    summary="Send invoice by email",
+    description="Send invoice PDF to customer via email using Resend",
+    tags=["invoices"],
+)
+async def send_invoice_email(
+    invoice_id: int,
+    request_data: InvoiceSendEmailRequest = Body(default=InvoiceSendEmailRequest()),
+    current_user: User = Depends(require_permission_dual("POST", "/invoices/*")),
+    db: Session = Depends(get_database),
+) -> InvoiceSendEmailResponse:
+    """
+    Send invoice by email to customer.
+
+    **Requirements:**
+    - Invoice must exist and belong to user's tenant
+    - Invoice must have efact_status = "success" (validated by SUNAT)
+    - Email address must be provided (in request or invoice.cliente_email)
+
+    **Process:**
+    1. Validate invoice exists and is successful
+    2. Determine recipient email
+    3. Download PDF from eFact
+    4. Optionally download XML
+    5. Send email via Resend
+    6. Return success response
+
+    **Authentication:** Accepts JWT token OR API key (X-API-Key header).
+
+    Args:
+        invoice_id: ID of the invoice to send
+        request_data: Email request with optional recipient_email and include_xml
+        current_user: Current authenticated user
+        db: Database session
+
+    Returns:
+        InvoiceSendEmailResponse: Success status with email_id and sent_to address
+
+    Raises:
+        HTTPException:
+            - 404 Not Found: Invoice doesn't exist
+            - 403 Forbidden: User doesn't have access to this invoice
+            - 400 Bad Request: Invoice not successful, no email provided, or invalid email
+            - 500 Internal Server Error: PDF download or email sending failed
+    """
+    # Get invoice and validate access
+    invoice = invoice_repository.get(db, invoice_id)
+
+    if not invoice:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invoice not found"
+        )
+
+    # Check tenant access (unless SUPERADMIN)
+    if current_user.role != Role.SUPERADMIN and invoice.tenant_id != current_user.tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+
+    # Validate invoice is successful (SUNAT accepted)
+    if invoice.efact_status != "success":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot send email for invoice with status '{invoice.efact_status}'. "
+                   "Invoice must be successfully validated by SUNAT."
+        )
+
+    # Determine recipient email
+    recipient_email = request_data.recipient_email or invoice.cliente_email
+
+    if not recipient_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No email address provided. Please provide recipient_email or ensure "
+                   "invoice has cliente_email set."
+        )
+
+    # Validate email format
+    try:
+        validated = validate_email(recipient_email)
+        recipient_email = validated.email
+    except EmailNotValidError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid email address: {str(e)}"
+        )
+
+    # Get tenant info
+    tenant = tenant_repository.get(db, invoice.tenant_id)
+
+    if not tenant:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Tenant not found"
+        )
+
+    # Download PDF from eFact
+
+    try:
+        pdf_bytes = efact_client.download_pdf(invoice.efact_ticket)
+    except Exception as e:
+        logger.error(f"Failed to download PDF for invoice {invoice_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to download PDF from eFact: {str(e)}"
+        )
+
+    # Download XML if requested
+    xml_bytes = None
+    if request_data.include_xml:
+        try:
+            xml_bytes = efact_client.download_xml(invoice.efact_ticket)
+        except Exception as e:
+            # XML download failure is not critical, log but continue
+            logger.warning(f"Failed to download XML for invoice {invoice_id}: {str(e)}")
+
+    # Send email
+    try:
+        resend_response = await email_service.send_invoice_email(
+            to_email=recipient_email,
+            invoice=invoice,
+            pdf_bytes=pdf_bytes,
+            tenant=tenant,
+            include_xml=request_data.include_xml,
+            xml_bytes=xml_bytes,
+        )
+
+        # Extract email ID from Resend response
+        email_id = resend_response.get("id")
+
+        logger.info(
+            f"Invoice {invoice_id} sent via email to {recipient_email} "
+            f"by user {current_user.id} (email_id: {email_id})"
+        )
+
+        return InvoiceSendEmailResponse(
+            success=True,
+            email_id=email_id,
+            sent_to=recipient_email,
+            message=f"Invoice sent successfully to {recipient_email}"
+        )
+
+    except EmailError as e:
+        logger.error(f"Failed to send email for invoice {invoice_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to send email: {str(e)}"
         )
 

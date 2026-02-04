@@ -12,8 +12,10 @@ import {
   Key,
   Shield,
   ArrowLeft,
+  FileBarChart,
+  MessageSquare,
 } from "lucide-react"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import Image from "next/image"
 import { useAuth } from "@/hooks/use-auth"
 
@@ -57,15 +59,29 @@ const dataSuperAdmin = [
     url: "/superadmin/users",
     icon: Users,
   },
+]
+
+const dataConfiguration = [
   {
-    title: "API Keys",
+    title: "Series de facturación",
+    url: "/superadmin/invoices/series",
+    icon: FileBarChart,
+  },
+  {
+    title: "Credenciales (API Key)",
     url: "/superadmin/api-keys",
     icon: Key,
+  },
+  {
+    title: "Conversaciones",
+    url: "/superadmin/conversations",
+    icon: MessageSquare,
   },
 ]
 
 export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
+  const router = useRouter()
   const { user, isLoading } = useAuth()
 
   const isActive = (url: string) => {
@@ -153,6 +169,35 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* --- GRUPO CONFIGURACIÓN --- */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-gray-500 text-xs font-medium uppercase tracking-wider mb-2 px-2">
+            Configuración
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {dataConfiguration.map((item) => (
+                <SidebarMenuItem key={item.title} className="mb-1">
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.url)}
+                    tooltip={item.title}
+                    className={`
+                        w-full justify-between h-10 px-3 rounded-lg transition-all duration-200
+                        ${isActive(item.url) ? "border border-sidebar-border shadow-sm" : ""}
+                    `}
+                  >
+                    <a href={item.url} className="flex items-center w-full">
+                      <item.icon className="w-5 h-5 mr-3 shrink-0" />
+                      <span className="flex-1 truncate">{item.title}</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
       {/* --- FOOTER (PERFIL) --- */}
@@ -203,18 +248,6 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-gray-100" />
-                {/*                 
-                <DropdownMenuGroup>
-                  <DropdownMenuItem className="text-gray-600 focus:text-gray-900 cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Configuración de cuenta
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="text-gray-600 focus:text-gray-900 cursor-pointer">
-                    <Bell className="mr-2 h-4 w-4" />
-                    Notificaciones
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator className="bg-gray-100" /> */}
                 <DropdownMenuItem
                   onClick={handleLogout}
                   className="text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer"

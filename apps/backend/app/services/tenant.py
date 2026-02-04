@@ -2,21 +2,29 @@
 Tenant service - business logic for tenant management.
 """
 
-from typing import Optional
+import logging
+import secrets
 
 from sqlalchemy import func
-from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from app.models.tenant import Tenant
-from app.schemas.tenant import TenantCreate, TenantUpdate
 from app.repositories.tenant import tenant_repository
+from app.schemas.tenant import TenantCreate, TenantUpdate
+from app.schemas.tenant_settings import (
+    EcommerceSettings,
+    ShopifyCredentials,
+    WooCommerceCredentials,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class TenantService:
     """Service for managing tenants (companies/clients)."""
 
-    def get_tenant(self, db: Session, tenant_id: int) -> Optional[Tenant]:
+    def get_tenant(self, db: Session, tenant_id: int) -> Tenant | None:
         """
         Get tenant by ID.
 
@@ -29,7 +37,7 @@ class TenantService:
         """
         return db.query(Tenant).filter(Tenant.id == tenant_id).first()
 
-    def get_tenant_by_slug(self, db: Session, slug: str) -> Optional[Tenant]:
+    def get_tenant_by_slug(self, db: Session, slug: str) -> Tenant | None:
         """
         Get tenant by slug.
 
@@ -47,7 +55,7 @@ class TenantService:
         db: Session,
         skip: int = 0,
         limit: int = 100,
-        is_active: Optional[bool] = None,
+        is_active: bool | None = None,
     ) -> tuple[list[Tenant], int]:
         """
         Get all tenants with pagination.
@@ -75,7 +83,7 @@ class TenantService:
 
         return tenants, total
 
-    def create_tenant(self, db: Session, tenant_in: TenantCreate) -> Tenant:
+    async def create_tenant(self, db: Session, tenant_in: TenantCreate) -> Tenant:
         """
         Create a new tenant.
 
@@ -83,13 +91,20 @@ class TenantService:
         Validates that slug is unique before creation.
         Sets is_platform=False by default (new tenants are clients, not platform).
 
-        **Encryption**: shopify_access_token is sent as plaintext in request body
-        but is automatically encrypted by the Tenant model's @property setter
-        before being stored in the database.
+        **E-commerce Configuration:**
+        - Supports Shopify and WooCommerce via ecommerce_* fields
+        - Builds settings.ecommerce JSON with encrypted credentials
+
+        **Encryption**: All credentials (access_token, consumer_key, consumer_secret)
+        are automatically encrypted before being stored in the settings JSON field.
+
+        **OAuth2 Token Generation:**
+        - For Shopify tenants with OAuth credentials, automatically generates the
+          initial access token after tenant creation.
 
         Args:
             db: Database session
-            tenant_in: Tenant creation data (shopify_access_token in plaintext)
+            tenant_in: Tenant creation data
 
         Returns:
             Created tenant with ID
@@ -112,15 +127,22 @@ class TenantService:
             name=tenant_in.name,
             slug=slug,
             company_id=tenant_in.company_id,
-            shopify_store_url=tenant_in.shopify_store_url,
-            shopify_api_version=tenant_in.shopify_api_version or "2024-01",
             is_platform=False,  # New tenants are always clients, not platform
             is_active=True,
+            efact_ruc=tenant_in.efact_ruc,
+            # Emisor data for electronic invoicing
+            emisor_nombre_comercial=tenant_in.emisor_nombre_comercial,
+            emisor_ubigeo=tenant_in.emisor_ubigeo,
+            emisor_departamento=tenant_in.emisor_departamento,
+            emisor_provincia=tenant_in.emisor_provincia,
+            emisor_distrito=tenant_in.emisor_distrito,
+            emisor_direccion=tenant_in.emisor_direccion,
         )
 
-        # Set Shopify token (required in TenantCreate)
-        # The @property setter automatically encrypts it before storing
-        tenant.shopify_access_token = tenant_in.shopify_access_token
+        # Build e-commerce settings if platform is specified
+        if tenant_in.ecommerce_platform:
+            ecommerce_settings = self._build_ecommerce_settings(tenant_in)
+            tenant.set_ecommerce_settings(ecommerce_settings)
 
         try:
             db.add(tenant)
@@ -128,18 +150,82 @@ class TenantService:
             db.refresh(tenant)
         except IntegrityError as e:
             db.rollback()
-            
+
             # Handle unique constraint violations with user-friendly messages
             error_str = str(e.orig)
             if "company_id" in error_str:
-                raise ValueError(f"Tenant with company_id '{tenant_in.company_id}' already exists")
+                raise ValueError(
+                    f"Tenant with company_id '{tenant_in.company_id}' already exists"
+                ) from e
             elif "slug" in error_str:
-                raise ValueError(f"Tenant with slug '{slug}' already exists")
+                raise ValueError(f"Tenant with slug '{slug}' already exists") from e
             else:
                 # Re-raise for other integrity errors
-                raise ValueError(f"Failed to create tenant: {str(e.orig)}")
+                raise ValueError(f"Failed to create tenant: {str(e.orig)}") from e
+
+        # Generate initial access token for Shopify if OAuth credentials provided
+        if tenant_in.ecommerce_platform == "shopify" and tenant_in.shopify_client_id:
+            import logging
+
+            from app.integrations.shopify_token_manager import shopify_token_manager
+
+            logger = logging.getLogger(__name__)
+
+            try:
+                # This will generate and store the first access token
+                await shopify_token_manager.get_valid_access_token(db, tenant)
+                logger.info(f"Generated initial Shopify access token for tenant {tenant.id}")
+            except ValueError as e:
+                logger.error(
+                    f"Failed to generate initial Shopify token for tenant {tenant.id}: {str(e)}"
+                )
+                # Don't fail tenant creation, token can be regenerated later
 
         return tenant
+
+    def _build_ecommerce_settings(self, tenant_in: TenantCreate) -> EcommerceSettings:
+        """
+        Build EcommerceSettings from TenantCreate fields.
+
+        For Shopify: Uses OAuth2 (client_id/client_secret). Access token will be
+        generated automatically by ShopifyTokenManager after tenant creation.
+
+        Args:
+            tenant_in: TenantCreate with ecommerce_* fields
+
+        Returns:
+            EcommerceSettings object ready for encryption and storage
+        """
+        if tenant_in.ecommerce_platform == "shopify":
+            return EcommerceSettings(
+                sync_on_validation=tenant_in.sync_on_validation,
+                shopify=ShopifyCredentials(
+                    store_url=tenant_in.ecommerce_store_url or "",
+                    api_version=tenant_in.shopify_api_version or "2025-10",
+                    client_id=tenant_in.shopify_client_id,
+                    client_secret=tenant_in.shopify_client_secret,
+                    access_token=None,  # Will be generated by TokenManager
+                    access_token_expires_at=None,
+                ),
+            )
+        elif tenant_in.ecommerce_platform == "woocommerce":
+            # Generate webhook_secret if not provided
+            webhook_secret = getattr(tenant_in, "webhook_secret", None)
+            if not webhook_secret:
+                webhook_secret = secrets.token_urlsafe(32)
+                logger.info("Generated new webhook_secret for new WooCommerce tenant")
+
+            return EcommerceSettings(
+                sync_on_validation=tenant_in.sync_on_validation,
+                woocommerce=WooCommerceCredentials(
+                    store_url=tenant_in.ecommerce_store_url or "",
+                    consumer_key=tenant_in.ecommerce_consumer_key,
+                    consumer_secret=tenant_in.ecommerce_consumer_secret,
+                    webhook_secret=webhook_secret,
+                ),
+            )
+        else:
+            return EcommerceSettings(sync_on_validation=tenant_in.sync_on_validation)
 
     def _generate_slug(self, name: str) -> str:
         """
@@ -187,23 +273,20 @@ class TenantService:
 
         return slug
 
-    def update_tenant(
-        self, db: Session, tenant_id: int, tenant_in: TenantUpdate
-    ) -> Optional[Tenant]:
+    async def update_tenant(self, db: Session, tenant_id: int, tenant_in: TenantUpdate) -> Tenant | None:
         """
         Update tenant fields.
 
         **Updatable fields:**
-        - name, shopify_store_url, shopify_access_token, shopify_api_version, is_active
+        - name, is_active, efact_ruc
+        - E-commerce: ecommerce_platform, ecommerce_store_url, credentials, sync_on_validation
 
         **Immutable fields (cannot be changed):**
         - slug, id, is_platform (set at creation)
 
-        The updated_at timestamp is automatically updated by SQLAlchemy.
-
-        **Encryption**: shopify_access_token is sent as plaintext in request body
-        but is automatically encrypted by the Tenant model's @property setter
-        before being stored in the database.
+        **E-commerce Configuration:**
+        - If ecommerce_platform is provided, rebuilds settings.ecommerce
+        - Credentials are encrypted before storage
 
         Args:
             db: Database session
@@ -223,23 +306,121 @@ class TenantService:
         # Extract update data (only fields that were explicitly provided)
         update_data = tenant_in.model_dump(exclude_unset=True)
 
-        # Check if trying to update immutable fields (which schema shouldn't allow, but validate anyway)
+        # Check if trying to update immutable fields
         immutable_fields = {"slug", "id", "is_platform", "company_id"}
         attempted_immutable = set(update_data.keys()) & immutable_fields
         if attempted_immutable:
             raise ValueError(f"Cannot modify immutable fields: {', '.join(attempted_immutable)}")
 
-        # Update allowed fields
+        # Separate e-commerce fields from regular fields
+        ecommerce_fields = {
+            "ecommerce_platform",
+            "ecommerce_store_url",
+            "shopify_client_id",
+            "shopify_client_secret",
+            "shopify_api_version",
+            "ecommerce_consumer_key",
+            "ecommerce_consumer_secret",
+            "sync_on_validation",
+        }
+
+        has_ecommerce_update = any(f in update_data for f in ecommerce_fields)
+
+        # Update regular fields
         for field, value in update_data.items():
-            if field == "shopify_access_token":
-                # Use property setter for automatic encryption (plaintext -> encrypted)
-                # Even if value is None, this clears the encrypted token
-                tenant.shopify_access_token = value
-            else:
-                setattr(tenant, field, value)
+            if field in ecommerce_fields:
+                continue  # Handle separately
+            setattr(tenant, field, value)
+
+        # Handle e-commerce settings update
+        if has_ecommerce_update:
+            await self._update_ecommerce_settings(db, tenant, update_data)
 
         db.commit()
         db.refresh(tenant)
+
+        return tenant
+
+    async def _update_ecommerce_settings(self, db: Session, tenant: Tenant, update_data: dict) -> None:
+        """
+        Update e-commerce settings for a tenant.
+
+        Args:
+            tenant: Tenant to update
+            update_data: Dictionary with ecommerce_* fields
+        """
+        # Get current settings or create new
+        current_settings = tenant.get_settings()
+        current_ecommerce = current_settings.ecommerce
+
+        # Determine platform (new value or keep current)
+        platform = update_data.get("ecommerce_platform")
+        if platform is None and current_ecommerce:
+            platform = current_ecommerce.platform
+
+        # Determine sync setting
+        sync_on_validation = update_data.get("sync_on_validation")
+        if sync_on_validation is None:
+            sync_on_validation = current_ecommerce.sync_on_validation if current_ecommerce else True
+
+        if platform == "shopify":
+            # Get current Shopify settings if available
+            current_shopify = current_ecommerce.shopify if current_ecommerce else None
+
+            new_settings = EcommerceSettings(
+                sync_on_validation=sync_on_validation,
+                shopify=ShopifyCredentials(
+                    store_url=update_data.get("ecommerce_store_url")
+                    or (current_shopify.store_url if current_shopify else ""),
+                    client_id=update_data.get("shopify_client_id")
+                    or (current_shopify.client_id if current_shopify else None),
+                    client_secret=update_data.get("shopify_client_secret")
+                    or (current_shopify.client_secret if current_shopify else None),
+                    api_version=update_data.get("shopify_api_version")
+                    or (current_shopify.api_version if current_shopify else "2024-01"),
+                ),
+            )
+            tenant.set_ecommerce_settings(new_settings)
+
+            # Auto-subscribe to Shopify webhooks if credentials are complete
+            await self._auto_subscribe_shopify_webhooks(db, tenant, new_settings.shopify)
+
+        elif platform == "woocommerce":
+            # Get current WooCommerce settings if available
+            current_woo = current_ecommerce.woocommerce if current_ecommerce else None
+
+            # Generate webhook_secret if not provided
+            webhook_secret = update_data.get("webhook_secret")
+            if not webhook_secret:
+                if current_woo and current_woo.webhook_secret:
+                    # Keep existing secret
+                    webhook_secret = current_woo.webhook_secret
+                else:
+                    # Generate new secure secret
+                    webhook_secret = secrets.token_urlsafe(32)
+                    logger.info(f"Generated new webhook_secret for WooCommerce tenant {tenant.id}")
+
+            new_settings = EcommerceSettings(
+                sync_on_validation=sync_on_validation,
+                woocommerce=WooCommerceCredentials(
+                    store_url=update_data.get("ecommerce_store_url")
+                    or (current_woo.store_url if current_woo else ""),
+                    consumer_key=update_data.get("ecommerce_consumer_key")
+                    or (current_woo.consumer_key if current_woo else None),
+                    consumer_secret=update_data.get("ecommerce_consumer_secret")
+                    or (current_woo.consumer_secret if current_woo else None),
+                    webhook_secret=webhook_secret,
+                ),
+            )
+            tenant.set_ecommerce_settings(new_settings)
+
+            # Auto-subscribe to WooCommerce webhooks if credentials are complete
+            await self._auto_subscribe_woocommerce_webhooks(db, tenant, new_settings.woocommerce)
+
+        else:
+            # No platform - just update sync setting
+            new_settings = EcommerceSettings(sync_on_validation=sync_on_validation)
+            tenant.set_ecommerce_settings(new_settings)
 
         return tenant
 
@@ -271,7 +452,7 @@ class TenantService:
 
         return True
 
-    def get_tenant_stats(self, db: Session, tenant_id: int) -> Optional[dict]:
+    def get_tenant_stats(self, db: Session, tenant_id: int) -> dict | None:
         """
         Get statistics for a tenant.
 
@@ -292,7 +473,7 @@ class TenantService:
         # Count active users
         user_count = (
             db.query(func.count(User.id))
-            .filter(User.tenant_id == tenant_id, User.is_active == True)
+            .filter(User.tenant_id == tenant_id, User.is_active)
             .scalar()
         )
 
@@ -303,6 +484,119 @@ class TenantService:
             "user_count": user_count or 0,
             "order_count": order_count or 0,
         }
+
+    async def _auto_subscribe_shopify_webhooks(
+        self,
+        db: Session,
+        tenant: Tenant,
+        shopify_credentials: ShopifyCredentials | None,
+    ) -> None:
+        """
+        Automatically subscribe to Shopify webhooks after credentials are saved.
+
+        Args:
+            db: Database session
+            tenant: Tenant with updated credentials
+            shopify_credentials: Shopify credentials (may be None if incomplete)
+        """
+        # Skip if credentials are incomplete
+        if not shopify_credentials or not shopify_credentials.client_id or not shopify_credentials.client_secret:
+            logger.info(f"Skipping Shopify webhook subscription for tenant {tenant.id}: incomplete credentials")
+            return
+
+        # Skip if store_url is missing
+        if not shopify_credentials.store_url:
+            logger.info(f"Skipping Shopify webhook subscription for tenant {tenant.id}: missing store_url")
+            return
+
+        try:
+            from app.integrations.shopify_client import ShopifyClient
+            from app.integrations.shopify_token_manager import shopify_token_manager
+            from app.services.webhook_subscription_service import WebhookSubscriptionService
+
+            # Get valid access token
+            access_token = await shopify_token_manager.get_valid_access_token(db, tenant)
+
+            # Create Shopify client
+            shopify_client = ShopifyClient(
+                store_url=shopify_credentials.store_url,
+                access_token=access_token,
+                api_version=shopify_credentials.api_version or "2024-01",
+            )
+
+            # Subscribe to webhooks
+            webhook_service = WebhookSubscriptionService(db)
+            result = await webhook_service.subscribe_shopify_webhooks(
+                tenant_id=tenant.id,
+                shopify_client=shopify_client,
+            )
+
+            logger.info(
+                f"Shopify webhook subscription result for tenant {tenant.id}: "
+                f"created={result['created']}, skipped={result['skipped']}, failed={result['failed']}"
+            )
+
+        except Exception as e:
+            # Don't fail the whole operation if webhook subscription fails
+            logger.error(
+                f"Failed to auto-subscribe Shopify webhooks for tenant {tenant.id}: {str(e)}",
+                exc_info=True,
+            )
+
+    async def _auto_subscribe_woocommerce_webhooks(
+        self,
+        db: Session,
+        tenant: Tenant,
+        woo_credentials: WooCommerceCredentials | None,
+    ) -> None:
+        """
+        Automatically subscribe to WooCommerce webhooks after credentials are saved.
+
+        Args:
+            db: Database session
+            tenant: Tenant with updated credentials
+            woo_credentials: WooCommerce credentials (may be None if incomplete)
+        """
+        # Skip if credentials are incomplete
+        if not woo_credentials or not woo_credentials.consumer_key or not woo_credentials.consumer_secret:
+            logger.info(f"Skipping WooCommerce webhook subscription for tenant {tenant.id}: incomplete credentials")
+            return
+
+        # Skip if store_url or webhook_secret is missing
+        if not woo_credentials.store_url or not woo_credentials.webhook_secret:
+            logger.info(f"Skipping WooCommerce webhook subscription for tenant {tenant.id}: missing store_url or webhook_secret")
+            return
+
+        try:
+            from app.integrations.woocommerce_client import WooCommerceClient
+            from app.services.webhook_subscription_service import WebhookSubscriptionService
+
+            # Create WooCommerce client
+            woo_client = WooCommerceClient(
+                store_url=woo_credentials.store_url,
+                consumer_key=woo_credentials.consumer_key,
+                consumer_secret=woo_credentials.consumer_secret,
+            )
+
+            # Subscribe to webhooks
+            webhook_service = WebhookSubscriptionService(db)
+            result = await webhook_service.subscribe_woocommerce_webhooks(
+                tenant_id=tenant.id,
+                woocommerce_client=woo_client,
+                webhook_secret=woo_credentials.webhook_secret,
+            )
+
+            logger.info(
+                f"WooCommerce webhook subscription result for tenant {tenant.id}: "
+                f"created={result['created']}, skipped={result['skipped']}, failed={result['failed']}"
+            )
+
+        except Exception as e:
+            # Don't fail the whole operation if webhook subscription fails
+            logger.error(
+                f"Failed to auto-subscribe WooCommerce webhooks for tenant {tenant.id}: {str(e)}",
+                exc_info=True,
+            )
 
 
 # Singleton instance

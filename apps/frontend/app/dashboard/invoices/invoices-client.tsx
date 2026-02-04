@@ -42,8 +42,13 @@ import {
   XCircle,
   Clock,
   AlertCircle,
+  Mail,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
+import { SendEmailDialog } from "@/components/invoices/send-email-dialog";
+import { downloadInvoicePdf, downloadInvoiceXml } from "@/lib/api-client/invoices";
+import { useToast } from "@/hooks/use-toast";
 
 interface InvoicesClientViewProps {
   initialInvoices: Invoice[];
@@ -53,9 +58,13 @@ interface InvoicesClientViewProps {
  * Client Component - Interactividad y filtros
  */
 export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps) {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [sendingEmailId, setSendingEmailId] = useState<number | null>(null);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
   // Filtrar facturas según los criterios
   const filteredInvoices = initialInvoices.filter((invoice) => {
@@ -91,39 +100,107 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
 
   const handleDownloadPDF = async (invoiceId: number) => {
     try {
-      const response = await fetch(`/api/invoices/pdf/${invoiceId}`);
-      if (!response.ok) throw new Error("Error al descargar PDF");
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `factura-${invoiceId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      // ✅ Usa Client API Layer
+      await downloadInvoicePdf(invoiceId);
+      toast({
+        title: "PDF descargado",
+        description: "El archivo se ha descargado correctamente",
+      });
     } catch (error) {
       console.error("Error downloading PDF:", error);
+      toast({
+        title: "Error",
+        description: "Error al descargar el PDF",
+        variant: "destructive",
+      });
     }
   };
 
   const handleDownloadXML = async (invoiceId: number) => {
     try {
-      const response = await fetch(`/api/invoices/xml/${invoiceId}`);
-      if (!response.ok) throw new Error("Error al descargar XML");
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `factura-${invoiceId}.xml`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      // ✅ Usa Client API Layer
+      await downloadInvoiceXml(invoiceId);
+      toast({
+        title: "XML descargado",
+        description: "El archivo se ha descargado correctamente",
+      });
     } catch (error) {
       console.error("Error downloading XML:", error);
+      toast({
+        title: "Error",
+        description: "Error al descargar el XML",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOpenEmailDialog = (invoice: Invoice) => {
+    // Validar que tenga email
+    if (!invoice.cliente_email) {
+      toast({
+        title: "Email no disponible",
+        description: "Esta factura no tiene email de cliente registrado",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validar estado
+    if (invoice.efact_status !== "success") {
+      toast({
+        title: "Factura no válida",
+        description: "Solo se pueden enviar facturas aceptadas por SUNAT",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Abrir dialog de confirmación
+    setSelectedInvoice(invoice);
+    setEmailDialogOpen(true);
+  };
+
+  const handleConfirmSendEmail = async (email: string, includeXml: boolean) => {
+    if (!selectedInvoice) return;
+
+    try {
+      setSendingEmailId(selectedInvoice.id);
+
+      const response = await fetch(`/api/invoices/send-email/${selectedInvoice.id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          recipient_email: email,
+          include_xml: includeXml,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({
+          detail: "Error al enviar el email",
+        }));
+        throw new Error(error.detail || "Error al enviar el email");
+      }
+
+      const result = await response.json();
+
+      toast({
+        title: "Email enviado",
+        description: `Comprobante enviado a ${result.sent_to}`,
+      });
+
+      // Cerrar dialog al éxito
+      setEmailDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error al enviar",
+        description: error instanceof Error ? error.message : "No se pudo enviar el email",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingEmailId(null);
     }
   };
 
@@ -273,6 +350,15 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
                             </Link>
                             {invoice.efact_status === "success" && (
                               <>
+                                {invoice.cliente_email && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleOpenEmailDialog(invoice)}
+                                    disabled={sendingEmailId === invoice.id}
+                                  >
+                                    <Mail className="h-4 w-4 mr-2" />
+                                    Enviar por Email
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem
                                   onClick={() => handleDownloadPDF(invoice.id)}
                                 >
@@ -298,6 +384,15 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
           </div>
         </CardContent>
       </Card>
+
+      {/* Dialog de confirmación de envío de email */}
+      <SendEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        invoice={selectedInvoice}
+        onConfirm={handleConfirmSendEmail}
+        loading={sendingEmailId !== null}
+      />
     </div>
   );
 }

@@ -3,9 +3,9 @@ Order schemas.
 """
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 from app.schemas.invoice import InvoiceResponse
 from app.schemas.tenant import TenantResponse
@@ -29,8 +29,18 @@ class OrderBase(BaseModel):
 
     customer_email: EmailStr = Field(..., description="Customer email")
     customer_name: str | None = Field(None, description="Customer name")
-    customer_document_type: str | None = Field(None, description="Tipo de documento: DNI o RUC")
-    customer_document_number: str | None = Field(None, description="Número de DNI o RUC del cliente")
+    customer_document_type: str | None = Field(
+        None,
+        description=(
+            "Tipo de documento SUNAT (catálogo 06): "
+            "1=DNI, 6=RUC, 4=Carnet extranjería, 7=Pasaporte, "
+            "0=Sin documento, A=Cédula diplomática"
+        )
+    )
+    customer_document_number: str | None = Field(
+        None,
+        description="Número de documento del cliente (8 dígitos para DNI, 11 para RUC)"
+    )
     total_price: float | None = Field(None, description="Total price (calculated if not provided)")
     currency: str = Field(default="USD", description="Currency code")
     line_items: list[LineItemBase] | None = Field(None, description="Order line items (products)")
@@ -38,17 +48,54 @@ class OrderBase(BaseModel):
     notes: str | None = Field(None, description="Additional notes")
     expected_delivery_date: datetime | None = Field(None, description="Expected delivery date of the order")
     dispatch_time_window: str | None = Field(None, description="Dispatch time window (e.g., '09:00-12:00')")
+    shipping_address: str | None = Field(
+        None,
+        description="Shipping address: address1, city",
+        max_length=500,
+    )
 
 
 class OrderCreate(OrderBase):
     """
     Schema for creating a new Order.
 
-    Used by n8n when inserting draft orders.
-    The tenant_id is automatically set from the authenticated user's tenant.
+    Used by n8n when inserting orders from e-commerce platforms.
+    The tenant_id is automatically set from the authenticated user's tenant (in API endpoints).
+    For internal use (webhooks), tenant_id can be provided explicitly.
+
+    Validation:
+    - At least one of shopify_draft_order_id or woocommerce_order_id must be provided
+    - Cannot provide both simultaneously (mutually exclusive)
     """
 
-    shopify_draft_order_id: str = Field(..., description="Shopify draft order ID")
+    tenant_id: int | None = Field(
+        None, description="Tenant ID (optional - for internal use only, ignored in public endpoints)"
+    )
+    shopify_draft_order_id: str | None = Field(
+        None, description="Shopify draft order ID (required if not WooCommerce)"
+    )
+    woocommerce_order_id: int | None = Field(
+        None, description="WooCommerce order ID (required if not Shopify)"
+    )
+
+    @model_validator(mode="after")
+    def validate_platform_id(self) -> "OrderCreate":
+        """Ensure exactly one platform ID is provided."""
+        has_shopify = self.shopify_draft_order_id is not None
+        has_woocommerce = self.woocommerce_order_id is not None
+
+        if not has_shopify and not has_woocommerce:
+            raise ValueError(
+                "Either shopify_draft_order_id or woocommerce_order_id must be provided"
+            )
+
+        if has_shopify and has_woocommerce:
+            raise ValueError(
+                "Cannot provide both shopify_draft_order_id and woocommerce_order_id. "
+                "An order can only belong to one platform."
+            )
+
+        return self
 
 
 class OrderUpdate(BaseModel):
@@ -64,6 +111,7 @@ class OrderUpdate(BaseModel):
     payment_method: str | None = None
     notes: str | None = None
     status: str | None = None
+    shipping_address: str | None = None
 
 
 class OrderValidate(BaseModel):
@@ -75,6 +123,22 @@ class OrderValidate(BaseModel):
 
     payment_method: str | None = Field(None, description="Payment method used")
     notes: str | None = Field(None, description="Additional validation notes")
+
+
+class OrderCancel(BaseModel):
+    """Schema for cancelling an order."""
+
+    reason: str = Field(
+        ...,
+        description="Cancel reason (CUSTOMER | DECLINED | FRAUD | INVENTORY | STAFF | OTHER)",
+    )
+    restock: bool = Field(default=True, description="Restock inventory (Shopify completed orders only)")
+    notify_customer: bool = Field(default=True, description="Notify customer of cancellation (Shopify completed orders only)")
+    refund_method: str | None = Field(
+        default="original",
+        description="Refund method: original | store_credit | later (Shopify completed orders only)",
+    )
+    staff_note: str | None = Field(default=None, description="Internal staff note")
 
 
 class OrderResponse(OrderBase):
@@ -105,15 +169,19 @@ class OrderResponse(OrderBase):
 
     id: int
     tenant_id: int
-    shopify_draft_order_id: str
+    shopify_draft_order_id: str | None
     shopify_order_id: str | None
+    woocommerce_order_id: int | None = Field(None, description="WooCommerce order ID")
+    source_platform: Literal["shopify", "woocommerce"] | None = Field(
+        None, description="Source e-commerce platform"
+    )
     validado: bool
     validated_at: datetime | None
     status: str
     created_at: datetime
     updated_at: datetime
-    tenant: Optional[TenantResponse] = Field(None, description="Optional tenant info (populated via join for SUPERADMIN)")
-    invoices: Optional[list[InvoiceResponse]] = Field(None, description="Optional list of invoices for this order (populated via eager loading)")
+    tenant: TenantResponse | None = Field(None, description="Optional tenant info (populated via join for SUPER_ADMIN)")
+    invoices: list[InvoiceResponse] | None = Field(None, description="Optional list of invoices for this order (populated via eager loading)")
 
     model_config = ConfigDict(from_attributes=True)
 

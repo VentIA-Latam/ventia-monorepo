@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CheckCircle2, FileText, Download, AlertCircle, Clock } from "lucide-react";
+import { CheckCircle2, FileText, Download, AlertCircle, Clock, Mail } from "lucide-react";
 import { Invoice } from "@/lib/types/invoice";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -18,6 +18,7 @@ interface InvoiceSuccessDialogProps {
   invoice: Invoice | null;
   onViewInvoice?: () => void;
   onDownloadPdf?: () => void;
+  onSendEmail?: () => void;
 }
 
 export function InvoiceSuccessDialog({
@@ -26,6 +27,7 @@ export function InvoiceSuccessDialog({
   invoice,
   onViewInvoice,
   onDownloadPdf,
+  onSendEmail,
 }: InvoiceSuccessDialogProps) {
   if (!invoice) return null;
 
@@ -159,13 +161,23 @@ export function InvoiceSuccessDialog({
             Ver Detalles
           </Button>
           {isSuccess && (
-            <Button
-              onClick={onDownloadPdf}
-              className="w-full sm:w-auto text-sm"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Descargar PDF
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={onSendEmail}
+                className="w-full sm:w-auto text-sm"
+              >
+                <Mail className="mr-2 h-4 w-4" />
+                Enviar por Correo
+              </Button>
+              <Button
+                onClick={onDownloadPdf}
+                className="w-full sm:w-auto text-sm"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Descargar PDF
+              </Button>
+            </>
           )}
         </DialogFooter>
       </DialogContent>

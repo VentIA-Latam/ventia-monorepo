@@ -18,6 +18,7 @@ import {
   CheckCircle,
   XCircle,
   RefreshCw,
+  Mail,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -27,6 +28,8 @@ import {
   INVOICE_STATUS_COLORS
 } from "@/lib/types/invoice";
 import { formatDateTime } from "@/lib/utils";
+import { SendEmailDialog } from "@/components/invoices/send-email-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface InvoiceDetailClientProps {
   invoice: Invoice;
@@ -34,10 +37,15 @@ interface InvoiceDetailClientProps {
 
 export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailClientProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [invoice, setInvoice] = useState(initialInvoice);
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
   const [isDownloadingXML, setIsDownloadingXML] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+
+  // Estados para envío de email
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   // Auto-polling DESACTIVADO - la factura cambia a success solo al descargar el PDF
   // useEffect(() => {
@@ -166,6 +174,67 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
       alert(err instanceof Error ? err.message : "Error al descargar el XML");
     } finally {
       setIsDownloadingXML(false);
+    }
+  };
+
+  // Handler para abrir dialog de email
+  const handleOpenEmailDialog = () => {
+    // Validar que el comprobante fue exitoso
+    if (invoice.efact_status !== "success") {
+      toast({
+        title: "No se puede enviar",
+        description: "Solo se pueden enviar comprobantes con estado exitoso.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validar que tenga email (opcional - el dialog permite editarlo)
+    if (!invoice.cliente_email) {
+      toast({
+        title: "Advertencia",
+        description: "El comprobante no tiene un email registrado. Deberás ingresarlo manualmente.",
+        variant: "default",
+      });
+    }
+
+    setEmailDialogOpen(true);
+  };
+
+  // Handler para confirmar envío de email
+  const handleConfirmSendEmail = async (email: string, includeXml: boolean) => {
+    setSendingEmail(true);
+    try {
+      const response = await fetch(`/api/invoices/send-email/${invoice.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipient_email: email,
+          include_xml: includeXml,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Error al enviar el email");
+      }
+
+      toast({
+        title: "Email enviado",
+        description: `El comprobante ha sido enviado a ${data.sent_to}`,
+      });
+
+      setEmailDialogOpen(false);
+    } catch (err) {
+      console.error("Error sending email:", err);
+      toast({
+        title: "Error al enviar email",
+        description: err instanceof Error ? err.message : "Error desconocido",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -397,6 +466,20 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
                 </Button>
               )}
 
+              {/* Botón Enviar por Correo */}
+              {invoice.efact_status === 'success' && (
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  size="sm"
+                  onClick={handleOpenEmailDialog}
+                  disabled={sendingEmail}
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Enviar por Correo
+                </Button>
+              )}
+
               {/* Botón Descargar PDF */}
               <Button
                 className="w-full"
@@ -487,6 +570,15 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
           </Card>
         </div>
       </div>
+
+      {/* Modal de Envío de Email */}
+      <SendEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        invoice={invoice}
+        onConfirm={handleConfirmSendEmail}
+        loading={sendingEmail}
+      />
     </div>
   );
 }

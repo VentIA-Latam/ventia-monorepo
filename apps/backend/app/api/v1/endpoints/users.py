@@ -116,18 +116,18 @@ async def create_user(
     db: Session = Depends(get_database),
 ) -> UserResponse:
     """
-    Create a new user.
+    Create a new user and sync with Auth0.
 
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
     SUPERADMIN: Can create users in any tenant. Validates tenant exists and is active.
     Other roles: Can only create users in their own tenant.
 
-    Both: Cannot create SUPERADMIN role users.
-    Request body: email, name, role, auth0_user_id, tenant_id
+    Both: Cannot create SUPER_ADMIN role users.
+    Request body: email, name, role, tenant_id (auth0_user_id is automatically generated)
     """
     try:
-        return user_service.create_user_for_role(db, user_in, current_user)
+        return await user_service.create_user_for_role(db, user_in, current_user)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -143,7 +143,7 @@ async def update_user(
     db: Session = Depends(get_database),
 ) -> UserUpdateResponse:
     """
-    Update user.
+    Update user and sync blocked status with Auth0.
 
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
@@ -158,7 +158,7 @@ async def update_user(
     Returns: 200 with updated user and optional warning message
     """
     try:
-        updated_user, warning = user_service.update_user_for_role(db, user_id, user_in, current_user)
+        updated_user, warning = await user_service.update_user_for_role(db, user_id, user_in, current_user)
         return UserUpdateResponse(user=updated_user, warning=warning)
     except ValueError as e:
         if "not found" in str(e):
@@ -180,16 +180,17 @@ async def delete_user(
     db: Session = Depends(get_database),
 ) -> None:
     """
-    Deactivate user (soft delete).
+    Deactivate user (soft delete) and block in Auth0.
 
     **Authentication:** Accepts JWT token OR API key (X-API-Key header).
 
     SUPERADMIN only: Can deactivate any user (except themselves).
     - Cannot deactivate the last active SUPERADMIN in the system
     - User is marked as inactive (is_active=False) instead of deleted
+    - User is also blocked in Auth0
     """
     try:
-        user_service.delete_user_for_access(db, user_id, current_user)
+        await user_service.delete_user_for_access(db, user_id, current_user)
     except ValueError as e:
         if "not found" in str(e):
             raise HTTPException(

@@ -2,13 +2,15 @@
  * User service - API calls to backend
  */
 
+import { UserRole } from '@/lib/constants/roles';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 export interface User {
   id: number;
   email: string;
   name: string;
-  role: 'SUPER_ADMIN' | 'ADMIN' | 'LOGISTICA' | 'VENTAS' | 'VIEWER';
+  role: UserRole;
   tenant_id: number;
   is_active: boolean;
   auth0_user_id: string;

@@ -18,6 +18,7 @@ import {
   Key,
   Receipt,
   FileBarChart,
+  MessageSquare,
 } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Image from "next/image"
@@ -70,6 +71,11 @@ const dataPlatform = [
     url: "/dashboard/invoices",
     icon: Receipt,
   },
+  {
+    title: "Conversaciones",
+    url: "/dashboard/conversations",
+    icon: MessageSquare,
+  },
   /*   {
       title: "Clientes",
       url: "/dashboard/clients",
@@ -101,12 +107,9 @@ const dataConfiguration = [
   },
 ]
 
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { user, isLoading, isSuperAdmin } = useAuth()
-
-  console.log('AppSidebar - isSuperAdmin:', isSuperAdmin); // Debug
 
   const isActive = (url: string) => {
     if (url === "/dashboard") return pathname === "/dashboard";
@@ -316,25 +319,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-gray-100" />
                 <DropdownMenuGroup>
-                  {!isSuperAdmin && (
-                    <>
-                      <DropdownMenuItem
-                        onClick={() => window.location.href = '/dashboard/invoices/series'}
-                        className="text-gray-600 focus:text-gray-900 cursor-pointer"
-                      >
-                        <FileBarChart className="mr-2 h-4 w-4" />
-                        Series de facturación
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => window.location.href = '/dashboard/settings/api-keys'}
-                        className="text-gray-600 focus:text-gray-900 cursor-pointer"
-                      >
-                        <Key className="mr-2 h-4 w-4" />
-                        Credenciales (API Key)
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-gray-100" />
-                    </>
-                  )}
                   {isSuperAdmin && (
                     <>
                       <DropdownMenuItem

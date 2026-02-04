@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Users, Plus, Eye, Power, MoreHorizontal, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getUsers, getTenants } from "@/lib/api-client";
 import {
   Card,
   CardContent,
@@ -55,11 +56,9 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/superadmin/users");
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data.items || []);
-      }
+      // ✅ Usa Client API Layer
+      const data = await getUsers({ limit: 100 });
+      setUsers(data.items || []);
     } catch {
       // handle error
     } finally {
@@ -69,11 +68,9 @@ export default function UsersPage() {
 
   const fetchTenants = async () => {
     try {
-      const response = await fetch("/api/superadmin/tenants");
-      if (response.ok) {
-        const data = await response.json();
-        setTenants(data.items || []);
-      }
+      // ✅ Usa Client API Layer
+      const data = await getTenants({ limit: 100 });
+      setTenants(data.items || []);
     } catch {
       // handle error
     }
@@ -136,6 +133,7 @@ export default function UsersPage() {
                     <TableHead className="text-xs md:text-sm min-w-[150px]">NOMBRE</TableHead>
                     <TableHead className="text-xs md:text-sm min-w-[180px]">EMAIL</TableHead>
                     <TableHead className="text-xs md:text-sm min-w-[100px]">ROL</TableHead>
+                    <TableHead className="text-xs md:text-sm min-w-[140px]">TENANT</TableHead>
                     <TableHead className="text-xs md:text-sm min-w-[100px]">ESTADO</TableHead>
                     <TableHead className="text-xs md:text-sm min-w-[100px]">ACCIONES</TableHead>
                   </TableRow>
@@ -149,6 +147,9 @@ export default function UsersPage() {
                         <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-0 hover:bg-blue-100 rounded-md px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs">
                           {user.role}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs md:text-sm text-gray-900 font-medium">
+                        {getTenantName(user.tenant_id)}
                       </TableCell>
                       <TableCell>
                         {user.is_active ? (

@@ -9,11 +9,11 @@ from typing import Dict, List, Tuple
 class Role(str, Enum):
     """User roles in the system."""
 
-    SUPERADMIN = "superadmin"  # Platform admin with access to all tenants
-    ADMIN = "admin"  # Full access to all resources within tenant
-    LOGISTICA = "logistica"  # Read-only access to orders and invoices (for dispatch)
-    VENTAS = "ventas"  # Can create, edit orders, validate payments and create invoices
-    VIEWER = "viewer"  # Read-only access
+    SUPERADMIN = "SUPERADMIN"  # Platform admin with access to all tenants
+    ADMIN = "ADMIN"  # Full access to all resources within tenant
+    LOGISTICA = "LOGISTICA"  # Read-only access to orders and invoices (for dispatch)
+    VENTAS = "VENTAS"  # Can create, edit orders, validate payments and create invoices
+    VIEWER = "VIEWER"  # Read-only access
 
 
 # Permissions map: (HTTP method, path pattern) -> allowed roles
@@ -24,23 +24,24 @@ PERMISSIONS: Dict[Tuple[str, str], List[Role]] = {
     ("POST", "/orders"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
     ("PUT", "/orders/*"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
     ("POST", "/orders/*/validate"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
+    ("POST", "/orders/*/cancel"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
     ("DELETE", "/orders/*"): [Role.SUPERADMIN, Role.ADMIN],
 
-    # USERS ENDPOINTS (only ADMIN and SUPERADMIN)
+    # USERS ENDPOINTS (only ADMIN and SUPER_ADMIN)
     ("GET", "/users"): [Role.SUPERADMIN, Role.ADMIN],
     ("GET", "/users/*"): [Role.SUPERADMIN, Role.ADMIN],
     ("POST", "/users"): [Role.SUPERADMIN, Role.ADMIN],
     ("PUT", "/users/*"): [Role.SUPERADMIN, Role.ADMIN],
     ("DELETE", "/users/*"): [Role.SUPERADMIN, Role.ADMIN],
 
-    # TENANTS ENDPOINTS (only SUPERADMIN)
+    # TENANTS ENDPOINTS (only SUPER_ADMIN)
     ("GET", "/tenants"): [Role.SUPERADMIN],
     ("GET", "/tenants/*"): [Role.SUPERADMIN],
     ("POST", "/tenants"): [Role.SUPERADMIN],
     ("PUT", "/tenants/*"): [Role.SUPERADMIN],
     ("DELETE", "/tenants/*"): [Role.SUPERADMIN],
 
-    # STATS ENDPOINTS (only SUPERADMIN)
+    # STATS ENDPOINTS (only SUPER_ADMIN)
     ("GET", "/stats"): [Role.SUPERADMIN],
     ("GET", "/stats/*"): [Role.SUPERADMIN],
 

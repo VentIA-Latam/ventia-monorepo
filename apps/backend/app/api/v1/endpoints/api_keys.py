@@ -57,11 +57,24 @@ async def create_api_key(
         HTTPException: If name already exists or role is SUPERADMIN
     """
     try:
-        # Create API key
+        # Determine target tenant based on role
+        if current_user.role == Role.SUPERADMIN:
+            # SUPERADMIN can create for any tenant
+            target_tenant_id = api_key_in.tenant_id if api_key_in.tenant_id else current_user.tenant_id
+        else:
+            # ADMIN can only create for their own tenant
+            if api_key_in.tenant_id is not None and api_key_in.tenant_id != current_user.tenant_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You can only create API keys for your own tenant",
+                )
+            target_tenant_id = current_user.tenant_id
+
+        # Create API key with the determined tenant_id
         api_key, plain_key = api_key_service.create_api_key(
             db=db,
             api_key_in=api_key_in,
-            tenant_id=current_user.tenant_id,
+            tenant_id=target_tenant_id,
             created_by_user_id=current_user.id,
         )
 
