@@ -1,0 +1,228 @@
+/**
+ * SuperAdmin Client API
+ * 
+ * ⚠️ SOLO USAR DESDE CLIENT COMPONENTS ("use client")
+ * 
+ * Este módulo proporciona funciones para interactuar con la API de superadmin
+ * desde componentes cliente. Todas las funciones llaman a /api/superadmin/* routes.
+ */
+
+import { apiGet, apiPost, apiPut, apiPatch } from './client';
+import type { Tenant, TenantDetail } from '@/lib/types/tenant';
+import type { User } from '@/lib/types/user';
+import type { APIKey } from '@/lib/types/api-key';
+
+export interface TenantSummary {
+  id: number;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  total_users?: number;
+  total_orders?: number;
+  last_activity?: string;
+}
+
+export interface GlobalOrder {
+  id: number;
+  order_number: string;
+  customer_name: string;
+  customer_email: string;
+  status: string;
+  total: number;
+  currency: string;
+  validado: boolean;
+  tenant_id: number;
+  tenant_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SuperAdminStats {
+  total_tenants: number;
+  active_tenants: number;
+  total_users: number;
+  total_orders: number;
+  total_revenue: number;
+  active_api_keys?: number;
+  total_super_admins?: number;
+}
+
+export interface RecentActivity {
+  id: string;
+  type?: 'order' | 'user' | 'tenant';
+  entity_type: string;
+  operation: string;
+  description: string;
+  timestamp: string;
+  tenant_name?: string;
+}
+
+// ==================== TENANTS ====================
+
+/**
+ * Obtener todos los tenants
+ * GET /api/superadmin/tenants
+ */
+export async function getTenants(params?: {
+  skip?: number;
+  limit?: number;
+}): Promise<{ items: Tenant[]; total: number }> {
+  return apiGet('/api/superadmin/tenants', params as Record<string, number>);
+}
+
+/**
+ * Obtener un tenant por ID
+ * GET /api/superadmin/tenants/:id
+ */
+export async function getTenant(tenantId: number): Promise<TenantDetail> {
+  return apiGet(`/api/superadmin/tenants/${tenantId}`);
+}
+
+/**
+ * Crear un nuevo tenant
+ * POST /api/superadmin/tenants
+ */
+export async function createTenant(data: Partial<Tenant>): Promise<Tenant> {
+  return apiPost('/api/superadmin/tenants', data);
+}
+
+/**
+ * Actualizar un tenant
+ * PUT /api/superadmin/tenants/:id
+ */
+export async function updateTenant(
+  tenantId: number,
+  data: Partial<Tenant>
+): Promise<Tenant> {
+  return apiPatch(`/api/superadmin/tenants/${tenantId}`, data);
+}
+
+/**
+ * Toggle tenant status (activar/desactivar)
+ * PATCH /api/superadmin/tenants/:id
+ */
+export async function toggleTenantStatus(
+  tenantId: number,
+  isActive: boolean
+): Promise<Tenant> {
+  return apiPatch(`/api/superadmin/tenants/${tenantId}`, { is_active: isActive });
+}
+
+// ==================== USERS ====================
+
+/**
+ * Obtener todos los usuarios
+ * GET /api/superadmin/users
+ */
+export async function getUsers(params?: {
+  skip?: number;
+  limit?: number;
+}): Promise<{ items: User[]; total: number }> {
+  return apiGet('/api/superadmin/users', params as Record<string, number>);
+}
+
+/**
+ * Obtener un usuario por ID
+ * GET /api/superadmin/users/:id
+ */
+export async function getUser(userId: number): Promise<User> {
+  return apiGet(`/api/superadmin/users/${userId}`);
+}
+
+/**
+ * Crear un nuevo usuario
+ * POST /api/superadmin/users
+ */
+export async function createUser(data: Partial<User>): Promise<User> {
+  return apiPost('/api/superadmin/users', data);
+}
+
+/**
+ * Actualizar un usuario
+ * PUT /api/superadmin/users/:id
+ */
+export async function updateUser(
+  userId: number,
+  data: Partial<User>
+): Promise<User> {
+  return apiPut(`/api/superadmin/users/${userId}`, data);
+}
+
+/**
+ * Toggle user status (activar/desactivar)
+ * PATCH /api/superadmin/users/:id
+ */
+export async function toggleUserStatus(
+  userId: number,
+  isActive: boolean
+): Promise<User> {
+  return apiPatch(`/api/superadmin/users/${userId}`, { is_active: isActive });
+}
+
+// ==================== ORDERS ====================
+
+/**
+ * Obtener orders globales de todos los tenants
+ * GET /api/superadmin/global-orders
+ */
+export async function getGlobalOrders(limit: number = 20): Promise<GlobalOrder[]> {
+  const response = await apiGet<{ items: GlobalOrder[] }>(
+    '/api/superadmin/global-orders',
+    { limit }
+  );
+  return response.items;
+}
+
+// ==================== STATS ====================
+
+/**
+ * Obtener estadísticas globales
+ * GET /api/superadmin/stats
+ */
+export async function getStats(): Promise<SuperAdminStats> {
+  return apiGet('/api/superadmin/stats');
+}
+
+/**
+ * Obtener actividad reciente
+ * GET /api/superadmin/stats/activity/recent
+ */
+export async function getRecentActivity(
+  limit: number = 10
+): Promise<RecentActivity[]> {
+  const response = await apiGet<{ items: RecentActivity[] }>(
+    '/api/superadmin/stats/activity/recent',
+    { limit }
+  );
+  return response.items;
+}
+
+// ==================== API KEYS ====================
+
+/**
+ * Obtener API keys
+ * GET /api/superadmin/api-keys
+ */
+export async function getApiKeys(tenantId?: number): Promise<APIKey[]> {
+  const params = tenantId ? { tenant_id: tenantId } : undefined;
+  return apiGet('/api/superadmin/api-keys', params as Record<string, number>);
+}
+
+/**
+ * Crear API key
+ * POST /api/superadmin/api-keys
+ */
+export async function createApiKey(data: {
+  name: string;
+  tenant_id?: number;
+}): Promise<APIKey> {
+  return apiPost('/api/superadmin/api-keys', data);
+}
+
+/**
+ * Revocar API key
+ * DELETE /api/superadmin/api-keys/:id
+ */
+export async function revokeApiKey(apiKeyId: number): Promise<void> {
+  return apiPost(`/api/superadmin/api-keys/${apiKeyId}`, {});
+}

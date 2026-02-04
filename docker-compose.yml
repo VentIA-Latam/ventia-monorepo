@@ -7,7 +7,7 @@ services:
     container_name: ventia-postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-ventia_db}
-      POSTGRES_USER: ${POSTGRES_USER:-ventia_user}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ventia_password_dev}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
@@ -55,12 +55,16 @@ services:
     build:
       context: .
       dockerfile: docker/frontend.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
+        NEXT_PUBLIC_AUTH0_DOMAIN: ${NEXT_PUBLIC_AUTH0_DOMAIN}
+        NEXT_PUBLIC_AUTH0_CLIENT_ID: ${NEXT_PUBLIC_AUTH0_CLIENT_ID}
+        NEXT_PUBLIC_AUTH0_AUDIENCE: ${NEXT_PUBLIC_AUTH0_AUDIENCE}
+        NEXT_PUBLIC_CHATWOOT_BASE_URL: ${NEXT_PUBLIC_CHATWOOT_BASE_URL:-https://chatwoot.ventia-latam.com}
+        NEXT_PUBLIC_CHATWOOT_ACCOUNT_ID: ${NEXT_PUBLIC_CHATWOOT_ACCOUNT_ID:-3}
     container_name: ventia-frontend
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
-      NEXT_PUBLIC_AUTH0_DOMAIN: ${NEXT_PUBLIC_AUTH0_DOMAIN}
-      NEXT_PUBLIC_AUTH0_CLIENT_ID: ${NEXT_PUBLIC_AUTH0_CLIENT_ID}
-      NEXT_PUBLIC_AUTH0_AUDIENCE: ${NEXT_PUBLIC_AUTH0_AUDIENCE}
+      # Runtime environment variables (server-side only, not NEXT_PUBLIC_)
       AUTH0_CLIENT_SECRET: ${AUTH0_CLIENT_SECRET}
       AUTH0_SECRET: ${AUTH0_SECRET}
     ports:

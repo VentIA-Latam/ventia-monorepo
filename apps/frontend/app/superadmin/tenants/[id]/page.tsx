@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { getTenant } from "@/lib/api-client";
 import { ArrowLeft, Building2, Calendar, Globe, Users, Package, Shield, Store, ShoppingBag, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,17 +60,11 @@ export default function TenantDetailPage() {
   const fetchTenantDetail = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/superadmin/tenants/${params.id}`);
-
-      if (!response.ok) {
-        throw new Error('Error al cargar los detalles del tenant');
-      }
-
-      const data = await response.json();
+      // ✅ Usa Client API Layer
+      const data = await getTenant(parseInt(params.id as string));
       setTenant(data);
-    } catch (error) {
-      console.error('Error fetching tenant detail:', error);
-      setError(error instanceof Error ? error.message : 'Error desconocido');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar los detalles del tenant');
     } finally {
       setLoading(false);
     }

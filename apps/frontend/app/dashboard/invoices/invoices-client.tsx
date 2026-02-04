@@ -46,8 +46,9 @@ import {
   Loader2,
 } from "lucide-react";
 import Link from "next/link";
-import { useToast } from "@/hooks/use-toast";
 import { SendEmailDialog } from "@/components/invoices/send-email-dialog";
+import { downloadInvoicePdf, downloadInvoiceXml } from "@/lib/api-client/invoices";
+import { useToast } from "@/hooks/use-toast";
 
 interface InvoicesClientViewProps {
   initialInvoices: Invoice[];
@@ -57,13 +58,13 @@ interface InvoicesClientViewProps {
  * Client Component - Interactividad y filtros
  */
 export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps) {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [sendingEmailId, setSendingEmailId] = useState<number | null>(null);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const { toast } = useToast();
 
   // Filtrar facturas según los criterios
   const filteredInvoices = initialInvoices.filter((invoice) => {
@@ -99,39 +100,37 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
 
   const handleDownloadPDF = async (invoiceId: number) => {
     try {
-      const response = await fetch(`/api/invoices/pdf/${invoiceId}`);
-      if (!response.ok) throw new Error("Error al descargar PDF");
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `factura-${invoiceId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      // ✅ Usa Client API Layer
+      await downloadInvoicePdf(invoiceId);
+      toast({
+        title: "PDF descargado",
+        description: "El archivo se ha descargado correctamente",
+      });
     } catch (error) {
       console.error("Error downloading PDF:", error);
+      toast({
+        title: "Error",
+        description: "Error al descargar el PDF",
+        variant: "destructive",
+      });
     }
   };
 
   const handleDownloadXML = async (invoiceId: number) => {
     try {
-      const response = await fetch(`/api/invoices/xml/${invoiceId}`);
-      if (!response.ok) throw new Error("Error al descargar XML");
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `factura-${invoiceId}.xml`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      // ✅ Usa Client API Layer
+      await downloadInvoiceXml(invoiceId);
+      toast({
+        title: "XML descargado",
+        description: "El archivo se ha descargado correctamente",
+      });
     } catch (error) {
       console.error("Error downloading XML:", error);
+      toast({
+        title: "Error",
+        description: "Error al descargar el XML",
+        variant: "destructive",
+      });
     }
   };
 

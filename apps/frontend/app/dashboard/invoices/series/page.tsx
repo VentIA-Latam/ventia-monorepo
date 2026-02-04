@@ -2,6 +2,9 @@ import { InvoiceSerie } from "@/lib/types/invoice";
 import { getAccessToken } from "@/lib/auth0";
 import { InvoiceSeriesClientView } from "./series-client";
 
+// Forzar renderizado dinámico (SSR) porque usa cookies para auth
+export const dynamic = 'force-dynamic';
+
 /**
  * Server Component - Carga de series de facturación
  */

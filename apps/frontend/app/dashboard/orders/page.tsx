@@ -2,6 +2,9 @@ import { fetchOrders, Order } from "@/lib/services/order-service";
 import { getAccessToken } from "@/lib/auth0";
 import { OrdersClientView } from "./orders-client";
 
+// Forzar renderizado dinámico (SSR) porque usa cookies para auth
+export const dynamic = 'force-dynamic';
+
 /**
  * Server Component - Carga de datos segura
  *

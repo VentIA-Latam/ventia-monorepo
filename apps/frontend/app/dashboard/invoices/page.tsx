@@ -4,6 +4,9 @@ import { getAccessToken } from "@/lib/auth0";
 import { InvoicesClientView } from "./invoices-client";
 import { FileText } from "lucide-react";
 
+// Forzar renderizado dinámico (SSR) porque usa cookies para auth
+export const dynamic = 'force-dynamic';
+
 /**
  * Server Component - Carga de datos segura
  * 

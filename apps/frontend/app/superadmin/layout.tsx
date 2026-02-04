@@ -19,6 +19,7 @@ export default function SuperAdminLayout({
     if (pathname.includes('/api-keys')) return 'Gestión de API Keys';
     if (pathname.includes('/invoices/series')) return 'Series de facturación';
     if (pathname.includes('/settings/api-keys')) return 'Credenciales (API Key)';
+    if (pathname.includes('/chatwoot')) return 'Chatwoot';
     return 'SuperAdmin';
   };
 

@@ -13,6 +13,7 @@ import {
   Shield,
   ArrowLeft,
   FileBarChart,
+  MessageSquare,
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import Image from "next/image"
@@ -70,6 +71,11 @@ const dataConfiguration = [
     title: "Credenciales (API Key)",
     url: "/superadmin/api-keys",
     icon: Key,
+  },
+  {
+    title: "Conversaciones",
+    url: "/superadmin/conversations",
+    icon: MessageSquare,
   },
 ]
 
