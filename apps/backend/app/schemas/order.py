@@ -48,6 +48,11 @@ class OrderBase(BaseModel):
     notes: str | None = Field(None, description="Additional notes")
     expected_delivery_date: datetime | None = Field(None, description="Expected delivery date of the order")
     dispatch_time_window: str | None = Field(None, description="Dispatch time window (e.g., '09:00-12:00')")
+    shipping_address: str | None = Field(
+        None,
+        description="Shipping address: address1, city",
+        max_length=500,
+    )
 
 
 class OrderCreate(OrderBase):
@@ -55,13 +60,17 @@ class OrderCreate(OrderBase):
     Schema for creating a new Order.
 
     Used by n8n when inserting orders from e-commerce platforms.
-    The tenant_id is automatically set from the authenticated user's tenant.
+    The tenant_id is automatically set from the authenticated user's tenant (in API endpoints).
+    For internal use (webhooks), tenant_id can be provided explicitly.
 
     Validation:
     - At least one of shopify_draft_order_id or woocommerce_order_id must be provided
     - Cannot provide both simultaneously (mutually exclusive)
     """
 
+    tenant_id: int | None = Field(
+        None, description="Tenant ID (optional - for internal use only, ignored in public endpoints)"
+    )
     shopify_draft_order_id: str | None = Field(
         None, description="Shopify draft order ID (required if not WooCommerce)"
     )
@@ -102,6 +111,7 @@ class OrderUpdate(BaseModel):
     payment_method: str | None = None
     notes: str | None = None
     status: str | None = None
+    shipping_address: str | None = None
 
 
 class OrderValidate(BaseModel):

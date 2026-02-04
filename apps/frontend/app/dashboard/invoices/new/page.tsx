@@ -94,10 +94,6 @@ export default async function NewInvoicePage({ searchParams }: NewInvoicePagePro
     validationErrors.push("La orden debe estar validada antes de generar un comprobante");
   }
 
-  if (!order.customer_document_type || !order.customer_document_number) {
-    validationErrors.push("La orden debe tener documentos completos del cliente");
-  }
-
   if (validationErrors.length > 0) {
     return (
       <div className="space-y-6">

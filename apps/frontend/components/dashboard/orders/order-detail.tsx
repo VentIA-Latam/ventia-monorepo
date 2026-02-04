@@ -87,16 +87,49 @@ export function OrderDetail({ order, invoices }: OrderDetailProps) {
 
   // Badge de estado
   const getStatusBadge = () => {
-    if (order.validado) {
+    if (order.validado && order.status === 'Pagado') {
       return (
-        <Badge className="bg-green-50 text-green-700 border-green-200">
+        <Badge className="
+          bg-green-50
+          text-green-700
+          border-green-200
+          hover:bg-green-100
+          hover:text-green-800
+          hover:border-green-300
+          transition-colors
+          cursor-default
+        ">
           <CheckCircle className="w-3 h-3 mr-1" />
           Pago Validado
         </Badge>
       );
+    } else if (order.status === 'Cancelado') {
+      return (
+        <Badge className="
+          bg-red-50
+          text-red-700
+          border-red-200
+          hover:bg-red-100
+          hover:text-red-800
+          hover:border-red-300
+          transition-colors
+          cursor-default
+        ">
+          Cancelado
+        </Badge>
+      );
     }
     return (
-      <Badge className="bg-orange-50 text-orange-700 border-orange-200">
+      <Badge className="
+        bg-orange-50 
+        text-orange-700 
+        border-orange-200
+        hover:bg-orange-100
+        hover:text-orange-800
+        hover:border-orange-300
+        transition-colors
+        cursor-default
+      ">
         Pendiente de Pago
       </Badge>
     );
@@ -124,22 +157,18 @@ export function OrderDetail({ order, invoices }: OrderDetailProps) {
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {getStatusBadge()}
-          <Button variant="outline" className="gap-2 text-xs sm:text-sm" size="sm" disabled>
-            <Printer className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Imprimir</span>
-          </Button>
           {!order.validado && (
             <Button
               className="gap-2 text-xs sm:text-sm"
               size="sm"
               onClick={handleValidatePago}
-              disabled={isValidating}
+              disabled={isValidating || order.status === 'Cancelado'}
             >
               <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
               {isValidating ? 'Validando...' : 'Validar Pago'}
             </Button>
           )}
-          {order.validado && (
+          {order.validado && order.status !== 'Cancelado' && (
             <Button
               className="gap-2 text-xs sm:text-sm"
               size="sm"
@@ -190,12 +219,14 @@ export function OrderDetail({ order, invoices }: OrderDetailProps) {
                 </div>
               </div>
 
-              {/* Dirección de envío - Placeholder para futuros campos */}
+              {/* Dirección de envío */}
               <div>
                 <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">DIRECCIÓN DE ENVÍO</p>
-                <div className="text-xs sm:text-sm text-muted-foreground">
-                  <p>Información no disponible</p>
-                </div>
+                {order.shipping_address ? (
+                  <p className="text-xs sm:text-sm">{order.shipping_address}</p>
+                ) : (
+                  <p className="text-xs sm:text-sm text-muted-foreground">Información no disponible</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -333,7 +364,7 @@ export function OrderDetail({ order, invoices }: OrderDetailProps) {
                   className="w-full gap-2 text-xs sm:text-sm"
                   size="sm"
                   onClick={handleValidatePago}
-                  disabled={isValidating}
+                  disabled={isValidating || order.status === 'Cancelado'}
                 >
                   <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                   {isValidating ? 'Validando...' : 'Validar Pago'}
@@ -343,16 +374,16 @@ export function OrderDetail({ order, invoices }: OrderDetailProps) {
                 variant={order.validado ? "default" : "outline"}
                 className="w-full gap-2 text-xs sm:text-sm"
                 size="sm"
-                disabled={!order.validado}
+                disabled={!order.validado || order.status === 'Cancelado'}
                 onClick={() => router.push(`/dashboard/invoices/new?orderId=${order.id}`)}
               >
                 <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
                 Crear Comprobante
               </Button>
-              <Button variant="outline" className="w-full gap-2 text-xs sm:text-sm" size="sm" disabled>
+              {/* <Button variant="outline" className="w-full gap-2 text-xs sm:text-sm" size="sm" disabled>
                 <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
                 Actualizar Logística
-              </Button>
+              </Button> */}
             </CardContent>
           </Card>
 
@@ -362,18 +393,14 @@ export function OrderDetail({ order, invoices }: OrderDetailProps) {
               <CardTitle className="text-base sm:text-lg">Resumen Financiero</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {/*               <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span>{formatCurrency(order.total_price * 0.84, order.currency)}</span>
+                <span>{formatCurrency(order.total_price / 1.18, order.currency)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">IVA (16%)</span>
-                <span>{formatCurrency(order.total_price * 0.16, order.currency)}</span>
+                <span className="text-muted-foreground">IGV (18%)</span>
+                <span>{formatCurrency(order.total_price - (order.total_price / 1.18), order.currency)}</span>
               </div>
-              <div className="flex justify-between text-sm text-green-600">
-                <span>Descuento (Promo)</span>
-                <span>-{formatCurrency(0, order.currency)}</span>
-              </div> */}
               <div className="border-t pt-3 flex justify-between items-center">
                 <span className="font-semibold text-sm sm:text-base">Total</span>
                 <span className="text-lg sm:text-xl font-bold text-primary">
@@ -384,7 +411,7 @@ export function OrderDetail({ order, invoices }: OrderDetailProps) {
           </Card>
 
           {/* Información de Entrega */}
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                 <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -392,13 +419,11 @@ export function OrderDetail({ order, invoices }: OrderDetailProps) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {/* Campos futuros de la API */}
               <div>
                 <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">
                   FECHA DE ENTREGA DEL PEDIDO
                 </p>
                 <p className="text-xs sm:text-sm">
-                  {/* Placeholder para fecha_entrega_pedido */}
                   Información no disponible
                 </p>
               </div>
@@ -408,23 +433,11 @@ export function OrderDetail({ order, invoices }: OrderDetailProps) {
                   HORARIO DE DESPACHO
                 </p>
                 <p className="text-xs sm:text-sm">
-                  {/* Placeholder para horario_despacho */}
                   Información no disponible
                 </p>
               </div>
-              {/*               <div className="pt-3 border-t">
-                <p className="text-xs text-muted-foreground">
-                  Canal de Venta
-                </p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span>🏢</span>
-                  <span className="text-sm font-medium">
-                    {order.status === 'Pagado' ? 'WhatsApp Directo' : 'Portal B2B'}
-                  </span>
-                </div>
-              </div> */}
             </CardContent>
-          </Card>
+          </Card> */}
 
           {/* Información Adicional */}
           {order.notes && (

@@ -17,6 +17,8 @@ from app.models.base import Base  # noqa: F401
 from app.models.tenant import Tenant  # noqa: F401
 from app.models.user import User  # noqa: F401
 from app.models.order import Order  # noqa: F401
+from app.models.webhook import WebhookEvent  # noqa: F401
+from app.models.webhook_subscription import WebhookSubscription  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

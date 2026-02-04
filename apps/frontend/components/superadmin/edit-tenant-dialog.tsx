@@ -152,8 +152,8 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
 
           // Solo incluir credenciales si se proporcionaron (para actualizar)
           if (formData.woocommerce_consumer_key && formData.woocommerce_consumer_secret) {
-            updateData.woocommerce_consumer_key = formData.woocommerce_consumer_key;
-            updateData.woocommerce_consumer_secret = formData.woocommerce_consumer_secret;
+            updateData.ecommerce_consumer_key = formData.woocommerce_consumer_key;
+            updateData.ecommerce_consumer_secret = formData.woocommerce_consumer_secret;
           }
 
         }

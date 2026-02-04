@@ -5,8 +5,7 @@ Database configuration and session management.
 from typing import Generator
 
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session, sessionmaker, declarative_base
 
 from app.core.config import settings
 
@@ -16,7 +15,7 @@ engine = create_engine(
     pool_pre_ping=True,  # Verify connections before using them
     pool_size=10,  # Connection pool size
     max_overflow=20,  # Max connections beyond pool_size
-    echo=settings.ENVIRONMENT == "development",  # Log SQL in development
+    echo=False,
 )
 
 # Create SessionLocal class

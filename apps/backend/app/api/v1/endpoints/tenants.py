@@ -8,8 +8,7 @@ including unified e-commerce settings (Shopify/WooCommerce).
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_database, require_permission, require_role
-from app.core.permissions import Role
+from app.api.deps import get_current_user, get_database, require_permission_dual
 from app.models.user import User
 from app.schemas.tenant import (
     TenantCreate,
@@ -27,7 +26,7 @@ router = APIRouter()
 async def list_tenants(
     skip: int = 0,
     limit: int = 100,
-    current_user: User = Depends(require_permission("GET", "/tenants")),
+    current_user: User = Depends(require_permission_dual("GET", "/tenants")),
     db: Session = Depends(get_database),
 ) -> TenantListResponse:
     """
@@ -84,7 +83,7 @@ async def list_tenants(
 @router.get("/{tenant_id}", response_model=TenantDetailResponse, tags=["tenants"])
 async def get_tenant(
     tenant_id: int,
-    current_user: User = Depends(require_permission("GET", "/tenants/*")),
+    current_user: User = Depends(require_permission_dual("GET", "/tenants/*")),
     db: Session = Depends(get_database),
 ) -> TenantDetailResponse:
     """
@@ -138,7 +137,7 @@ async def get_tenant(
 @router.post("", response_model=TenantResponse, status_code=status.HTTP_201_CREATED, tags=["tenants"])
 async def create_tenant(
     tenant_in: TenantCreate,
-    current_user: User = Depends(require_permission("POST", "/tenants")),
+    current_user: User = Depends(require_permission_dual("POST", "/tenants")),
     db: Session = Depends(get_database),
 ) -> TenantResponse:
     """
@@ -208,7 +207,7 @@ async def create_tenant(
 async def update_tenant(
     tenant_id: int,
     tenant_in: TenantUpdate,
-    current_user: User = Depends(require_permission("PUT", "/tenants/*")),
+    current_user: User = Depends(require_permission_dual("PUT", "/tenants/*")),
     db: Session = Depends(get_database),
 ) -> TenantResponse:
     """
@@ -262,7 +261,7 @@ async def update_tenant(
     but are automatically encrypted before storage in the settings JSON field.
     """
     try:
-        updated_tenant = tenant_service.update_tenant(db, tenant_id, tenant_in)
+        updated_tenant = await tenant_service.update_tenant(db, tenant_id, tenant_in)
 
         if not updated_tenant:
             raise HTTPException(
@@ -286,7 +285,7 @@ async def update_tenant(
 @router.delete("/{tenant_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["tenants"])
 async def deactivate_tenant(
     tenant_id: int,
-    current_user: User = Depends(require_permission("DELETE", "/tenants/*")),
+    current_user: User = Depends(require_permission_dual("DELETE", "/tenants/*")),
     db: Session = Depends(get_database),
 ) -> None:
     """

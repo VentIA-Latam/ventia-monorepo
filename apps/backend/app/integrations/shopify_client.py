@@ -212,3 +212,115 @@ class ShopifyClient:
             raise ValueError(f"Draft order {draft_order_id} not found")
 
         return draft_order
+
+    async def create_webhook_subscription(
+        self,
+        topic: str,
+        callback_url: str,
+    ) -> dict[str, Any]:
+        """
+        Create a webhook subscription in Shopify using GraphQL.
+
+        Reference: https://shopify.dev/docs/api/admin-graphql/latest/mutations/webhookSubscriptionCreate
+
+        Args:
+            topic: Webhook topic in UPPERCASE format (e.g., "DRAFT_ORDERS_CREATE", "ORDERS_PAID")
+            callback_url: Full HTTPS URL where webhook will be sent
+                         (e.g., "https://api.ventia.pe/api/v1/webhooks/shopify/123")
+
+        Returns:
+            dict: Subscription details with id
+            {
+                "id": "gid://shopify/WebhookSubscription/123456789",
+                "topic": "DRAFT_ORDERS_CREATE",
+                "callbackUrl": "https://api.ventia.pe/api/v1/webhooks/shopify/123"
+            }
+
+        Raises:
+            ValueError: If mutation fails or returns user errors
+        """
+        mutation = """
+        mutation webhookSubscriptionCreate($topic: WebhookSubscriptionTopic!, $webhookSubscription: WebhookSubscriptionInput!) {
+            webhookSubscriptionCreate(topic: $topic, webhookSubscription: $webhookSubscription) {
+                webhookSubscription {
+                    id
+                    topic
+                    callbackUrl
+                    createdAt
+                }
+                userErrors {
+                    field
+                    message
+                }
+            }
+        }
+        """
+
+        variables = {
+            "topic": topic,
+            "webhookSubscription": {
+                "callbackUrl": callback_url,
+                "format": "JSON",
+            },
+        }
+
+        data = await self._execute_query(mutation, variables)
+
+        result = data.get("data", {}).get("webhookSubscriptionCreate", {})
+
+        # Check for user errors
+        user_errors = result.get("userErrors", [])
+        if user_errors:
+            error_messages = [
+                f"{err.get('field', 'unknown')}: {err.get('message', 'unknown error')}"
+                for err in user_errors
+            ]
+            raise ValueError(f"Shopify webhook subscription errors: {'; '.join(error_messages)}")
+
+        subscription = result.get("webhookSubscription")
+        if not subscription:
+            raise ValueError("Webhook subscription created but no data returned")
+
+        return subscription
+
+    async def delete_webhook_subscription(self, subscription_id: str) -> bool:
+        """
+        Delete a webhook subscription in Shopify.
+
+        Args:
+            subscription_id: Webhook subscription ID (e.g., "gid://shopify/WebhookSubscription/123")
+
+        Returns:
+            bool: True if deleted successfully
+
+        Raises:
+            ValueError: If mutation fails or returns user errors
+        """
+        mutation = """
+        mutation webhookSubscriptionDelete($id: ID!) {
+            webhookSubscriptionDelete(id: $id) {
+                deletedWebhookSubscriptionId
+                userErrors {
+                    field
+                    message
+                }
+            }
+        }
+        """
+
+        variables = {"id": subscription_id}
+
+        data = await self._execute_query(mutation, variables)
+
+        result = data.get("data", {}).get("webhookSubscriptionDelete", {})
+
+        # Check for user errors
+        user_errors = result.get("userErrors", [])
+        if user_errors:
+            error_messages = [
+                f"{err.get('field', 'unknown')}: {err.get('message', 'unknown error')}"
+                for err in user_errors
+            ]
+            raise ValueError(f"Shopify webhook deletion errors: {'; '.join(error_messages)}")
+
+        return result.get("deletedWebhookSubscriptionId") == subscription_id

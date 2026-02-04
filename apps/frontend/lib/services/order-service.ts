@@ -20,6 +20,7 @@ export interface Order {
   validado: boolean;
   validated_at: string | null;
   payment_method: string | null;
+  shipping_address: string | null;
   notes: string | null;
   status: string;
   created_at: string;

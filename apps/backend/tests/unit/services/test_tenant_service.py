@@ -224,7 +224,8 @@ class TestTenantServiceImmutableFields:
         """Create TenantService instance."""
         return TenantService()
 
-    def test_cannot_update_is_platform(self, tenant_service, mock_db):
+    @pytest.mark.asyncio
+    async def test_cannot_update_is_platform(self, tenant_service, mock_db):
         """Test: Attempting to update is_platform raises ValueError."""
         with patch.object(tenant_service, "get_tenant") as mock_get:
             mock_tenant = MagicMock()
@@ -234,7 +235,7 @@ class TestTenantServiceImmutableFields:
             update = TenantUpdate(is_platform=True)
 
             with pytest.raises(ValueError) as exc_info:
-                tenant_service.update_tenant(mock_db, 1, update)
+                await tenant_service.update_tenant(mock_db, 1, update)
 
             assert "immutable" in str(exc_info.value).lower()
             assert "is_platform" in str(exc_info.value)

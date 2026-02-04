@@ -58,6 +58,12 @@ class Settings(BaseSettings):
     RESEND_FROM_EMAIL: str = "noreply@ventia.pe"  # Email address for sending invoices
     RESEND_FROM_NAME: str = "VentIA - Facturación"  # Sender name for emails
 
+    # Webhooks
+    WEBHOOK_BASE_URL: str = Field(
+        default="",
+        description="Base URL for webhook callbacks (e.g., https://api.ventia.pe). Falls back to first CORS origin if not set."
+    )
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: str | List[str]) -> List[str]:
