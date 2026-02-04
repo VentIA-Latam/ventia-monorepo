@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -10,10 +11,19 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Order } from "@/lib/services/order-service";
 import { getEcommerceOrderId, extractShopifyOrderId, formatDateTime, getCurrencySymbol } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { FileText } from "lucide-react";
+import { FileText, MoreVertical, Eye, Ban } from "lucide-react";
+import { CancelOrderDialog } from "./cancel-order-dialog";
 
 interface OrdersTableProps {
   orders: Order[];
@@ -136,19 +146,55 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                 <TableCell className="text-right font-semibold text-sm text-gray-900 min-w-[100px]">
                   {getCurrencySymbol(order.currency)}{order.total_price.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </TableCell>
-                <TableCell className="text-center min-w-[120px]">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/dashboard/invoices/new?orderId=${order.id}`);
-                    }}
-                    className="gap-1.5"
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Crear</span>
-                  </Button>
+                <TableCell className="text-center min-w-[80px]">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <Link href={`/dashboard/orders/${order.id}`}>
+                        <DropdownMenuItem>
+                          <Eye className="h-4 w-4 mr-2" />
+                          Ver detalles
+                        </DropdownMenuItem>
+                      </Link>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/dashboard/invoices/new?orderId=${order.id}`);
+                        }}
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Ir a Facturación
+                      </DropdownMenuItem>
+                      {order.status !== 'Cancelado' && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <CancelOrderDialog
+                            order={order}
+                            onCancelled={() => router.refresh()}
+                            trigger={
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onSelect={(e) => e.preventDefault()}
+                              >
+                                <Ban className="h-4 w-4 mr-2" />
+                                Cancelar Pedido
+                              </DropdownMenuItem>
+                            }
+                          />
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}

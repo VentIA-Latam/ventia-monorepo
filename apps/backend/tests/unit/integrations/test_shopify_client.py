@@ -427,3 +427,358 @@ class TestShopifyClientNetworkErrors:
                 await shopify_client.complete_draft_order(
                     "gid://shopify/DraftOrder/123"
                 )
+
+
+class TestShopifyClientDeleteDraftOrder:
+    """Tests for delete_draft_order method in ShopifyClient."""
+
+    @pytest.fixture
+    def shopify_client(self) -> ShopifyClient:
+        """Create ShopifyClient instance with test credentials."""
+        return ShopifyClient(
+            store_url="https://test-store.myshopify.com",
+            access_token="shpat_test_token_123",
+            api_version="2024-01",
+        )
+
+    @pytest.mark.asyncio
+    async def test_delete_draft_order_success_returns_deleted_id(self, shopify_client):
+        """Test: Successful deletion returns the deletedDraftOrderId."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {
+                "draftOrderDelete": {
+                    "deletedDraftOrderId": "gid://shopify/DraftOrder/123",
+                    "userErrors": [],
+                }
+            }
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_client.post.return_value = mock_response
+            mock_client_class.return_value = mock_client
+
+            result = await shopify_client.delete_draft_order(
+                "gid://shopify/DraftOrder/123"
+            )
+
+            assert result == "gid://shopify/DraftOrder/123"
+
+    @pytest.mark.asyncio
+    async def test_delete_draft_order_user_errors_raises_value_error(
+        self, shopify_client
+    ):
+        """Test: userErrors in response raises ValueError with details."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {
+                "draftOrderDelete": {
+                    "deletedDraftOrderId": None,
+                    "userErrors": [
+                        {
+                            "field": ["id"],
+                            "message": "Draft order not found",
+                        }
+                    ],
+                }
+            }
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_client.post.return_value = mock_response
+            mock_client_class.return_value = mock_client
+
+            with pytest.raises(ValueError) as exc_info:
+                await shopify_client.delete_draft_order(
+                    "gid://shopify/DraftOrder/999"
+                )
+
+            assert "user errors" in str(exc_info.value).lower()
+            assert "Draft order not found" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_delete_draft_order_no_deleted_id_raises_value_error(
+        self, shopify_client
+    ):
+        """Test: Missing deletedDraftOrderId in response raises ValueError."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {
+                "draftOrderDelete": {
+                    "deletedDraftOrderId": None,
+                    "userErrors": [],
+                }
+            }
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_client.post.return_value = mock_response
+            mock_client_class.return_value = mock_client
+
+            with pytest.raises(ValueError) as exc_info:
+                await shopify_client.delete_draft_order(
+                    "gid://shopify/DraftOrder/123"
+                )
+
+            assert "no deleted id" in str(exc_info.value).lower()
+
+
+class TestShopifyClientCancelOrder:
+    """Tests for cancel_order method in ShopifyClient."""
+
+    @pytest.fixture
+    def shopify_client(self) -> ShopifyClient:
+        """Create ShopifyClient instance with test credentials."""
+        return ShopifyClient(
+            store_url="https://test-store.myshopify.com",
+            access_token="shpat_test_token_123",
+            api_version="2024-01",
+        )
+
+    @pytest.mark.asyncio
+    async def test_cancel_order_success_returns_order_data(self, shopify_client):
+        """Test: Successful cancellation returns order with id and status."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {
+                "orderCancel": {
+                    "order": {
+                        "id": "gid://shopify/Order/456",
+                        "status": "CANCELLED",
+                    },
+                    "userErrors": [],
+                }
+            }
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_client.post.return_value = mock_response
+            mock_client_class.return_value = mock_client
+
+            result = await shopify_client.cancel_order(
+                order_id="gid://shopify/Order/456",
+                reason="CUSTOMER",
+                restock=True,
+                notify_customer=True,
+                refund_method="original",
+                staff_note="Cliente solicitó cancelación",
+            )
+
+            assert result["id"] == "gid://shopify/Order/456"
+            assert result["status"] == "CANCELLED"
+
+    @pytest.mark.asyncio
+    async def test_cancel_order_user_errors_raises_value_error(self, shopify_client):
+        """Test: userErrors in response raises ValueError with details."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {
+                "orderCancel": {
+                    "order": None,
+                    "userErrors": [
+                        {
+                            "field": ["id"],
+                            "message": "Order is already cancelled",
+                        }
+                    ],
+                }
+            }
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_client.post.return_value = mock_response
+            mock_client_class.return_value = mock_client
+
+            with pytest.raises(ValueError) as exc_info:
+                await shopify_client.cancel_order(
+                    order_id="gid://shopify/Order/456",
+                    reason="CUSTOMER",
+                    restock=True,
+                    notify_customer=True,
+                    refund_method="original",
+                    staff_note=None,
+                )
+
+            assert "user errors" in str(exc_info.value).lower()
+            assert "already cancelled" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_cancel_order_no_order_in_response_raises_value_error(
+        self, shopify_client
+    ):
+        """Test: Missing order in response raises ValueError."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {
+                "orderCancel": {
+                    "order": None,
+                    "userErrors": [],
+                }
+            }
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_client.post.return_value = mock_response
+            mock_client_class.return_value = mock_client
+
+            with pytest.raises(ValueError) as exc_info:
+                await shopify_client.cancel_order(
+                    order_id="gid://shopify/Order/456",
+                    reason="FRAUD",
+                    restock=False,
+                    notify_customer=False,
+                    refund_method="later",
+                    staff_note=None,
+                )
+
+            assert "no order data" in str(exc_info.value).lower()
+
+    @pytest.mark.asyncio
+    async def test_cancel_order_refund_method_mapping(self, shopify_client):
+        """Test: refund_method values map correctly to Shopify refundPolicy enum."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {
+                "orderCancel": {
+                    "order": {"id": "gid://shopify/Order/456", "status": "CANCELLED"},
+                    "userErrors": [],
+                }
+            }
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        expected_mapping = {
+            "original": "ORIGINAL_PAYMENT_METHOD",
+            "store_credit": "STORE_CREDIT",
+            "later": "MANUAL",
+        }
+
+        for refund_method, expected_policy in expected_mapping.items():
+            with patch("httpx.AsyncClient") as mock_client_class:
+                mock_client = AsyncMock()
+                mock_client.__aenter__.return_value = mock_client
+                mock_client.__aexit__.return_value = None
+                mock_client.post.return_value = mock_response
+                mock_client_class.return_value = mock_client
+
+                await shopify_client.cancel_order(
+                    order_id="gid://shopify/Order/456",
+                    reason="CUSTOMER",
+                    restock=True,
+                    notify_customer=True,
+                    refund_method=refund_method,
+                    staff_note=None,
+                )
+
+                call_kwargs = mock_client.post.call_args
+                payload = call_kwargs.kwargs.get("json", call_kwargs[1].get("json"))
+                cancel_input = payload["variables"]["cancelInput"]
+
+                assert cancel_input["refundPolicy"] == expected_policy
+
+    @pytest.mark.asyncio
+    async def test_cancel_order_staff_note_included_when_provided(
+        self, shopify_client
+    ):
+        """Test: staffNote is included in cancelInput when staff_note is provided."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {
+                "orderCancel": {
+                    "order": {"id": "gid://shopify/Order/456", "status": "CANCELLED"},
+                    "userErrors": [],
+                }
+            }
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_client.post.return_value = mock_response
+            mock_client_class.return_value = mock_client
+
+            await shopify_client.cancel_order(
+                order_id="gid://shopify/Order/456",
+                reason="STAFF",
+                restock=True,
+                notify_customer=False,
+                refund_method="original",
+                staff_note="Nota interna del personal",
+            )
+
+            call_kwargs = mock_client.post.call_args
+            payload = call_kwargs.kwargs.get("json", call_kwargs[1].get("json"))
+            cancel_input = payload["variables"]["cancelInput"]
+
+            assert cancel_input["staffNote"] == "Nota interna del personal"
+
+    @pytest.mark.asyncio
+    async def test_cancel_order_staff_note_omitted_when_none(self, shopify_client):
+        """Test: staffNote is NOT in cancelInput when staff_note is None."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {
+                "orderCancel": {
+                    "order": {"id": "gid://shopify/Order/456", "status": "CANCELLED"},
+                    "userErrors": [],
+                }
+            }
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_client.post.return_value = mock_response
+            mock_client_class.return_value = mock_client
+
+            await shopify_client.cancel_order(
+                order_id="gid://shopify/Order/456",
+                reason="OTHER",
+                restock=False,
+                notify_customer=True,
+                refund_method="store_credit",
+                staff_note=None,
+            )
+
+            call_kwargs = mock_client.post.call_args
+            payload = call_kwargs.kwargs.get("json", call_kwargs[1].get("json"))
+            cancel_input = payload["variables"]["cancelInput"]
+
+            assert "staffNote" not in cancel_input

@@ -2,8 +2,9 @@
 Shopify GraphQL API client.
 """
 
-import httpx
 from typing import Any
+
+import httpx
 
 
 class ShopifyClient:
@@ -164,6 +165,139 @@ class ShopifyClient:
             "fulfillment_status": order.get("displayFulfillmentStatus"),
             "financial_status": order.get("displayFinancialStatus"),
         }
+
+    async def delete_draft_order(self, draft_order_id: str) -> str:
+        """
+        Delete a draft order using Shopify GraphQL mutation.
+
+        Permanently removes the draft order from Shopify.
+
+        Args:
+            draft_order_id: Draft order ID (e.g., 'gid://shopify/DraftOrder/123')
+
+        Returns:
+            str: The deleted draft order ID
+
+        Raises:
+            ValueError: If mutation fails or returns user errors
+        """
+        mutation = """
+        mutation draftOrderDelete($input: DraftOrderDeleteInput!) {
+            draftOrderDelete(input: $input) {
+                deletedId
+                userErrors {
+                    field
+                    message
+                }
+            }
+        }
+        """
+
+        variables = {"input": {"id": draft_order_id}}
+        data = await self._execute_query(mutation, variables)
+
+        result = data.get("data", {}).get("draftOrderDelete", {})
+
+        user_errors = result.get("userErrors", [])
+        if user_errors:
+            error_messages = [
+                f"{err.get('field', 'unknown')}: {err.get('message', 'unknown error')}"
+                for err in user_errors
+            ]
+            raise ValueError(f"Shopify user errors: {'; '.join(error_messages)}")
+
+        deleted_id = result.get("deletedId")
+        if not deleted_id:
+            raise ValueError("Draft order delete mutation returned no deleted ID")
+
+        return deleted_id
+
+    async def cancel_order(
+        self,
+        order_id: str,
+        reason: str,
+        restock: bool,
+        notify_customer: bool,
+        refund_method: str | None,
+        staff_note: str | None,
+    ) -> dict[str, Any]:
+        """
+        Cancel a completed order using Shopify GraphQL mutation.
+
+        Args:
+            order_id: Order ID (e.g., 'gid://shopify/Order/456')
+            reason: Cancel reason enum (CUSTOMER | DECLINED | FRAUD | INVENTORY | STAFF | OTHER)
+            restock: Whether to restock inventory
+            notify_customer: Whether to notify the customer
+            refund_method: Refund method ('original' | 'store_credit' | 'later')
+            staff_note: Optional internal note
+
+        Returns:
+            dict: Job info with id and done status
+
+        Raises:
+            ValueError: If mutation fails or returns user errors
+        """
+        mutation = """
+        mutation orderCancel(
+            $orderId: ID!
+            $reason: OrderCancelReason!
+            $restock: Boolean!
+            $notifyCustomer: Boolean
+            $staffNote: String
+        ) {
+            orderCancel(
+                orderId: $orderId
+                reason: $reason
+                restock: $restock
+                notifyCustomer: $notifyCustomer
+                staffNote: $staffNote
+            ) {
+                job {
+                    id
+                    done
+                }
+                orderCancelUserErrors {
+                    field
+                    message
+                    code
+                }
+                userErrors {
+                    field
+                    message
+                }
+            }
+        }
+        """
+
+        variables: dict[str, Any] = {
+            "orderId": order_id,
+            "reason": reason,
+            "restock": restock,
+            "notifyCustomer": notify_customer,
+        }
+
+        if staff_note:
+            variables["staffNote"] = staff_note
+
+        data = await self._execute_query(mutation, variables)
+
+        result = data.get("data", {}).get("orderCancel", {})
+
+        # Check for user errors (both new and deprecated fields)
+        user_errors = result.get("orderCancelUserErrors", []) or result.get("userErrors", [])
+        if user_errors:
+            error_messages = [
+                f"{err.get('field', 'unknown')}: {err.get('message', 'unknown error')}"
+                for err in user_errors
+            ]
+            raise ValueError(f"Shopify user errors: {'; '.join(error_messages)}")
+
+        job = result.get("job")
+        if not job:
+            raise ValueError("Order cancel mutation returned no job data")
+
+        return job
 
     async def get_draft_order(self, draft_order_id: str) -> dict[str, Any]:
         """

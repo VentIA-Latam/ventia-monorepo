@@ -23,6 +23,14 @@ export interface ValidateOrderRequest {
   notes?: string;
 }
 
+export interface CancelOrderRequest {
+  reason: string;
+  restock?: boolean;
+  notify_customer?: boolean;
+  refund_method?: string | null;
+  staff_note?: string | null;
+}
+
 /**
  * Obtener lista de orders
  * GET /api/orders
@@ -61,4 +69,15 @@ export async function validateOrder(
   data?: ValidateOrderRequest
 ): Promise<Order> {
   return apiPost<Order>(`/api/orders/${orderId}/validate`, data);
+}
+
+/**
+ * Cancelar una order y sincronizar con la plataforma de ecommerce
+ * POST /api/orders/:id/cancel
+ */
+export async function cancelOrder(
+  orderId: number,
+  data: CancelOrderRequest
+): Promise<Order> {
+  return apiPost<Order>(`/api/orders/${orderId}/cancel`, data);
 }

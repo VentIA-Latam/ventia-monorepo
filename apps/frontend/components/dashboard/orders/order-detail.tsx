@@ -9,18 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
   CheckCircle,
-  Printer,
-  X,
+  Ban,
   User,
   Mail,
-  Phone,
   MapPin,
-  Calendar,
-  Clock,
-  CreditCard,
   Package,
   FileText
 } from "lucide-react";
+import { CancelOrderDialog } from "./cancel-order-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime, getEcommerceOrderId } from "@/lib/utils";
 
@@ -168,20 +164,27 @@ export function OrderDetail({ order, invoices }: OrderDetailProps) {
               {isValidating ? 'Validando...' : 'Validar Pago'}
             </Button>
           )}
-          {order.validado && order.status !== 'Cancelado' && (
+          {order.validado && (
             <Button
               className="gap-2 text-xs sm:text-sm"
               size="sm"
+              disabled={order.status === 'Cancelado'}
               onClick={() => router.push(`/dashboard/invoices/new?orderId=${order.id}`)}
             >
               <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
               Crear Comprobante
             </Button>
           )}
-          <Button variant="destructive" className="gap-2 text-xs sm:text-sm" size="sm" onClick={() => router.push('/dashboard/orders')}>
-            <X className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Cancelar</span>
-          </Button>
+          <CancelOrderDialog
+            order={order}
+            onCancelled={() => router.refresh()}
+            trigger={
+              <Button variant="destructive" className="gap-2 text-xs sm:text-sm" size="sm" disabled={order.status === 'Cancelado'}>
+                <Ban className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Cancelar Pedido</span>
+              </Button>
+            }
+          />
         </div>
       </div>
 

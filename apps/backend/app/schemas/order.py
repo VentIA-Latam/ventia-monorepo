@@ -125,6 +125,22 @@ class OrderValidate(BaseModel):
     notes: str | None = Field(None, description="Additional validation notes")
 
 
+class OrderCancel(BaseModel):
+    """Schema for cancelling an order."""
+
+    reason: str = Field(
+        ...,
+        description="Cancel reason (CUSTOMER | DECLINED | FRAUD | INVENTORY | STAFF | OTHER)",
+    )
+    restock: bool = Field(default=True, description="Restock inventory (Shopify completed orders only)")
+    notify_customer: bool = Field(default=True, description="Notify customer of cancellation (Shopify completed orders only)")
+    refund_method: str | None = Field(
+        default="original",
+        description="Refund method: original | store_credit | later (Shopify completed orders only)",
+    )
+    staff_note: str | None = Field(default=None, description="Internal staff note")
+
+
 class OrderResponse(OrderBase):
     """
     Schema for Order response.
