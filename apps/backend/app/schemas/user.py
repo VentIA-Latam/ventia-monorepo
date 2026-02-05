@@ -54,11 +54,12 @@ class UserCreate(UserBase):
 
 
 class UserUpdate(BaseModel):
-    """Schema for updating a User (only name, role, is_active can be updated)."""
+    """Schema for updating a User."""
 
     name: str | None = None
     role: Role | None = None
     is_active: bool | None = None
+    tenant_id: int | None = None
     chatwoot_user_id: int | None = None
     chatwoot_account_id: int | None = None
 
