@@ -181,6 +181,12 @@ class TenantService:
                 )
                 # Don't fail tenant creation, token can be regenerated later
 
+        # Auto-subscribe to webhooks if ecommerce credentials are complete
+        if tenant_in.ecommerce_platform == "shopify":
+            await self._auto_subscribe_shopify_webhooks(db, tenant, ecommerce_settings.shopify)
+        elif tenant_in.ecommerce_platform == "woocommerce":
+            await self._auto_subscribe_woocommerce_webhooks(db, tenant, ecommerce_settings.woocommerce)
+
         return tenant
 
     def _build_ecommerce_settings(self, tenant_in: TenantCreate) -> EcommerceSettings:
