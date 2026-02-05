@@ -14,7 +14,7 @@ from app.models.user import User
 from app.repositories.invoice_serie import invoice_serie_repository
 from app.schemas.invoice import InvoiceSerieCreate, InvoiceSerieResponse, InvoiceSerieUpdate
 from app.services.invoice_serie import invoice_serie_service
-from apps.backend.app.core.permissions import Role
+from app.core.permissions import Role
 
 logger = logging.getLogger(__name__)
 
