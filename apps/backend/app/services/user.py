@@ -285,6 +285,10 @@ class UserService:
             if user.tenant_id != current_user.tenant_id:
                 raise ValueError("Can only update users in your own tenant")
 
+            # Cannot change tenant_id (SUPERADMIN only)
+            if user_in.tenant_id is not None:
+                raise ValueError("Only SUPERADMIN can change a user's tenant")
+
             # Cannot deactivate SUPER_ADMIN users
             if user_in.is_active is False and user.role == Role.SUPERADMIN:
                 raise ValueError("Cannot deactivate SUPER_ADMIN users")
