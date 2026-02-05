@@ -7,7 +7,7 @@
  * desde componentes cliente. Todas las funciones llaman a /api/* routes.
  */
 
-import { apiGet, apiPost, apiPut } from './client';
+import { apiGet, apiPost, apiPatch } from './client';
 import type { Order, OrderListResponse } from '@/lib/types/order';
 
 export interface FetchOrdersParams {
@@ -51,13 +51,13 @@ export async function getOrder(orderId: number): Promise<Order> {
 
 /**
  * Actualizar una order
- * PUT /api/orders/:id
+ * PATCH /api/orders/:id
  */
 export async function updateOrder(
   orderId: number,
   data: Partial<Order>
 ): Promise<Order> {
-  return apiPut<Order>(`/api/orders/${orderId}`, data);
+  return apiPatch<Order>(`/api/orders/${orderId}`, data);
 }
 
 /**

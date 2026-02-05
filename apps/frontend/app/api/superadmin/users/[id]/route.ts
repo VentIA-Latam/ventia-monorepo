@@ -4,44 +4,6 @@ import { getAccessToken } from '@/lib/auth0';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 /**
- * PUT /api/superadmin/users/[id]
- *
- * Activate user (is_active: true)
- * Requires SUPER_ADMIN role
- */
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params;
-    const userId = Number(id);
-    if (isNaN(userId)) {
-      return NextResponse.json({ error: 'Invalid user id' }, { status: 400 });
-    }
-    const accessToken = await getAccessToken();
-    if (!accessToken) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-    }
-    const body = await req.json();
-    // PUT directo a /users/:id para activar usuario
-    const response = await fetch(`${API_URL}/users/${userId}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-    if (response.status === 204) {
-      return new NextResponse(null, { status: 204 });
-    }
-    const data = await response.json();
-    return NextResponse.json(data, { status: response.status });
-  } catch (error) {
-    console.error('Error updating user status:', error);
-    return NextResponse.json({ error: 'Failed to update user status', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
-  }
-}
-
-/**
  * DELETE /api/superadmin/users/[id]
  *
  * Deactivate (soft delete) a user
@@ -124,9 +86,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
     const body = await req.json();
-    // PUT to /users/:id to update user information (backend uses PUT, not PATCH)
     const response = await fetch(`${API_URL}/users/${userId}`, {
-      method: 'PUT',
+      method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',

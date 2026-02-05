@@ -7,7 +7,7 @@
  * desde componentes cliente. Todas las funciones llaman a /api/* routes.
  */
 
-import { apiGet, apiPost, apiPut, apiDelete, apiDownload } from './client';
+import { apiGet, apiPost, apiPatch, apiDelete, apiDownload } from './client';
 import type {
   Invoice,
   InvoiceCreate,
@@ -98,13 +98,13 @@ export async function createInvoiceSerie(
 
 /**
  * Actualizar invoice serie
- * PUT /api/invoice-series/:id
+ * PATCH /api/invoice-series/:id
  */
 export async function updateInvoiceSerie(
   serieId: number,
   data: Partial<InvoiceSerieCreate>
 ): Promise<InvoiceSerie> {
-  return apiPut<InvoiceSerie>(`/api/invoice-series/${serieId}`, data);
+  return apiPatch<InvoiceSerie>(`/api/invoice-series/${serieId}`, data);
 }
 
 /**
