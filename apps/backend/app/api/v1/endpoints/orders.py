@@ -278,11 +278,11 @@ async def get_order(
     return order
 
 
-@router.put("/{order_id}", response_model=OrderResponse, tags=["orders"])
+@router.patch("/{order_id}", response_model=OrderResponse, tags=["orders"])
 async def update_order(
     order_id: int,
     order_in: OrderUpdate,
-    current_user: User = Depends(require_permission_dual("PUT", "/orders/*")),
+    current_user: User = Depends(require_permission_dual("PATCH", "/orders/*")),
     db: Session = Depends(get_database),
 ) -> OrderResponse:
     """

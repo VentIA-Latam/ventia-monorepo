@@ -135,7 +135,7 @@ export async function updateOrder(
   data: Partial<Order>
 ): Promise<Order> {
   const response = await fetch(`${API_URL}/orders/${orderId}`, {
-    method: 'PUT',
+    method: 'PATCH',
     headers: {
       'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',

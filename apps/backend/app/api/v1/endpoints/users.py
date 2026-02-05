@@ -135,11 +135,11 @@ async def create_user(
         )
 
 
-@router.put("/{user_id}", response_model=UserUpdateResponse, tags=["users"])
+@router.patch("/{user_id}", response_model=UserUpdateResponse, tags=["users"])
 async def update_user(
     user_id: int,
     user_in: UserUpdate,
-    current_user: User = Depends(require_permission_dual("PUT", "/users/*")),
+    current_user: User = Depends(require_permission_dual("PATCH", "/users/*")),
     db: Session = Depends(get_database),
 ) -> UserUpdateResponse:
     """

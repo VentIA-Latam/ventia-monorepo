@@ -7,7 +7,7 @@
  * desde componentes cliente. Todas las funciones llaman a /api/superadmin/* routes.
  */
 
-import { apiGet, apiPost, apiPut, apiPatch } from './client';
+import { apiGet, apiPost, apiPatch } from './client';
 import type { Tenant, TenantDetail } from '@/lib/types/tenant';
 import type { User } from '@/lib/types/user';
 import type { APIKey } from '@/lib/types/api-key';
@@ -88,7 +88,7 @@ export async function createTenant(data: Partial<Tenant>): Promise<Tenant> {
 
 /**
  * Actualizar un tenant
- * PUT /api/superadmin/tenants/:id
+ * PATCH /api/superadmin/tenants/:id
  */
 export async function updateTenant(
   tenantId: number,
@@ -139,13 +139,13 @@ export async function createUser(data: Partial<User>): Promise<User> {
 
 /**
  * Actualizar un usuario
- * PUT /api/superadmin/users/:id
+ * PATCH /api/superadmin/users/:id
  */
 export async function updateUser(
   userId: number,
   data: Partial<User>
 ): Promise<User> {
-  return apiPut(`/api/superadmin/users/${userId}`, data);
+  return apiPatch(`/api/superadmin/users/${userId}`, data);
 }
 
 /**

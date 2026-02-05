@@ -22,7 +22,7 @@ PERMISSIONS: Dict[Tuple[str, str], List[Role]] = {
     ("GET", "/orders"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
     ("GET", "/orders/*"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
     ("POST", "/orders"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
-    ("PUT", "/orders/*"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
+    ("PATCH", "/orders/*"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
     ("POST", "/orders/*/validate"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
     ("POST", "/orders/*/cancel"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
     ("DELETE", "/orders/*"): [Role.SUPERADMIN, Role.ADMIN],
@@ -31,14 +31,14 @@ PERMISSIONS: Dict[Tuple[str, str], List[Role]] = {
     ("GET", "/users"): [Role.SUPERADMIN, Role.ADMIN],
     ("GET", "/users/*"): [Role.SUPERADMIN, Role.ADMIN],
     ("POST", "/users"): [Role.SUPERADMIN, Role.ADMIN],
-    ("PUT", "/users/*"): [Role.SUPERADMIN, Role.ADMIN],
+    ("PATCH", "/users/*"): [Role.SUPERADMIN, Role.ADMIN],
     ("DELETE", "/users/*"): [Role.SUPERADMIN, Role.ADMIN],
 
     # TENANTS ENDPOINTS (only SUPER_ADMIN)
     ("GET", "/tenants"): [Role.SUPERADMIN],
     ("GET", "/tenants/*"): [Role.SUPERADMIN],
     ("POST", "/tenants"): [Role.SUPERADMIN],
-    ("PUT", "/tenants/*"): [Role.SUPERADMIN],
+    ("PATCH", "/tenants/*"): [Role.SUPERADMIN],
     ("DELETE", "/tenants/*"): [Role.SUPERADMIN],
 
     # STATS ENDPOINTS (only SUPER_ADMIN)

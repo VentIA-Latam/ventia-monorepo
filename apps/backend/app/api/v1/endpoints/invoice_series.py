@@ -344,7 +344,7 @@ async def get_invoice_serie(
 async def update_invoice_serie(
     serie_id: int,
     serie_update: InvoiceSerieUpdate,
-    current_user: User = Depends(require_permission_dual("PUT", "/invoice-series/*")),
+    current_user: User = Depends(require_permission_dual("PATCH", "/invoice-series/*")),
     db: Session = Depends(get_database),
 ) -> InvoiceSerieResponse:
     """

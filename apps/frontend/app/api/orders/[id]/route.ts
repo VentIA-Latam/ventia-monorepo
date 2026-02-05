@@ -1,7 +1,7 @@
 /**
  * Order by ID API Route
  * GET /api/orders/:id
- * PUT /api/orders/:id
+ * PATCH /api/orders/:id
  */
 
 import { NextResponse } from 'next/server';
@@ -39,7 +39,7 @@ export async function GET(
   }
 }
 
-export async function PUT(
+export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {

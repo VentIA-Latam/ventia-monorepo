@@ -28,9 +28,9 @@ export function ToggleUserStatusDialog({ user, open, onOpenChange, onSuccess }: 
           headers: { "Content-Type": "application/json" },
         });
       } else {
-        // Activar (PUT)
+        // Activar (PATCH)
         response = await fetch(`/api/superadmin/users/${user.id}`, {
-          method: "PUT",
+          method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ is_active: true }),
         });

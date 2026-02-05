@@ -207,7 +207,7 @@ async def create_tenant(
 async def update_tenant(
     tenant_id: int,
     tenant_in: TenantUpdate,
-    current_user: User = Depends(require_permission_dual("PUT", "/tenants/*")),
+    current_user: User = Depends(require_permission_dual("PATCH", "/tenants/*")),
     db: Session = Depends(get_database),
 ) -> TenantResponse:
     """
