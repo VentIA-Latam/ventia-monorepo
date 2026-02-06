@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Auth0Provider } from '@auth0/nextjs-auth0/client';
 import { Toaster } from "@/components/ui/toaster";
+import { Providers } from "./providers";
 
 // Google Fonts
 import { Inter, Libre_Franklin, Source_Sans_3, JetBrains_Mono } from "next/font/google";
@@ -42,8 +43,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         suppressHydrationWarning
       >
         <Auth0Provider>
-          {children}
-          <Toaster />
+          <Providers>
+            {children}
+            <Toaster />
+          </Providers>
         </Auth0Provider>
       </body>
     </html>
