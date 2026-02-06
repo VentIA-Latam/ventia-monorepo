@@ -17,6 +17,7 @@ import {
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import Image from "next/image"
+import Link from "next/link"
 import { useAuth } from "@/hooks/use-auth"
 
 import {
@@ -68,7 +69,7 @@ const dataConfiguration = [
     icon: FileBarChart,
   },
   {
-    title: "Credenciales (API Key)",
+    title: "Credenciales",
     url: "/superadmin/api-keys",
     icon: Key,
   },
@@ -159,10 +160,10 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
                         ${isActive(item.url) ? "border border-sidebar-border shadow-sm" : ""}
                     `}
                   >
-                    <a href={item.url} className="flex items-center w-full">
+                    <Link href={item.url} className="flex items-center w-full">
                       <item.icon className="w-5 h-5 mr-3 shrink-0" />
                       <span className="flex-1 truncate">{item.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -188,10 +189,10 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
                         ${isActive(item.url) ? "border border-sidebar-border shadow-sm" : ""}
                     `}
                   >
-                    <a href={item.url} className="flex items-center w-full">
+                    <Link href={item.url} className="flex items-center w-full">
                       <item.icon className="w-5 h-5 mr-3 shrink-0" />
                       <span className="flex-1 truncate">{item.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
