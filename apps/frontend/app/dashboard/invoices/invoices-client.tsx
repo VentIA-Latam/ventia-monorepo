@@ -98,10 +98,9 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
     }
   };
 
-  const handleDownloadPDF = async (invoiceId: number) => {
+  const handleDownloadPDF = async (invoiceId: number, fullNumber: string) => {
     try {
-      // ✅ Usa Client API Layer
-      await downloadInvoicePdf(invoiceId);
+      await downloadInvoicePdf(invoiceId, `${fullNumber}.pdf`);
       toast({
         title: "PDF descargado",
         description: "El archivo se ha descargado correctamente",
@@ -116,10 +115,9 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
     }
   };
 
-  const handleDownloadXML = async (invoiceId: number) => {
+  const handleDownloadXML = async (invoiceId: number, fullNumber: string) => {
     try {
-      // ✅ Usa Client API Layer
-      await downloadInvoiceXml(invoiceId);
+      await downloadInvoiceXml(invoiceId, `${fullNumber}.xml`);
       toast({
         title: "XML descargado",
         description: "El archivo se ha descargado correctamente",
@@ -360,13 +358,13 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
                                   </DropdownMenuItem>
                                 )}
                                 <DropdownMenuItem
-                                  onClick={() => handleDownloadPDF(invoice.id)}
+                                  onClick={() => handleDownloadPDF(invoice.id, invoice.full_number)}
                                 >
                                   <FileDown className="h-4 w-4 mr-2" />
                                   Descargar PDF
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={() => handleDownloadXML(invoice.id)}
+                                  onClick={() => handleDownloadXML(invoice.id, invoice.full_number)}
                                 >
                                   <Download className="h-4 w-4 mr-2" />
                                   Descargar XML
