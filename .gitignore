@@ -4,6 +4,7 @@ node_modules/
 .pnp.js
 .claude/
 ventia-vm/
+.agents/
 
 # Python
 __pycache__/
