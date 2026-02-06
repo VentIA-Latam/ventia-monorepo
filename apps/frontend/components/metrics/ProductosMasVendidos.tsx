@@ -29,22 +29,20 @@ interface ProductosMasVendidosProps {
   data: ProductData[];
 }
 
-// Tonal palette derived from the theme's chart tokens — slate-blue base
+// Brand palette: Volt, Aqua, Marino, Luma, Cielo, Noche
 const BAR_COLORS = [
-  "oklch(0.55 0.15 250)",
-  "oklch(0.60 0.13 220)",
-  "oklch(0.65 0.11 200)",
-  "oklch(0.70 0.09 190)",
-  "oklch(0.75 0.07 180)",
-  "oklch(0.80 0.05 170)",
-  "oklch(0.84 0.04 160)",
-  "oklch(0.88 0.03 150)",
+  "oklch(0.84 0.19 163)",   // Volt
+  "oklch(0.77 0.12 207)",   // Aqua
+  "oklch(0.55 0.18 255)",   // Marino
+  "oklch(0.88 0.16 90)",    // Luma
+  "oklch(0.72 0.10 230)",   // Cielo
+  "oklch(0.35 0.12 270)",   // Noche
 ];
 
 const MEDAL_STYLES = [
-  "bg-amber-50 text-amber-700 border-amber-200",
-  "bg-gray-50 text-gray-500 border-gray-200",
-  "bg-orange-50 text-orange-600 border-orange-200",
+  "bg-warning-bg text-warning border-warning/30",
+  "bg-muted/50 text-muted-foreground border-border",
+  "bg-volt/10 text-volt border-volt/30",
 ];
 
 const formatPEN = (value: number) =>

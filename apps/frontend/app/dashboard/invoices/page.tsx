@@ -47,11 +47,11 @@ export default async function InvoicesPage() {
     return (
       <div className="space-y-6">
         <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <FileText className="h-6 w-6" />
             Comprobantes Electrónicos
           </h1>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Gestiona facturas, boletas y comprobantes electrónicos
           </p>
         </div>

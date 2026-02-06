@@ -105,7 +105,7 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
   };
 
   return (
-    <Sidebar collapsible="icon" className="bg-white border-r border-gray-100 [--sidebar-width-icon:4.5rem]" {...props}>
+    <Sidebar collapsible="icon" className="bg-sidebar border-r border-sidebar-border [--sidebar-width-icon:4.5rem]" {...props}>
 
       {/* --- HEADER con LOGO DINÁMICO --- */}
       <SidebarHeader className="h-16 flex items-center justify-between px-4 border-b border-transparent" suppressHydrationWarning>
@@ -132,9 +132,9 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
                 className="object-contain"
               />
             </div>
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 border border-purple-200">
-              <Shield className="w-3 h-3 text-purple-600" />
-              <span className="text-[10px] font-bold text-purple-600 uppercase">Admin</span>
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-luma/15 border border-luma/30">
+              <Shield className="w-3 h-3 text-marino" />
+              <span className="text-[10px] font-bold text-marino uppercase">Admin</span>
             </div>
           </div>
         </div>
@@ -143,7 +143,7 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
       <SidebarContent className="px-3 py-2 font-inter">
         {/* --- GRUPO SUPER ADMIN --- */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-gray-500 text-xs font-medium uppercase tracking-wider mb-2 px-2">
+          <SidebarGroupLabel className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-2 px-2">
             Administración
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -172,7 +172,7 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
 
         {/* --- GRUPO CONFIGURACIÓN --- */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-gray-500 text-xs font-medium uppercase tracking-wider mb-2 px-2">
+          <SidebarGroupLabel className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-2 px-2">
             Configuración
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -201,56 +201,56 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
       </SidebarContent>
 
       {/* --- FOOTER (PERFIL) --- */}
-      <SidebarFooter className="p-4 border-t border-gray-100 bg-white">
+      <SidebarFooter className="p-4 border-t border-sidebar-border bg-sidebar">
         <SidebarMenu>
           <SidebarMenuItem suppressHydrationWarning>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
-                  className="data-[state=open]:bg-gray-50 data-[state=open]:text-gray-900 w-full hover:bg-gray-50 rounded-xl transition-colors p-2 border border-transparent hover:border-gray-100"
+                  className="data-[state=open]:bg-muted/50 data-[state=open]:text-foreground w-full hover:bg-muted/50 rounded-xl transition-colors p-2 border border-transparent hover:border-border"
                 >
-                  <Avatar className="h-10 w-10 rounded-full bg-purple-100 border border-purple-200">
+                  <Avatar className="h-10 w-10 rounded-full bg-luma/15 border border-luma/30">
                     <AvatarImage src={user?.picture || ""} alt={user?.name || "User"} />
-                    <AvatarFallback className="bg-purple-200 text-purple-700 font-medium text-sm">
+                    <AvatarFallback className="bg-luma/20 text-marino font-medium text-sm">
                       {isLoading ? "..." : getUserInitials()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight ml-3 group-data-[collapsible=icon]:hidden">
-                    <span className="truncate font-bold text-gray-800">
+                    <span className="truncate font-bold text-foreground">
                       {isLoading ? "Cargando..." : user?.name || "Usuario"}
                     </span>
-                    <span className="truncate text-xs text-purple-600 font-semibold">
+                    <span className="truncate text-xs text-marino font-semibold">
                       SUPER ADMIN
                     </span>
                   </div>
-                  <ChevronsUpDown className="ml-auto size-4 text-gray-400 group-data-[collapsible=icon]:hidden" />
+                  <ChevronsUpDown className="ml-auto size-4 text-muted-foreground group-data-[collapsible=icon]:hidden" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-xl shadow-lg border-gray-100"
+                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-xl shadow-lg border-border"
                 side="bottom"
                 align="end"
                 sideOffset={8}
               >
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-3 px-3 py-2.5 text-left text-sm">
-                    <Avatar className="h-9 w-9 rounded-full bg-purple-100 border border-purple-200">
+                    <Avatar className="h-9 w-9 rounded-full bg-luma/15 border border-luma/30">
                       <AvatarImage src={user?.picture || ""} alt={user?.name || "User"} />
-                      <AvatarFallback className="bg-purple-200 text-purple-700 text-xs font-medium">
+                      <AvatarFallback className="bg-luma/20 text-marino text-xs font-medium">
                         {getUserInitials()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-bold text-gray-800">{user?.name || "Usuario"}</span>
-                      <span className="truncate text-xs text-purple-600 font-semibold">SUPER ADMIN</span>
+                      <span className="truncate font-bold text-foreground">{user?.name || "Usuario"}</span>
+                      <span className="truncate text-xs text-marino font-semibold">SUPER ADMIN</span>
                     </div>
                   </div>
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator className="bg-gray-100" />
+                <DropdownMenuSeparator className="bg-border" />
                 <DropdownMenuItem
                   onClick={handleLogout}
-                  className="text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer"
+                  className="text-danger focus:text-danger focus:bg-danger-bg cursor-pointer"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   Cerrar sesión

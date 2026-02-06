@@ -200,7 +200,7 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="edit-name">
-                Nombre <span className="text-red-500">*</span>
+                Nombre <span className="text-danger">*</span>
               </Label>
               <Input
                 id="edit-name"
@@ -222,7 +222,7 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
                 pattern="^\d{11}$"
                 maxLength={11}
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 RUC del tenant para facturación electrónica en Perú (opcional, debe tener 11 dígitos)
               </p>
             </div>
@@ -236,13 +236,13 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
                 onChange={(e) => setFormData({ ...formData, emisor_nombre_comercial: e.target.value })}
                 placeholder="Ej: Tienda Example S.A.C."
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 RUC del tenant para facturación electrónica en Perú (opcional, debe tener 11 dígitos)
               </p>
             </div>
 
             {/* Sección: Ubicación Fiscal */}
-            <div className="rounded-lg border p-4 space-y-4 bg-gray-50">
+            <div className="rounded-lg border p-4 space-y-4 bg-muted/50">
               <h3 className="font-semibold text-sm">Ubicación Fiscal (Emisor)</h3>
 
               {/* UBIGEO */}
@@ -314,8 +314,8 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
 
             <div className="grid gap-2">
               <Label>Slug (no editable)</Label>
-              <Input value={tenant.slug} disabled className="bg-gray-100" />
-              <p className="text-xs text-gray-500">
+              <Input value={tenant.slug} disabled className="bg-muted" />
+              <p className="text-xs text-muted-foreground">
                 El slug no puede modificarse después de la creación
               </p>
             </div>
@@ -325,7 +325,7 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
               <div className="flex items-center justify-between">
                 <Label>Plataforma de E-commerce</Label>
                 {initialPlatform && (
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-muted-foreground">
                     Configurado: <span className="font-medium capitalize">{initialPlatform}</span>
                   </span>
                 )}
@@ -339,24 +339,24 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
                   className={cn(
                     "relative flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all hover:shadow-md",
                     platform === null
-                      ? "border-gray-500 bg-gray-50 shadow-md"
-                      : "border-gray-200 bg-white hover:border-gray-300"
+                      ? "border-muted-foreground bg-muted/50 shadow-md"
+                      : "border-border bg-card hover:border-muted-foreground"
                   )}
                 >
-                  <div className="w-12 h-12 mb-2 flex items-center justify-center text-gray-400">
+                  <div className="w-12 h-12 mb-2 flex items-center justify-center text-muted-foreground">
                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </div>
                   <span className={cn(
                     "font-medium text-xs",
-                    platform === null ? "text-gray-700" : "text-gray-500"
+                    platform === null ? "text-foreground" : "text-muted-foreground"
                   )}>
                     Ninguna
                   </span>
                   {platform === null && (
                     <div className="absolute top-2 right-2">
-                      <div className="bg-gray-500 text-white rounded-full w-5 h-5 flex items-center justify-center">
+                      <div className="bg-muted/500 text-white rounded-full w-5 h-5 flex items-center justify-center">
                         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
@@ -372,8 +372,8 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
                   className={cn(
                     "relative flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all hover:shadow-md",
                     platform === "shopify"
-                      ? "border-green-500 bg-green-50 shadow-md ring-2 ring-green-200"
-                      : "border-gray-200 bg-white hover:border-gray-300",
+                      ? "border-success bg-success-bg shadow-md ring-2 ring-success/30"
+                      : "border-border bg-card hover:border-muted-foreground",
                     initialPlatform === "shopify" && platform === "shopify" && "animate-pulse"
                   )}
                 >
@@ -387,13 +387,13 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
                   </div>
                   <span className={cn(
                     "font-medium text-xs",
-                    platform === "shopify" ? "text-green-700" : "text-gray-600"
+                    platform === "shopify" ? "text-success" : "text-muted-foreground"
                   )}>
                     Shopify
                   </span>
                   {platform === "shopify" && (
                     <div className="absolute top-2 right-2">
-                      <div className="bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center">
+                      <div className="bg-success text-white rounded-full w-5 h-5 flex items-center justify-center">
                         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
@@ -402,7 +402,7 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
                   )}
                   {initialPlatform === "shopify" && (
                     <div className="absolute -top-1 -left-1">
-                      <div className="bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
+                      <div className="bg-primary text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
                         Actual
                       </div>
                     </div>
@@ -416,8 +416,8 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
                   className={cn(
                     "relative flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all hover:shadow-md",
                     platform === "woocommerce"
-                      ? "border-purple-500 bg-purple-50 shadow-md ring-2 ring-purple-200"
-                      : "border-gray-200 bg-white hover:border-gray-300",
+                      ? "border-marino bg-cielo shadow-md ring-2 ring-luma/30"
+                      : "border-border bg-card hover:border-muted-foreground",
                     initialPlatform === "woocommerce" && platform === "woocommerce" && "animate-pulse"
                   )}
                 >
@@ -431,13 +431,13 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
                   </div>
                   <span className={cn(
                     "font-medium text-xs",
-                    platform === "woocommerce" ? "text-purple-700" : "text-gray-600"
+                    platform === "woocommerce" ? "text-marino" : "text-muted-foreground"
                   )}>
                     WooCommerce
                   </span>
                   {platform === "woocommerce" && (
                     <div className="absolute top-2 right-2">
-                      <div className="bg-purple-500 text-white rounded-full w-5 h-5 flex items-center justify-center">
+                      <div className="bg-marino text-white rounded-full w-5 h-5 flex items-center justify-center">
                         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
@@ -446,7 +446,7 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
                   )}
                   {initialPlatform === "woocommerce" && (
                     <div className="absolute -top-1 -left-1">
-                      <div className="bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
+                      <div className="bg-primary text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
                         Actual
                       </div>
                     </div>
@@ -470,7 +470,7 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
                   <Label htmlFor="sync-on-validation">Sincronizar al validar pago</Label>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     Sincronizar automáticamente pedidos al validar pagos
                   </p>
                 </div>
@@ -487,7 +487,7 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
               <>
                 <div className="grid gap-2">
                   <Label htmlFor="edit-shopify_store_url">
-                    URL de tienda Shopify <span className="text-red-500">*</span>
+                    URL de tienda Shopify <span className="text-danger">*</span>
                   </Label>
                   <Input
                     id="edit-shopify_store_url"
@@ -501,10 +501,10 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
 
                 <div className="grid gap-2">
                   <Label htmlFor="edit-shopify_client_id" className="flex items-center gap-2">
-                    Client ID de Shopify {showPlatformWarning ? <span className="text-red-500">*</span> : "(opcional)"}
+                    Client ID de Shopify {showPlatformWarning ? <span className="text-danger">*</span> : "(opcional)"}
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 text-gray-400 cursor-help" />
+                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
                         <p>Obtén el Client ID desde el panel de tu app de Shopify en Partners Dashboard</p>
@@ -519,7 +519,7 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
                     onChange={(e) => setFormData({ ...formData, shopify_client_id: e.target.value })}
                     required={showPlatformWarning && initialPlatform !== "shopify"}
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     {showPlatformWarning
                       ? "Debes proporcionar un nuevo Client ID al cambiar de plataforma"
                       : "Solo completa si deseas cambiar las credenciales OAuth2"
@@ -529,10 +529,10 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
 
                 <div className="grid gap-2">
                   <Label htmlFor="edit-shopify_client_secret" className="flex items-center gap-2">
-                    Client Secret de Shopify {showPlatformWarning ? <span className="text-red-500">*</span> : "(opcional)"}
+                    Client Secret de Shopify {showPlatformWarning ? <span className="text-danger">*</span> : "(opcional)"}
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 text-gray-400 cursor-help" />
+                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
                         <p>Obtén el Client Secret desde el panel de tu app de Shopify en Partners Dashboard</p>
@@ -547,7 +547,7 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
                     onChange={(e) => setFormData({ ...formData, shopify_client_secret: e.target.value })}
                     required={showPlatformWarning && initialPlatform !== "shopify"}
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     {showPlatformWarning
                       ? "Debes proporcionar un nuevo Client Secret al cambiar de plataforma"
                       : "Solo completa si deseas cambiar las credenciales OAuth2"
@@ -555,8 +555,8 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
                   </p>
                 </div>
 
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-                  <p className="text-xs text-blue-800">
+                <div className="p-3 bg-volt/10 border border-volt/30 rounded-md">
+                  <p className="text-xs text-volt">
                     ℹ️ El access token se genera automáticamente usando OAuth2
                   </p>
                 </div>
@@ -580,7 +580,7 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
               <>
                 <div className="grid gap-2">
                   <Label htmlFor="edit-woocommerce_url">
-                    URL de WooCommerce <span className="text-red-500">*</span>
+                    URL de WooCommerce <span className="text-danger">*</span>
                   </Label>
                   <Input
                     id="edit-woocommerce_url"
@@ -594,7 +594,7 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
 
                 <div className="grid gap-2">
                   <Label htmlFor="edit-woocommerce_consumer_key">
-                    Consumer Key {showPlatformWarning ? <span className="text-red-500">*</span> : "(opcional)"}
+                    Consumer Key {showPlatformWarning ? <span className="text-danger">*</span> : "(opcional)"}
                   </Label>
                   <Input
                     id="edit-woocommerce_consumer_key"
@@ -608,7 +608,7 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
 
                 <div className="grid gap-2">
                   <Label htmlFor="edit-woocommerce_consumer_secret">
-                    Consumer Secret {showPlatformWarning ? <span className="text-red-500">*</span> : "(opcional)"}
+                    Consumer Secret {showPlatformWarning ? <span className="text-danger">*</span> : "(opcional)"}
                   </Label>
                   <Input
                     id="edit-woocommerce_consumer_secret"
@@ -618,7 +618,7 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
                     onChange={(e) => setFormData({ ...formData, woocommerce_consumer_secret: e.target.value })}
                     required={showPlatformWarning && initialPlatform !== "woocommerce"}
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     {showPlatformWarning
                       ? "Debes proporcionar nuevas credenciales al cambiar de plataforma"
                       : "Solo completa si deseas cambiar las credenciales actuales"
@@ -632,7 +632,7 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
             <div className="flex items-center justify-between rounded-lg border p-4">
               <div className="space-y-0.5">
                 <Label htmlFor="edit-is_active">Estado del Tenant</Label>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   {formData.is_active ? "Tenant activo" : "Tenant inactivo"}
                 </p>
               </div>

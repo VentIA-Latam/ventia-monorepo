@@ -237,11 +237,11 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-foreground font-heading flex items-center gap-2">
             <Settings className="h-6 w-6" />
             Series de Facturación
           </h1>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Configura las series de numeración para tus comprobantes electrónicos
           </p>
         </div>
@@ -278,8 +278,8 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
         <CardContent>
           {series.length === 0 ? (
             <div className="text-center py-12">
-              <Settings className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 mb-4">No hay series configuradas</p>
+              <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground mb-4">No hay series configuradas</p>
               <Button onClick={() => setIsCreateDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Crear Primera Serie
@@ -308,19 +308,19 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
                       <TableCell className="font-mono font-bold">{serie.serie}</TableCell>
                       <TableCell>{INVOICE_TYPE_LABELS[serie.invoice_type] || serie.invoice_type}</TableCell>
                       <TableCell className="max-w-[200px] truncate">
-                        {serie.description || <span className="text-gray-400 italic">Sin descripción</span>}
+                        {serie.description || <span className="text-muted-foreground italic">Sin descripción</span>}
                       </TableCell>
                       <TableCell className="text-right font-mono">
                         {String(serie.last_correlativo).padStart(8, '0')}
                       </TableCell>
                       <TableCell>
                         {serie.is_active ? (
-                          <Badge className="bg-green-50 text-green-700 border-green-200">
+                          <Badge className="bg-success-bg text-success border-success/30">
                             <CheckCircle className="h-3 w-3 mr-1" />
                             Activa
                           </Badge>
                         ) : (
-                          <Badge className="bg-gray-50 text-gray-700 border-gray-200">
+                          <Badge className="bg-muted/50 text-foreground border-border">
                             <XCircle className="h-3 w-3 mr-1" />
                             Inactiva
                           </Badge>
@@ -340,7 +340,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(serie.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            className="text-danger hover:text-danger hover:bg-danger-bg"
                             title="Eliminar serie"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -385,7 +385,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 Selecciona el tenant para el cual se creará esta serie
               </p>
             </div>
@@ -430,7 +430,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
                 maxLength={4}
                 className="font-mono"
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 Usa 4 caracteres alfanuméricos (ej: F001 para facturas, B001 para boletas)
               </p>
             </div>
@@ -448,7 +448,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
                 }
                 className="font-mono"
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 Si ya usaste esta serie antes, ingresa el último número de comprobante. El próximo será este número + 1.
               </p>
             </div>
@@ -502,7 +502,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
               <Input
                 value={INVOICE_TYPE_LABELS[formData.invoice_type] || formData.invoice_type}
                 disabled
-                className="bg-gray-50"
+                className="bg-muted/50"
               />
             </div>
 
@@ -511,9 +511,9 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
               <Input
                 value={formData.serie}
                 disabled
-                className="font-mono bg-gray-50"
+                className="font-mono bg-muted/50"
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 La serie no puede ser modificada una vez creada
               </p>
             </div>
@@ -531,7 +531,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
                 }
                 className="font-mono"
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 ⚠️ Cuidado: el próximo comprobante será este número + 1. Úsalo solo si necesitas corregir el contador.
               </p>
             </div>
@@ -557,7 +557,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
                 onChange={(e) =>
                   setFormData({ ...formData, is_active: e.target.checked })
                 }
-                className="h-4 w-4 rounded border-gray-300"
+                className="h-4 w-4 rounded border-border"
               />
               <Label htmlFor="is_active" className="text-sm font-normal">
                 Serie activa (puede ser usada para emitir comprobantes)

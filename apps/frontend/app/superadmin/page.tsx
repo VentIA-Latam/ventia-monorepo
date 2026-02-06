@@ -28,9 +28,9 @@ export default function SuperAdminDashboard() {
         // Fetch all data in parallel
         const [statsData, tenantsResponse, ordersData, activityData] = await Promise.all([
           getStats(),
-          getTenants({ limit: 100 }),
-          getGlobalOrders(15),
-          getRecentActivity(10),
+          getTenants({ limit: 10 }),
+          getGlobalOrders(5),
+          getRecentActivity(6),
         ]);
 
         setPlatformStats(statsData);
@@ -70,8 +70,8 @@ export default function SuperAdminDashboard() {
       {/* Header with Search */}
       <div className="flex flex-col gap-3 md:gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dashboard Global</h1>
-          <p className="text-sm md:text-base text-gray-600 mt-1">Vista completa de toda la plataforma VentIA</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground font-heading">Dashboard Global</h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">Vista completa de toda la plataforma VentIA</p>
         </div>
         <div className="flex gap-2 w-full md:max-w-md md:w-auto">
           <Input
@@ -88,9 +88,9 @@ export default function SuperAdminDashboard() {
 
       {/* Error State */}
       {error && (
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-danger/30 bg-danger-bg">
           <CardContent className="pt-6">
-            <p className="text-red-800">Error: {error}</p>
+            <p className="text-danger">Error: {error}</p>
           </CardContent>
         </Card>
       )}
@@ -101,11 +101,11 @@ export default function SuperAdminDashboard() {
           {[1, 2, 3, 4].map((i) => (
             <Card key={i} className="animate-pulse">
               <CardHeader className="space-y-0 pb-2">
-                <div className="h-4 bg-gray-200 rounded w-24"></div>
+                <div className="h-4 bg-muted rounded w-24"></div>
               </CardHeader>
               <CardContent>
-                <div className="h-8 bg-gray-200 rounded w-16 mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-32"></div>
+                <div className="h-8 bg-muted rounded w-16 mb-2"></div>
+                <div className="h-3 bg-muted rounded w-32"></div>
               </CardContent>
             </Card>
           ))}
@@ -117,15 +117,15 @@ export default function SuperAdminDashboard() {
         <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 md:gap-4 lg:gap-6">
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs md:text-sm font-medium text-gray-600">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Empresas Activas
               </CardTitle>
-              <Building2 className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
+              <Building2 className="h-4 w-4 md:h-5 md:w-5 text-volt" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl md:text-3xl font-bold">{platformStats.total_tenants}</div>
-              <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                <TrendingDown className="h-3 w-3 text-red-600" />
+              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                <TrendingDown className="h-3 w-3 text-danger" />
                 {inactiveTenants.length} inactivos
               </p>
             </CardContent>
@@ -133,14 +133,14 @@ export default function SuperAdminDashboard() {
 
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs md:text-sm font-medium text-gray-600">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Total Usuarios
               </CardTitle>
-              <Users className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
+              <Users className="h-4 w-4 md:h-5 md:w-5 text-success" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl md:text-3xl font-bold">{platformStats.total_users}</div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 En {platformStats.total_tenants} organizaciones
               </p>
             </CardContent>
@@ -148,14 +148,14 @@ export default function SuperAdminDashboard() {
 
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs md:text-sm font-medium text-gray-600">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 API Keys Activas
               </CardTitle>
-              <Key className="h-4 w-4 md:h-5 md:w-5 text-purple-600" />
+              <Key className="h-4 w-4 md:h-5 md:w-5 text-marino" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl md:text-3xl font-bold">{platformStats.active_api_keys ?? 0}</div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Credenciales en uso
               </p>
             </CardContent>
@@ -163,14 +163,14 @@ export default function SuperAdminDashboard() {
 
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs md:text-sm font-medium text-gray-600">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Super Admins
               </CardTitle>
-              <Shield className="h-4 w-4 md:h-5 md:w-5 text-orange-600" />
+              <Shield className="h-4 w-4 md:h-5 md:w-5 text-warning" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl md:text-3xl font-bold">{platformStats.total_super_admins ?? 0}</div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Administradores de sistema
               </p>
             </CardContent>
@@ -187,7 +187,7 @@ export default function SuperAdminDashboard() {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                    <Building2 className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
+                    <Building2 className="h-4 w-4 md:h-5 md:w-5 text-volt" />
                     Top Tenants
                   </CardTitle>
                   <CardDescription className="text-xs md:text-sm">Organizaciones más activas</CardDescription>
@@ -201,8 +201,8 @@ export default function SuperAdminDashboard() {
             </CardHeader>
             <CardContent>
               {inactiveTenants.length > 0 && (
-                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <div className="flex items-center gap-2 text-yellow-800">
+                <div className="mb-4 p-3 bg-warning-bg border border-warning/30 rounded-lg">
+                  <div className="flex items-center gap-2 text-warning">
                     <AlertTriangle className="h-4 w-4" />
                     <span className="text-sm font-medium">
                       {inactiveTenants.length} tenant{inactiveTenants.length !== 1 ? 's' : ''} inactivo{inactiveTenants.length !== 1 ? 's' : ''}
@@ -214,19 +214,19 @@ export default function SuperAdminDashboard() {
                 {(searchTerm ? filteredTenants : topTenants).slice(0, 5).map((tenant) => (
                   <div
                     key={tenant.id}
-                    className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
+                    className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
                     onClick={() => window.location.href = `/superadmin/tenants`}
                   >
                     <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
-                      <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                        <Building2 className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
+                      <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-volt/10 flex items-center justify-center shrink-0">
+                        <Building2 className="h-4 w-4 md:h-5 md:w-5 text-volt" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-xs md:text-sm truncate">{tenant.name}</p>
-                        <p className="text-[10px] md:text-xs text-gray-500 truncate">@{tenant.slug}</p>
+                        <p className="text-[10px] md:text-xs text-muted-foreground truncate">@{tenant.slug}</p>
                       </div>
                     </div>
-                    <Badge variant={tenant.is_active ? "default" : "secondary"} className="text-[10px] md:text-xs shrink-0">
+                    <Badge className={`text-[10px] md:text-xs shrink-0 ${tenant.is_active ? "bg-success-bg text-success border-success/30" : "bg-muted/50 text-foreground border-border"}`}>
                       {tenant.is_active ? "Activo" : "Inactivo"}
                     </Badge>
                   </div>
@@ -241,7 +241,7 @@ export default function SuperAdminDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                    <Package className="h-4 w-4 md:h-5 md:w-5 text-orange-600" />
+                    <Package className="h-4 w-4 md:h-5 md:w-5 text-warning" />
                     Órdenes Recientes Globales
                   </CardTitle>
                   <CardDescription className="text-xs md:text-sm">Últimas órdenes de todos los tenants</CardDescription>
@@ -253,25 +253,25 @@ export default function SuperAdminDashboard() {
                 {(searchTerm ? filteredOrders : globalOrders).slice(0, 8).map((order) => (
                   <div
                     key={order.id}
-                    className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                    className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                   >
                     <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
-                      <div className={`p-1.5 md:p-2 rounded-lg shrink-0 ${order.status === 'Pagado' ? 'bg-green-100' : 'bg-yellow-100'
+                      <div className={`p-1.5 md:p-2 rounded-lg shrink-0 ${order.status === 'Pagado' ? 'bg-success-bg' : 'bg-warning-bg'
                         }`}>
                         {order.status === 'Pagado' ? (
-                          <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
+                          <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4 text-success" />
                         ) : (
-                          <Clock className="h-3 w-3 md:h-4 md:w-4 text-yellow-600" />
+                          <Clock className="h-3 w-3 md:h-4 md:w-4 text-warning" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1 md:gap-2 flex-wrap">
                           <p className="font-medium text-xs md:text-sm">#{order.order_number}</p>
                           <Badge variant="outline" className="text-[10px] md:text-xs">
-                            {order.tenant_name || `Tenant ${order.tenant_id}`}
+                            {order.tenant?.name || `Tenant ${order.tenant_id}`}
                           </Badge>
                         </div>
-                        <p className="text-[10px] md:text-xs text-gray-600 truncate">{order.customer_name}</p>
+                        <p className="text-[10px] md:text-xs text-muted-foreground truncate">{order.customer_name}</p>
                       </div>
                     </div>
                     <div className="text-right ml-2 md:ml-4 shrink-0">
@@ -279,8 +279,7 @@ export default function SuperAdminDashboard() {
                         {order.currency} {order.total?.toFixed(2) || '0.00'}
                       </p>
                       <Badge
-                        variant={order.status === 'Pagado' ? "default" : "secondary"}
-                        className="text-[10px] md:text-xs mt-1"
+                        className={`text-[10px] md:text-xs mt-1 ${order.status === 'Pagado' ? "bg-success-bg text-success border-success/30" : "bg-warning-bg text-warning border-warning/30"}`}
                       >
                         {order.status}
                       </Badge>
@@ -298,7 +297,7 @@ export default function SuperAdminDashboard() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Activity className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
+              <Activity className="h-4 w-4 md:h-5 md:w-5 text-volt" />
               <div>
                 <CardTitle className="text-base md:text-lg">Actividad en Tiempo Real</CardTitle>
                 <CardDescription className="text-xs md:text-sm">Eventos recientes en la plataforma</CardDescription>
@@ -318,10 +317,10 @@ export default function SuperAdminDashboard() {
 
                 const getColor = () => {
                   const type = activity.entity_type.toLowerCase();
-                  if (type === 'user') return 'bg-green-100 text-green-700';
-                  if (type === 'tenant') return 'bg-blue-100 text-blue-700';
-                  if (type === 'api_key') return 'bg-purple-100 text-purple-700';
-                  return 'bg-gray-100 text-gray-700';
+                  if (type === 'user') return 'bg-success-bg text-success';
+                  if (type === 'tenant') return 'bg-volt/10 text-volt';
+                  if (type === 'api_key') return 'bg-luma/15 text-marino';
+                  return 'bg-muted text-foreground';
                 };
 
                 const translateOperation = (operation: string) => {
@@ -336,19 +335,19 @@ export default function SuperAdminDashboard() {
                 };
 
                 return (
-                  <div key={activity.id} className="flex items-start gap-2 md:gap-3 p-2 md:p-3 rounded-lg bg-gray-50">
+                  <div key={`${activity.entity_type}-${activity.id}`} className="flex items-start gap-2 md:gap-3 p-2 md:p-3 rounded-lg bg-muted/50">
                     <div className={`p-1.5 md:p-2 rounded-full shrink-0 ${getColor()}`}>
                       {getIcon()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs md:text-sm font-medium text-gray-900 truncate">
+                      <p className="text-xs md:text-sm font-medium text-foreground truncate">
                         {activity.description}
                       </p>
                       <div className="flex items-center gap-1 md:gap-2 mt-1 flex-wrap">
                         <Badge variant="outline" className="text-[10px] md:text-xs">
                           {translateOperation(activity.operation)}
                         </Badge>
-                        <span className="text-[10px] md:text-xs text-gray-500">
+                        <span className="text-[10px] md:text-xs text-muted-foreground">
                           {formatDateTime(activity.timestamp)}
                         </span>
                       </div>
@@ -372,25 +371,25 @@ export default function SuperAdminDashboard() {
             <div className="grid gap-3 grid-cols-2 md:grid-cols-4 md:gap-4">
               <Button variant="outline" className="h-16 md:h-20 flex-col gap-1 md:gap-2" asChild>
                 <a href="/superadmin/tenants">
-                  <Building2 className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
+                  <Building2 className="h-5 w-5 md:h-6 md:w-6 text-volt" />
                   <span className="text-xs md:text-sm font-medium text-center">Gestionar Tenants</span>
                 </a>
               </Button>
               <Button variant="outline" className="h-16 md:h-20 flex-col gap-1 md:gap-2" asChild>
                 <a href="/superadmin/users">
-                  <Users className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
+                  <Users className="h-5 w-5 md:h-6 md:w-6 text-success" />
                   <span className="text-xs md:text-sm font-medium text-center">Gestionar Usuarios</span>
                 </a>
               </Button>
               <Button variant="outline" className="h-16 md:h-20 flex-col gap-1 md:gap-2" asChild>
                 <a href="/superadmin/api-keys">
-                  <Key className="h-5 w-5 md:h-6 md:w-6 text-purple-600" />
+                  <Key className="h-5 w-5 md:h-6 md:w-6 text-marino" />
                   <span className="text-xs md:text-sm font-medium text-center">API Keys</span>
                 </a>
               </Button>
               <Button variant="outline" className="h-16 md:h-20 flex-col gap-1 md:gap-2" asChild>
                 <a href="/dashboard/get-started">
-                  <Activity className="h-5 w-5 md:h-6 md:w-6 text-orange-600" />
+                  <Activity className="h-5 w-5 md:h-6 md:w-6 text-warning" />
                   <span className="text-xs md:text-sm font-medium text-center">Ver Dashboard</span>
                 </a>
               </Button>

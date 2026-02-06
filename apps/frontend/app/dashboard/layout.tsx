@@ -39,7 +39,7 @@ export default function DashboardLayout({
               orientation="vertical"
               className="mr-2 data-[orientation=vertical]:h-4"
             />
-            <h2 className="text-base sm:text-lg font-semibold text-gray-800 font-libre-franklin truncate">
+            <h2 className="text-base sm:text-lg font-semibold text-foreground font-heading truncate">
               {getPageTitle()}
             </h2>
           </div>

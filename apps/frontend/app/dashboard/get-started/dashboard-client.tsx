@@ -59,10 +59,10 @@ export function DashboardClient({ initialMetrics }: DashboardClientProps) {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-ventia-blue font-libre-franklin">
+          <h1 className="text-2xl sm:text-3xl font-bold text-marino font-heading">
             Dashboard General
           </h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2 font-inter">
+          <p className="text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2 font-inter">
             Bienvenido de nuevo, aquí tienes un resumen de la operación
           </p>
         </div>
