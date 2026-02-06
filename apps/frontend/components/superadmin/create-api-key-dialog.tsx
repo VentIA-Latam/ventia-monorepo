@@ -31,8 +31,6 @@ export function CreateAPIKeyDialog({ open, onOpenChange, onSuccess, apiEndpoint,
   const [createdKey, setCreatedKey] = useState<APIKeyCreateResponse | null>(null);
   const [copied, setCopied] = useState(false);
 
-  console.log('CreateAPIKeyDialog tenants:', tenants, 'length:', tenants.length);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
