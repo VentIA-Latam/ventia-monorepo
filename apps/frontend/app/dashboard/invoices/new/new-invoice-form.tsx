@@ -1078,7 +1078,7 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
               const url = window.URL.createObjectURL(blob);
               const a = document.createElement("a");
               a.href = url;
-              a.download = `${createdInvoice.serie}-${createdInvoice.correlativo}.pdf`;
+              a.download = `${createdInvoice.serie}-${String(createdInvoice.correlativo).padStart(8, '0')}.pdf`;
               document.body.appendChild(a);
               a.click();
               window.URL.revokeObjectURL(url);
