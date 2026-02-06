@@ -76,6 +76,16 @@ const dataPlatform = [
     url: "/dashboard/conversations",
     icon: MessageSquare,
   },
+  {
+    title: "Campañas",
+    url: "/dashboard/campaigns",
+    icon: Bell,
+  },
+  {
+    title: "Personalización",
+    url: "/dashboard/agent-customization",
+    icon: Bot,
+  },
   /*   {
       title: "Clientes",
       url: "/dashboard/clients",

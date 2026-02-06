@@ -16,6 +16,8 @@ export default function DashboardLayout({
     if (pathname.includes('/assistant')) return 'Configuración de tu vendedor';
     if (pathname.includes('/products')) return 'Productos';
     if (pathname.includes('/conversations')) return 'Conversaciones';
+    if (pathname.includes('/campaigns')) return 'Campañas';
+    if (pathname.includes('/agent-customization')) return 'Personalización del Agente';
     if (pathname.includes('/metrics')) return 'Métricas';
     if (pathname.includes('/get-started')) return 'Inicio';
     if (pathname.includes('/payments')) return 'Pagos';
