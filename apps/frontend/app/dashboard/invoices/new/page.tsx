@@ -57,18 +57,17 @@ export default async function NewInvoicePage({ searchParams }: NewInvoicePagePro
     );
   }
 
-  // 3️⃣ Cargar orden
-  let order;
-  let error: Error | null = null;
+  // 3️⃣ Cargar orden e invoices en paralelo (async-parallel)
+  const [orderResult, invoicesResult] = await Promise.allSettled([
+    fetchOrder(accessToken, orderId),
+    fetchInvoicesByOrder(accessToken, orderId),
+  ]);
 
-  try {
-    order = await fetchOrder(accessToken, orderId);
-  } catch (err) {
-    console.error("Error loading order:", err);
-    error = err instanceof Error ? err : new Error("Error desconocido");
-  }
-
-  if (error || !order) {
+  if (orderResult.status === 'rejected' || !orderResult.value) {
+    const error = orderResult.status === 'rejected'
+      ? (orderResult.reason instanceof Error ? orderResult.reason : new Error("Error desconocido"))
+      : new Error("Orden no encontrada");
+    console.error("Error loading order:", error);
     return (
       <div className="space-y-6">
         <Link href="/dashboard/orders">
@@ -81,11 +80,13 @@ export default async function NewInvoicePage({ searchParams }: NewInvoicePagePro
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>No se pudo cargar la orden</AlertTitle>
-          <AlertDescription>{error?.message || "Orden no encontrada"}</AlertDescription>
+          <AlertDescription>{error.message}</AlertDescription>
         </Alert>
       </div>
     );
   }
+
+  const order = orderResult.value;
 
   // 4️⃣ Validar requisitos de la orden
   const validationErrors: string[] = [];
@@ -122,14 +123,10 @@ export default async function NewInvoicePage({ searchParams }: NewInvoicePagePro
     );
   }
 
-  // 5️⃣ Cargar invoices previos (para NC/ND)
-  let existingInvoices: Invoice[] = [];
-  try {
-    existingInvoices = await fetchInvoicesByOrder(accessToken, orderId);
-  } catch (err) {
-    console.error("Error loading existing invoices:", err);
-    // No es crítico, continuar sin invoices previos
-  }
+  // 5️⃣ Invoices previos (ya cargados en paralelo, para NC/ND)
+  const existingInvoices: Invoice[] = invoicesResult.status === 'fulfilled'
+    ? invoicesResult.value
+    : [];
 
   // 6️⃣ Renderizar formulario
   return <NewInvoiceForm order={order} existingInvoices={existingInvoices} />;

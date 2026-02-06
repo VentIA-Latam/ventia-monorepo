@@ -84,7 +84,7 @@ const ProductosMasVendidos = ({ data }: ProductosMasVendidosProps) => {
         <div className="grid grid-cols-3 gap-3 pb-8">
           {chartData.slice(0, 3).map((item, index) => (
             <div
-              key={index}
+              key={item.producto}
               className={`flex flex-col items-center gap-1.5 rounded-lg border p-4 ${MEDAL_STYLES[index]}`}
             >
               <div className="flex items-center gap-1">

@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { FaInfoCircle } from "react-icons/fa";
-import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
+import dynamic from "next/dynamic";
+import type { EmojiClickData } from "emoji-picker-react";
+
+const EmojiPicker = dynamic(() => import("emoji-picker-react"), { ssr: false });
 import { HiOutlineEmojiHappy } from "react-icons/hi";
 import {
   Select,

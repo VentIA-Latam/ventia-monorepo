@@ -17,13 +17,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import ProductosMasVendidos from "@/components/metrics/ProductosMasVendidos";
+import { Skeleton } from "@/components/ui/skeleton";
 import type {
   TopProductsResponse,
   OrdersByCityResponse,
   DashboardMetrics,
   PeriodType,
 } from "@/lib/services/metrics-service";
+
+const ProductosMasVendidos = dynamic(
+  () => import("@/components/metrics/ProductosMasVendidos"),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-80 rounded-lg" />,
+  }
+);
 
 const Mapa = dynamic(() => import("@/components/metrics/Mapa"), {
   ssr: false,

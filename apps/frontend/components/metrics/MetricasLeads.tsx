@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie, Sector } from 'recharts';
 
 const MetricasLeads = () => {
@@ -33,8 +34,8 @@ const MetricasLeads = () => {
 
           {/* Visualización de embudo con barras */}
           <div style={{ marginBottom: '30px' }}>
-            {embudoData.map((item, index) => (
-              <div key={index} style={{ marginBottom: '15px' }}>
+            {embudoData.map((item) => (
+              <div key={item.etapa} style={{ marginBottom: '15px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
                   <span style={{ fontSize: '14px', fontWeight: '500' }}>{item.etapa}</span>
                   <span style={{ fontSize: '14px', fontWeight: 'bold', color: item.color }}>
@@ -112,8 +113,8 @@ const MetricasLeads = () => {
 
           {/* Lista detallada */}
           <div style={{ marginTop: '20px' }}>
-            {motivosNoCierre.sort((a, b) => b.cantidad - a.cantidad).map((item, index) => (
-              <div key={index} style={{
+            {[...motivosNoCierre].sort((a, b) => b.cantidad - a.cantidad).map((item, index) => (
+              <div key={item.motivo} style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
