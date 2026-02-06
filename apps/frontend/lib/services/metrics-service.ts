@@ -22,7 +22,6 @@ export interface MetricsQuery {
 export interface DashboardMetrics {
   total_orders: number;
   pending_payment: number;
-  pending_dispatch: number;
   total_sales: number;
   currency: string;
   period: PeriodType;
@@ -66,6 +65,109 @@ export async function fetchDashboardMetrics(
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: 'Failed to fetch metrics' }));
     throw new Error(error.detail || 'Failed to fetch metrics');
+  }
+
+  return response.json();
+}
+
+// --- Top Products ---
+
+export interface TopProduct {
+  product: string;
+  total_sold: number;
+  total_revenue: number;
+}
+
+export interface TopProductsResponse {
+  data: TopProduct[];
+  period: PeriodType;
+  start_date: string;
+  end_date: string;
+}
+
+export async function fetchTopProducts(
+  accessToken: string,
+  query?: MetricsQuery
+): Promise<TopProductsResponse> {
+  const params = new URLSearchParams();
+
+  if (query?.period) {
+    params.append('period', query.period);
+  }
+
+  if (query?.start_date && query.period === 'custom') {
+    params.append('start_date', query.start_date);
+  }
+
+  if (query?.end_date && query.period === 'custom') {
+    params.append('end_date', query.end_date);
+  }
+
+  const url = `${API_URL}/metrics/top-products${params.toString() ? '?' + params.toString() : ''}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Failed to fetch top products' }));
+    throw new Error(error.detail || 'Failed to fetch top products');
+  }
+
+  return response.json();
+}
+
+// --- Orders by City ---
+
+export interface CityOrderCount {
+  city: string;
+  order_count: number;
+}
+
+export interface OrdersByCityResponse {
+  data: CityOrderCount[];
+  period: PeriodType;
+  start_date: string;
+  end_date: string;
+}
+
+export async function fetchOrdersByCity(
+  accessToken: string,
+  query?: MetricsQuery
+): Promise<OrdersByCityResponse> {
+  const params = new URLSearchParams();
+
+  if (query?.period) {
+    params.append('period', query.period);
+  }
+
+  if (query?.start_date && query.period === 'custom') {
+    params.append('start_date', query.start_date);
+  }
+
+  if (query?.end_date && query.period === 'custom') {
+    params.append('end_date', query.end_date);
+  }
+
+  const url = `${API_URL}/metrics/orders-by-city${params.toString() ? '?' + params.toString() : ''}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Failed to fetch orders by city' }));
+    throw new Error(error.detail || 'Failed to fetch orders by city');
   }
 
   return response.json();

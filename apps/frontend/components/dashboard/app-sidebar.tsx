@@ -72,6 +72,11 @@ const dataPlatform = [
     icon: Receipt,
   },
   {
+    title: "Métricas",
+    url: "/dashboard/metrics",
+    icon: FileBarChart,
+  },
+  {
     title: "Conversaciones",
     url: "/dashboard/conversations",
     icon: MessageSquare,

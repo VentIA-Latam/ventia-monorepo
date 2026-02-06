@@ -53,6 +53,9 @@ class OrderBase(BaseModel):
         description="Shipping address: address1, city",
         max_length=500,
     )
+    shipping_city: str | None = Field(None, description="Shipping city")
+    shipping_province: str | None = Field(None, description="Shipping province/state")
+    shipping_country: str | None = Field(None, description="Country name")
 
 
 class OrderCreate(OrderBase):
@@ -112,6 +115,9 @@ class OrderUpdate(BaseModel):
     notes: str | None = None
     status: str | None = None
     shipping_address: str | None = None
+    shipping_city: str | None = None
+    shipping_province: str | None = None
+    shipping_country: str | None = None
 
 
 class OrderValidate(BaseModel):

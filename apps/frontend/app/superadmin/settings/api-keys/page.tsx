@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { APIKey } from "@/lib/types/api-key";
-import { CreateAPIKeyDialog } from "@/components/dashboard/create-api-key-dialog";
+import { CreateAPIKeyDialog } from "@/components/superadmin/create-api-key-dialog";
 import { RevokeAPIKeyDialog } from "@/components/superadmin/revoke-api-key-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info, BookOpen } from "lucide-react";
