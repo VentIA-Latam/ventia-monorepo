@@ -81,13 +81,13 @@ export function MetricsClient({
       title: "Total Pedidos",
       value: dashboardMetrics.total_orders.toString(),
       icon: ShoppingCart,
-      color: "text-blue-600 bg-blue-50",
+      color: "text-volt bg-volt/10",
     },
     {
       title: "Pago Pendiente",
       value: dashboardMetrics.pending_payment.toString(),
       icon: CreditCard,
-      color: "text-amber-600 bg-amber-50",
+      color: "text-warning bg-warning-bg",
     },
     {
       title: "Ventas Totales",
@@ -96,7 +96,7 @@ export function MetricsClient({
         dashboardMetrics.currency
       ),
       icon: DollarSign,
-      color: "text-emerald-600 bg-emerald-50",
+      color: "text-success bg-success-bg",
     },
   ];
 
@@ -105,7 +105,7 @@ export function MetricsClient({
       {/* Header + Period selector */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold">Métricas</h1>
+          <h1 className="text-3xl font-bold font-heading">Métricas</h1>
           <p className="text-muted-foreground">
             Visualiza el rendimiento de tu negocio.
           </p>

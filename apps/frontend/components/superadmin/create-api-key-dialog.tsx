@@ -101,9 +101,9 @@ export function CreateAPIKeyDialog({ open, onOpenChange, onSuccess, apiEndpoint,
             </DialogDescription>
           </DialogHeader>
           
-          <Alert className="bg-yellow-50 border-yellow-200">
-            <AlertCircle className="h-4 w-4 text-yellow-600" />
-            <AlertDescription className="text-yellow-800">
+          <Alert className="bg-warning-bg border-warning/30">
+            <AlertCircle className="h-4 w-4 text-warning" />
+            <AlertDescription className="text-warning">
               <b>Importante:</b> Esta es la única vez que verás la clave completa. Cópiala y guárdala en un lugar seguro.
             </AlertDescription>
           </Alert>
@@ -128,7 +128,7 @@ export function CreateAPIKeyDialog({ open, onOpenChange, onSuccess, apiEndpoint,
                   size="icon"
                   onClick={handleCopy}
                 >
-                  {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                  {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
@@ -218,7 +218,7 @@ export function CreateAPIKeyDialog({ open, onOpenChange, onSuccess, apiEndpoint,
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Solo SUPER_ADMIN puede crear API keys para otros tenants
               </p>
             </div>

@@ -4,7 +4,7 @@ import { Auth0Provider } from '@auth0/nextjs-auth0/client';
 import { Toaster } from "@/components/ui/toaster";
 
 // Google Fonts
-import { Inter, Libre_Franklin, Source_Sans_3 } from "next/font/google";
+import { Inter, Libre_Franklin, Source_Sans_3, JetBrains_Mono } from "next/font/google";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -23,6 +23,12 @@ const sourceSans = Source_Sans_3({
   variable: "--font-source-sans",
 });
 
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "600"],
+  variable: "--font-jetbrains-mono",
+});
+
 export const metadata: Metadata = {
   title: "Ventia - Latam | Vendemos y entregamos por ti.",
   description: "Landing VentIA",
@@ -32,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es">
       <body
-        className={`${inter.variable} ${libre.variable} ${sourceSans.variable} font-sans`}
+        className={`${inter.variable} ${libre.variable} ${sourceSans.variable} ${jetbrainsMono.variable} font-sans`}
         suppressHydrationWarning
       >
         <Auth0Provider>

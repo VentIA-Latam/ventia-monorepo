@@ -271,25 +271,25 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
       </div>
 
       {/* Breadcrumb */}
-      <nav className="flex text-sm text-gray-500">
-        <Link href="/dashboard" className="hover:text-gray-900">
+      <nav className="flex text-sm text-muted-foreground">
+        <Link href="/dashboard" className="hover:text-foreground">
           Dashboard
         </Link>
         <span className="mx-2">/</span>
-        <Link href="/dashboard/invoices" className="hover:text-gray-900">
+        <Link href="/dashboard/invoices" className="hover:text-foreground">
           Facturación
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-gray-900">{invoice.full_number}</span>
+        <span className="text-foreground">{invoice.full_number}</span>
       </nav>
 
       {/* Title */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground font-heading">
             {tipoComprobante}
           </h1>
-          <p className="text-lg text-gray-600 mt-1">{invoice.full_number}</p>
+          <p className="text-lg text-muted-foreground mt-1">{invoice.full_number}</p>
         </div>
         <Badge className={`${INVOICE_STATUS_COLORS[invoice.efact_status]} text-sm px-3 py-1`}>
           {invoice.efact_status === 'success' && <CheckCircle className="h-4 w-4 mr-1" />}
@@ -330,11 +330,11 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-sm font-medium text-gray-500">Razón Social</p>
+                <p className="text-sm font-medium text-muted-foreground">Razón Social</p>
                 <p className="text-base font-semibold mt-1">{invoice.emisor_razon_social}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-500">RUC</p>
+                <p className="text-sm font-medium text-muted-foreground">RUC</p>
                 <p className="text-base font-mono mt-1">{invoice.emisor_ruc}</p>
               </div>
             </CardContent>
@@ -347,16 +347,16 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-sm font-medium text-gray-500">Nombre / Razón Social</p>
+                <p className="text-sm font-medium text-muted-foreground">Nombre / Razón Social</p>
                 <p className="text-base font-semibold mt-1">{invoice.cliente_razon_social}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Tipo de Documento</p>
+                  <p className="text-sm font-medium text-muted-foreground">Tipo de Documento</p>
                   <p className="text-base mt-1">{invoice.cliente_tipo_documento}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Número de Documento</p>
+                  <p className="text-sm font-medium text-muted-foreground">Número de Documento</p>
                   <p className="text-base font-mono mt-1">{invoice.cliente_numero_documento}</p>
                 </div>
               </div>
@@ -375,7 +375,7 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
                     <div key={index} className="flex justify-between items-start pb-3 border-b last:border-b-0">
                       <div className="flex-1">
                         <p className="font-medium">{item.product || item.descripcion || '-'}</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-muted-foreground">
                           SKU: {item.sku || '-'} • Cantidad: {item.quantity || item.cantidad || 0} x {formatCurrency(item.unitPrice || item.precio_unitario, invoice.currency)}
                         </p>
                       </div>
@@ -396,11 +396,11 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between text-base">
-                <span className="text-gray-600">Subtotal (Op. Gravada)</span>
+                <span className="text-muted-foreground">Subtotal (Op. Gravada)</span>
                 <span className="font-medium">{formatCurrency(invoice.subtotal, invoice.currency)}</span>
               </div>
               <div className="flex justify-between text-base">
-                <span className="text-gray-600">IGV (18%)</span>
+                <span className="text-muted-foreground">IGV (18%)</span>
                 <span className="font-medium">{formatCurrency(invoice.igv, invoice.currency)}</span>
               </div>
               <Separator />
@@ -419,14 +419,14 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Comprobante Referencia</p>
+                  <p className="text-sm font-medium text-muted-foreground">Comprobante Referencia</p>
                   <p className="text-base font-mono mt-1">
                     {invoice.reference_serie}-{String(invoice.reference_correlativo).padStart(8, '0')}
                   </p>
                 </div>
                 {invoice.reference_reason && (
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Motivo</p>
+                    <p className="text-sm font-medium text-muted-foreground">Motivo</p>
                     <p className="text-base mt-1">{invoice.reference_reason}</p>
                   </div>
                 )}
@@ -530,7 +530,7 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div>
-                <p className="text-gray-500 flex items-center gap-2">
+                <p className="text-muted-foreground flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   Fecha de Emisión
                 </p>
@@ -538,7 +538,7 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
               </div>
               {invoice.efact_processed_at && (
                 <div>
-                  <p className="text-gray-500 flex items-center gap-2">
+                  <p className="text-muted-foreground flex items-center gap-2">
                     <Clock className="h-4 w-4" />
                     Fecha de Validación
                   </p>
@@ -547,7 +547,7 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
               )}
               {invoice.efact_ticket && (
                 <div>
-                  <p className="text-gray-500">Ticket eFact</p>
+                  <p className="text-muted-foreground">Ticket eFact</p>
                   <p className="font-mono text-xs mt-1 break-all">{invoice.efact_ticket}</p>
                 </div>
               )}

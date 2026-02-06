@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Building2, Plus, Search, MoreHorizontal, Eye, Edit, Power, Store, ShoppingBag } from "lucide-react";
+import { Building2, Plus, Search, MoreHorizontal, Eye, Edit, Power, Store, ShoppingBag, CheckCircle, XCircle } from 'lucide-react';
 import { getTenants } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -146,13 +146,13 @@ export default function TenantsPage() {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Gestión de Empresas</h1>
-          <p className="text-sm md:text-base text-gray-600 mt-1 md:mt-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground font-heading">Gestión de Empresas</h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-1 md:mt-2">
             Administra todas las empresas de la plataforma
           </p>
         </div>
         <Button
-          className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto text-sm md:text-base"
+          className="bg-primary hover:bg-primary/90 w-full sm:w-auto text-sm md:text-base"
           onClick={() => setCreateDialogOpen(true)}
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -168,7 +168,7 @@ export default function TenantsPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nombre o slug..."
                 value={filters.search}
@@ -211,18 +211,18 @@ export default function TenantsPage() {
         <CardContent className="p-0">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="text-sm md:text-base text-gray-500">Cargando empresas...</div>
+              <div className="text-sm md:text-base text-muted-foreground">Cargando empresas...</div>
             </div>
           ) : filteredTenants.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Building2 className="h-10 w-10 md:h-12 md:w-12 text-gray-300 mb-3 md:mb-4" />
-              <p className="text-sm md:text-base text-gray-500">No se encontraron empresas</p>
+              <Building2 className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-3 md:mb-4" />
+              <p className="text-sm md:text-base text-muted-foreground">No se encontraron empresas</p>
             </div>
           ) : (
-            <div className="border rounded-lg bg-white shadow-sm overflow-x-auto">
+            <div className="border rounded-lg bg-card shadow-sm overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50/80 border-b border-gray-200">
+                  <TableRow className="bg-muted/50 border-b border-border">
                     <TableHead className="text-xs md:text-sm min-w-[150px]">NOMBRE</TableHead>
                     <TableHead className="text-xs md:text-sm min-w-[120px]">IDENTIFICADOR</TableHead>
                     <TableHead className="text-xs md:text-sm min-w-[200px]">E-COMMERCE</TableHead>
@@ -233,10 +233,10 @@ export default function TenantsPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredTenants.map((tenant) => (
-                    <TableRow key={tenant.id} className="hover:bg-gray-50/50 transition-colors border-b border-gray-100 last:border-0">
-                      <TableCell className="font-medium text-xs md:text-sm text-gray-900">{tenant.name}</TableCell>
+                    <TableRow key={tenant.id} className="hover:bg-cielo/30 transition-colors border-b border-border last:border-0">
+                      <TableCell className="font-medium text-xs md:text-sm text-foreground">{tenant.name}</TableCell>
                       <TableCell>
-                        <code className="text-[10px] md:text-xs bg-gray-100 px-2 py-1 rounded text-gray-700">
+                        <code className="text-[10px] md:text-xs bg-muted px-2 py-1 rounded text-foreground">
                           {tenant.slug}
                         </code>
                       </TableCell>
@@ -249,7 +249,7 @@ export default function TenantsPage() {
 
                           if (!platform || !storeUrl) {
                             return (
-                              <Badge variant="secondary" className="bg-gray-100 text-gray-500 border-0 rounded-md px-2 md:px-3 py-1 text-[10px] md:text-xs">
+                              <Badge variant="secondary" className="bg-muted text-muted-foreground border-0 rounded-md px-2 md:px-3 py-1 text-[10px] md:text-xs">
                                 <Store className="mr-1 h-3 w-3" />
                                 Sin configurar
                               </Badge>
@@ -260,7 +260,7 @@ export default function TenantsPage() {
                             <div className="flex flex-col gap-1">
                               <div className="flex items-center gap-2">
                                 {platform === "shopify" ? (
-                                  <Badge variant="secondary" className="bg-green-100 text-green-700 border-0 rounded-md px-2 md:px-3 py-1 text-[10px] md:text-xs flex items-center gap-1">
+                                  <Badge variant="secondary" className="bg-success-bg text-success border-0 rounded-md px-2 md:px-3 py-1 text-[10px] md:text-xs flex items-center gap-1">
                                     <ShoppingBag className="h-3 w-3" />
                                     <a
                                       href={storeUrl}
@@ -273,7 +273,7 @@ export default function TenantsPage() {
                                     </a>
                                   </Badge>
                                 ) : (
-                                  <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-0 rounded-md px-2 md:px-3 py-1 text-[10px] md:text-xs flex items-center gap-1">
+                                  <Badge variant="secondary" className="bg-luma/15 text-marino border-0 rounded-md px-2 md:px-3 py-1 text-[10px] md:text-xs flex items-center gap-1">
                                     <Store className="h-3 w-3" />
                                     <a
                                       href={storeUrl}
@@ -287,13 +287,13 @@ export default function TenantsPage() {
                                   </Badge>
                                 )}
                                 <div
-                                  className={`h-2 w-2 rounded-full ${syncEnabled ? "bg-green-500" : "bg-gray-300"
+                                  className={`h-2 w-2 rounded-full ${syncEnabled ? "bg-success" : "bg-muted-foreground"
                                     }`}
                                   title={syncEnabled ? "Sincronización activa" : "Sincronización desactivada"}
                                 />
                               </div>
                               {!credentialsConfigured && (
-                                <span className="text-[9px] md:text-[10px] text-gray-500 font-medium">
+                                <span className="text-[9px] md:text-[10px] text-muted-foreground font-medium">
                                   Credenciales pendientes
                                 </span>
                               )}
@@ -303,23 +303,25 @@ export default function TenantsPage() {
                       </TableCell>
                       <TableCell>
                         {tenant.is_platform ? (
-                          <Badge variant="secondary" className="bg-purple-100 text-purple-700 border-0 hover:bg-purple-100 rounded-md px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs">
+                          <Badge variant="secondary" className="bg-luma/15 text-marino border-0 hover:bg-luma/15 rounded-md px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs">
                             Plataforma
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="bg-gray-100 text-gray-700 border-0 hover:bg-gray-100 rounded-md px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs">
+                          <Badge variant="secondary" className="bg-muted text-foreground border-0 hover:bg-muted rounded-md px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs">
                             Empresa
                           </Badge>
                         )}
                       </TableCell>
                       <TableCell>
                         {tenant.is_active ? (
-                          <Badge variant="secondary" className="bg-green-100 text-green-700 border-0 hover:bg-green-100 rounded-md px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs">
-                            Activo
+                          <Badge className="bg-success-bg text-success border-success/30">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Activa
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="bg-red-100 text-red-700 border-0 hover:bg-red-100 rounded-md px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs">
-                            Inactivo
+                          <Badge className="bg-muted/50 text-foreground border-border">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Inactiva
                           </Badge>
                         )}
                       </TableCell>
@@ -344,7 +346,7 @@ export default function TenantsPage() {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => handleToggleStatus(tenant)}
-                              className={`text-xs md:text-sm ${tenant.is_active ? "text-red-600" : "text-green-600"}`}
+                              className={`text-xs md:text-sm ${tenant.is_active ? "text-danger" : "text-success"}`}
                             >
                               <Power className="mr-2 h-3 w-3 md:h-4 md:w-4" />
                               {tenant.is_active ? "Desactivar" : "Activar"}
@@ -362,7 +364,7 @@ export default function TenantsPage() {
       </Card>
 
       {/* Stats */}
-      <div className="text-xs md:text-sm text-gray-600">
+      <div className="text-xs md:text-sm text-muted-foreground">
         Mostrando {filteredTenants.length} de {tenants.length} tenants
       </div>
 

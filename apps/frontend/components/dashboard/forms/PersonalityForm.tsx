@@ -103,10 +103,10 @@ export default function PersonalityForm({
     <div className="space-y-8 font-inter">
 
       {/* Basic Information Section */}
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg p-6 shadow-sm border border-border">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-6 h-6 rounded-full border-2 border-[#5ACAF0] flex items-center justify-center">
-            <div className="w-3 h-3 rounded-full bg-[#5ACAF0]"></div>
+          <div className="w-6 h-6 rounded-full border-2 border-aqua flex items-center justify-center">
+            <div className="w-3 h-3 rounded-full bg-aqua"></div>
           </div>
           <h2 className="text-xl font-semibold text-ventia-blue">
             Información básica
@@ -115,23 +115,23 @@ export default function PersonalityForm({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Nombre del vendedor
-              <span className="text-red-500 ml-1">*</span>
+              <span className="text-danger ml-1">*</span>
             </label>
             <input
               type="text"
               value={formData.sellerName}
               onChange={(e) => handleChange("sellerName", e.target.value)}
               placeholder="GenAssist"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] bg-gray-50"
+              className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua bg-muted"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Género del vendedor
-              <span className="text-red-500 ml-1">*</span>
+              <span className="text-danger ml-1">*</span>
             </label>
             <div className="flex flex-wrap gap-3">
               {[
@@ -150,38 +150,38 @@ export default function PersonalityForm({
                     value={option.value}
                     checked={formData.sellerGender === option.value}
                     onChange={(e) => handleChange("sellerGender", e.target.value as any)}
-                    className="w-4 h-4 text-[#5ACAF0] focus:ring-[#5ACAF0]"
+                    className="w-4 h-4 text-aqua focus:ring-aqua"
                   />
-                  <span className="text-sm text-gray-700">{option.label}</span>
+                  <span className="text-sm text-muted-foreground">{option.label}</span>
                 </label>
               ))}
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Nombre de la empresa
-              <span className="text-red-500 ml-1">*</span>
+              <span className="text-danger ml-1">*</span>
             </label>
             <input
               type="text"
               value={formData.companyName}
               onChange={(e) => handleChange("companyName", e.target.value)}
               placeholder="Nicara"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] bg-gray-50"
+              className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua bg-muted"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               País de operación
-              <span className="text-red-500 ml-1">*</span>
+              <span className="text-danger ml-1">*</span>
             </label>
             <Select
               value={formData.operationCountry}
               onValueChange={(value) => handleChange("operationCountry", value)}
             >
-              <SelectTrigger className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] bg-gray-50">
+              <SelectTrigger className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua bg-muted">
                 <SelectValue placeholder="Seleccionar país" />
               </SelectTrigger>
               <SelectContent>
@@ -197,25 +197,25 @@ export default function PersonalityForm({
         </div>
 
         <div className="mt-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-muted-foreground mb-2">
             Descripción de la empresa
-            <span className="text-red-500 ml-1">*</span>
+            <span className="text-danger ml-1">*</span>
           </label>
           <textarea
             value={formData.companyDescription}
             onChange={(e) => handleChange("companyDescription", e.target.value)}
             placeholder="Tienda genérica de productos variados."
             rows={6}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] bg-gray-50"
+            className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua bg-muted"
           />
         </div>
       </div>
 
       {/* Audience and Instructions Section */}
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg p-6 shadow-sm border border-border">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-6 h-6 rounded-full border-2 border-[#5ACAF0] flex items-center justify-center">
-            <div className="w-3 h-3 rounded-full bg-[#5ACAF0]"></div>
+          <div className="w-6 h-6 rounded-full border-2 border-aqua flex items-center justify-center">
+            <div className="w-3 h-3 rounded-full bg-aqua"></div>
           </div>
           <h2 className="text-xl font-semibold text-ventia-blue">
             Audiencia e instrucciones
@@ -224,23 +224,23 @@ export default function PersonalityForm({
 
         <div className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               ¿A quién le vendes?
-              <span className="text-red-500 ml-1">*</span>
+              <span className="text-danger ml-1">*</span>
             </label>
             <input
               type="text"
               value={formData.targetAudience}
               onChange={(e) => handleChange("targetAudience", e.target.value)}
               placeholder="broad consumer audience"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] bg-gray-50"
+              className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua bg-muted"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Instrucciones especiales para tu vendedor
-              <span className="text-red-500 ml-1">*</span>
+              <span className="text-danger ml-1">*</span>
             </label>
             <textarea
               value={formData.specialInstructions}
@@ -249,17 +249,17 @@ export default function PersonalityForm({
               }
               placeholder="general product support"
               rows={5}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] bg-gray-50"
+              className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua bg-muted"
             />
           </div>
         </div>
       </div>
       {/* Personality Section */}
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg p-6 shadow-sm border border-border">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-6 h-6 rounded-full border-2 border-[#5ACAF0] flex items-center justify-center">
-              <div className="w-3 h-3 rounded-full bg-[#5ACAF0]"></div>
+            <div className="w-6 h-6 rounded-full border-2 border-aqua flex items-center justify-center">
+              <div className="w-3 h-3 rounded-full bg-aqua"></div>
             </div>
             <h2 className="text-xl font-semibold text-ventia-blue">
               Personalidad
@@ -274,9 +274,9 @@ export default function PersonalityForm({
           {/* Estilo de comunicación */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
                 Estilo de comunicación
-                <FaInfoCircle className="text-gray-400 text-xs cursor-help" />
+                <FaInfoCircle className="text-muted-foreground text-xs cursor-help" />
               </label>
               <div className="relative">
                 <input
@@ -286,18 +286,18 @@ export default function PersonalityForm({
                     handleChange("communicationStyle", e.target.value)
                   }
                   placeholder="friendly, concise, and clear"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] bg-gray-50"
+                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua bg-muted"
                 />
-                <div className="absolute right-3 top-3 text-xs text-gray-400">
+                <div className="absolute right-3 top-3 text-xs text-muted-foreground">
                   28/200
                 </div>
               </div>
             </div>
 
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
                 Estilo de ventas
-                <FaInfoCircle className="text-gray-400 text-xs cursor-help" />
+                <FaInfoCircle className="text-muted-foreground text-xs cursor-help" />
               </label>
               <div className="relative">
                 <input
@@ -305,9 +305,9 @@ export default function PersonalityForm({
                   value={formData.salesStyle}
                   onChange={(e) => handleChange("salesStyle", e.target.value)}
                   placeholder="consultative"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] bg-gray-50"
+                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua bg-muted"
                 />
-                <div className="absolute right-3 top-3 text-xs text-gray-400">
+                <div className="absolute right-3 top-3 text-xs text-muted-foreground">
                   12/200
                 </div>
               </div>
@@ -317,9 +317,9 @@ export default function PersonalityForm({
           {/* Longitud de respuesta */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                 Longitud de respuesta
-                <FaInfoCircle className="text-gray-400 text-xs cursor-help" />
+                <FaInfoCircle className="text-muted-foreground text-xs cursor-help" />
               </label>
               <span className="text-sm text-ventia-blue font-medium">
                 {responseLengthLabels[formData.responseLength]}
@@ -336,7 +336,7 @@ export default function PersonalityForm({
                 aria-valuetext={responseLengthLabels[formData.responseLength]}
               >
                 {/* Background track with border */}
-                <div className="absolute inset-0 bg-gray-100 border border-gray-300 rounded-full overflow-hidden">
+                <div className="absolute inset-0 bg-muted border border-border rounded-full overflow-hidden">
                   {/* Clickable segments - invisible but functional */}
                   <div className="absolute inset-0 flex">
                     {responseLengthLabels.map((_, index) => (
@@ -354,7 +354,7 @@ export default function PersonalityForm({
                     {responseLengthLabels.slice(1).map((_, index) => (
                       <div
                         key={index}
-                        className="h-full shrink-0 grow-0 border-l border-gray-100/70"
+                        className="h-full shrink-0 grow-0 border-l border-border/70"
                         style={{
                           width: `${100 / responseLengthLabels.length}%`,
                           marginLeft: index === 0 ? `${100 / responseLengthLabels.length}%` : '0'
@@ -365,7 +365,7 @@ export default function PersonalityForm({
 
                   {/* Progress fill - from start to end of selected segment */}
                   <div
-                    className="absolute left-0 top-0 h-full bg-gray-300/30 rounded-l-full transition-all duration-300"
+                    className="absolute left-0 top-0 h-full bg-muted/30 rounded-l-full transition-all duration-300"
                     style={{
                       width: `${((formData.responseLength + 1) / responseLengthLabels.length) * 100}%`,
                     }}
@@ -381,7 +381,7 @@ export default function PersonalityForm({
                         <div
                           className={`w-8 h-8 rounded-full shadow-sm flex items-center justify-center transition-all duration-300 ${
                             index === formData.responseLength
-                              ? "bg-gray-500 scale-100"
+                              ? "bg-muted-foreground scale-100"
                               : "bg-transparent scale-0"
                           }`}
                         >
@@ -422,7 +422,7 @@ export default function PersonalityForm({
                     className={`flex-1 text-center text-xs transition-all ${
                       index === formData.responseLength
                         ? "font-semibold text-ventia-blue"
-                        : "text-gray-600 hover:text-gray-800"
+                        : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     {label}
@@ -434,8 +434,8 @@ export default function PersonalityForm({
 
           {/* Toggles */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <span className="text-sm font-medium text-gray-700">
+            <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
+              <span className="text-sm font-medium text-muted-foreground">
                 ¿Usar emojis?
               </span>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -445,12 +445,12 @@ export default function PersonalityForm({
                   onChange={(e) => handleChange("useEmojis", e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#5ACAF0] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[0.5] after:left-[0.5] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5ACAF0]"></div>
+                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-aqua rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[0.5] after:left-[0.5] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-aqua"></div>
               </label>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <span className="text-sm font-medium text-gray-700">
+            <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
+              <span className="text-sm font-medium text-muted-foreground">
                 ¿Usar signos de apertura (¿)?
               </span>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -462,36 +462,36 @@ export default function PersonalityForm({
                   }
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#5ACAF0] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[0.5] after:left-[0.5] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5ACAF0]"></div>
+                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-aqua rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[0.5] after:left-[0.5] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-aqua"></div>
               </label>
             </div>
           </div>
 
           {/* Palabras a evitar */}
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
               Palabras a evitar
-              <FaInfoCircle className="text-gray-400 text-xs cursor-help" />
+              <FaInfoCircle className="text-muted-foreground text-xs cursor-help" />
             </label>
             <input
               type="text"
               value={formData.wordsToAvoid}
               onChange={(e) => handleChange("wordsToAvoid", e.target.value)}
               placeholder="Escribe palabras separadas por comas"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] bg-gray-50"
+              className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua bg-muted"
             />
           </div>
 
           {/* Paleta de emojis permitidos */}
           <div className="relative">
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
               Paleta de emojis permitidos
-              <FaInfoCircle className="text-gray-400 text-xs cursor-help" />
+              <FaInfoCircle className="text-muted-foreground text-xs cursor-help" />
             </label>
 
             <div className="flex gap-2 items-stretch">
               {/* Input con emojis seleccionados dentro */}
-              <div className="flex-1 border border-gray-300 rounded-lg p-2 bg-gray-50 min-h-12 flex flex-wrap gap-2 items-center">
+              <div className="flex-1 border border-border rounded-lg p-2 bg-muted min-h-12 flex flex-wrap gap-2 items-center">
                 {formData.allowedEmojis.map((emoji) => (
                   <div
                     key={emoji}
@@ -502,7 +502,7 @@ export default function PersonalityForm({
                     </span>
                     <button
                       onClick={() => removeEmoji(emoji)}
-                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute -top-1 -right-1 bg-danger text-white rounded-full w-4 h-4 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       ×
                     </button>
@@ -510,7 +510,7 @@ export default function PersonalityForm({
                 ))}
 
                 {formData.allowedEmojis.length === 0 && (
-                  <span className="text-sm text-gray-400">
+                  <span className="text-sm text-muted-foreground">
                     Escribe o selecciona emojis de la paleta
                   </span>
                 )}
@@ -519,7 +519,7 @@ export default function PersonalityForm({
               {/* Botón selector de emojis a la derecha */}
               <button
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className="w-12 border border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-xl transition-colors"
+                className="w-12 border border-border rounded-lg bg-muted hover:bg-muted flex items-center justify-center text-xl transition-colors"
               >
                 <HiOutlineEmojiHappy />
 
@@ -537,7 +537,7 @@ export default function PersonalityForm({
 
                 {/* Emoji picker superpuesto - aparece hacia arriba */}
                 <div className="absolute right-0 bottom-full mb-2 z-50">
-                  <div className="border border-gray-300 rounded-lg overflow-hidden shadow-2xl bg-white">
+                  <div className="border border-border rounded-lg overflow-hidden shadow-2xl bg-white">
                     <EmojiPicker
                       onEmojiClick={handleEmojiClick}
                       width={350}
@@ -556,10 +556,10 @@ export default function PersonalityForm({
       </div>
 
       {/* Messages Section */}
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg p-6 shadow-sm border border-border">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-6 h-6 rounded-full border-2 border-[#5ACAF0] flex items-center justify-center">
-            <div className="w-3 h-3 rounded-full bg-[#5ACAF0]"></div>
+          <div className="w-6 h-6 rounded-full border-2 border-aqua flex items-center justify-center">
+            <div className="w-3 h-3 rounded-full bg-aqua"></div>
           </div>
           <h2 className="text-xl font-semibold text-ventia-blue">
             Mensajes
@@ -569,49 +569,49 @@ export default function PersonalityForm({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Mensaje de bienvenida */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Mensaje de bienvenida
-              <span className="text-red-500 ml-1">*</span>
+              <span className="text-danger ml-1">*</span>
             </label>
             <textarea
               value={formData.welcomeMessage}
               onChange={(e) => handleChange("welcomeMessage", e.target.value)}
               placeholder="¡Hola! Soy GenAssist. ¿En qué puedo ayudarte hoy?"
               rows={4}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] bg-gray-50"
+              className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua bg-muted"
             />
           </div>
 
           {/* Mensaje de confirmación de compra */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Mensaje de confirmación de compra
-              <span className="text-red-500 ml-1">*</span>
+              <span className="text-danger ml-1">*</span>
             </label>
             <textarea
               value={formData.purchaseConfirmationMessage}
               onChange={(e) => handleChange("purchaseConfirmationMessage", e.target.value)}
               placeholder="¡Gracias por tu compra! Estamos procesando tu pedido y pronto recibirás la confirmación."
               rows={4}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] bg-gray-50"
+              className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua bg-muted"
             />
           </div>
         </div>
 
         {/* Mensaje de derivación humana */}
         <div className="mt-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-muted-foreground mb-2">
             Mensaje de derivación humana
-            <span className="text-red-500 ml-1">*</span>
+            <span className="text-danger ml-1">*</span>
           </label>
           <textarea
             value={formData.humanHandoffMessage}
             onChange={(e) => handleChange("humanHandoffMessage", e.target.value)}
             placeholder="Te conectaré con un agente humano para brindarte más ayuda."
             rows={4}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] bg-gray-50"
+            className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua bg-muted"
           />
-          <p className="mt-2 text-xs text-gray-500">
+          <p className="mt-2 text-xs text-muted-foreground">
             Mensaje que se envía cuando el asistente deriva la conversación a un humano
           </p>
         </div>

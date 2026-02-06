@@ -71,10 +71,10 @@ export default function UserDetailPage() {
         <Card>
           <CardContent className="py-12">
             <div className="text-center space-y-4">
-              <UserIcon className="h-12 w-12 text-gray-300 mx-auto" />
+              <UserIcon className="h-12 w-12 text-muted-foreground mx-auto" />
               <div>
                 <h3 className="text-lg font-semibold">Error al cargar usuario</h3>
-                <p className="text-gray-500">{error || 'No se encontró el usuario'}</p>
+                <p className="text-muted-foreground">{error || 'No se encontró el usuario'}</p>
               </div>
             </div>
           </CardContent>
@@ -86,17 +86,17 @@ export default function UserDetailPage() {
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'SUPERADMIN':
-        return 'bg-purple-100 text-purple-700';
+        return 'bg-luma/15 text-marino';
       case 'ADMIN':
-        return 'bg-blue-100 text-blue-700';
+        return 'bg-volt/10 text-volt';
       case 'LOGISTICA':
-        return 'bg-orange-100 text-orange-700';
+        return 'bg-warning-bg text-warning';
       case 'VENTAS':
-        return 'bg-green-100 text-green-700';
+        return 'bg-success-bg text-success';
       case 'VIEWER':
-        return 'bg-gray-100 text-gray-700';
+        return 'bg-muted text-foreground';
       default:
-        return 'bg-gray-100 text-gray-700';
+        return 'bg-muted text-foreground';
     }
   };
 
@@ -111,18 +111,18 @@ export default function UserDetailPage() {
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold text-gray-900">{user.name}</h1>
+              <h1 className="text-3xl font-bold text-foreground font-heading">{user.name}</h1>
               {user.is_active ? (
-                <Badge className="bg-green-100 text-green-700">Activo</Badge>
+                <Badge className="bg-success-bg text-success border-success/30">Activo</Badge>
               ) : (
-                <Badge variant="destructive">Inactivo</Badge>
+                <Badge className="bg-muted/50 text-foreground border-border">Inactivo</Badge>
               )}
               <Badge className={getRoleBadgeColor(user.role)}>
                 <Shield className="mr-1 h-3 w-3" />
                 {getRoleLabel(user.role)}
               </Badge>
             </div>
-            <p className="text-gray-600 mt-1 flex items-center gap-2">
+            <p className="text-muted-foreground mt-1 flex items-center gap-2">
               <Mail className="h-4 w-4" />
               {user.email}
             </p>
@@ -153,9 +153,9 @@ export default function UserDetailPage() {
           <CardContent>
             <div className="text-2xl font-bold">
               {user.is_active ? (
-                <Badge className="bg-green-100 text-green-700">Activo</Badge>
+                <Badge className="bg-success-bg text-success border-success/30">Activo</Badge>
               ) : (
-                <Badge variant="destructive">Inactivo</Badge>
+                <Badge className="bg-muted/50 text-foreground border-border">Inactivo</Badge>
               )}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -191,20 +191,20 @@ export default function UserDetailPage() {
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <div className="text-sm font-medium text-gray-500">Nombre Completo</div>
+              <div className="text-sm font-medium text-muted-foreground">Nombre Completo</div>
               <div className="mt-1 text-base">{user.name}</div>
             </div>
 
             <div>
-              <div className="text-sm font-medium text-gray-500">Correo Electrónico</div>
+              <div className="text-sm font-medium text-muted-foreground">Correo Electrónico</div>
               <div className="mt-1 text-base flex items-center gap-2">
-                <Mail className="h-4 w-4 text-gray-500" />
+                <Mail className="h-4 w-4 text-muted-foreground" />
                 {user.email}
               </div>
             </div>
 
             <div>
-              <div className="text-sm font-medium text-gray-500">Rol</div>
+              <div className="text-sm font-medium text-muted-foreground">Rol</div>
               <div className="mt-1">
                 <Badge className={getRoleBadgeColor(user.role)}>
                   <Shield className="mr-1 h-3 w-3" />
@@ -214,22 +214,22 @@ export default function UserDetailPage() {
             </div>
 
             <div>
-              <div className="text-sm font-medium text-gray-500">Estado</div>
+              <div className="text-sm font-medium text-muted-foreground">Estado</div>
               <div className="mt-1">
                 {user.is_active ? (
-                  <Badge className="bg-green-100 text-green-700">Activo</Badge>
+                  <Badge className="bg-success-bg text-success border-success/30">Activo</Badge>
                 ) : (
-                  <Badge variant="destructive">Inactivo</Badge>
+                  <Badge className="bg-muted/50 text-foreground border-border">Inactivo</Badge>
                 )}
               </div>
             </div>
 
             {user.tenant_id && (
               <div>
-                <div className="text-sm font-medium text-gray-500">Tenant ID</div>
+                <div className="text-sm font-medium text-muted-foreground">Tenant ID</div>
                 <div className="mt-1 text-base flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-gray-500" />
-                  <code className="text-sm bg-gray-100 px-2 py-1 rounded">{user.tenant_id}</code>
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <code className="text-sm bg-muted px-2 py-1 rounded">{user.tenant_id}</code>
                 </div>
               </div>
             )}
@@ -239,17 +239,17 @@ export default function UserDetailPage() {
 
           <div className="grid gap-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">ID del Usuario:</span>
+              <span className="text-muted-foreground">ID del Usuario:</span>
               <span className="font-mono">{user.id}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Creado:</span>
+              <span className="text-muted-foreground">Creado:</span>
               <span>
                 {formatDateTime(user.created_at)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Última actualización:</span>
+              <span className="text-muted-foreground">Última actualización:</span>
               <span>
                 {formatDateTime(user.updated_at)}
               </span>

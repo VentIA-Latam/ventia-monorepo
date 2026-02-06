@@ -86,15 +86,15 @@ export default function TenantAPIKeysPage() {
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'ADMIN':
-        return 'bg-purple-100 text-purple-700';
+        return 'bg-luma/15 text-marino';
       case 'LOGISTICA':
-        return 'bg-blue-100 text-blue-700';
+        return 'bg-volt/10 text-volt';
       case 'VENTAS':
-        return 'bg-green-100 text-green-700';
+        return 'bg-success-bg text-success';
       case 'VIEWER':
-        return 'bg-gray-100 text-gray-700';
+        return 'bg-muted text-foreground';
       default:
-        return 'bg-gray-100 text-gray-700';
+        return 'bg-muted text-foreground';
     }
   };
 
@@ -116,7 +116,7 @@ export default function TenantAPIKeysPage() {
     const diffHours = Math.floor((now.getTime() - lastUsed.getTime()) / (1000 * 60 * 60));
 
     if (diffHours < 24) {
-      return <Badge className="bg-green-100 text-green-700 text-xs">Reciente</Badge>;
+      return <Badge className="bg-success-bg text-success text-xs">Reciente</Badge>;
     } else if (diffHours < 168) { // 7 days
       return <Badge variant="secondary" className="text-xs">{Math.floor(diffHours / 24)}d atrás</Badge>;
     } else {
@@ -128,11 +128,11 @@ export default function TenantAPIKeysPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-3xl font-bold text-foreground font-heading flex items-center gap-2">
             <Key className="h-8 w-8" />
             API Keys
           </h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-muted-foreground mt-1">
             Gestiona las claves de API para integraciones (n8n, webhooks, etc.)
           </p>
         </div>
@@ -143,9 +143,9 @@ export default function TenantAPIKeysPage() {
       </div>
 
       {/* Documentation Alert */}
-      <Alert className="bg-blue-50 border-blue-200">
-        <Info className="h-4 w-4 text-blue-600" />
-        <AlertDescription className="text-blue-800">
+      <Alert className="bg-volt/10 border-volt/30">
+        <Info className="h-4 w-4 text-volt" />
+        <AlertDescription className="text-volt">
           <div className="flex items-start gap-2">
             <BookOpen className="h-4 w-4 mt-0.5 shrink-0" />
             <div>
@@ -153,8 +153,8 @@ export default function TenantAPIKeysPage() {
               <ol className="list-decimal ml-4 mt-2 space-y-1">
                 <li>Copia tu API Key cuando la crees (solo se muestra una vez)</li>
                 <li>En n8n, usa el nodo &quot;HTTP Request&quot;</li>
-                <li>Añade un header: <code className="bg-blue-100 px-1 rounded">X-API-Key</code> con tu clave</li>
-                <li>URL base: <code className="bg-blue-100 px-1 rounded">{process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}</code></li>
+                <li>Añade un header: <code className="bg-volt/10 px-1 rounded">X-API-Key</code> con tu clave</li>
+                <li>URL base: <code className="bg-volt/10 px-1 rounded">{process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}</code></li>
               </ol>
             </div>
           </div>
@@ -176,7 +176,7 @@ export default function TenantAPIKeysPage() {
           {/* Filters */}
           <div className="flex gap-4 items-center">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Buscar por nombre o prefijo..."
                 value={searchTerm}
@@ -214,13 +214,13 @@ export default function TenantAPIKeysPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       Cargando API Keys...
                     </TableCell>
                   </TableRow>
                 ) : filteredAPIKeys.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       {searchTerm ? "No se encontraron API Keys" : "No tienes API Keys aún. Crea una para empezar."}
                     </TableCell>
                   </TableRow>
@@ -229,7 +229,7 @@ export default function TenantAPIKeysPage() {
                     <TableRow key={apiKey.id}>
                       <TableCell className="font-medium">{apiKey.name}</TableCell>
                       <TableCell>
-                        <code className="text-sm bg-gray-100 px-2 py-1 rounded">
+                        <code className="text-sm bg-muted px-2 py-1 rounded">
                           {apiKey.key_prefix}••••••••
                         </code>
                       </TableCell>
@@ -242,7 +242,7 @@ export default function TenantAPIKeysPage() {
                         <div className="flex flex-col gap-1">
                           {getLastUsedBadge(apiKey.last_used_at)}
                           {apiKey.last_used_at && (
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-muted-foreground">
                               {formatDateLocal(apiKey.last_used_at)}
                             </span>
                           )}
@@ -250,12 +250,12 @@ export default function TenantAPIKeysPage() {
                       </TableCell>
                       <TableCell>
                         {apiKey.is_active ? (
-                          <Badge className="bg-green-100 text-green-700">Activa</Badge>
+                          <Badge className="bg-success-bg text-success border-success/30">Activa</Badge>
                         ) : (
-                          <Badge variant="destructive">Revocada</Badge>
+                          <Badge className="bg-muted/50 text-foreground border-border">Revocada</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-sm text-gray-600">
+                      <TableCell className="text-sm text-muted-foreground">
                         {apiKey.expires_at ? formatDateLocal(apiKey.expires_at) : "Sin vencimiento"}
                       </TableCell>
                       <TableCell>
@@ -270,7 +270,7 @@ export default function TenantAPIKeysPage() {
                             <DropdownMenuSeparator />
                             {apiKey.is_active && (
                               <DropdownMenuItem
-                                className="text-red-600"
+                                className="text-danger"
                                 onClick={() => handleRevoke(apiKey)}
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />

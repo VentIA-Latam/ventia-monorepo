@@ -83,7 +83,7 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Listado de Pedidos</h1>
+            <h1 className="text-3xl font-bold font-heading text-foreground">Listado de Pedidos</h1>
             <p className="text-muted-foreground mt-1">
               Gestiona y monitorea todas las órdenes, estados de pago y logística centralizada.
             </p>

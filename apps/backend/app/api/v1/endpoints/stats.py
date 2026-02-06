@@ -4,7 +4,7 @@ Platform statistics endpoints.
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import (
@@ -65,6 +65,7 @@ async def get_platform_stats(
 
 @router.get("/activity/recent", response_model=RecentActivityResponse, tags=["stats"])
 async def get_recent_activity(
+    limit: int = Query(10, ge=1, le=50),
     current_user: User = Depends(require_permission_dual("GET", "/stats")),
     db: Session = Depends(get_database),
 ) -> RecentActivityResponse:
@@ -102,7 +103,7 @@ async def get_recent_activity(
         HTTPException 500: If activity retrieval fails
     """
     try:
-        return activity_service.get_recent_activities(db, limit=3)
+        return activity_service.get_recent_activities(db, limit=limit)
     except Exception as e:
         logger.error(f"Failed to retrieve recent activities: {str(e)}")
         raise HTTPException(

@@ -86,12 +86,12 @@ export function OrderDetail({ order, invoices }: OrderDetailProps) {
     if (order.validado && order.status === 'Pagado') {
       return (
         <Badge className="
-          bg-green-50
-          text-green-700
-          border-green-200
-          hover:bg-green-100
-          hover:text-green-800
-          hover:border-green-300
+          bg-success-bg
+          text-success
+          border-success/30
+          hover:bg-success-bg
+          hover:text-success
+          hover:border-success/30
           transition-colors
           cursor-default
         ">
@@ -102,12 +102,12 @@ export function OrderDetail({ order, invoices }: OrderDetailProps) {
     } else if (order.status === 'Cancelado') {
       return (
         <Badge className="
-          bg-red-50
-          text-red-700
-          border-red-200
-          hover:bg-red-100
-          hover:text-red-800
-          hover:border-red-300
+          bg-danger-bg
+          text-danger
+          border-danger/30
+          hover:bg-danger-bg
+          hover:text-danger
+          hover:border-danger/30
           transition-colors
           cursor-default
         ">
@@ -117,12 +117,12 @@ export function OrderDetail({ order, invoices }: OrderDetailProps) {
     }
     return (
       <Badge className="
-        bg-orange-50 
-        text-orange-700 
-        border-orange-200
-        hover:bg-orange-100
-        hover:text-orange-800
-        hover:border-orange-300
+        bg-warning-bg
+        text-warning
+        border-warning/30
+        hover:bg-warning-bg
+        hover:text-warning
+        hover:border-warning/30
         transition-colors
         cursor-default
       ">

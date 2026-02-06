@@ -24,10 +24,10 @@ export function StatsCard({
   comparison,
 }: StatsCardProps) {
   return (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
         <div className="space-y-1">
-          <CardTitle className="text-sm font-medium text-gray-600">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
             {title}
           </CardTitle>
         </div>
@@ -39,7 +39,7 @@ export function StatsCard({
       </CardHeader>
 
       <CardContent>
-        <div className="text-3xl font-bold text-gray-900">
+        <div className="text-3xl font-bold text-foreground font-mono tabular-nums">
           {value}
         </div>
 
@@ -49,9 +49,9 @@ export function StatsCard({
             className={cn(
               "mt-3 text-xs",
               {
-                "bg-orange-50 text-orange-700 border-orange-200": badgeType === "warning",
-                "bg-blue-50 text-blue-700 border-blue-200": badgeType === "info",
-                "bg-green-50 text-green-700 border-green-200": badgeType === "success",
+                "bg-warning-bg text-warning border-warning/30": badgeType === "warning",
+                "bg-info-bg text-info border-info/30": badgeType === "info",
+                "bg-success-bg text-success border-success/30": badgeType === "success",
               }
             )}
           >
@@ -64,14 +64,14 @@ export function StatsCard({
             <span className={cn(
               "font-semibold",
               {
-                "text-green-600": changeType === "positive",
-                "text-red-600": changeType === "negative",
+                "text-success": changeType === "positive",
+                "text-danger": changeType === "negative",
               }
             )}>
               {change}
             </span>
             {comparison && (
-              <span className="ml-1 text-gray-500">
+              <span className="ml-1 text-muted-foreground">
                 {comparison}
               </span>
             )}
