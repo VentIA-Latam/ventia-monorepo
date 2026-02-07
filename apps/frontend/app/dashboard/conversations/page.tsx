@@ -9,3 +9,4 @@ import { ChatwootEmbed } from "@/components/chatwoot";
 export default function ChatwootPage() {
     return <ChatwootEmbed mode="sso" iconColor="blue" showFooterInfo={false} />;
 }
+

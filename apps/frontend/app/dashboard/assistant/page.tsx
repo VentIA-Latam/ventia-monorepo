@@ -37,13 +37,13 @@ export default function AssistantPage() {
       <div className="flex justify-between">
         <button
           type="button"
-          className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-inter"
+          className="px-6 py-3 border border-border rounded-lg text-muted-foreground hover:bg-muted transition-colors font-sans"
         >
           Cancelar
         </button>
         <button
           type="button"
-          className="px-6 py-3 bg-[#5ACAF0] text-white rounded-lg hover:bg-[#4AB8DC] transition-colors font-inter"
+          className="px-6 py-3 bg-aqua text-white rounded-lg hover:bg-aqua/80 transition-colors font-sans"
         >
           Guardar y continuar
         </button>

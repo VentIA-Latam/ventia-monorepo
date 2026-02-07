@@ -45,19 +45,18 @@ export default async function OrderPage({ params }: OrderPageProps) {
     );
   }
 
-  // 2️⃣ Fetch de la orden específica (desde el servidor)
-  let order;
-  let error: Error | null = null;
+  // 2️⃣ Fetch orden e invoices en paralelo (async-parallel)
+  const [orderResult, invoicesResult] = await Promise.allSettled([
+    fetchOrder(accessToken, orderId),
+    fetchInvoicesByOrder(accessToken, orderId),
+  ]);
 
-  try {
-    order = await fetchOrder(accessToken, orderId);
-  } catch (err) {
-    console.error('Error loading order:', err);
-    error = err instanceof Error ? err : new Error('Error desconocido');
-  }
-
-  // 3️⃣ Si hay error, mostrar mensaje
-  if (error) {
+  // 3️⃣ Si hay error en la orden, mostrar mensaje
+  if (orderResult.status === 'rejected') {
+    const error = orderResult.reason instanceof Error
+      ? orderResult.reason
+      : new Error('Error desconocido');
+    console.error('Error loading order:', error);
     return (
       <div className="space-y-6">
         <h1 className="text-3xl font-bold">Error al cargar pedido</h1>
@@ -69,14 +68,11 @@ export default async function OrderPage({ params }: OrderPageProps) {
     );
   }
 
-  // 4️⃣ Cargar invoices de la orden
-  let invoices: Invoice[] = [];
-  try {
-    invoices = await fetchInvoicesByOrder(accessToken, orderId);
-  } catch (err) {
-    console.error('Error loading invoices:', err);
-    // No es crítico, continuar sin invoices
-  }
+  const order = orderResult.value;
+  // Invoices no son críticos, usar array vacío si fallan
+  const invoices: Invoice[] = invoicesResult.status === 'fulfilled'
+    ? invoicesResult.value
+    : [];
 
   // 5️⃣ Renderizar el componente cliente con los datos
   return <OrderDetail order={order!} invoices={invoices} />;
