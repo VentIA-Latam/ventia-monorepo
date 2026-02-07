@@ -102,31 +102,31 @@ export default function ChatwootPage() {
         return (
             <div className="space-y-6">
                 <div className="flex flex-col gap-2">
-                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                        <MessageSquare className="h-6 w-6 text-volt" />
+                    <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                        <MessageSquare className="h-6 w-6 text-blue-600" />
                         Chatwoot
                     </h1>
-                    <p className="text-muted-foreground">
+                    <p className="text-gray-500">
                         Centro de mensajería y atención al cliente
                     </p>
                 </div>
 
-                <Card className="border-warning/30 bg-warning-bg">
+                <Card className="border-yellow-200 bg-yellow-50">
                     <CardHeader>
-                        <CardTitle className="text-warning flex items-center gap-2">
+                        <CardTitle className="text-yellow-800 flex items-center gap-2">
                             <MessageSquare className="h-5 w-5" />
                             Configuración Requerida
                         </CardTitle>
-                        <CardDescription className="text-warning">
+                        <CardDescription className="text-yellow-700">
                             Chatwoot no está configurado en este momento.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="text-warning space-y-4">
+                    <CardContent className="text-yellow-800 space-y-4">
                         <p>
                             Para habilitar la integración con Chatwoot, necesitas configurar
                             las siguientes variables de entorno:
                         </p>
-                        <div className="bg-warning-bg p-4 rounded-lg font-mono text-sm">
+                        <div className="bg-yellow-100 p-4 rounded-lg font-mono text-sm">
                             <p>NEXT_PUBLIC_CHATWOOT_BASE_URL=http://localhost:3001</p>
                             <p>NEXT_PUBLIC_CHATWOOT_ACCOUNT_ID=1</p>
                         </div>
@@ -156,11 +156,11 @@ export default function ChatwootPage() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex flex-col gap-1">
-                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                        <MessageSquare className="h-6 w-6 text-volt" />
+                    <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                        <MessageSquare className="h-6 w-6 text-blue-600" />
                         Chatwoot
                     </h1>
-                    <p className="text-muted-foreground">
+                    <p className="text-gray-500">
                         Centro de mensajería y atención al cliente
                     </p>
                 </div>
@@ -222,17 +222,17 @@ export default function ChatwootPage() {
 
             {/* Chatwoot Iframe Container */}
             <div
-                className={`relative bg-card rounded-lg border border-border overflow-hidden shadow-sm ${isFullscreen
+                className={`relative bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm ${isFullscreen
                     ? "h-[calc(100vh-120px)]"
                     : "h-[calc(100vh-220px)] min-h-[500px]"
                     }`}
             >
                 {/* Loading Skeleton */}
                 {isLoading && (
-                    <div className="absolute inset-0 bg-muted flex items-center justify-center z-10">
+                    <div className="absolute inset-0 bg-gray-50 flex items-center justify-center z-10">
                         <div className="text-center space-y-4">
-                            <RefreshCw className="h-8 w-8 animate-spin text-volt mx-auto" />
-                            <p className="text-muted-foreground">Cargando Chatwoot...</p>
+                            <RefreshCw className="h-8 w-8 animate-spin text-blue-600 mx-auto" />
+                            <p className="text-gray-500">Cargando Chatwoot...</p>
                         </div>
                     </div>
                 )}
@@ -253,11 +253,10 @@ export default function ChatwootPage() {
             </div>
 
             {/* Footer info */}
-            <div className="text-xs text-muted-foreground text-center">
+            <div className="text-xs text-gray-400 text-center">
                 Conectado a: {chatwootBaseUrl}
                 {user?.email && ` • Usuario: ${user.email}`}
             </div>
         </div>
     );
 }
-

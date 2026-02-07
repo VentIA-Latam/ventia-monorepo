@@ -25,7 +25,7 @@ export default function Footer() {
           </div>
 
           {/* TEXTO: Más pequeño en móvil (text-xs/sm) y centrado */}
-          <p className="text-xs sm:text-sm md:text-lg leading-relaxed font-sans mb-8 md:mb-10 max-w-xs md:max-w-lg mx-auto md:mx-0">
+          <p className="text-xs sm:text-sm md:text-lg leading-relaxed font-inter mb-8 md:mb-10 max-w-xs md:max-w-lg mx-auto md:mx-0">
             VentIA no es un chatbot ni una empresa de envíos.<br className="hidden md:block" />
             <span className="md:hidden"> </span>
             Es tu nuevo equipo de ventas y logística trabajando <span className="font-semibold">24/7</span> por ti.
@@ -68,7 +68,7 @@ export default function Footer() {
             target="_blank"
           >
             <div className="flex flex-col items-center md:items-end cursor-pointer hover:opacity-90 transition">
-              <p className="text-[10px] md:text-xs font-sans mb-1 uppercase tracking-widest md:hidden">
+              <p className="text-[10px] md:text-xs font-inter mb-1 uppercase tracking-widest md:hidden">
                 LIBRO DE RECLAMACIONES
               </p>
               <div className="relative h-10 w-16 md:h-20 md:w-32">
@@ -86,21 +86,21 @@ export default function Footer() {
             <h3 className="font-libre font-bold tracking-wide text-sm md:text-base mb-2 uppercase">
               CONTACTO
             </h3>
-            <p className="text-xs md:text-lg font-sans mb-1">ventas@ventia-latam.com</p>
-            <p className="text-xs md:text-lg font-sans">+51 951 752 355</p>
+            <p className="text-xs md:text-lg font-inter mb-1">ventas@ventia-latam.com</p>
+            <p className="text-xs md:text-lg font-inter">+51 951 752 355</p>
           </div>
 
           {/* LINKS LEGALES */}
           <div className="md:text-right text-center flex flex-col gap-2">
             <Link
               href="/terms-and-conditions"
-              className="text-xs md:text-sm font-sans text-white/80 hover:text-white transition"
+              className="text-xs md:text-sm font-inter text-white/80 hover:text-white transition"
             >
               Términos y Condiciones
             </Link>
             <Link
               href="/privacy-policy"
-              className="text-xs md:text-sm font-sans text-white/80 hover:text-white transition"
+              className="text-xs md:text-sm font-inter text-white/80 hover:text-white transition"
             >
               Política de Privacidad
             </Link>

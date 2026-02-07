@@ -1,8 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "mcp__clickup__clickup_create_task",
-      "Bash(pnpm build:*)"
+      "mcp__clickup__clickup_create_task"
     ]
   }
 }

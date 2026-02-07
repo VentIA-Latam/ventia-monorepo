@@ -8,24 +8,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_database
-from app.models.tenant import Tenant
 from app.models.user import User
-from app.schemas.metrics import (
-    DashboardMetrics,
-    MetricsQuery,
-    OrdersByCityResponse,
-    PeriodType,
-    TopProductsResponse,
-)
+from app.schemas.metrics import DashboardMetrics, MetricsQuery, PeriodType
 from app.services.metrics import metrics_service
 
 router = APIRouter()
-
-
-def _get_tenant_timezone(db: Session, tenant_id: int) -> str:
-    """Get the IANA timezone configured for a tenant."""
-    tenant = db.query(Tenant.timezone).filter(Tenant.id == tenant_id).first()
-    return tenant[0] if tenant and tenant[0] else "America/Lima"
 
 
 @router.get("/dashboard", response_model=DashboardMetrics, tags=["metrics"])
@@ -65,22 +52,33 @@ async def get_dashboard_metrics(
     ```
 
     All authenticated users can view metrics from their tenant.
-    Date calculations use the tenant's configured timezone.
+
+    Args:
+        period: Predefined period type
+        start_date: Custom start date (only for period='custom')
+        end_date: Custom end date (only for period='custom')
+        current_user: Current authenticated user
+        db: Database session
+
+    Returns:
+        DashboardMetrics with all dashboard statistics for the specified period
+
+    Raises:
+        HTTPException: If metrics retrieval fails or invalid parameters
     """
     try:
+        # Create query object
         query = MetricsQuery(
             period=period,
             start_date=start_date,
             end_date=end_date
         )
 
-        tz_name = _get_tenant_timezone(db, current_user.tenant_id)
-
+        # Get metrics
         metrics = metrics_service.get_dashboard_metrics(
             db,
             current_user.tenant_id,
-            query,
-            tz_name=tz_name,
+            query
         )
 
         return metrics
@@ -94,53 +92,4 @@ async def get_dashboard_metrics(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve metrics: {str(e)}",
-        )
-
-
-@router.get("/top-products", response_model=TopProductsResponse, tags=["metrics"])
-async def get_top_products(
-    period: PeriodType = Query("last_30_days", description="Predefined period"),
-    start_date: date | None = Query(None, description="Custom start date (required for period='custom')"),
-    end_date: date | None = Query(None, description="Custom end date (required for period='custom')"),
-    limit: int = Query(5, ge=1, le=50, description="Max number of products to return"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_database),
-) -> TopProductsResponse:
-    """Get top-selling products for the current user's tenant."""
-    try:
-        query = MetricsQuery(period=period, start_date=start_date, end_date=end_date)
-        tz_name = _get_tenant_timezone(db, current_user.tenant_id)
-        return metrics_service.get_top_products(
-            db, current_user.tenant_id, query, limit, tz_name=tz_name,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve top products: {str(e)}",
-        )
-
-
-@router.get("/orders-by-city", response_model=OrdersByCityResponse, tags=["metrics"])
-async def get_orders_by_city(
-    period: PeriodType = Query("last_30_days", description="Predefined period"),
-    start_date: date | None = Query(None, description="Custom start date (required for period='custom')"),
-    end_date: date | None = Query(None, description="Custom end date (required for period='custom')"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_database),
-) -> OrdersByCityResponse:
-    """Get order counts grouped by city for the current user's tenant."""
-    try:
-        query = MetricsQuery(period=period, start_date=start_date, end_date=end_date)
-        tz_name = _get_tenant_timezone(db, current_user.tenant_id)
-        return metrics_service.get_orders_by_city(
-            db, current_user.tenant_id, query, tz_name=tz_name,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve orders by city: {str(e)}",
         )

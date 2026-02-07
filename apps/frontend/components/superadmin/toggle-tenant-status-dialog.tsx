@@ -90,7 +90,7 @@ export function ToggleTenantStatusDialog({
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={loading}
-            className={tenant.is_active ? "bg-danger hover:bg-danger/90" : "bg-success hover:bg-success/90"}
+            className={tenant.is_active ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"}
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {tenant.is_active ? "Desactivar" : "Activar"}

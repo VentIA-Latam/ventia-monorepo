@@ -43,14 +43,6 @@ export function getCurrencySymbol(currency: string): string {
  * @returns String formateado "15/01/2024"
  */
 export function formatDate(isoDate: string): string {
-  // Pure date strings (e.g. "2026-02-01") from metrics date ranges
-  // Parse directly to avoid timezone shift (UTC midnight → previous day in Lima)
-  if (/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
-    const [year, month, day] = isoDate.split('-');
-    return `${day}/${month}/${year}`;
-  }
-
-  // Timestamps (e.g. "2026-02-06 00:34:06") → convert from UTC to Lima
   const utcDate = new Date(isoDate + 'Z');
 
   const peruDate = new Date(

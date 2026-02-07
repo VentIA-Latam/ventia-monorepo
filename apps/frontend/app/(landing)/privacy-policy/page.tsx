@@ -16,13 +16,13 @@ export default function PrivacyPolicyPage() {
           <h1 className="text-3xl md:text-4xl font-libre font-bold text-[#182432] mb-4">
             Política de Privacidad
           </h1>
-          <p className="text-sm text-gray-500 font-sans uppercase tracking-wide">
+          <p className="text-sm text-gray-500 font-inter uppercase tracking-wide">
             Última actualización: 20 de octubre de 2025
           </p>
         </div>
 
         {/* Contenido del documento */}
-        <div className="space-y-10 font-sans text-[#182432]">
+        <div className="space-y-10 font-inter text-[#182432]">
           {/* Sección 1 */}
           <section className="space-y-4">
             <h2 className="text-xl md:text-2xl font-libre font-semibold text-[#182432]">
@@ -288,4 +288,3 @@ export default function PrivacyPolicyPage() {
     </main>
   );
 }
-

@@ -134,7 +134,7 @@ export function EditUserDialog({ user, open, onOpenChange, onSuccess, tenants }:
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-gray-500">
                 Selecciona el tenant al que pertenecerá el usuario.
               </p>
             </div>
@@ -156,13 +156,13 @@ export function EditUserDialog({ user, open, onOpenChange, onSuccess, tenants }:
 
             {/* Chatwoot Integration - Required fields */}
             <div className="border-t pt-4 mt-2">
-              <p className="text-sm font-medium text-foreground mb-3">Integración Chatwoot (Requerido)</p>
-              <p className="text-xs text-muted-foreground mb-3">
+              <p className="text-sm font-medium text-gray-700 mb-3">Integración Chatwoot (Requerido)</p>
+              <p className="text-xs text-gray-500 mb-3">
                 El usuario debe existir previamente en Chatwoot. Obtén estos IDs desde la plataforma de Chatwoot.
               </p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="chatwoot_user_id">User ID <span className="text-danger">*</span></Label>
+                  <Label htmlFor="chatwoot_user_id">User ID <span className="text-red-500">*</span></Label>
                   <Input
                     id="chatwoot_user_id"
                     type="number"
@@ -173,7 +173,7 @@ export function EditUserDialog({ user, open, onOpenChange, onSuccess, tenants }:
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="chatwoot_account_id">Account ID <span className="text-danger">*</span></Label>
+                  <Label htmlFor="chatwoot_account_id">Account ID <span className="text-red-500">*</span></Label>
                   <Input
                     id="chatwoot_account_id"
                     type="number"
@@ -187,7 +187,7 @@ export function EditUserDialog({ user, open, onOpenChange, onSuccess, tenants }:
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading} className="bg-primary hover:bg-primary/90">
+            <Button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Guardar Cambios
             </Button>
           </DialogFooter>

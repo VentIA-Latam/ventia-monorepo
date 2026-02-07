@@ -27,10 +27,10 @@ export default function KnowledgeBaseForm() {
   ];
 
   return (
-    <div className="bg-white rounded-lg p-6 shadow-sm border border-border">
+    <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-6 h-6 rounded-full border-2 border-aqua flex items-center justify-center">
-          <div className="w-3 h-3 rounded-full bg-aqua"></div>
+        <div className="w-6 h-6 rounded-full border-2 border-[#5ACAF0] flex items-center justify-center">
+          <div className="w-3 h-3 rounded-full bg-[#5ACAF0]"></div>
         </div>
         <h2 className="text-xl font-semibold text-ventia-blue">
           Base de conocimiento
@@ -43,8 +43,8 @@ export default function KnowledgeBaseForm() {
           onClick={() => setSelectedTopic(null)}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
             selectedTopic === null
-              ? "text-volt bg-volt/10"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              ? "text-ventia-blue bg-blue-50"
+              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
           }`}
         >
           Todas
@@ -55,8 +55,8 @@ export default function KnowledgeBaseForm() {
             onClick={() => setSelectedTopic(topic.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               selectedTopic === topic.id
-                ? "text-volt bg-volt/10"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "text-ventia-blue bg-blue-50"
+                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
             }`}
           >
             {topic.icon}
@@ -68,7 +68,7 @@ export default function KnowledgeBaseForm() {
       {/* Add topic button */}
       <button
         onClick={() => setShowAddTopicModal(true)}
-        className="w-full border-2 border-dashed border-border rounded-lg py-8 text-muted-foreground hover:border-aqua hover:text-aqua transition-colors flex items-center justify-center gap-2"
+        className="w-full border-2 border-dashed border-gray-300 rounded-lg py-8 text-gray-500 hover:border-[#5ACAF0] hover:text-[#5ACAF0] transition-colors flex items-center justify-center gap-2"
       >
         <span className="text-xl">+</span>
         <span className="font-medium">Agregar tema</span>
@@ -80,7 +80,7 @@ export default function KnowledgeBaseForm() {
           <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-2xl animate-scaleIn">
             {/* Header del modal */}
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-foreground">
+              <h3 className="text-lg font-semibold text-gray-900">
                 Agregar tema
               </h3>
               <button
@@ -90,7 +90,7 @@ export default function KnowledgeBaseForm() {
                   setNewTopicDescription("");
                   setSelectedTopicType("otros");
                 }}
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <FaTimes />
               </button>
@@ -105,7 +105,7 @@ export default function KnowledgeBaseForm() {
                   placeholder="Tema"
                   value={newTopicName}
                   onChange={(e) => setNewTopicName(e.target.value)}
-                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0]"
                 />
               </div>
 
@@ -116,7 +116,7 @@ export default function KnowledgeBaseForm() {
                   value={newTopicDescription}
                   onChange={(e) => setNewTopicDescription(e.target.value)}
                   rows={4}
-                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua resize-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] resize-none"
                 />
               </div>
 
@@ -125,7 +125,7 @@ export default function KnowledgeBaseForm() {
                 <button
                   type="button"
                   onClick={() => setShowTopicTypeDropdown(!showTopicTypeDropdown)}
-                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua flex items-center justify-between text-sm text-muted-foreground"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] flex items-center justify-between text-sm text-gray-600"
                 >
                   <div className="flex items-center gap-2">
                     {topics.find(t => t.id === selectedTopicType)?.icon}
@@ -148,7 +148,7 @@ export default function KnowledgeBaseForm() {
                       className="fixed inset-0 z-10"
                       onClick={() => setShowTopicTypeDropdown(false)}
                     />
-                    <div className="absolute z-20 w-full mt-1 bg-white border border-border rounded-lg shadow-lg max-h-60 overflow-auto">
+                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
                       {topics.map((topic) => (
                         <button
                           key={topic.id}
@@ -157,8 +157,8 @@ export default function KnowledgeBaseForm() {
                             setSelectedTopicType(topic.id);
                             setShowTopicTypeDropdown(false);
                           }}
-                          className={`w-full px-4 py-2 text-left flex items-center gap-2 text-sm hover:bg-muted transition-colors ${
-                            selectedTopicType === topic.id ? 'bg-volt/10 text-volt' : 'text-muted-foreground'
+                          className={`w-full px-4 py-2 text-left flex items-center gap-2 text-sm hover:bg-gray-100 transition-colors ${
+                            selectedTopicType === topic.id ? 'bg-blue-50 text-ventia-blue' : 'text-gray-600'
                           }`}
                         >
                           {topic.icon}
@@ -180,7 +180,7 @@ export default function KnowledgeBaseForm() {
                   setNewTopicDescription("");
                   setSelectedTopicType("otros");
                 }}
-                className="px-4 py-2 text-muted-foreground hover:bg-muted rounded-lg transition-colors"
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 Cancelar
               </button>
@@ -193,7 +193,7 @@ export default function KnowledgeBaseForm() {
                   setNewTopicDescription("");
                   setSelectedTopicType("otros");
                 }}
-                className="px-4 py-2 bg-marino text-white rounded-lg hover:bg-marino/80 transition-colors"
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
               >
                 Agregar
               </button>
@@ -204,8 +204,8 @@ export default function KnowledgeBaseForm() {
 
       {/* Empty state */}
       <div className="mt-8 text-center py-12">
-        <div className="text-6xl text-muted-foreground mb-4">?</div>
-        <p className="text-muted-foreground">No hay temas</p>
+        <div className="text-6xl text-gray-300 mb-4">?</div>
+        <p className="text-gray-500">No hay temas</p>
       </div>
     </div>
   );

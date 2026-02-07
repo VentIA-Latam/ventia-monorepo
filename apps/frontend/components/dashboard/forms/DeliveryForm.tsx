@@ -123,17 +123,17 @@ export default function DeliveryForm() {
   };
 
   return (
-    <div className="bg-white rounded-lg p-6 shadow-sm border border-border">
+    <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-6 h-6 rounded-full border-2 border-aqua flex items-center justify-center">
-          <div className="w-3 h-3 rounded-full bg-aqua"></div>
+        <div className="w-6 h-6 rounded-full border-2 border-[#5ACAF0] flex items-center justify-center">
+          <div className="w-3 h-3 rounded-full bg-[#5ACAF0]"></div>
         </div>
         <h2 className="text-xl font-semibold text-ventia-blue">
           Configuración de entrega
         </h2>
       </div>
 
-      <p className="text-sm text-muted-foreground mb-6">
+      <p className="text-sm text-gray-600 mb-6">
         Define las zonas de entrega, opciones de envío y métodos de pago disponibles
       </p>
 
@@ -142,16 +142,16 @@ export default function DeliveryForm() {
         {deliveryZones.map((zone, index) => (
           <div
             key={zone.id}
-            className="border border-border rounded-lg p-6 relative"
+            className="border border-gray-200 rounded-lg p-6 relative"
           >
             {/* Zone Header */}
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-foreground">
+              <h3 className="text-lg font-semibold text-gray-900">
                 Zona {index + 1}
               </h3>
               <button
                 onClick={() => removeDeliveryZone(zone.id)}
-                className="text-danger/70 hover:text-danger transition-colors p-2 rounded-full hover:bg-danger-bg"
+                className="text-red-400 hover:text-red-600 transition-colors p-2 rounded-full hover:bg-red-50"
               >
                 <FaTimes />
               </button>
@@ -160,7 +160,7 @@ export default function DeliveryForm() {
             {/* Zone Name and Payment Types */}
             <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
               <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Nombre de la zona
                 </label>
                 <input
@@ -168,17 +168,17 @@ export default function DeliveryForm() {
                   value={zone.zoneName}
                   onChange={(e) => updateZone(zone.id, "zoneName", e.target.value)}
                   placeholder="Lima Centro"
-                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0]"
                 />
               </div>
 
               {/* Payment Type Switches */}
               <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Tipos de pago
                 </label>
-                <div className="flex items-center justify-between p-3 bg-muted rounded-lg border border-border">
-                  <span className="text-sm text-muted-foreground">Pago por adelantado</span>
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <span className="text-sm text-gray-700">Pago por adelantado</span>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
@@ -191,17 +191,17 @@ export default function DeliveryForm() {
                       }
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-aqua rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[0.5] after:left-[0.5] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-aqua"></div>
+                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#5ACAF0] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[0.5] after:left-[0.5] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5ACAF0]"></div>
                   </label>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-2 opacity-0">
+                <label className="block text-sm font-medium text-gray-700 mb-2 opacity-0">
                   Tipo
                 </label>
-                <div className="flex items-center justify-between p-3 bg-muted rounded-lg border border-border">
-                  <span className="text-sm text-muted-foreground">Contraentrega</span>
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <span className="text-sm text-gray-700">Contraentrega</span>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
@@ -214,7 +214,7 @@ export default function DeliveryForm() {
                       }
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-aqua rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[0.5] after:left-[0.5] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-aqua"></div>
+                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#5ACAF0] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[0.5] after:left-[0.5] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5ACAF0]"></div>
                   </label>
                 </div>
               </div>
@@ -222,7 +222,7 @@ export default function DeliveryForm() {
 
             {/* Coverage Areas */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-muted-foreground mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Zonas de cobertura
               </label>
               <div className="space-y-2">
@@ -232,12 +232,12 @@ export default function DeliveryForm() {
                     {zone.coverageAreas.map((area) => (
                       <span
                         key={area}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-volt/10 text-volt rounded-full text-sm"
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-ventia-blue rounded-full text-sm"
                       >
                         {area}
                         <button
                           onClick={() => removeCoverageArea(zone.id, area)}
-                          className="hover:text-danger transition-colors"
+                          className="hover:text-red-500 transition-colors"
                         >
                           <FaTimes className="text-xs" />
                         </button>
@@ -251,9 +251,9 @@ export default function DeliveryForm() {
                   onChange={(e) => handleCoverageInputChange(zone.id, e.target.value)}
                   onKeyDown={(e) => handleCoverageKeyDown(zone.id, e)}
                   placeholder="Miraflores, San Isidro, Barranco..."
-                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0]"
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-gray-500">
                   Presiona Enter o usa comas para agregar
                   <span className="float-right">
                     {zone.coverageAreas.length}/20
@@ -265,7 +265,7 @@ export default function DeliveryForm() {
             {/* Enable Partial Payments */}
             <div className="mb-6">
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-3 px-4 py-3 bg-muted rounded-lg border border-border">
+                <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
@@ -275,15 +275,15 @@ export default function DeliveryForm() {
                       }
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-aqua rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[0.5] after:left-[0.5] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-aqua"></div>
+                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#5ACAF0] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[0.5] after:left-[0.5] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5ACAF0]"></div>
                   </label>
-                  <span className="text-sm font-medium text-muted-foreground">Habilitar pagos parciales</span>
+                  <span className="text-sm font-medium text-gray-700">Habilitar pagos parciales</span>
                 </div>
 
                 {/* Minimum Percentage Input - only shown when partial payments enabled */}
                 {zone.enablePartialPayments && (
                   <>
-                    <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                    <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
                       Porcentaje mínimo
                     </label>
                     <input
@@ -293,7 +293,7 @@ export default function DeliveryForm() {
                       value={zone.minimumPercentage || ""}
                       onChange={(e) => updateZone(zone.id, "minimumPercentage", e.target.value)}
                       placeholder="0"
-                      className="w-20 px-3 py-2 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua text-sm"
+                      className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] text-sm"
                     />
                   </>
                 )}
@@ -303,12 +303,12 @@ export default function DeliveryForm() {
             {/* Shipping Options */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <label className="block text-sm font-medium text-muted-foreground">
+                <label className="block text-sm font-medium text-gray-700">
                   Opciones de envío
                 </label>
                 <button
                   onClick={() => addShippingOption(zone.id)}
-                  className="text-volt text-sm hover:text-volt/80 transition-colors flex items-center gap-1"
+                  className="text-ventia-blue text-sm hover:text-blue-700 transition-colors flex items-center gap-1"
                 >
                   <FaPlus className="text-xs" />
                   Agregar opción
@@ -316,11 +316,11 @@ export default function DeliveryForm() {
               </div>
 
               {zone.shippingOptions.length === 0 ? (
-                <div className="text-center py-8 bg-muted rounded-lg border border-dashed border-border">
-                  <p className="text-sm text-muted-foreground mb-1">
+                <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                  <p className="text-sm text-gray-500 mb-1">
                     No hay opciones de envío configuradas
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-gray-400">
                     Agrega una opción de envío para esta zona
                   </p>
                 </div>
@@ -329,17 +329,17 @@ export default function DeliveryForm() {
                   {zone.shippingOptions.map((option) => (
                     <div
                       key={option.id}
-                      className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 bg-muted rounded-lg border border-border relative"
+                      className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200 relative"
                     >
                       <button
                         onClick={() => removeShippingOption(zone.id, option.id)}
-                        className="absolute top-2 right-2 text-danger/70 hover:text-danger transition-colors"
+                        className="absolute top-2 right-2 text-red-400 hover:text-red-600 transition-colors"
                       >
                         <FaTimes className="text-xs" />
                       </button>
 
                       <div>
-                        <label className="block text-xs text-muted-foreground mb-1">
+                        <label className="block text-xs text-gray-600 mb-1">
                           Nombre
                         </label>
                         <input
@@ -354,12 +354,12 @@ export default function DeliveryForm() {
                             )
                           }
                           placeholder="Envío express"
-                          className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] text-sm"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs text-muted-foreground mb-1">
+                        <label className="block text-xs text-gray-600 mb-1">
                           Precio
                         </label>
                         <input
@@ -374,12 +374,12 @@ export default function DeliveryForm() {
                             )
                           }
                           placeholder="0"
-                          className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] text-sm"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs text-muted-foreground mb-1">
+                        <label className="block text-xs text-gray-600 mb-1">
                           Descripcion
                         </label>
                         <input
@@ -394,7 +394,7 @@ export default function DeliveryForm() {
                             )
                           }
                           placeholder="Descripcion de envío"
-                          className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#5ACAF0] focus:ring-1 focus:ring-[#5ACAF0] text-sm"
                         />
                       </div>
                     </div>
@@ -409,7 +409,7 @@ export default function DeliveryForm() {
       {/* Add Delivery Zone Button */}
       <button
         onClick={addDeliveryZone}
-        className="w-full mt-6 border-2 border-dashed border-border rounded-lg py-8 text-muted-foreground hover:border-aqua hover:text-aqua transition-colors flex items-center justify-center gap-2"
+        className="w-full mt-6 border-2 border-dashed border-gray-300 rounded-lg py-8 text-gray-500 hover:border-[#5ACAF0] hover:text-[#5ACAF0] transition-colors flex items-center justify-center gap-2"
       >
         <FaPlus className="text-lg" />
         <span className="font-medium">Agregar zona de entrega</span>

@@ -60,12 +60,6 @@ class Tenant(Base, TimestampMixin):
 
     # Metadata
     is_active = Column(Boolean, default=True, nullable=False, comment="Is tenant active")
-    timezone = Column(
-        String(50),
-        default="America/Lima",
-        nullable=False,
-        comment="IANA timezone for this tenant (e.g., 'America/Lima', 'America/Bogota')",
-    )
     settings = Column(JSON, nullable=True, comment="Additional tenant-specific settings (JSON)")
 
     # Electronic invoicing (facturacion electronica)
