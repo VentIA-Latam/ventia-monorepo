@@ -25,7 +25,7 @@ interface ProductData {
   total_revenue: number;
 }
 
-interface ProductosMasVendidosProps {
+interface TopProductsProps {
   data: ProductData[];
 }
 
@@ -48,7 +48,7 @@ const MEDAL_STYLES = [
 const formatPEN = (value: number) =>
   `S/ ${new Intl.NumberFormat("es-PE").format(value)}`;
 
-const ProductosMasVendidos = ({ data }: ProductosMasVendidosProps) => {
+const TopProducts = ({ data }: TopProductsProps) => {
   const chartData = data
     .map((item) => ({
       producto: item.product,
@@ -166,4 +166,4 @@ const ProductosMasVendidos = ({ data }: ProductosMasVendidosProps) => {
   );
 };
 
-export default ProductosMasVendidos;
+export default TopProducts;

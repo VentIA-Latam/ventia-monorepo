@@ -25,15 +25,15 @@ import type {
   PeriodType,
 } from "@/lib/services/metrics-service";
 
-const ProductosMasVendidos = dynamic(
-  () => import("@/components/metrics/ProductosMasVendidos"),
+const TopProducts = dynamic(
+  () => import("@/components/metrics/top-products"),
   {
     ssr: false,
     loading: () => <Skeleton className="h-80 rounded-lg" />,
   }
 );
 
-const Mapa = dynamic(() => import("@/components/metrics/Mapa"), {
+const SalesMap = dynamic(() => import("@/components/metrics/sales-map"), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
@@ -158,7 +158,7 @@ export function MetricsClient({
 
       {/* Charts: Products + Map */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <ProductosMasVendidos data={topProducts.data} />
+        <TopProducts data={topProducts.data} />
 
         <Card>
           <CardHeader>
@@ -170,7 +170,7 @@ export function MetricsClient({
             </CardDescription>
           </CardHeader>
           <CardContent className="h-[500px] p-4 pt-0">
-            <Mapa data={ordersByCity.data} />
+            <SalesMap data={ordersByCity.data} />
           </CardContent>
         </Card>
       </div>

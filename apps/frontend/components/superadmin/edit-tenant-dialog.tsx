@@ -14,20 +14,19 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/utils";
-import Image from "next/image";
 import {
   Alert,
   AlertDescription,
 } from "@/components/ui/alert";
-import { Loader2, AlertTriangle, Info } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tenant, EcommercePlatform } from "@/lib/types/tenant";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  PlatformSelector,
+  ShopifyFields,
+  WooCommerceFields,
+  EmissorLocationForm,
+} from "./tenant-forms";
 
 interface EditTenantDialogProps {
   tenant: Tenant | null;
@@ -244,72 +243,19 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
             {/* Sección: Ubicación Fiscal */}
             <div className="rounded-lg border p-4 space-y-4 bg-muted/50">
               <h3 className="font-semibold text-sm">Ubicación Fiscal (Emisor)</h3>
-
-              {/* UBIGEO */}
-              <div className="grid gap-2">
-                <Label htmlFor="edit-emisor_ubigeo" className="flex items-center gap-2">
-                  Código UBIGEO
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="inline-block w-4 h-4 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Código UBIGEO de 6 dígitos según INEI (Ej: 150101 para Lima)</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </Label>
-                <Input
-                  id="edit-emisor_ubigeo"
-                  value={formData.emisor_ubigeo}
-                  onChange={(e) => setFormData({ ...formData, emisor_ubigeo: e.target.value })}
-                  placeholder="150101"
-                  maxLength={6}
-                />
-              </div>
-
-              {/* Grid 3 columnas: Departamento, Provincia, Distrito */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-emisor_departamento">Departamento</Label>
-                  <Input
-                    id="edit-emisor_departamento"
-                    value={formData.emisor_departamento}
-                    onChange={(e) => setFormData({ ...formData, emisor_departamento: e.target.value })}
-                    placeholder="LIMA"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-emisor_provincia">Provincia</Label>
-                  <Input
-                    id="edit-emisor_provincia"
-                    value={formData.emisor_provincia}
-                    onChange={(e) => setFormData({ ...formData, emisor_provincia: e.target.value })}
-                    placeholder="LIMA"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-emisor_distrito">Distrito</Label>
-                  <Input
-                    id="edit-emisor_distrito"
-                    value={formData.emisor_distrito}
-                    onChange={(e) => setFormData({ ...formData, emisor_distrito: e.target.value })}
-                    placeholder="LIMA"
-                  />
-                </div>
-              </div>
-
-              {/* Dirección */}
-              <div className="grid gap-2">
-                <Label htmlFor="edit-emisor_direccion">Dirección Fiscal</Label>
-                <Input
-                  id="edit-emisor_direccion"
-                  value={formData.emisor_direccion}
-                  onChange={(e) => setFormData({ ...formData, emisor_direccion: e.target.value })}
-                  placeholder="Av. Ejemplo 123, Lima, Perú"
-                />
-              </div>
+              <EmissorLocationForm
+                values={{
+                  emisor_ubigeo: formData.emisor_ubigeo,
+                  emisor_departamento: formData.emisor_departamento,
+                  emisor_provincia: formData.emisor_provincia,
+                  emisor_distrito: formData.emisor_distrito,
+                  emisor_direccion: formData.emisor_direccion,
+                }}
+                onChange={(vals) => setFormData({ ...formData, ...vals })}
+                idPrefix="edit"
+                fieldSpacing="grid gap-2"
+                gridGap="gap-3"
+              />
             </div>
 
             <div className="grid gap-2">
@@ -331,128 +277,11 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
                 )}
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                {/* Sin Plataforma */}
-                <button
-                  type="button"
-                  onClick={() => handlePlatformChange(null)}
-                  className={cn(
-                    "relative flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all hover:shadow-md",
-                    platform === null
-                      ? "border-muted-foreground bg-muted/50 shadow-md"
-                      : "border-border bg-card hover:border-muted-foreground"
-                  )}
-                >
-                  <div className="w-12 h-12 mb-2 flex items-center justify-center text-muted-foreground">
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </div>
-                  <span className={cn(
-                    "font-medium text-xs",
-                    platform === null ? "text-foreground" : "text-muted-foreground"
-                  )}>
-                    Ninguna
-                  </span>
-                  {platform === null && (
-                    <div className="absolute top-2 right-2">
-                      <div className="bg-muted/500 text-white rounded-full w-5 h-5 flex items-center justify-center">
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    </div>
-                  )}
-                </button>
-
-                {/* Shopify Card */}
-                <button
-                  type="button"
-                  onClick={() => handlePlatformChange("shopify")}
-                  className={cn(
-                    "relative flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all hover:shadow-md",
-                    platform === "shopify"
-                      ? "border-success bg-success-bg shadow-md ring-2 ring-success/30"
-                      : "border-border bg-card hover:border-muted-foreground",
-                    initialPlatform === "shopify" && platform === "shopify" && "animate-pulse"
-                  )}
-                >
-                  <div className="relative w-12 h-12 mb-2">
-                    <Image
-                      src="/external-icons/shopify-icon.png"
-                      alt="Shopify"
-                      fill
-                      className="object-contain"
-                    />
-                  </div>
-                  <span className={cn(
-                    "font-medium text-xs",
-                    platform === "shopify" ? "text-success" : "text-muted-foreground"
-                  )}>
-                    Shopify
-                  </span>
-                  {platform === "shopify" && (
-                    <div className="absolute top-2 right-2">
-                      <div className="bg-success text-white rounded-full w-5 h-5 flex items-center justify-center">
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    </div>
-                  )}
-                  {initialPlatform === "shopify" && (
-                    <div className="absolute -top-1 -left-1">
-                      <div className="bg-primary text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
-                        Actual
-                      </div>
-                    </div>
-                  )}
-                </button>
-
-                {/* WooCommerce Card */}
-                <button
-                  type="button"
-                  onClick={() => handlePlatformChange("woocommerce")}
-                  className={cn(
-                    "relative flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all hover:shadow-md",
-                    platform === "woocommerce"
-                      ? "border-marino bg-cielo shadow-md ring-2 ring-luma/30"
-                      : "border-border bg-card hover:border-muted-foreground",
-                    initialPlatform === "woocommerce" && platform === "woocommerce" && "animate-pulse"
-                  )}
-                >
-                  <div className="relative w-12 h-12 mb-2">
-                    <Image
-                      src="/external-icons/woo-icon.png"
-                      alt="WooCommerce"
-                      fill
-                      className="object-contain"
-                    />
-                  </div>
-                  <span className={cn(
-                    "font-medium text-xs",
-                    platform === "woocommerce" ? "text-marino" : "text-muted-foreground"
-                  )}>
-                    WooCommerce
-                  </span>
-                  {platform === "woocommerce" && (
-                    <div className="absolute top-2 right-2">
-                      <div className="bg-marino text-white rounded-full w-5 h-5 flex items-center justify-center">
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    </div>
-                  )}
-                  {initialPlatform === "woocommerce" && (
-                    <div className="absolute -top-1 -left-1">
-                      <div className="bg-primary text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
-                        Actual
-                      </div>
-                    </div>
-                  )}
-                </button>
-              </div>
+              <PlatformSelector
+                selectedPlatform={platform}
+                onPlatformChange={handlePlatformChange}
+                initialPlatform={initialPlatform}
+              />
             </div>
 
             {/* Advertencia de cambio de plataforma */}
@@ -484,148 +313,33 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
 
             {/* Campos de Shopify */}
             {platform === "shopify" && (
-              <>
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-shopify_store_url">
-                    URL de tienda Shopify <span className="text-danger">*</span>
-                  </Label>
-                  <Input
-                    id="edit-shopify_store_url"
-                    type="url"
-                    placeholder="https://mi-tienda.myshopify.com"
-                    value={formData.shopify_store_url}
-                    onChange={(e) => setFormData({ ...formData, shopify_store_url: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-shopify_client_id" className="flex items-center gap-2">
-                    Client ID de Shopify {showPlatformWarning ? <span className="text-danger">*</span> : "(opcional)"}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-xs">
-                        <p>Obtén el Client ID desde el panel de tu app de Shopify en Partners Dashboard</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </Label>
-                  <Input
-                    id="edit-shopify_client_id"
-                    type="text"
-                    placeholder={showPlatformWarning ? "Requerido al cambiar de plataforma" : "Dejar vacío para mantener el actual"}
-                    value={formData.shopify_client_id}
-                    onChange={(e) => setFormData({ ...formData, shopify_client_id: e.target.value })}
-                    required={showPlatformWarning && initialPlatform !== "shopify"}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {showPlatformWarning
-                      ? "Debes proporcionar un nuevo Client ID al cambiar de plataforma"
-                      : "Solo completa si deseas cambiar las credenciales OAuth2"
-                    }
-                  </p>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-shopify_client_secret" className="flex items-center gap-2">
-                    Client Secret de Shopify {showPlatformWarning ? <span className="text-danger">*</span> : "(opcional)"}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-xs">
-                        <p>Obtén el Client Secret desde el panel de tu app de Shopify en Partners Dashboard</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </Label>
-                  <Input
-                    id="edit-shopify_client_secret"
-                    type="password"
-                    placeholder={showPlatformWarning ? "Requerido al cambiar de plataforma" : "Dejar vacío para mantener el actual"}
-                    value={formData.shopify_client_secret}
-                    onChange={(e) => setFormData({ ...formData, shopify_client_secret: e.target.value })}
-                    required={showPlatformWarning && initialPlatform !== "shopify"}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {showPlatformWarning
-                      ? "Debes proporcionar un nuevo Client Secret al cambiar de plataforma"
-                      : "Solo completa si deseas cambiar las credenciales OAuth2"
-                    }
-                  </p>
-                </div>
-
-                <div className="p-3 bg-volt/10 border border-volt/30 rounded-md">
-                  <p className="text-xs text-volt">
-                    ℹ️ El access token se genera automáticamente usando OAuth2
-                  </p>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-shopify_api_version">
-                    Versión API Shopify
-                  </Label>
-                  <Input
-                    id="edit-shopify_api_version"
-                    placeholder="2024-01"
-                    value={formData.shopify_api_version}
-                    onChange={(e) => setFormData({ ...formData, shopify_api_version: e.target.value })}
-                  />
-                </div>
-              </>
+              <ShopifyFields
+                values={{
+                  shopify_store_url: formData.shopify_store_url,
+                  shopify_client_id: formData.shopify_client_id,
+                  shopify_client_secret: formData.shopify_client_secret,
+                  shopify_api_version: formData.shopify_api_version,
+                }}
+                onChange={(vals) => setFormData({ ...formData, ...vals })}
+                idPrefix="edit"
+                credentialsOptional={true}
+                showPlatformWarning={showPlatformWarning}
+              />
             )}
 
             {/* Campos de WooCommerce */}
             {platform === "woocommerce" && (
-              <>
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-woocommerce_url">
-                    URL de WooCommerce <span className="text-danger">*</span>
-                  </Label>
-                  <Input
-                    id="edit-woocommerce_url"
-                    type="url"
-                    placeholder="https://mi-tienda.com"
-                    value={formData.woocommerce_url}
-                    onChange={(e) => setFormData({ ...formData, woocommerce_url: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-woocommerce_consumer_key">
-                    Consumer Key {showPlatformWarning ? <span className="text-danger">*</span> : "(opcional)"}
-                  </Label>
-                  <Input
-                    id="edit-woocommerce_consumer_key"
-                    type="password"
-                    placeholder={showPlatformWarning ? "Requerido al cambiar de plataforma" : "Dejar vacío para mantener el actual"}
-                    value={formData.woocommerce_consumer_key}
-                    onChange={(e) => setFormData({ ...formData, woocommerce_consumer_key: e.target.value })}
-                    required={showPlatformWarning && initialPlatform !== "woocommerce"}
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-woocommerce_consumer_secret">
-                    Consumer Secret {showPlatformWarning ? <span className="text-danger">*</span> : "(opcional)"}
-                  </Label>
-                  <Input
-                    id="edit-woocommerce_consumer_secret"
-                    type="password"
-                    placeholder={showPlatformWarning ? "Requerido al cambiar de plataforma" : "Dejar vacío para mantener el actual"}
-                    value={formData.woocommerce_consumer_secret}
-                    onChange={(e) => setFormData({ ...formData, woocommerce_consumer_secret: e.target.value })}
-                    required={showPlatformWarning && initialPlatform !== "woocommerce"}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {showPlatformWarning
-                      ? "Debes proporcionar nuevas credenciales al cambiar de plataforma"
-                      : "Solo completa si deseas cambiar las credenciales actuales"
-                    }
-                  </p>
-                </div>
-              </>
+              <WooCommerceFields
+                values={{
+                  woocommerce_url: formData.woocommerce_url,
+                  woocommerce_consumer_key: formData.woocommerce_consumer_key,
+                  woocommerce_consumer_secret: formData.woocommerce_consumer_secret,
+                }}
+                onChange={(vals) => setFormData({ ...formData, ...vals })}
+                idPrefix="edit"
+                credentialsOptional={true}
+                showPlatformWarning={showPlatformWarning}
+              />
             )}
 
             {/* Estado del tenant */}

@@ -21,7 +21,7 @@ interface CityData {
   order_count: number;
 }
 
-interface MapaProps {
+interface SalesMapProps {
   data: CityData[];
 }
 
@@ -36,7 +36,7 @@ const COLOR_SCALE = [
   { threshold: 0, color: "oklch(0.92 0.04 240)", label: "Muy bajo" },
 ];
 
-export const Mapa = ({ data }: MapaProps) => {
+export const SalesMap = ({ data }: SalesMapProps) => {
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
 
   useEffect(() => {
@@ -181,4 +181,4 @@ export const Mapa = ({ data }: MapaProps) => {
   );
 };
 
-export default Mapa;
+export default SalesMap;

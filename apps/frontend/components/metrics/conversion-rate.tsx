@@ -2,7 +2,7 @@
 
 import { RadialBarChart, RadialBar, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
-const TasaConversion = () => {
+const ConversionRate = () => {
   // Data de ejemplo
   const conversacionesAbiertas = 150;
   const ventasCerradas = 45;
@@ -61,4 +61,4 @@ const TasaConversion = () => {
   );
 };
 
-export default TasaConversion;
+export default ConversionRate;

@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie, Sector } from 'recharts';
 
-const MetricasLeads = () => {
+const LeadsFunnel = () => {
   // Embudo de ventas
   const embudoData = [
     { etapa: 'Contacto Inicial', cantidad: 250, porcentaje: 100, color: '#8884d8' },
@@ -154,4 +154,4 @@ const MetricasLeads = () => {
   );
 };
 
-export default MetricasLeads;
+export default LeadsFunnel;
