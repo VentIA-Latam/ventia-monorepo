@@ -32,7 +32,7 @@ export interface GlobalOrder {
   currency: string;
   validado: boolean;
   tenant_id: number;
-  tenant?: Tenant;
+  tenant_name?: string;
   created_at: string;
   updated_at: string;
 }
@@ -190,11 +190,11 @@ export async function getStats(): Promise<SuperAdminStats> {
 export async function getRecentActivity(
   limit: number = 10
 ): Promise<RecentActivity[]> {
-  const response = await apiGet<{ activities: RecentActivity[] }>(
+  const response = await apiGet<{ items: RecentActivity[] }>(
     '/api/superadmin/stats/activity/recent',
     { limit }
   );
-  return response.activities;
+  return response.items;
 }
 
 // ==================== API KEYS ====================

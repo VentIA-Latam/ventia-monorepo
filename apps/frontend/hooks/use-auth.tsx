@@ -1,14 +1,11 @@
 /**
- * Auth Context + Hook for Client Components
- *
- * AuthProvider hace el fetch de /api/users/me UNA sola vez
- * y comparte el resultado a todos los componentes via Context.
+ * Custom hook for Auth0 in Client Components
  */
 
 'use client';
 
 import { useUser } from '@auth0/nextjs-auth0/client';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type UserRole = 'superadmin' | 'admin' | 'logistica' | null;
 
@@ -20,22 +17,7 @@ interface UserWithRole {
   tenant_id: number | null;
 }
 
-interface AuthContextValue {
-  user: ReturnType<typeof useUser>['user'];
-  userDetails: UserWithRole | null;
-  role: UserRole;
-  isAuthenticated: boolean;
-  isSuperAdmin: boolean;
-  isAdmin: boolean;
-  isLogistica: boolean;
-  isLoading: boolean;
-  isUserLoading: boolean;
-  error: ReturnType<typeof useUser>['error'];
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null);
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function useAuth() {
   const { user, error, isLoading } = useUser();
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [userDetails, setUserDetails] = useState<UserWithRole | null>(null);
@@ -66,7 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const value: AuthContextValue = {
+  return {
     user,
     userDetails,
     role: userRole,
@@ -75,17 +57,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAdmin: userRole?.toLowerCase() === 'admin',
     isLogistica: userRole?.toLowerCase() === 'logistica',
     isLoading: isLoading || loadingRole,
-    isUserLoading: isLoading,
     error,
   };
-
-  return <AuthContext value={value}>{children}</AuthContext>;
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 }

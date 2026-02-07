@@ -22,11 +22,6 @@ class TenantBase(BaseModel):
     company_id: str | None = Field(
         None, max_length=100, description="Company ID for Auth0 organization mapping"
     )
-    timezone: str = Field(
-        "America/Lima",
-        max_length=50,
-        description="IANA timezone for this tenant (e.g., 'America/Lima', 'America/Bogota')",
-    )
     efact_ruc: str | None = Field(
         None,
         pattern=r"^\d{11}$",
@@ -72,11 +67,6 @@ class TenantCreate(BaseModel):
     )
     company_id: str | None = Field(
         None, max_length=100, description="Company ID for Auth0 organization mapping (optional)"
-    )
-    timezone: str = Field(
-        "America/Lima",
-        max_length=50,
-        description="IANA timezone (e.g., 'America/Lima', 'America/Bogota', 'America/Mexico_City')",
     )
 
     # === E-COMMERCE CONFIGURATION ===
@@ -230,11 +220,6 @@ class TenantUpdate(BaseModel):
 
     name: str | None = Field(None, min_length=1, max_length=100)
     is_active: bool | None = None
-    timezone: str | None = Field(
-        None,
-        max_length=50,
-        description="IANA timezone (e.g., 'America/Lima', 'America/Bogota')",
-    )
     is_platform: bool | None = Field(
         None, description="Cannot be changed after creation (will be rejected by service)"
     )
@@ -357,7 +342,6 @@ class TenantResponse(BaseModel):
     name: str
     slug: str
     company_id: str | None
-    timezone: str
     efact_ruc: str | None
     emisor_nombre_comercial: str | None
     emisor_ubigeo: str | None
@@ -427,7 +411,6 @@ class TenantResponse(BaseModel):
             name=tenant.name,
             slug=tenant.slug,
             company_id=tenant.company_id,
-            timezone=tenant.timezone or "America/Lima",
             efact_ruc=tenant.efact_ruc,
             emisor_nombre_comercial=tenant.emisor_nombre_comercial,
             emisor_ubigeo=tenant.emisor_ubigeo,

@@ -157,9 +157,9 @@ def process_shopify_draft_order_create(
         except (ValueError, TypeError) as e:
             logger.warning(f"Failed to add shipping line item: {shipping_line}, error: {e}")
 
-    # Extract structured shipping data (shipping_address principal, billing_address fallback)
+    # Extract shipping address (shipping_address principal, billing_address fallback)
     shipping_address_raw = payload.get("shipping_address") or payload.get("billing_address")
-    shipping_data = _extract_shipping_data(shipping_address_raw, "shopify")
+    shipping_address = _format_shipping_address(shipping_address_raw, "shopify")
 
     # Create order using repository
     try:
@@ -171,7 +171,7 @@ def process_shopify_draft_order_create(
             total_price=total_price,
             currency=currency,
             line_items=line_items if line_items else None,
-            **shipping_data,  # Spread all shipping fields
+            shipping_address=shipping_address,
         )
 
         order = order_repository.create(db, obj_in=order_data)
@@ -430,63 +430,40 @@ def _map_woo_status(woo_status: str) -> tuple[str, bool]:
     return ("Pendiente", False)
 
 
-def _extract_shipping_data(
+def _format_shipping_address(
     address_data: dict[str, Any] | None,
     platform: str,
-) -> dict[str, Any]:
+) -> str | None:
     """
-    Extract structured shipping data from webhook payload.
+    Format shipping address as "address1, city" string.
 
     Args:
         address_data: Raw address dict from webhook
         platform: "shopify" or "woocommerce"
 
     Returns:
-        Dict with shipping fields: shipping_address, shipping_city,
-        shipping_province, shipping_country
+        Formatted address string or None if no data
     """
     if not address_data:
-        return {}
-
-    result = {}
+        return None
 
     if platform == "shopify":
         address1 = address_data.get("address1")
         city = address_data.get("city")
-        province = address_data.get("province")
-        country = address_data.get("country")
-
-        # shipping_address solo contiene address1
-        if address1:
-            result["shipping_address"] = address1
-
-        # Agregar campos estructurados
-        if city:
-            result["shipping_city"] = city
-        if province:
-            result["shipping_province"] = province
-        if country:
-            result["shipping_country"] = country
-
     elif platform == "woocommerce":
         address1 = address_data.get("address_1")
         city = address_data.get("city")
-        state = address_data.get("state")
-        country = address_data.get("country")
+    else:
+        return None
 
-        # shipping_address solo contiene address1
-        if address1:
-            result["shipping_address"] = address1
-
-        # Agregar campos estructurados
-        if city:
-            result["shipping_city"] = city
-        if state:
-            result["shipping_province"] = state
-        if country:
-            result["shipping_country"] = country
-
-    return result
+    if address1 and city:
+        return f"{address1}, {city}"
+    elif address1:
+        return address1
+    elif city:
+        return city
+    else:
+        return None
 
 
 def process_shopify_draft_order_update(
@@ -601,9 +578,9 @@ def process_shopify_draft_order_update(
         except (ValueError, TypeError) as e:
             logger.warning(f"Failed to add shipping line item: {shipping_line}, error: {e}")
 
-    # Extract structured shipping data (shipping_address principal, billing_address fallback)
+    # Extract shipping address (shipping_address principal, billing_address fallback)
     shipping_address_raw = payload.get("shipping_address") or payload.get("billing_address")
-    shipping_data = _extract_shipping_data(shipping_address_raw, "shopify")
+    shipping_address = _format_shipping_address(shipping_address_raw, "shopify")
 
     # 4. Check idempotency - compare critical fields
     needs_update = False
@@ -619,14 +596,7 @@ def process_shopify_draft_order_update(
     # For line_items, compare JSON representation
     if line_items and order.line_items != line_items:
         needs_update = True
-    # Compare shipping fields
-    if shipping_data.get("shipping_address") and order.shipping_address != shipping_data.get("shipping_address"):
-        needs_update = True
-    if shipping_data.get("shipping_city") and order.shipping_city != shipping_data.get("shipping_city"):
-        needs_update = True
-    if shipping_data.get("shipping_province") and order.shipping_province != shipping_data.get("shipping_province"):
-        needs_update = True
-    if shipping_data.get("shipping_country") and order.shipping_country != shipping_data.get("shipping_country"):
+    if shipping_address and order.shipping_address != shipping_address:
         needs_update = True
 
     if not needs_update:
@@ -649,15 +619,8 @@ def process_shopify_draft_order_update(
         order.currency = currency
         if line_items:
             order.line_items = line_items
-        # Update shipping fields
-        if shipping_data.get("shipping_address"):
-            order.shipping_address = shipping_data["shipping_address"]
-        if shipping_data.get("shipping_city"):
-            order.shipping_city = shipping_data["shipping_city"]
-        if shipping_data.get("shipping_province"):
-            order.shipping_province = shipping_data["shipping_province"]
-        if shipping_data.get("shipping_country"):
-            order.shipping_country = shipping_data["shipping_country"]
+        if shipping_address:
+            order.shipping_address = shipping_address
 
         db.flush()
 
@@ -1191,9 +1154,9 @@ def process_woocommerce_order_created(
     # 8. Extraer método de pago
     payment_method = payload.get("payment_method_title") or payload.get("payment_method")
 
-    # 9. Extraer dirección de envío estructurada (shipping principal, billing fallback)
+    # 9. Extraer dirección de envío (shipping principal, billing fallback)
     shipping_address_raw = payload.get("shipping") or payload.get("billing")
-    shipping_data = _extract_shipping_data(shipping_address_raw, "woocommerce")
+    shipping_address = _format_shipping_address(shipping_address_raw, "woocommerce")
 
     # 10. Crear orden
     try:
@@ -1206,7 +1169,7 @@ def process_woocommerce_order_created(
             currency=currency,
             line_items=line_items if line_items else None,
             payment_method=payment_method,
-            **shipping_data,  # Spread all shipping fields
+            shipping_address=shipping_address,
         )
 
         order = order_repository.create(db, obj_in=order_data)
@@ -1360,9 +1323,9 @@ def process_woocommerce_order_updated(
     # 8. Extract payment method
     payment_method = payload.get("payment_method_title") or payload.get("payment_method")
 
-    # 9. Extraer dirección de envío estructurada (shipping principal, billing fallback)
+    # 9. Extraer dirección de envío (shipping principal, billing fallback)
     shipping_address_raw = payload.get("shipping") or payload.get("billing")
-    shipping_data = _extract_shipping_data(shipping_address_raw, "woocommerce")
+    shipping_address = _format_shipping_address(shipping_address_raw, "woocommerce")
 
     # 10. Check idempotency - compare all critical fields
     needs_update = False
@@ -1384,14 +1347,7 @@ def process_woocommerce_order_updated(
     # Compare line_items (basic comparison)
     if line_items and order.line_items != line_items:
         needs_update = True
-    # Compare shipping fields
-    if shipping_data.get("shipping_address") and order.shipping_address != shipping_data.get("shipping_address"):
-        needs_update = True
-    if shipping_data.get("shipping_city") and order.shipping_city != shipping_data.get("shipping_city"):
-        needs_update = True
-    if shipping_data.get("shipping_province") and order.shipping_province != shipping_data.get("shipping_province"):
-        needs_update = True
-    if shipping_data.get("shipping_country") and order.shipping_country != shipping_data.get("shipping_country"):
+    if shipping_address and order.shipping_address != shipping_address:
         needs_update = True
 
     if not needs_update:
@@ -1426,15 +1382,8 @@ def process_woocommerce_order_updated(
         if line_items:
             order.line_items = line_items
 
-        # Update shipping fields
-        if shipping_data.get("shipping_address"):
-            order.shipping_address = shipping_data["shipping_address"]
-        if shipping_data.get("shipping_city"):
-            order.shipping_city = shipping_data["shipping_city"]
-        if shipping_data.get("shipping_province"):
-            order.shipping_province = shipping_data["shipping_province"]
-        if shipping_data.get("shipping_country"):
-            order.shipping_country = shipping_data["shipping_country"]
+        if shipping_address:
+            order.shipping_address = shipping_address
 
         db.flush()
 

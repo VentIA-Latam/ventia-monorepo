@@ -58,7 +58,7 @@ export function RevokeAPIKeyDialog({ apiKey, open, onOpenChange, onSuccess, apiE
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-danger" />
+            <AlertTriangle className="h-5 w-5 text-red-600" />
             Revocar API Key
           </DialogTitle>
           <DialogDescription>
@@ -68,12 +68,12 @@ export function RevokeAPIKeyDialog({ apiKey, open, onOpenChange, onSuccess, apiE
 
         <div className="py-4 space-y-2">
           <p>¿Estás seguro que deseas revocar la siguiente API Key?</p>
-          <div className="bg-muted/50 p-3 rounded-md border">
+          <div className="bg-gray-50 p-3 rounded-md border">
             <div className="font-semibold">{apiKey.name}</div>
-            <div className="text-sm text-muted-foreground font-mono">{apiKey.key_prefix}••••••••</div>
-            <div className="text-sm text-muted-foreground mt-1">Rol: {apiKey.role}</div>
+            <div className="text-sm text-gray-600 font-mono">{apiKey.key_prefix}••••••••</div>
+            <div className="text-sm text-gray-500 mt-1">Rol: {apiKey.role}</div>
           </div>
-          <p className="text-sm text-muted-foreground mt-2">
+          <p className="text-sm text-gray-600 mt-2">
             Las integraciones que usen esta clave dejarán de funcionar inmediatamente.
           </p>
         </div>

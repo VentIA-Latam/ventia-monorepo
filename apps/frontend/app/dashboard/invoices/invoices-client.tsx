@@ -98,9 +98,10 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
     }
   };
 
-  const handleDownloadPDF = async (invoiceId: number, fullNumber: string) => {
+  const handleDownloadPDF = async (invoiceId: number) => {
     try {
-      await downloadInvoicePdf(invoiceId, `${fullNumber}.pdf`);
+      // ✅ Usa Client API Layer
+      await downloadInvoicePdf(invoiceId);
       toast({
         title: "PDF descargado",
         description: "El archivo se ha descargado correctamente",
@@ -115,9 +116,10 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
     }
   };
 
-  const handleDownloadXML = async (invoiceId: number, fullNumber: string) => {
+  const handleDownloadXML = async (invoiceId: number) => {
     try {
-      await downloadInvoiceXml(invoiceId, `${fullNumber}.xml`);
+      // ✅ Usa Client API Layer
+      await downloadInvoiceXml(invoiceId);
       toast({
         title: "XML descargado",
         description: "El archivo se ha descargado correctamente",
@@ -207,11 +209,11 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground font-heading flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <FileText className="h-6 w-6" />
             Comprobantes Electrónicos
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-sm text-gray-600 mt-1">
             Gestiona facturas, boletas y comprobantes electrónicos
           </p>
         </div>
@@ -222,7 +224,7 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
         <CardContent className="pt-6">
           <div className="grid gap-4 md:grid-cols-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Buscar por serie, cliente, RUC/DNI..."
                 value={searchTerm}
@@ -260,7 +262,7 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
 
       {/* Results Summary */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-gray-600">
           Mostrando <span className="font-semibold">{filteredInvoices.length}</span> de{" "}
           <span className="font-semibold">{initialInvoices.length}</span> comprobantes
         </p>
@@ -292,7 +294,7 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
               <TableBody>
                 {filteredInvoices.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                       No se encontraron comprobantes
                     </TableCell>
                   </TableRow>
@@ -308,10 +310,10 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {invoice.cliente_razon_social || <span className="text-muted-foreground">-</span>}
+                        {invoice.cliente_razon_social || <span className="text-gray-400">-</span>}
                       </TableCell>
                       <TableCell>
-                        {invoice.cliente_numero_documento || <span className="text-muted-foreground">-</span>}
+                        {invoice.cliente_numero_documento || <span className="text-gray-400">-</span>}
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         {invoice.currency} {invoice.total.toFixed(2)}
@@ -358,13 +360,13 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
                                   </DropdownMenuItem>
                                 )}
                                 <DropdownMenuItem
-                                  onClick={() => handleDownloadPDF(invoice.id, invoice.full_number)}
+                                  onClick={() => handleDownloadPDF(invoice.id)}
                                 >
                                   <FileDown className="h-4 w-4 mr-2" />
                                   Descargar PDF
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={() => handleDownloadXML(invoice.id, invoice.full_number)}
+                                  onClick={() => handleDownloadXML(invoice.id)}
                                 >
                                   <Download className="h-4 w-4 mr-2" />
                                   Descargar XML
@@ -394,4 +396,3 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
     </div>
   );
 }
-

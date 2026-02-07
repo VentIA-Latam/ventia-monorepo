@@ -456,7 +456,7 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
               Volver a la Orden
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold mt-2 font-heading">Crear Comprobante</h1>
+          <h1 className="text-3xl font-bold mt-2">Crear Comprobante</h1>
           <p className="text-muted-foreground">
             Orden #{getCompletedOrderId(order)} • {order.customer_name}
           </p>
@@ -784,7 +784,7 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
                           {order.line_items.map((item, index) => (
                             <tr key={item.id || index} className="hover:bg-muted/30">
                               <td className="p-2">
-                                <p className="font-medium text-foreground">{item.product}</p>
+                                <p className="font-medium text-gray-900">{item.product}</p>
                                 {item.sku && (
                                   <p className="text-xs text-muted-foreground">SKU: {item.sku}</p>
                                 )}
@@ -1078,7 +1078,7 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
               const url = window.URL.createObjectURL(blob);
               const a = document.createElement("a");
               a.href = url;
-              a.download = `${createdInvoice.serie}-${String(createdInvoice.correlativo).padStart(8, '0')}.pdf`;
+              a.download = `${createdInvoice.serie}-${createdInvoice.correlativo}.pdf`;
               document.body.appendChild(a);
               a.click();
               window.URL.revokeObjectURL(url);
@@ -1117,5 +1117,4 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
     </div>
   );
 }
-
 

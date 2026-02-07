@@ -6,8 +6,8 @@
 @custom-variant dark (&:is(.dark *));
 
 body {
-  font-family: var(--font-sans), "Plus Jakarta Sans", system-ui, -apple-system,
-    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
 }
 html {
   scroll-behavior: smooth;
@@ -57,81 +57,41 @@ html {
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  /* Brand colors */
-  --color-volt: var(--volt);
-  --color-aqua: var(--aqua);
-  --color-marino: var(--marino);
-  --color-cielo: var(--cielo);
-  --color-luma: var(--luma);
-  --color-noche: var(--noche);
-  /* Semantic colors */
-  --color-success: var(--success);
-  --color-success-bg: var(--success-bg);
-  --color-warning: var(--warning);
-  --color-warning-bg: var(--warning-bg);
-  --color-danger: var(--danger);
-  --color-danger-bg: var(--danger-bg);
-  --color-info: var(--info);
-  --color-info-bg: var(--info-bg);
 }
 
 :root {
   --radius: 0.625rem;
-
-  /* Brand palette */
-  --volt: oklch(0.58 0.19 260);
-  --aqua: oklch(0.78 0.11 220);
-  --marino: oklch(0.33 0.10 255);
-  --cielo: oklch(0.93 0.04 230);
-  --luma: oklch(0.78 0.08 255);
-  --noche: oklch(0.20 0.03 250);
-
-  /* Semantic status */
-  --success: oklch(0.59 0.18 145);
-  --success-bg: oklch(0.98 0.02 150);
-  --warning: oklch(0.62 0.17 70);
-  --warning-bg: oklch(0.99 0.02 90);
-  --danger: oklch(0.55 0.22 27);
-  --danger-bg: oklch(0.98 0.02 20);
-  --info: var(--aqua);
-  --info-bg: var(--cielo);
-
-  /* Core tokens — mapped to brand */
   --background: oklch(1 0 0);
-  --foreground: oklch(0.20 0.03 250);
+  --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.20 0.03 250);
+  --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.20 0.03 250);
-  --primary: oklch(0.58 0.19 260);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.93 0.04 230);
-  --secondary-foreground: oklch(0.33 0.10 255);
-  --muted: oklch(0.97 0.01 250);
-  --muted-foreground: oklch(0.50 0.03 250);
-  --accent: oklch(0.93 0.04 230);
-  --accent-foreground: oklch(0.33 0.10 255);
-  --destructive: oklch(0.55 0.22 27);
-  --border: oklch(0.92 0.01 250);
-  --input: oklch(0.92 0.01 250);
-  --ring: oklch(0.58 0.19 260);
-
-  /* Charts — brand palette */
-  --chart-1: oklch(0.58 0.19 260);
-  --chart-2: oklch(0.78 0.11 220);
-  --chart-3: oklch(0.33 0.10 255);
-  --chart-4: oklch(0.78 0.08 255);
-  --chart-5: oklch(0.93 0.04 230);
-
-  /* Sidebar — brand aligned OKLch */
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.20 0.03 250);
-  --sidebar-primary: oklch(0.58 0.19 260);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.93 0.04 230);
-  --sidebar-accent-foreground: oklch(0.58 0.19 260);
-  --sidebar-border: oklch(0.92 0.01 250);
-  --sidebar-ring: oklch(0.58 0.19 260);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: hsl(0 0% 100%);
+  --sidebar-foreground: hsl(220 9% 46%);
+  --sidebar-primary: hsl(221 83% 53%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(214 100% 97%);
+  --sidebar-accent-foreground: hsl(221 83% 53%);
+  --sidebar-border: hsl(220 13% 91%);
+  --sidebar-ring: hsl(221 83% 53%);
 }
 
 .dark {
@@ -153,19 +113,19 @@ html {
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.58 0.19 260);
-  --chart-2: oklch(0.78 0.11 220);
-  --chart-3: oklch(0.78 0.08 255);
-  --chart-4: oklch(0.33 0.10 255);
-  --chart-5: oklch(0.93 0.04 230);
-  --sidebar: oklch(0.20 0.03 250);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.58 0.19 260);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.269 0.02 250);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0.02 250);
-  --sidebar-ring: oklch(0.58 0.19 260);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: hsl(240 5.9% 10%);
+  --sidebar-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-primary: hsl(224.3 76.3% 48%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(240 3.7% 15.9%);
+  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-border: hsl(240 3.7% 15.9%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
 }
 
 @layer base {
@@ -178,41 +138,29 @@ html {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-
-@keyframes slideInUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 0 0 oklch(0.58 0.19 260 / 0.2); }
-  50% { box-shadow: 0 0 12px 4px oklch(0.58 0.19 260 / 0.1); }
-}
-
-.animate-fadeIn { animation: fadeIn 0.2s ease-out; }
-.animate-scaleIn { animation: scaleIn 0.2s ease-out; }
-.animate-slideInUp { animation: slideInUp 0.3s ease-out both; }
-.animate-pulseGlow { animation: pulseGlow 2s ease-in-out infinite; }
-
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .animate-fadeIn,
-  .animate-scaleIn,
-  .animate-slideInUp,
-  .animate-pulseGlow {
-    animation: none;
+  from {
+    opacity: 0;
+    transform: scale(0.95);
   }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.2s ease-out;
 }

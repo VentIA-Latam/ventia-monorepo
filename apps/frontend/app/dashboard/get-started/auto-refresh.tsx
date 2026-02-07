@@ -32,4 +32,3 @@ export function AutoRefresh({ intervalMs = 60000 }: AutoRefreshProps) {
   // Este componente no renderiza nada
   return null;
 }
-
