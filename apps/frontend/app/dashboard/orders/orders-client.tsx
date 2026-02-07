@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { OrdersTable } from "@/components/dashboard/orders/orders-table";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Order } from "@/lib/services/order-service";
 import {
   Download,
@@ -56,6 +57,7 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
   const filteredOrders = initialOrders.filter((order) => {
     const matchesSearch =
       (order.shopify_draft_order_id?.toLowerCase().includes(filters.search.toLowerCase()) ||
+       order.shopify_order_id?.toLowerCase().includes(filters.search.toLowerCase()) ||
        order.woocommerce_order_id?.toString().includes(filters.search) ||
        order.customer_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
        order.customer_email.toLowerCase().includes(filters.search.toLowerCase())) ?? false;
@@ -83,7 +85,7 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Listado de Pedidos</h1>
+            <h1 className="text-3xl font-bold font-heading text-foreground">Listado de Pedidos</h1>
             <p className="text-muted-foreground mt-1">
               Gestiona y monitorea todas las órdenes, estados de pago y logística centralizada.
             </p>
@@ -106,7 +108,7 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
         <div className="flex-1 min-w-[250px] relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por ID de pedido, Cliente o Empresa..."
+            placeholder="Buscar por ID de pedido o Cliente..."
             value={filters.search}
             onChange={(e) => setFilters({ ...filters, search: e.target.value })}
             className="pl-10"
@@ -140,8 +142,25 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
         </select> */}
       </div>
 
-      {/* Table */}
-      <OrdersTable orders={currentOrders} />
+      {/* Table or Empty State */}
+      {filteredOrders.length === 0 ? (
+        <EmptyState
+          icon={<Search className="h-6 w-6" />}
+          title="No se encontraron pedidos"
+          description="Intenta ajustar los filtros de búsqueda o estado de pago."
+          action={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setFilters({ search: "", paymentStatus: "all", channel: "all", dateRange: "30" })}
+            >
+              Limpiar filtros
+            </Button>
+          }
+        />
+      ) : (
+        <OrdersTable orders={currentOrders} />
+      )}
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
@@ -208,3 +227,4 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
     </div>
   );
 }
+

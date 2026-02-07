@@ -17,11 +17,11 @@ export function RecentActivityTable({ orders }: RecentActivityTableProps) {
   const getEstadoColor = (estado: string) => {
     switch (estado) {
       case "Pagado":
-        return "bg-green-50 text-green-700 border-green-200"
+        return "bg-success-bg text-success border-success/30"
       case "Pendiente":
-        return "bg-orange-50 text-orange-700 border-orange-200"
+        return "bg-warning-bg text-warning border-warning/30"
       default:
-        return "bg-gray-50 text-gray-700 border-gray-200"
+        return "bg-muted text-muted-foreground border-border"
     }
   }
 
@@ -34,10 +34,10 @@ export function RecentActivityTable({ orders }: RecentActivityTableProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900">Actividad Reciente</h2>
+        <h2 className="text-xl font-semibold text-foreground">Actividad Reciente</h2>
         <Button
           variant="link"
-          className="text-blue-600"
+          className="text-volt"
           onClick={() => router.push('/dashboard/orders')}
         >
           Ver todo
@@ -59,7 +59,7 @@ export function RecentActivityTable({ orders }: RecentActivityTableProps) {
           <TableBody>
             {orders.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   No hay pedidos recientes.
                 </TableCell>
               </TableRow>
@@ -69,10 +69,10 @@ export function RecentActivityTable({ orders }: RecentActivityTableProps) {
                   <TableCell className="font-medium text-sm pl-5">
                     {getEcommerceOrderId(order)}
                   </TableCell>
-                  <TableCell className="text-sm text-gray-700">
+                  <TableCell className="text-sm text-muted-foreground">
                     {order.customer_name || 'Sin nombre'}
                   </TableCell>
-                  <TableCell className="text-sm text-gray-600">
+                  <TableCell className="text-sm text-muted-foreground">
                     {formatDate(order.created_at)}
                   </TableCell>
                   <TableCell className="text-sm font-semibold">
@@ -93,7 +93,7 @@ export function RecentActivityTable({ orders }: RecentActivityTableProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-blue-600 hover:text-blue-700"
+                      className="text-volt hover:text-volt/80"
                       onClick={() => handleViewOrder(order.id)}
                     >
                       Ver

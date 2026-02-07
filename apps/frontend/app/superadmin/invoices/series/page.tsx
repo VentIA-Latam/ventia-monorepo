@@ -43,3 +43,4 @@ export default async function InvoiceSeriesPage() {
   const series = await fetchInvoiceSeries();
   return <InvoiceSeriesClientView initialSeries={series} />;
 }
+

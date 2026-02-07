@@ -161,10 +161,10 @@ export const INVOICE_STATUS_NAMES: Record<string, string> = {
  * INVOICE_STATUS_COLORS - Colores Tailwind para estados
  */
 export const INVOICE_STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-gray-50 text-gray-700 border-gray-200',
-  processing: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  success: 'bg-green-50 text-green-700 border-green-200',
-  error: 'bg-red-50 text-red-700 border-red-200',
+  pending: 'bg-muted text-muted-foreground border-border',
+  processing: 'bg-warning-bg text-warning border-warning/30',
+  success: 'bg-success-bg text-success border-success/30',
+  error: 'bg-danger-bg text-danger border-danger/30',
 };
 
 // Mantener LABELS por compatibilidad con código existente

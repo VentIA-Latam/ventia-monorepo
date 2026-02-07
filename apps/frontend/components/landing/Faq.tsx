@@ -130,7 +130,7 @@ export default function Faq({ limit = null, showMoreButton = true }: FaqProps) {
                     w-full flex items-center justify-between
                     rounded-full bg-[#182432] text-white
                     px-6 py-3 md:px-8 md:py-4
-                    text-sm md:text-base font-inter font-semibold
+                    text-sm md:text-base font-sans font-semibold
                     shadow-md
                   "
                 >
@@ -151,7 +151,7 @@ export default function Faq({ limit = null, showMoreButton = true }: FaqProps) {
                     className="
                       w-full rounded-3xl bg-white text-[#182432]
                       px-6 md:px-8 py-3 md:py-4
-                      text-sm md:text-base font-inter leading-relaxed
+                      text-sm md:text-base font-sans leading-relaxed
                       shadow-md
                     "
                   >
@@ -172,7 +172,7 @@ export default function Faq({ limit = null, showMoreButton = true }: FaqProps) {
                 inline-flex items-center justify-center
                 rounded-full bg-[#5ACAF0] text-white
                 px-16 md:px-20 py-3.5
-                text-xl md:text-2xl font-inter font-medium
+                text-xl md:text-2xl font-sans font-medium
                 shadow-md
                 hover:bg-[#212835] transition
               "

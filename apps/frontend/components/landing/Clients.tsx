@@ -38,7 +38,7 @@ export default function Clients() {
           <h2 className="text-3xl md:text-4xl lg:text-[40px] font-libre font-bold tracking-wide text-[#182432] mb-4">
             CLIENTES QUE CONFÍAN
           </h2>
-          <p className="text-[20px] font-inter text-[#182432] font-semibold">
+          <p className="text-[20px] font-sans text-[#182432] font-semibold">
             Marcas que ya automatizan sus ventas y/o logística con VentIA.
           </p>
         </div>

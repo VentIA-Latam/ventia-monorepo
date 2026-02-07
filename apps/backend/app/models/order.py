@@ -134,6 +134,23 @@ class Order(Base, TimestampMixin):
         comment="Shipping address: address1, city",
     )
 
+    # Structured shipping data (extracted from e-commerce platform)
+    shipping_city = Column(
+        String,
+        nullable=True,
+        comment="Shipping city",
+    )
+    shipping_province = Column(
+        String,
+        nullable=True,
+        comment="Shipping province/state",
+    )
+    shipping_country = Column(
+        String,
+        nullable=True,
+        comment="Country name (e.g., 'Peru', 'United States')",
+    )
+
     # Relationships
     invoices = relationship("Invoice", back_populates="order", cascade="all, delete-orphan")
 
