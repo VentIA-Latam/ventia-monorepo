@@ -17,7 +17,6 @@ import {
   Shield,
   Key,
   Receipt,
-  FileBarChart,
   MessageSquare,
 } from "lucide-react"
 import { usePathname } from "next/navigation"
@@ -72,11 +71,6 @@ const dataPlatform = [
     title: "Facturación",
     url: "/dashboard/invoices",
     icon: Receipt,
-  },
-  {
-    title: "Métricas",
-    url: "/dashboard/metrics",
-    icon: FileBarChart,
   },
   {
     title: "Conversaciones",

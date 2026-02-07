@@ -475,10 +475,10 @@ def seed_database():
                 line_items=[
                     {"sku": "MON-UW-34", "product": "Ultrawide Monitor 34\"", "unitPrice": 625.00, "quantity": 1, "subtotal": 625.00},
                     {"sku": "STAND-MON-WD", "product": "Monitor Stand Wood", "unitPrice": 100.00, "quantity": 1, "subtotal": 100.00}
-                ], validado=True, validated_at=datetime(2026, 1, 16, 13, 15, 0), payment_method="Debit Card",
+                ], validado=False, validated_at=None, payment_method=None,
                 notes=None, status="Pendiente",
                 shipping_address="Av. Salaverry 3200", shipping_city="SAN ISIDRO", shipping_province="LIMA", shipping_country="Peru",
-                created_at=datetime(2026, 1, 16, 12, 50, 0), updated_at=datetime(2026, 1, 16, 13, 15, 0)),
+                created_at=datetime(2026, 1, 16, 12, 50, 0), updated_at=datetime(2026, 1, 16, 12, 50, 0)),
             Order(tenant_id=2, shopify_draft_order_id="DFT-012", shopify_order_id=None,
                 customer_email="miguel.ruiz@company.com", customer_name="Miguel Ruiz", 
                 customer_document_type="6", customer_document_number="20777555333",
@@ -570,14 +570,14 @@ def seed_database():
             Order(tenant_id=2, shopify_draft_order_id="DFT-020", shopify_order_id="ORD-020",
                 customer_email="ricardo.flores@biz.com", customer_name="Ricardo Flores", 
                 customer_document_type="6", customer_document_number="20222888999",
-                total_price=980.25, currency="PEN",
+                total_price=980.50, currency="PEN",
                 line_items=[
                     {"sku": "MON-GM-27-144", "product": "27\" Gaming Monitor 144Hz", "unitPrice": 380.00, "quantity": 2, "subtotal": 760.00},
                     {"sku": "CABLE-DP-6FT", "product": "DisplayPort Cable 6ft", "unitPrice": 22.05, "quantity": 10, "subtotal": 220.50}
-                ], validado=True, validated_at=datetime(2026, 1, 26, 11, 45, 0), payment_method="Debit Card",
+                ], validado=False, validated_at=None, payment_method=None,
                 notes=None, status="Pendiente",
                 shipping_address="Av. Grau 900", shipping_city="BARRANCO", shipping_province="LIMA", shipping_country="Peru",
-                created_at=datetime(2026, 1, 26, 11, 0, 0), updated_at=datetime(2026, 1, 26, 11, 45, 0)),
+                created_at=datetime(2026, 1, 26, 11, 0, 0), updated_at=datetime(2026, 1, 26, 11, 0, 0)),
             Order(tenant_id=2, shopify_draft_order_id="DFT-021", shopify_order_id=None,
                 customer_email="paula.jimenez@company.com", customer_name="Paula Jimenez", 
                 customer_document_type="1", customer_document_number="88901234",
@@ -644,7 +644,7 @@ def seed_database():
             Order(tenant_id=2, shopify_draft_order_id="DFT-027", shopify_order_id="ORD-027",
                 customer_email="patricia.gomez@mail.com", customer_name="Patricia Gomez", 
                 customer_document_type="6", customer_document_number="20888555666",
-                total_price=435.75, currency="PEN",
+                total_price=435.79, currency="PEN",
                 line_items=[
                     {"sku": "MIC-BLUE-YETI", "product": "Microphone Blue Yeti", "unitPrice": 129.99, "quantity": 1, "subtotal": 129.99},
                     {"sku": "ARM-MIC-BOOM", "product": "Boom Arm Stand", "unitPrice": 48.95, "quantity": 2, "subtotal": 97.90},
@@ -661,14 +661,14 @@ def seed_database():
                     {"sku": "WATCH-APL-S9", "product": "Smart Watch Apple Watch", "unitPrice": 399.00, "quantity": 1, "subtotal": 399.00},
                     {"sku": "BAND-WATCH-SP", "product": "Watch Band Sport", "unitPrice": 49.00, "quantity": 2, "subtotal": 98.00},
                     {"sku": "PROT-SCR-GLS", "product": "Screen Protector Glass", "unitPrice": 16.00, "quantity": 8, "subtotal": 128.00}
-                ], validado=True, validated_at=datetime(2026, 2, 3, 12, 0, 0), payment_method="PayPal",
+                ], validado=False, validated_at=None, payment_method=None,
                 notes=None, status="Pendiente",
                 shipping_address="Calle Monte Rosa 250", shipping_city="SANTIAGO DE SURCO", shipping_province="LIMA", shipping_country="Peru",
-                created_at=datetime(2026, 2, 3, 11, 15, 0), updated_at=datetime(2026, 2, 3, 12, 0, 0)),
+                created_at=datetime(2026, 2, 3, 11, 15, 0), updated_at=datetime(2026, 2, 3, 11, 15, 0)),
             Order(tenant_id=2, shopify_draft_order_id="DFT-029", shopify_order_id=None,
                 customer_email="veronica.medina@biz.com", customer_name="Veronica Medina", 
                 customer_document_type="6", customer_document_number="20777666555",
-                total_price=189.99, currency="PEN",
+                total_price=189.98, currency="PEN",
                 line_items=[
                     {"sku": "PWR-BANK-20K", "product": "Power Bank 20000mAh", "unitPrice": 45.99, "quantity": 2, "subtotal": 91.98},
                     {"sku": "CHR-FAST-65W", "product": "Fast Charger 65W GaN", "unitPrice": 49.00, "quantity": 2, "subtotal": 98.00}

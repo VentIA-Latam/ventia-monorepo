@@ -151,7 +151,7 @@ class MetricsRepository:
             Order.tenant_id == tenant_id,
             Order.created_at >= start,
             Order.created_at <= end,
-            Order.validado == True  # Solo órdenes validadas cuentan como ventas
+            Order.status == 'Pagado'
         ).scalar()
 
         return float(result) if result else 0.0
@@ -187,6 +187,7 @@ class MetricsRepository:
             WHERE orders.tenant_id = :tenant_id
               AND orders.created_at >= :start
               AND orders.created_at <= :end
+              AND orders.status = 'Pagado'
               AND UPPER(item->>'sku') != 'DELIVERY'
               AND item->>'product' IS NOT NULL
             GROUP BY item->>'product'

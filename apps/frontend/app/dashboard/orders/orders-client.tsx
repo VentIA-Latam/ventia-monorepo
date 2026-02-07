@@ -57,6 +57,7 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
   const filteredOrders = initialOrders.filter((order) => {
     const matchesSearch =
       (order.shopify_draft_order_id?.toLowerCase().includes(filters.search.toLowerCase()) ||
+       order.shopify_order_id?.toLowerCase().includes(filters.search.toLowerCase()) ||
        order.woocommerce_order_id?.toString().includes(filters.search) ||
        order.customer_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
        order.customer_email.toLowerCase().includes(filters.search.toLowerCase())) ?? false;
@@ -107,7 +108,7 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
         <div className="flex-1 min-w-[250px] relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por ID de pedido, Cliente o Empresa..."
+            placeholder="Buscar por ID de pedido o Cliente..."
             value={filters.search}
             onChange={(e) => setFilters({ ...filters, search: e.target.value })}
             className="pl-10"
