@@ -2,13 +2,15 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Auth0Provider } from '@auth0/nextjs-auth0/client';
 import { Toaster } from "@/components/ui/toaster";
+import { Providers } from "./providers";
 
 // Google Fonts
-import { Inter, Libre_Franklin, Source_Sans_3, JetBrains_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, Libre_Franklin, Source_Sans_3, JetBrains_Mono } from "next/font/google";
 
-const inter = Inter({
+const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-inter",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
 });
 
 const libre = Libre_Franklin({
@@ -38,14 +40,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es">
       <body
-        className={`${inter.variable} ${libre.variable} ${sourceSans.variable} ${jetbrainsMono.variable} font-sans`}
+        className={`${plusJakarta.variable} ${libre.variable} ${sourceSans.variable} ${jetbrainsMono.variable} font-sans`}
         suppressHydrationWarning
       >
         <Auth0Provider>
-          {children}
-          <Toaster />
+          <Providers>
+            {children}
+            <Toaster />
+          </Providers>
         </Auth0Provider>
       </body>
     </html>
   );
 }
+

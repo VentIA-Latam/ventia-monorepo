@@ -17,11 +17,11 @@ import {
   Shield,
   Key,
   Receipt,
-  FileBarChart,
   MessageSquare,
 } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Image from "next/image"
+import Link from "next/link"
 import { useAuth } from "@/hooks/use-auth"
 
 import {
@@ -38,6 +38,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,11 +73,6 @@ const dataPlatform = [
     icon: Receipt,
   },
   {
-    title: "Métricas",
-    url: "/dashboard/metrics",
-    icon: FileBarChart,
-  },
-  {
     title: "Conversaciones",
     url: "/dashboard/conversations",
     icon: MessageSquare,
@@ -93,22 +89,9 @@ const dataPlatform = [
   },
 ]
 
-const dataConfiguration = [
-  {
-    title: "Series de facturación",
-    url: "/dashboard/invoices/series",
-    icon: FileBarChart,
-  },
-  {
-    title: "Credenciales (API Key)",
-    url: "/dashboard/settings/api-keys",
-    icon: Key,
-  },
-]
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
-  const { user, isLoading, isSuperAdmin } = useAuth()
+  const { user, isUserLoading, isSuperAdmin } = useAuth()
 
   const isActive = (url: string) => {
     if (url === "/dashboard") return pathname === "/dashboard";
@@ -157,7 +140,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-3 py-2 font-inter">
+      <SidebarContent className="px-3 py-2 font-sans">
         {/* --- GRUPO PLATAFORMA --- */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-2 px-2">
@@ -173,13 +156,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     tooltip={item.title}
                     className={`
                         w-full justify-between h-10 px-3 rounded-lg transition-all duration-200
-                        ${isActive(item.url) ? "border border-sidebar-border shadow-sm" : ""}
+                        ${isActive(item.url)
+                          ? "bg-gradient-to-r from-volt/10 to-aqua/5 border-l-2 border-l-volt shadow-sm"
+                          : "hover:bg-muted/60"
+                        }
                     `}
                   >
-                    <a href={item.url} className="flex items-center w-full">
+                    <Link href={item.url} className="flex items-center w-full">
                       <item.icon className="w-5 h-5 mr-3 shrink-0" />
                       <span className="flex-1 truncate">{item.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -189,7 +175,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
 
       {/* --- FOOTER (PERFIL) --- */}
-      <SidebarFooter className="p-4 border-t border-sidebar-border bg-sidebar">
+      <SidebarFooter className="p-4 border-t border-sidebar-border bg-gradient-to-t from-cielo/5 to-transparent">
         <SidebarMenu>
           <SidebarMenuItem suppressHydrationWarning>
             <DropdownMenu>
@@ -198,19 +184,32 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   size="lg"
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-foreground w-full hover:bg-sidebar-accent rounded-xl transition-colors p-2 border border-transparent hover:border-sidebar-border"
                 >
-                  <Avatar className="h-10 w-10 rounded-full bg-cielo border border-luma/30">
-                    <AvatarImage src={user?.picture || ""} alt={user?.name || "User"} />
-                    <AvatarFallback className="bg-cielo text-marino font-medium text-sm">
-                      {isLoading ? "..." : getUserInitials()}
-                    </AvatarFallback>
-                  </Avatar>
+                  {isUserLoading ? (
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                  ) : (
+                    <Avatar className="h-10 w-10 rounded-full bg-cielo border border-luma/30">
+                      <AvatarImage src={user?.picture || ""} alt={user?.name || "User"} />
+                      <AvatarFallback className="bg-cielo text-marino font-medium text-sm">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
                   <div className="grid flex-1 text-left text-sm leading-tight ml-3 group-data-[collapsible=icon]:hidden">
-                    <span className="truncate font-bold text-foreground">
-                      {isLoading ? "Cargando..." : user?.name || "Usuario"}
-                    </span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {isLoading ? "" : user?.email || ""}
-                    </span>
+                    {isUserLoading ? (
+                      <>
+                        <Skeleton className="h-4 w-24 mb-1" />
+                        <Skeleton className="h-3 w-32" />
+                      </>
+                    ) : (
+                      <>
+                        <span className="truncate font-bold text-foreground">
+                          {user?.name || "Usuario"}
+                        </span>
+                        <span className="truncate text-xs text-muted-foreground">
+                          {user?.email || ""}
+                        </span>
+                      </>
+                    )}
                   </div>
                   <ChevronsUpDown className="ml-auto size-4 text-muted-foreground group-data-[collapsible=icon]:hidden" />
                 </SidebarMenuButton>

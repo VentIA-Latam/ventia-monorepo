@@ -394,3 +394,4 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
     </div>
   );
 }
+

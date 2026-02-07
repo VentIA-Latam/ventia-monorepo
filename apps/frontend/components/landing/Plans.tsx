@@ -177,14 +177,14 @@ export default function Plans() {
                   "
                 >
                   {/* --- ENCABEZADO DEL PLAN --- */}
-                  <h3 className="text-lg sm:text-xl md:text-2xl tracking-widest text-black mb-3 sm:mb-4 uppercase font-inter font-bold whitespace-pre-line leading-tight">
+                  <h3 className="text-lg sm:text-xl md:text-2xl tracking-widest text-black mb-3 sm:mb-4 uppercase font-sans font-bold whitespace-pre-line leading-tight">
                     {plan.name}
                   </h3>
 
                   {/* Subtítulo (DESDE) */}
                   <p
                     className={`
-                      text-xs md:text-sm font-inter text-[#182432]/60 mb-1
+                      text-xs md:text-sm font-sans text-[#182432]/60 mb-1
                       ${!plan.subtitle ? "invisible" : ""}
                     `}
                   >
@@ -200,7 +200,7 @@ export default function Plans() {
 
                     <p
                       className={`
-                        text-xs md:text-sm font-inter font-medium text-[#182432] mt-2
+                        text-xs md:text-sm font-sans font-medium text-[#182432] mt-2
                         ${!plan.priceDetails ? "invisible select-none" : ""}
                       `}
                     >
@@ -219,7 +219,7 @@ export default function Plans() {
                       rounded-full
                       bg-[#5ACAF0]
                       px-8 sm:px-10 py-2.5 sm:py-3
-                      text-xs sm:text-sm md:text-base font-inter font-bold text-white
+                      text-xs sm:text-sm md:text-base font-sans font-bold text-white
                       shadow-md
                       border-2 border-[#5ACAF0]
                       hover:bg-white hover:text-[#48C1EC] hover:border-[#48C1EC]
@@ -232,7 +232,7 @@ export default function Plans() {
                   </a>
 
                   {/* --- CARACTERÍSTICAS --- */}
-                  <ul className="w-full text-left text-xs sm:text-sm md:text-base font-inter font-medium text-[#182432] space-y-2 sm:space-y-3 px-2">
+                  <ul className="w-full text-left text-xs sm:text-sm md:text-base font-sans font-medium text-[#182432] space-y-2 sm:space-y-3 px-2">
                     {plan.features.map((f) => (
                       <li key={f} className="flex items-start gap-2 sm:gap-3">
                         <span className="mt-1.5 sm:mt-2 h-1.5 w-1.5 min-w-1.5 rounded-full bg-[#182432]" />
