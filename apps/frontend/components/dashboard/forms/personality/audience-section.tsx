@@ -27,7 +27,7 @@ export default function AudienceSection({
       <div className="space-y-6">
         <div>
           <label className="block text-sm font-medium text-muted-foreground mb-2">
-            {"\u00bfA qui\u00e9n le vendes?"}
+            ¿A quién le vendes?
             <span className="text-danger ml-1">*</span>
           </label>
           <input

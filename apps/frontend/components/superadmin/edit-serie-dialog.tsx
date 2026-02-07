@@ -103,7 +103,7 @@ export function EditSerieDialog({ open, serie, onClose, onSuccess }: EditSerieDi
         <DialogHeader>
           <DialogTitle>Editar Serie</DialogTitle>
           <DialogDescription>
-            {"Modifica la descripci\u00f3n o el estado de la serie "}{serie?.serie}
+            Modifica la descripción o el estado de la serie {serie?.serie}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -132,7 +132,7 @@ export function EditSerieDialog({ open, serie, onClose, onSuccess }: EditSerieDi
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit_last_correlativo">{"\u00daltimo Correlativo Usado"}</Label>
+            <Label htmlFor="edit_last_correlativo">Último Correlativo Usado</Label>
             <Input
               id="edit_last_correlativo"
               type="number"
@@ -145,12 +145,12 @@ export function EditSerieDialog({ open, serie, onClose, onSuccess }: EditSerieDi
               className="font-mono"
             />
             <p className="text-xs text-muted-foreground">
-              {"\u26a0\ufe0f Cuidado: el pr\u00f3ximo comprobante ser\u00e1 este n\u00famero + 1. \u00dasalo solo si necesitas corregir el contador."}
+              ⚠️ Cuidado: el próximo comprobante será este número + 1. Úsalo solo si necesitas corregir el contador.
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit_description">{"Descripci\u00f3n"}</Label>
+            <Label htmlFor="edit_description">Descripción</Label>
             <Textarea
               id="edit_description"
               placeholder="Ej: Serie principal de facturas"

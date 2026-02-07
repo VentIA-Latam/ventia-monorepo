@@ -40,7 +40,7 @@ export default function BasicInfoSection({
           <div className="w-3 h-3 rounded-full bg-aqua"></div>
         </div>
         <h2 className="text-xl font-semibold text-ventia-blue">
-          {"Informaci\u00f3n b\u00e1sica"}
+          Información básica
         </h2>
       </div>
 
@@ -61,7 +61,7 @@ export default function BasicInfoSection({
 
         <div>
           <label className="block text-sm font-medium text-muted-foreground mb-2">
-            {"G\u00e9nero del vendedor"}
+            Género del vendedor
             <span className="text-danger ml-1">*</span>
           </label>
           <div className="flex flex-wrap gap-3">
@@ -105,7 +105,7 @@ export default function BasicInfoSection({
 
         <div>
           <label className="block text-sm font-medium text-muted-foreground mb-2">
-            {"Pa\u00eds de operaci\u00f3n"}
+            País de operación
             <span className="text-danger ml-1">*</span>
           </label>
           <Select
@@ -113,15 +113,15 @@ export default function BasicInfoSection({
             onValueChange={onOperationCountryChange}
           >
             <SelectTrigger className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua bg-muted">
-              <SelectValue placeholder={"Seleccionar pa\u00eds"} />
+              <SelectValue placeholder="Seleccionar país" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="PE">{"\uD83C\uDDF5\uD83C\uDDEA Per\u00fa"}</SelectItem>
-              <SelectItem value="MX">{"\uD83C\uDDF2\uD83C\uDDFD M\u00e9xico"}</SelectItem>
-              <SelectItem value="CO">{"\uD83C\uDDE8\uD83C\uDDF4 Colombia"}</SelectItem>
-              <SelectItem value="AR">{"\uD83C\uDDE6\uD83C\uDDF7 Argentina"}</SelectItem>
-              <SelectItem value="CL">{"\uD83C\uDDE8\uD83C\uDDF1 Chile"}</SelectItem>
-              <SelectItem value="ES">{"\uD83C\uDDEA\uD83C\uDDF8 Espa\u00f1a"}</SelectItem>
+              <SelectItem value="PE">🇵🇪 Perú</SelectItem>
+              <SelectItem value="MX">🇲🇽 México</SelectItem>
+              <SelectItem value="CO">🇨🇴 Colombia</SelectItem>
+              <SelectItem value="AR">🇦🇷 Argentina</SelectItem>
+              <SelectItem value="CL">🇨🇱 Chile</SelectItem>
+              <SelectItem value="ES">🇪🇸 España</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -129,13 +129,13 @@ export default function BasicInfoSection({
 
       <div className="mt-6">
         <label className="block text-sm font-medium text-muted-foreground mb-2">
-          {"Descripci\u00f3n de la empresa"}
+          Descripción de la empresa
           <span className="text-danger ml-1">*</span>
         </label>
         <textarea
           value={companyDescription}
           onChange={(e) => onCompanyDescriptionChange(e.target.value)}
-          placeholder={"Tienda gen\u00e9rica de productos variados."}
+          placeholder="Tienda genérica de productos variados."
           rows={6}
           className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua bg-muted"
         />

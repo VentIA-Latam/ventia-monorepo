@@ -38,7 +38,7 @@ export default function MessagesSection({
           <textarea
             value={welcomeMessage}
             onChange={(e) => onWelcomeMessageChange(e.target.value)}
-            placeholder={"\u00a1Hola! Soy GenAssist. \u00bfEn qu\u00e9 puedo ayudarte hoy?"}
+            placeholder="¡Hola! Soy GenAssist. ¿En qué puedo ayudarte hoy?"
             rows={4}
             className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua bg-muted"
           />
@@ -47,13 +47,13 @@ export default function MessagesSection({
         {/* Mensaje de confirmación de compra */}
         <div>
           <label className="block text-sm font-medium text-muted-foreground mb-2">
-            {"Mensaje de confirmaci\u00f3n de compra"}
+            Mensaje de confirmación de compra
             <span className="text-danger ml-1">*</span>
           </label>
           <textarea
             value={purchaseConfirmationMessage}
             onChange={(e) => onPurchaseConfirmationMessageChange(e.target.value)}
-            placeholder={"\u00a1Gracias por tu compra! Estamos procesando tu pedido y pronto recibir\u00e1s la confirmaci\u00f3n."}
+            placeholder="¡Gracias por tu compra! Estamos procesando tu pedido y pronto recibirás la confirmación."
             rows={4}
             className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua bg-muted"
           />
@@ -63,18 +63,18 @@ export default function MessagesSection({
       {/* Mensaje de derivación humana */}
       <div className="mt-6">
         <label className="block text-sm font-medium text-muted-foreground mb-2">
-          {"Mensaje de derivaci\u00f3n humana"}
+          Mensaje de derivación humana
           <span className="text-danger ml-1">*</span>
         </label>
         <textarea
           value={humanHandoffMessage}
           onChange={(e) => onHumanHandoffMessageChange(e.target.value)}
-          placeholder={"Te conectar\u00e9 con un agente humano para brindarte m\u00e1s ayuda."}
+          placeholder="Te conectaré con un agente humano para brindarte más ayuda."
           rows={4}
           className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua bg-muted"
         />
         <p className="mt-2 text-xs text-muted-foreground">
-          {"Mensaje que se env\u00eda cuando el asistente deriva la conversaci\u00f3n a un humano"}
+          Mensaje que se envía cuando el asistente deriva la conversación a un humano
         </p>
       </div>
     </div>

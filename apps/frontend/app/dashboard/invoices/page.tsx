@@ -67,3 +67,4 @@ export default async function InvoicesPage() {
   return <InvoicesClientView initialInvoices={invoices} />;
 }
 
+

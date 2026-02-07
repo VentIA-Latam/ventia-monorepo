@@ -21,3 +21,4 @@ export default async function SuperAdminLayout({
 
   return <SuperAdminLayoutClient>{children}</SuperAdminLayoutClient>;
 }
+

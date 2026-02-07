@@ -131,3 +131,4 @@ export default async function NewInvoicePage({ searchParams }: NewInvoicePagePro
   // 6️⃣ Renderizar formulario
   return <NewInvoiceForm order={order} existingInvoices={existingInvoices} />;
 }
+

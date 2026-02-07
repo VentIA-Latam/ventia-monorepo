@@ -79,7 +79,7 @@ export default function PersonalitySection({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
-              {"Estilo de comunicaci\u00f3n"}
+              Estilo de comunicación
               <FaInfoCircle className="text-muted-foreground text-xs cursor-help" />
             </label>
             <div className="relative">
@@ -126,7 +126,7 @@ export default function PersonalitySection({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
             <span className="text-sm font-medium text-muted-foreground">
-              {"\u00bfUsar emojis?"}
+              ¿Usar emojis?
             </span>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -141,7 +141,7 @@ export default function PersonalitySection({
 
           <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
             <span className="text-sm font-medium text-muted-foreground">
-              {"\u00bfUsar signos de apertura (\u00bf)?"}
+              ¿Usar signos de apertura (¿)?
             </span>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -192,7 +192,7 @@ export default function PersonalitySection({
                     onClick={() => removeEmoji(emoji)}
                     className="absolute -top-1 -right-1 bg-danger text-white rounded-full w-4 h-4 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    {"\u00d7"}
+                    ×
                   </button>
                 </div>
               ))}

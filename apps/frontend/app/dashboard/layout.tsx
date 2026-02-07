@@ -21,3 +21,4 @@ export default async function DashboardLayout({
 
   return <DashboardLayoutClient>{children}</DashboardLayoutClient>;
 }
+

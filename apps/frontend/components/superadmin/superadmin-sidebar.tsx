@@ -141,7 +141,7 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-3 py-2 font-inter">
+      <SidebarContent className="px-3 py-2 font-sans">
         {/* --- GRUPO SUPER ADMIN --- */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-2 px-2">
@@ -157,7 +157,10 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
                     tooltip={item.title}
                     className={`
                         w-full justify-between h-10 px-3 rounded-lg transition-all duration-200
-                        ${isActive(item.url) ? "border border-sidebar-border shadow-sm" : ""}
+                        ${isActive(item.url)
+                          ? "bg-gradient-to-r from-volt/10 to-aqua/5 border-l-2 border-l-volt shadow-sm"
+                          : "hover:bg-muted/60"
+                        }
                     `}
                   >
                     <Link href={item.url} className="flex items-center w-full">
@@ -186,7 +189,10 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
                     tooltip={item.title}
                     className={`
                         w-full justify-between h-10 px-3 rounded-lg transition-all duration-200
-                        ${isActive(item.url) ? "border border-sidebar-border shadow-sm" : ""}
+                        ${isActive(item.url)
+                          ? "bg-gradient-to-r from-volt/10 to-aqua/5 border-l-2 border-l-volt shadow-sm"
+                          : "hover:bg-muted/60"
+                        }
                     `}
                   >
                     <Link href={item.url} className="flex items-center w-full">
@@ -202,7 +208,7 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
       </SidebarContent>
 
       {/* --- FOOTER (PERFIL) --- */}
-      <SidebarFooter className="p-4 border-t border-sidebar-border bg-sidebar">
+      <SidebarFooter className="p-4 border-t border-sidebar-border bg-gradient-to-t from-cielo/5 to-transparent">
         <SidebarMenu>
           <SidebarMenuItem suppressHydrationWarning>
             <DropdownMenu>

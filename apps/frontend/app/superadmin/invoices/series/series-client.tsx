@@ -69,7 +69,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
   };
 
   const handleDelete = async (serieId: number) => {
-    if (!confirm("\u00bfEst\u00e1s seguro de eliminar esta serie? Esta acci\u00f3n no se puede deshacer.")) {
+    if (!confirm("¿Estás seguro de eliminar esta serie? Esta acción no se puede deshacer.")) {
       return;
     }
 
@@ -119,10 +119,10 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
         <div>
           <h1 className="text-2xl font-bold text-foreground font-heading flex items-center gap-2">
             <Settings className="h-6 w-6" />
-            Series de Facturaci\u00f3n
+            Series de Facturación
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Configura las series de numeraci\u00f3n para tus comprobantes electr\u00f3nicos
+            Configura las series de numeración para tus comprobantes electrónicos
           </p>
         </div>
         <Button onClick={() => setIsCreateDialogOpen(true)}>
@@ -135,7 +135,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          Las series de facturaci\u00f3n son c\u00f3digos de 4 caracteres que identifican cada tipo de comprobante. Ejemplos: F001 para facturas, B001 para boletas. El correlativo se incrementa autom\u00e1ticamente.
+          Las series de facturación son códigos de 4 caracteres que identifican cada tipo de comprobante. Ejemplos: F001 para facturas, B001 para boletas. El correlativo se incrementa automáticamente.
         </AlertDescription>
       </Alert>
 
@@ -152,7 +152,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
         <CardHeader>
           <CardTitle>Series Configuradas</CardTitle>
           <CardDescription>
-            Administra las series de numeraci\u00f3n para cada tipo de comprobante
+            Administra las series de numeración para cada tipo de comprobante
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -173,8 +173,8 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
                     <TableHead>Tenant</TableHead>
                     <TableHead>Serie</TableHead>
                     <TableHead>Tipo de Comprobante</TableHead>
-                    <TableHead>Descripci\u00f3n</TableHead>
-                    <TableHead className="text-right">{"\u00daltimo Correlativo"}</TableHead>
+                    <TableHead>Descripción</TableHead>
+                    <TableHead className="text-right">{"Último Correlativo"}</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
@@ -188,7 +188,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
                       <TableCell className="font-mono font-bold">{serie.serie}</TableCell>
                       <TableCell>{INVOICE_TYPE_LABELS[serie.invoice_type] || serie.invoice_type}</TableCell>
                       <TableCell className="max-w-[200px] truncate">
-                        {serie.description || <span className="text-muted-foreground italic">Sin descripci\u00f3n</span>}
+                        {serie.description || <span className="text-muted-foreground italic">Sin descripción</span>}
                       </TableCell>
                       <TableCell className="text-right font-mono">
                         {String(serie.last_correlativo).padStart(8, '0')}
@@ -254,3 +254,4 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
     </div>
   );
 }
+

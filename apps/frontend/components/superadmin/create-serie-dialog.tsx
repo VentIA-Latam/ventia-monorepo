@@ -111,7 +111,7 @@ export function CreateSerieDialog({ open, onClose, onSuccess, tenants }: CreateS
         <DialogHeader>
           <DialogTitle>Crear Nueva Serie</DialogTitle>
           <DialogDescription>
-            Define una nueva serie de numeraci\u00f3n para tus comprobantes electr\u00f3nicos
+            Define una nueva serie de numeración para tus comprobantes electrónicos
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -138,7 +138,7 @@ export function CreateSerieDialog({ open, onClose, onSuccess, tenants }: CreateS
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Selecciona el tenant para el cual se crear\u00e1 esta serie
+              Selecciona el tenant para el cual se creará esta serie
             </p>
           </div>
 
@@ -155,16 +155,16 @@ export function CreateSerieDialog({ open, onClose, onSuccess, tenants }: CreateS
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={INVOICE_TYPES.FACTURA}>
-                  Factura Electr\u00f3nica
+                  Factura Electrónica
                 </SelectItem>
                 <SelectItem value={INVOICE_TYPES.BOLETA}>
-                  Boleta de Venta Electr\u00f3nica
+                  Boleta de Venta Electrónica
                 </SelectItem>
                 <SelectItem value={INVOICE_TYPES.NOTA_CREDITO}>
-                  Nota de Cr\u00e9dito Electr\u00f3nica
+                  Nota de Crédito Electrónica
                 </SelectItem>
                 <SelectItem value={INVOICE_TYPES.NOTA_DEBITO}>
-                  Nota de D\u00e9bito Electr\u00f3nica
+                  Nota de Débito Electrónica
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -183,12 +183,12 @@ export function CreateSerieDialog({ open, onClose, onSuccess, tenants }: CreateS
               className="font-mono"
             />
             <p className="text-xs text-muted-foreground">
-              Usa 4 caracteres alfanum\u00e9ricos (ej: F001 para facturas, B001 para boletas)
+              Usa 4 caracteres alfanuméricos (ej: F001 para facturas, B001 para boletas)
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="last_correlativo">\u00daltimo Correlativo Usado</Label>
+            <Label htmlFor="last_correlativo">Último Correlativo Usado</Label>
             <Input
               id="last_correlativo"
               type="number"
@@ -201,12 +201,12 @@ export function CreateSerieDialog({ open, onClose, onSuccess, tenants }: CreateS
               className="font-mono"
             />
             <p className="text-xs text-muted-foreground">
-              Si ya usaste esta serie antes, ingresa el \u00faltimo n\u00famero de comprobante. El pr\u00f3ximo ser\u00e1 este n\u00famero + 1.
+              Si ya usaste esta serie antes, ingresa el último número de comprobante. El próximo será este número + 1.
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Descripci\u00f3n (opcional)</Label>
+            <Label htmlFor="description">Descripción (opcional)</Label>
             <Textarea
               id="description"
               placeholder="Ej: Serie principal de facturas"

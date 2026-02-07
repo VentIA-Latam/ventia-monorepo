@@ -379,3 +379,4 @@ export function TenantsClient({ initialTenants }: { initialTenants: Tenant[] }) 
     </div>
   );
 }
+

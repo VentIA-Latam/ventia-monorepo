@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, Users, Key, Shield, Package, Activity, TrendingUp, Clock, AlertTriangle, ArrowUpRight, Search, CheckCircle2, TrendingDown } from "lucide-react";
+import { Building2, Users, Key, Shield, Package, Activity, Clock, AlertTriangle, ArrowUpRight, Search, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatsCard } from "@/components/dashboard/stats-card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -59,66 +60,35 @@ export function SuperAdminDashboardClient({ stats, tenants, globalOrders, activi
 
       {/* Platform Stats */}
       <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 md:gap-4 lg:gap-6">
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
-              Empresas Activas
-            </CardTitle>
-            <Building2 className="h-4 w-4 md:h-5 md:w-5 text-volt" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl md:text-3xl font-bold">{stats.total_tenants}</div>
-            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-              <TrendingDown className="h-3 w-3 text-danger" />
-              {inactiveTenants.length} inactivos
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
-              Total Usuarios
-            </CardTitle>
-            <Users className="h-4 w-4 md:h-5 md:w-5 text-success" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl md:text-3xl font-bold">{stats.total_users}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              En {stats.total_tenants} organizaciones
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
-              API Keys Activas
-            </CardTitle>
-            <Key className="h-4 w-4 md:h-5 md:w-5 text-marino" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl md:text-3xl font-bold">{stats.active_api_keys ?? 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Credenciales en uso
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
-              Super Admins
-            </CardTitle>
-            <Shield className="h-4 w-4 md:h-5 md:w-5 text-warning" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl md:text-3xl font-bold">{stats.total_super_admins ?? 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Administradores de sistema
-            </p>
-          </CardContent>
-        </Card>
+        <StatsCard
+          title="Empresas Activas"
+          value={stats.total_tenants.toString()}
+          icon={<Building2 className="h-5 w-5" />}
+          accentColor="volt"
+          change={`${inactiveTenants.length} inactivos`}
+          changeType="negative"
+        />
+        <StatsCard
+          title="Total Usuarios"
+          value={stats.total_users.toString()}
+          icon={<Users className="h-5 w-5" />}
+          accentColor="success"
+          comparison={`En ${stats.total_tenants} organizaciones`}
+        />
+        <StatsCard
+          title="API Keys Activas"
+          value={(stats.active_api_keys ?? 0).toString()}
+          icon={<Key className="h-5 w-5" />}
+          accentColor="marino"
+          comparison="Credenciales en uso"
+        />
+        <StatsCard
+          title="Super Admins"
+          value={(stats.total_super_admins ?? 0).toString()}
+          icon={<Shield className="h-5 w-5" />}
+          accentColor="warning"
+          comparison="Administradores de sistema"
+        />
       </div>
 
       {/* Main Content Grid */}
@@ -337,3 +307,4 @@ export function SuperAdminDashboardClient({ stats, tenants, globalOrders, activi
     </div>
   );
 }
+

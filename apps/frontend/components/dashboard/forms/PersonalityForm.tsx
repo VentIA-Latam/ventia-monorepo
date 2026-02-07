@@ -46,7 +46,7 @@ export default function PersonalityForm({
     useEmojis: true,
     useOpeningSymbols: false,
     wordsToAvoid: "",
-    allowedEmojis: ["\uD83D\uDE0A", "\uD83D\uDC4D", "\uD83C\uDF89"],
+    allowedEmojis: ["😊", "👍", "🎉"],
     sellerName: "",
     sellerGender: "",
     companyName: "",
@@ -69,7 +69,7 @@ export default function PersonalityForm({
   };
 
   return (
-    <div className="space-y-8 font-inter">
+    <div className="space-y-8 font-sans">
 
       {/* Basic Information Section */}
       <BasicInfoSection

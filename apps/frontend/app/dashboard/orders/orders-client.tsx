@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { OrdersTable } from "@/components/dashboard/orders/orders-table";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Order } from "@/lib/services/order-service";
 import {
   Download,
@@ -140,8 +141,25 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
         </select> */}
       </div>
 
-      {/* Table */}
-      <OrdersTable orders={currentOrders} />
+      {/* Table or Empty State */}
+      {filteredOrders.length === 0 ? (
+        <EmptyState
+          icon={<Search className="h-6 w-6" />}
+          title="No se encontraron pedidos"
+          description="Intenta ajustar los filtros de búsqueda o estado de pago."
+          action={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setFilters({ search: "", paymentStatus: "all", channel: "all", dateRange: "30" })}
+            >
+              Limpiar filtros
+            </Button>
+          }
+        />
+      ) : (
+        <OrdersTable orders={currentOrders} />
+      )}
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
@@ -208,3 +226,4 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
     </div>
   );
 }
+

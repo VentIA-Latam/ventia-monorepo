@@ -91,7 +91,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
             {orders.map((order) => (
               <TableRow
                 key={order.id}
-                className="hover:bg-cielo/30 cursor-pointer transition-colors border-b border-border last:border-0"
+                className="hover:bg-cielo/20 cursor-pointer transition-all duration-200 border-b border-border last:border-0 border-l-2 border-l-transparent hover:border-l-volt"
                 onClick={() => handleOrderClick(order.id)}
               >
                 <TableCell className="min-w-[120px]">

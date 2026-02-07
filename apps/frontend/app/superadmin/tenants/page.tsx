@@ -6,3 +6,4 @@ export default async function TenantsPage() {
 
   return <TenantsClient initialTenants={tenantsData.items} />;
 }
+

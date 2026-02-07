@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { StatsCard } from "@/components/dashboard/stats-card";
-import { ShoppingBag, AlertCircle, Truck, DollarSign } from "lucide-react";
+import { ShoppingBag, AlertCircle, DollarSign } from "lucide-react";
 import { DashboardMetrics, PeriodType } from "@/lib/services/metrics-service";
 import { formatDate } from "@/lib/utils";
+import { motion } from "framer-motion";
 import {
   Select,
   SelectContent,
@@ -28,15 +29,17 @@ const PERIOD_LABELS: Record<PeriodType, string> = {
   'custom': 'Personalizado',
 };
 
-/**
- * Client Component para dashboard con métricas reales
- * Maneja la selección de periodo y refresco automático
- */
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Buenos días";
+  if (hour < 18) return "Buenas tardes";
+  return "Buenas noches";
+}
+
 export function DashboardClient({ initialMetrics }: DashboardClientProps) {
   const router = useRouter();
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>(initialMetrics.period);
 
-  // Formatear moneda
   const formatCurrency = (amount: number, currency: string) => {
     const symbols: Record<string, string> = {
       'USD': '$',
@@ -47,10 +50,8 @@ export function DashboardClient({ initialMetrics }: DashboardClientProps) {
     return `${symbols[currency] || currency}${amount.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`;
   };
 
-  // Manejar cambio de periodo
   const handlePeriodChange = (newPeriod: PeriodType) => {
     setSelectedPeriod(newPeriod);
-    // Actualizar URL y refrescar datos del servidor
     router.push(`/dashboard/get-started?period=${newPeriod}`);
     router.refresh();
   };
@@ -60,14 +61,13 @@ export function DashboardClient({ initialMetrics }: DashboardClientProps) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-marino font-heading">
-            Dashboard General
+            {getGreeting()} 👋
           </h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2 font-inter">
-            Bienvenido de nuevo, aquí tienes un resumen de la operación
+          <p className="text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2">
+            Aquí tienes un resumen de la operación
           </p>
         </div>
 
-        {/* Selector de periodo */}
         <div className="flex items-center gap-2">
           <label className="text-xs sm:text-sm font-medium text-muted-foreground">
             Periodo:
@@ -92,33 +92,40 @@ export function DashboardClient({ initialMetrics }: DashboardClientProps) {
         </div>
       </div>
 
-      {/* Grid de 4 tarjetas de estadísticas con datos REALES */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatsCard
-          title="Total Pedidos"
-          value={initialMetrics.total_orders.toLocaleString('es-PE')}
-          icon={<ShoppingBag className="w-5 h-5" />}
-          // change="+5%"  // TODO: Calcular cambio vs periodo anterior
-          // changeType="positive"
-          comparison={`del ${formatDate(initialMetrics.start_date)} al ${formatDate(initialMetrics.end_date)}`}
-        />
-
-        <StatsCard
-          title="Pendientes de Pago"
-          value={initialMetrics.pending_payment.toString()}
-          icon={<AlertCircle className="w-5 h-5" />}
-          badge={initialMetrics.pending_payment > 0 ? "Requieren atención" : "Todo al día"}
-          badgeType={initialMetrics.pending_payment > 0 ? "warning" : "success"}
-        />
-
-        <StatsCard
-          title={`Ventas (${PERIOD_LABELS[selectedPeriod]})`}
-          value={formatCurrency(initialMetrics.total_sales, initialMetrics.currency)}
-          icon={<DollarSign className="w-5 h-5" />}
-          // change="+12%"  // TODO: Calcular cambio vs periodo anterior
-          // changeType="positive"
-          comparison="solo órdenes validadas"
-        />
+        {[
+          {
+            title: "Total Pedidos",
+            value: initialMetrics.total_orders.toLocaleString('es-PE'),
+            icon: <ShoppingBag className="w-5 h-5" />,
+            comparison: `del ${formatDate(initialMetrics.start_date)} al ${formatDate(initialMetrics.end_date)}`,
+            accentColor: "volt" as const,
+          },
+          {
+            title: "Pendientes de Pago",
+            value: initialMetrics.pending_payment.toString(),
+            icon: <AlertCircle className="w-5 h-5" />,
+            badge: initialMetrics.pending_payment > 0 ? "Requieren atención" : "Todo al día",
+            badgeType: (initialMetrics.pending_payment > 0 ? "warning" : "success") as "warning" | "success",
+            accentColor: "warning" as const,
+          },
+          {
+            title: `Ventas (${PERIOD_LABELS[selectedPeriod]})`,
+            value: formatCurrency(initialMetrics.total_sales, initialMetrics.currency),
+            icon: <DollarSign className="w-5 h-5" />,
+            comparison: "solo órdenes validadas",
+            accentColor: "success" as const,
+          },
+        ].map((card, i) => (
+          <motion.div
+            key={card.title}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: i * 0.1, ease: "easeOut" }}
+          >
+            <StatsCard {...card} />
+          </motion.div>
+        ))}
       </div>
     </div>
   );

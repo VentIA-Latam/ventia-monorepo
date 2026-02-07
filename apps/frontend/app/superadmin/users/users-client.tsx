@@ -65,7 +65,7 @@ export function UsersClient({ initialUsers, tenants }: { initialUsers: User[], t
   };
 
   const getTenantName = (tenantId: number | null) => {
-    if (!tenantId) return "\u2014";
+    if (!tenantId) return "—";
     const tenant = tenants.find(t => t.id === tenantId);
     return tenant ? tenant.name : "Desconocido";
   };
