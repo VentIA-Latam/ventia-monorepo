@@ -105,15 +105,15 @@ export async function fetchUsers(params?: {
 
 export interface GlobalOrder {
   id: number;
-  order_number: string;
   customer_name: string;
   customer_email: string;
   status: string;
-  total: number;
+  total_price: number;
   currency: string;
   validado: boolean;
   tenant_id: number;
   tenant?: Tenant;
+  channel: string;
   created_at: string;
   updated_at: string;
 }
