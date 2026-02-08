@@ -28,7 +28,7 @@ export function SuperAdminDashboardClient({ stats, tenants, globalOrders, activi
   );
 
   const filteredOrders = globalOrders.filter(o =>
-    o.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    o.id.toString().includes(searchTerm) ||
     o.customer_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -178,7 +178,7 @@ export function SuperAdminDashboardClient({ stats, tenants, globalOrders, activi
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1 md:gap-2 flex-wrap">
-                        <p className="font-medium text-xs md:text-sm">#{order.order_number}</p>
+                        <p className="font-medium text-xs md:text-sm">#{order.id}</p>
                         <Badge variant="outline" className="text-[10px] md:text-xs">
                           {order.tenant?.name || `Tenant ${order.tenant_id}`}
                         </Badge>
@@ -188,7 +188,7 @@ export function SuperAdminDashboardClient({ stats, tenants, globalOrders, activi
                   </div>
                   <div className="text-right ml-2 md:ml-4 shrink-0">
                     <p className="font-semibold text-xs md:text-sm">
-                      {order.currency} {order.total?.toFixed(2) || '0.00'}
+                      {order.currency} {order.total_price?.toFixed(2) || '0.00'}
                     </p>
                     <Badge
                       className={`text-[10px] md:text-xs mt-1 ${order.status === 'Pagado' ? "bg-success-bg text-success border-success/30" : "bg-warning-bg text-warning border-warning/30"}`}
