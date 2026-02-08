@@ -14,6 +14,8 @@ import {
   ArrowLeft,
   FileBarChart,
   MessageSquare,
+  ShoppingCart,
+  FileText,
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import Image from "next/image"
@@ -62,10 +64,23 @@ const dataSuperAdmin = [
   },
 ]
 
+const dataOperations = [
+  {
+    title: "Pedidos",
+    url: "/superadmin/orders",
+    icon: ShoppingCart,
+  },
+  {
+    title: "Facturación",
+    url: "/superadmin/invoices",
+    icon: FileText,
+  },
+]
+
 const dataConfiguration = [
   {
     title: "Series de facturación",
-    url: "/superadmin/invoices/series",
+    url: "/superadmin/invoices-series",
     icon: FileBarChart,
   },
   {
@@ -87,7 +102,7 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
 
   const isActive = (url: string) => {
     if (url === "/superadmin") return pathname === "/superadmin";
-    return pathname.startsWith(url);
+    return pathname === url || pathname.startsWith(url + "/");
   };
 
   const handleLogout = () => {
@@ -150,6 +165,38 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
           <SidebarGroupContent>
             <SidebarMenu>
               {dataSuperAdmin.map((item) => (
+                <SidebarMenuItem key={item.title} className="mb-1">
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.url)}
+                    tooltip={item.title}
+                    className={`
+                        w-full justify-between h-10 px-3 rounded-lg transition-all duration-200
+                        ${isActive(item.url)
+                          ? "bg-gradient-to-r from-volt/10 to-aqua/5 border-l-2 border-l-volt shadow-sm"
+                          : "hover:bg-muted/60"
+                        }
+                    `}
+                  >
+                    <Link href={item.url} className="flex items-center w-full">
+                      <item.icon className="w-5 h-5 mr-3 shrink-0" />
+                      <span className="flex-1 truncate">{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* --- GRUPO OPERACIONES --- */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-2 px-2">
+            Operaciones
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {dataOperations.map((item) => (
                 <SidebarMenuItem key={item.title} className="mb-1">
                   <SidebarMenuButton
                     asChild

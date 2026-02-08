@@ -532,6 +532,7 @@ async def download_invoice_xml(
 async def list_invoices(
     skip: int = 0,
     limit: int = 100,
+    tenant_id: int | None = None,
     current_user: User = Depends(require_permission_dual("GET", "/invoices")),
     db: Session = Depends(get_database),
 ) -> InvoiceListResponse:
@@ -578,9 +579,12 @@ async def list_invoices(
         )
 
     try:
-        # SUPERADMIN can view invoices from all tenants (tenant_id=None)
-        # Other users can only view their tenant's invoices
-        tenant_id = None if current_user.role == Role.SUPERADMIN else current_user.tenant_id
+        # SUPERADMIN can view invoices from all tenants or filter by tenant_id
+        # Other users can only view their tenant's invoices (tenant_id param ignored)
+        if current_user.role == Role.SUPERADMIN:
+            tenant_id = tenant_id  # Use provided filter or None for all
+        else:
+            tenant_id = current_user.tenant_id
         
         invoices, total = invoice_service.get_invoices_by_tenant(
             db=db,

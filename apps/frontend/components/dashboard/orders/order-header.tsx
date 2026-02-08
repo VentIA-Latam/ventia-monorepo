@@ -18,6 +18,7 @@ interface OrderHeaderProps {
   isValidating: boolean;
   error: string | null;
   onValidatePago: () => void;
+  basePath?: string;
 }
 
 export function OrderHeader({
@@ -25,6 +26,7 @@ export function OrderHeader({
   isValidating,
   error,
   onValidatePago,
+  basePath = '/dashboard',
 }: OrderHeaderProps) {
   const router = useRouter();
 
@@ -85,7 +87,7 @@ export function OrderHeader({
             variant="ghost"
             size="icon"
             className="shrink-0 mt-1 sm:mt-0"
-            onClick={() => router.push('/dashboard/orders')}
+            onClick={() => router.push(`${basePath}/orders`)}
           >
             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
@@ -114,7 +116,7 @@ export function OrderHeader({
               className="gap-2 text-xs sm:text-sm"
               size="sm"
               disabled={order.status === 'Cancelado'}
-              onClick={() => router.push(`/dashboard/invoices/new?orderId=${order.id}`)}
+              onClick={() => router.push(`${basePath}/invoices/new?orderId=${order.id}`)}
             >
               <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
               Crear Comprobante

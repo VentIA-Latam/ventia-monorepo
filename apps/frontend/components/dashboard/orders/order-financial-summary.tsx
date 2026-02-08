@@ -10,12 +10,14 @@ interface OrderFinancialSummaryProps {
   order: Order;
   isValidating: boolean;
   onValidatePago: () => void;
+  basePath?: string;
 }
 
 export function OrderFinancialSummary({
   order,
   isValidating,
   onValidatePago,
+  basePath = '/dashboard',
 }: OrderFinancialSummaryProps) {
   const router = useRouter();
 
@@ -56,7 +58,7 @@ export function OrderFinancialSummary({
             className="w-full gap-2 text-xs sm:text-sm"
             size="sm"
             disabled={!order.validado || order.status === 'Cancelado'}
-            onClick={() => router.push(`/dashboard/invoices/new?orderId=${order.id}`)}
+            onClick={() => router.push(`${basePath}/invoices/new?orderId=${order.id}`)}
           >
             <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
             Crear Comprobante

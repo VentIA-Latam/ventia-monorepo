@@ -11,6 +11,7 @@ import { InvoiceActionsCard } from "@/components/invoices/invoice-actions-card";
 
 interface InvoiceDetailClientProps {
   invoice: Invoice;
+  basePath?: string;
 }
 
 const formatCurrency = (amount: number | undefined, currency: string) => {
@@ -27,7 +28,7 @@ const formatCurrency = (amount: number | undefined, currency: string) => {
   return `${symbols[currency] || currency} ${amount.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailClientProps) {
+export function InvoiceDetailClient({ invoice: initialInvoice, basePath = '/dashboard' }: InvoiceDetailClientProps) {
   const {
     invoice,
     isDownloadingPDF,
@@ -45,7 +46,7 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
 
   return (
     <div className="space-y-6">
-      <InvoiceHeader invoice={invoice} />
+      <InvoiceHeader invoice={invoice} basePath={basePath} />
 
       <div className="grid gap-6 md:grid-cols-3">
         {/* Main Content */}
@@ -70,6 +71,7 @@ export function InvoiceDetailClient({ invoice: initialInvoice }: InvoiceDetailCl
           onCheckStatus={handleCheckStatus}
           onOpenEmailDialog={handleOpenEmailDialog}
           onConfirmSendEmail={handleConfirmSendEmail}
+          basePath={basePath}
         />
       </div>
     </div>

@@ -34,9 +34,10 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1
 interface NewInvoiceFormProps {
   order: Order;
   existingInvoices: Invoice[];
+  basePath?: string;
 }
 
-export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps) {
+export function NewInvoiceForm({ order, existingInvoices, basePath = '/dashboard' }: NewInvoiceFormProps) {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -154,7 +155,7 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
         const { accessToken } = await tokenRes.json();
 
         // Cargar series
-        const response = await fetch(`${API_URL}/invoice-series`, {
+        const response = await fetch(`${API_URL}/invoice-series?tenant_id=${order.tenant_id}`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -190,7 +191,7 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
     };
 
     fetchSeries();
-  }, [invoiceType]);
+  }, [invoiceType, order.tenant_id]);
 
   // 3️⃣ Validar si NC/ND requiere referencia
   const requiresReference = invoiceType === "07" || invoiceType === "08";
@@ -450,7 +451,7 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <Link href={`/dashboard/orders/${order.id}`}>
+          <Link href={`${basePath}/orders/${order.id}`}>
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Volver a la Orden
@@ -1062,7 +1063,7 @@ export function NewInvoiceForm({ order, existingInvoices }: NewInvoiceFormProps)
         invoice={createdInvoice}
         onViewInvoice={() => {
           if (createdInvoice) {
-            router.push(`/dashboard/invoices/${createdInvoice.id}`);
+            router.push(`${basePath}/invoices/${createdInvoice.id}`);
           }
         }}
         onDownloadPdf={async () => {

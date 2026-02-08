@@ -130,7 +130,7 @@ export function CreateSerieDialog({ open, onClose, onSuccess, tenants }: CreateS
                 <SelectValue placeholder="Selecciona un tenant" />
               </SelectTrigger>
               <SelectContent>
-                {tenants.map((tenant) => (
+                {tenants.filter((t) => !t.is_platform).map((tenant) => (
                   <SelectItem key={tenant.id} value={tenant.id.toString()}>
                     {tenant.name}
                   </SelectItem>

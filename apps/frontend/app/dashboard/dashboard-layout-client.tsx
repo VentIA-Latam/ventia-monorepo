@@ -17,7 +17,7 @@ const PAGE_META: Record<string, { title: string; breadcrumb: string[] }> = {
   '/metrics': { title: 'Métricas', breadcrumb: ['Métricas'] },
   '/get-started': { title: 'Inicio', breadcrumb: [] },
   '/payments': { title: 'Pagos', breadcrumb: ['Pagos'] },
-  '/invoices/series': { title: 'Series de facturación', breadcrumb: ['Facturación', 'Series'] },
+  '/invoices-series': { title: 'Series de facturación', breadcrumb: ['Facturación', 'Series'] },
   '/invoices/new': { title: 'Nuevo Comprobante', breadcrumb: ['Facturación', 'Nuevo'] },
   '/invoices': { title: 'Facturación', breadcrumb: ['Facturación'] },
   '/orders': { title: 'Pedidos', breadcrumb: ['Pedidos'] },

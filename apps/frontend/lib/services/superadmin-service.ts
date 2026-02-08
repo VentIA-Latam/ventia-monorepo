@@ -125,3 +125,25 @@ export async function fetchGlobalOrders(limit: number = 20): Promise<GlobalOrder
   );
   return data.items;
 }
+
+/**
+ * Fetch orders with full schema (for OrdersTable reuse in superadmin)
+ */
+export async function fetchOrdersFull(params?: {
+  limit?: number;
+  tenant_id?: number;
+}): Promise<{ items: import("@/lib/services/order-service").Order[]; total: number }> {
+  return fetchWithAuth("/orders", params as Record<string, number>);
+}
+
+// ==================== INVOICES ====================
+
+/**
+ * Fetch invoices (for superadmin invoices page)
+ */
+export async function fetchInvoicesFull(params?: {
+  limit?: number;
+  tenant_id?: number;
+}): Promise<{ items: import("@/lib/types/invoice").Invoice[]; total: number }> {
+  return fetchWithAuth("/invoices", params as Record<string, number>);
+}
