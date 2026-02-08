@@ -56,6 +56,7 @@ class OrderBase(BaseModel):
     shipping_city: str | None = Field(None, description="Shipping city")
     shipping_province: str | None = Field(None, description="Shipping province/state")
     shipping_country: str | None = Field(None, description="Country name")
+    channel: str | None = Field(None, description="Sales channel: shopify, woocommerce, venta_whatsapp")
 
 
 class OrderCreate(OrderBase):
@@ -183,6 +184,7 @@ class OrderResponse(OrderBase):
     )
     validado: bool
     validated_at: datetime | None
+    channel: str | None = Field(None, description="Sales channel: shopify, woocommerce, venta_whatsapp")
     status: str
     created_at: datetime
     updated_at: datetime

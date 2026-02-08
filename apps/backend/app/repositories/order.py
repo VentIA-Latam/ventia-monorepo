@@ -4,6 +4,7 @@ Order repository.
 
 from sqlalchemy.orm import Session, joinedload
 
+from app.models.invoice import Invoice
 from app.models.order import Order
 from app.repositories.base import CRUDBase
 from app.schemas.order import OrderCreate, OrderUpdate
@@ -38,7 +39,7 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         Returns:
             List of orders
         """
-        query = db.query(Order).filter(Order.tenant_id == tenant_id)
+        query = db.query(Order).options(joinedload(Order.invoices)).filter(Order.tenant_id == tenant_id)
 
         # Apply validation filter if specified
         if validado is not None:
@@ -79,7 +80,7 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         Returns:
             List of orders
         """
-        query = db.query(Order)
+        query = db.query(Order).options(joinedload(Order.invoices))
 
         # Optional tenant filter (for SUPERADMIN with specific tenant)
         if tenant_id is not None:

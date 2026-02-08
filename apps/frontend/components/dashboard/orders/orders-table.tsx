@@ -20,9 +20,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Order } from "@/lib/services/order-service";
+import { INVOICE_STATUS_COLORS } from "@/lib/types/invoice";
 import { getEcommerceOrderId, extractShopifyOrderId, formatDateTime, getCurrencySymbol, cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { FileText, MoreVertical, Eye, Ban } from "lucide-react";
+import { FileText, MoreVertical, Eye, Ban, Bot, CheckCircle2, AlertCircle, Clock } from "lucide-react";
+import Image from "next/image";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { CancelOrderDialog } from "./cancel-order-dialog";
 
 interface OrdersTableProps {
@@ -54,6 +57,105 @@ const getEstadoColor = (estado: string) => {
   }
 }
 
+function ChannelBadge({ channel }: { channel: string | null }) {
+  switch (channel) {
+    case "venta_whatsapp":
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-success/10 ring-1 ring-inset ring-success/20 cursor-default">
+              <Bot className="h-6 w-6 text-success" />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top">WhatsApp AI Agent</TooltipContent>
+        </Tooltip>
+      );
+    case "shopify":
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-muted/50 cursor-default">
+              <Image src="/external-icons/shopify-icon.png" alt="Shopify" width={35} height={35} />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top">Shopify</TooltipContent>
+        </Tooltip>
+      );
+    case "woocommerce":
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-muted/50 cursor-default">
+              <Image src="/external-icons/woo-icon.png" alt="WooCommerce" width={35} height={35} />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top">WooCommerce</TooltipContent>
+        </Tooltip>
+      );
+    default:
+      return (
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-dashed border-muted-foreground/20 cursor-default">
+          <span className="text-[10px] font-medium text-muted-foreground/35 uppercase tracking-wide">N/A</span>
+        </div>
+      );
+  }
+}
+
+function InvoiceBadge({ invoices }: { invoices: Order["invoices"] }) {
+  if (!invoices || invoices.length === 0) {
+    return (
+      <Badge
+        variant="outline"
+        className="text-xs px-2.5 py-0.5 gap-1 cursor-default border-dashed border-muted-foreground/25 text-muted-foreground/50 bg-transparent"
+      >
+        <FileText className="h-3 w-3" />
+        Sin emitir
+      </Badge>
+    );
+  }
+
+  const hasSuccess = invoices.some((inv) => inv.efact_status === "success");
+  const hasError = invoices.some((inv) => inv.efact_status === "error");
+
+  let status: "success" | "error" | "processing";
+  let label: string;
+  let Icon: typeof CheckCircle2;
+
+  if (hasSuccess) {
+    status = "success";
+    label = "Emitida";
+    Icon = CheckCircle2;
+  } else if (hasError) {
+    status = "error";
+    label = "Error";
+    Icon = AlertCircle;
+  } else {
+    status = "processing";
+    label = "En proceso";
+    Icon = Clock;
+  }
+
+  const successInvoice = invoices.find((inv) => inv.efact_status === "success");
+  const tooltipText = successInvoice
+    ? `${successInvoice.full_number}`
+    : `${invoices.length} comprobante${invoices.length > 1 ? "s" : ""}`;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Badge
+          variant="outline"
+          className={cn("text-xs px-2.5 py-0.5 gap-1 cursor-default", INVOICE_STATUS_COLORS[status])}
+        >
+          <Icon className="h-3 w-3" />
+          {label}
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent side="top">{tooltipText}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function OrdersTable({ orders }: OrdersTableProps) {
   const router = useRouter();
 
@@ -76,8 +178,14 @@ export function OrdersTable({ orders }: OrdersTableProps) {
               <TableHead className="min-w-[200px]">
                 CLIENTE
               </TableHead>
+              <TableHead className="min-w-[60px] w-[100px]">
+                CANAL
+              </TableHead>
               <TableHead className="min-w-[120px]">
                 ESTADO PAGO
+              </TableHead>
+              <TableHead className="min-w-[120px]">
+                FACTURACIÓN
               </TableHead>
               <TableHead className="text-right min-w-[100px]">
                 MONTO
@@ -138,7 +246,10 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="min-w-[120px]">
+                  <ChannelBadge channel={order.channel} />
+                </TableCell>
+                <TableCell className="min-w-[120px]">
                   <Badge
                     variant="outline"
                     className={cn(
@@ -148,6 +259,9 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                   >
                     {order.status}
                   </Badge>
+                </TableCell>
+                <TableCell className="min-w-[120px]">
+                  <InvoiceBadge invoices={order.invoices} />
                 </TableCell>
                 <TableCell className="text-right font-semibold text-sm text-foreground font-mono tabular-nums min-w-[100px]">
                   {getCurrencySymbol(order.currency)}{order.total_price.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

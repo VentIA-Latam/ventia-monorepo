@@ -161,6 +161,9 @@ def process_shopify_draft_order_create(
     shipping_address_raw = payload.get("shipping_address") or payload.get("billing_address")
     shipping_data = _extract_shipping_data(shipping_address_raw, "shopify")
 
+    # Extract sales channel
+    channel = _extract_channel(payload, "shopify")
+
     # Create order using repository
     try:
         order_data = OrderCreate(
@@ -171,6 +174,7 @@ def process_shopify_draft_order_create(
             total_price=total_price,
             currency=currency,
             line_items=line_items if line_items else None,
+            channel=channel,
             **shipping_data,  # Spread all shipping fields
         )
 
@@ -362,6 +366,10 @@ def process_shopify_orders_paid(
         if payment_method:
             order.payment_method = payment_method
 
+        # Set channel if not already set
+        if not order.channel:
+            order.channel = _extract_channel(payload, "shopify")
+
         db.flush()
 
         # Update webhook event
@@ -489,6 +497,31 @@ def _extract_shipping_data(
     return result
 
 
+def _extract_channel(payload: dict[str, Any], platform: str) -> str:
+    """
+    Determine the sales channel from webhook payload.
+
+    Checks for the 'venta_whatsapp' tag to identify AI agent sales.
+    - Shopify: tags is a comma-separated string
+    - WooCommerce: meta_data array with key 'order_tags'
+
+    Returns:
+        Channel string: 'venta_whatsapp', 'shopify', or 'woocommerce'
+    """
+    if platform == "shopify":
+        tags = payload.get("tags", "")
+        if "venta_whatsapp" in tags:
+            return "venta_whatsapp"
+        return "shopify"
+    elif platform == "woocommerce":
+        meta_data = payload.get("meta_data", [])
+        for meta in meta_data:
+            if meta.get("key") == "order_tags" and "venta_whatsapp" in str(meta.get("value", "")):
+                return "venta_whatsapp"
+        return "woocommerce"
+    return platform
+
+
 def process_shopify_draft_order_update(
     db: Session,
     webhook_event: WebhookEvent,
@@ -605,6 +638,9 @@ def process_shopify_draft_order_update(
     shipping_address_raw = payload.get("shipping_address") or payload.get("billing_address")
     shipping_data = _extract_shipping_data(shipping_address_raw, "shopify")
 
+    # Extract sales channel
+    channel = _extract_channel(payload, "shopify")
+
     # 4. Check idempotency - compare critical fields
     needs_update = False
 
@@ -627,6 +663,9 @@ def process_shopify_draft_order_update(
     if shipping_data.get("shipping_province") and order.shipping_province != shipping_data.get("shipping_province"):
         needs_update = True
     if shipping_data.get("shipping_country") and order.shipping_country != shipping_data.get("shipping_country"):
+        needs_update = True
+    # Compare channel
+    if order.channel != channel:
         needs_update = True
 
     if not needs_update:
@@ -658,6 +697,9 @@ def process_shopify_draft_order_update(
             order.shipping_province = shipping_data["shipping_province"]
         if shipping_data.get("shipping_country"):
             order.shipping_country = shipping_data["shipping_country"]
+
+        # Update channel
+        order.channel = channel
 
         db.flush()
 
@@ -890,6 +932,9 @@ def process_shopify_order_updated(
     financial_status = payload.get("financial_status", "").lower()
     is_paid = financial_status in ["paid", "partially_paid", "refunded"]
 
+    # Extract sales channel
+    channel = _extract_channel(payload, "shopify")
+
     # 5. Check idempotency
     needs_update = False
 
@@ -904,6 +949,8 @@ def process_shopify_order_updated(
     if is_paid and not order.validado:
         needs_update = True
     if not order.shopify_order_id:
+        needs_update = True
+    if order.channel != channel:
         needs_update = True
 
     if not needs_update:
@@ -935,6 +982,9 @@ def process_shopify_order_updated(
 
         if payment_method:
             order.payment_method = payment_method
+
+        # Update channel
+        order.channel = channel
 
         db.flush()
 
@@ -1195,7 +1245,10 @@ def process_woocommerce_order_created(
     shipping_address_raw = payload.get("shipping") or payload.get("billing")
     shipping_data = _extract_shipping_data(shipping_address_raw, "woocommerce")
 
-    # 10. Crear orden
+    # 10. Extract sales channel
+    channel = _extract_channel(payload, "woocommerce")
+
+    # 11. Crear orden
     try:
         order_data = OrderCreate(
             tenant_id=tenant.id,
@@ -1206,6 +1259,7 @@ def process_woocommerce_order_created(
             currency=currency,
             line_items=line_items if line_items else None,
             payment_method=payment_method,
+            channel=channel,
             **shipping_data,  # Spread all shipping fields
         )
 
@@ -1364,6 +1418,9 @@ def process_woocommerce_order_updated(
     shipping_address_raw = payload.get("shipping") or payload.get("billing")
     shipping_data = _extract_shipping_data(shipping_address_raw, "woocommerce")
 
+    # 9.5 Extract sales channel
+    channel = _extract_channel(payload, "woocommerce")
+
     # 10. Check idempotency - compare all critical fields
     needs_update = False
 
@@ -1392,6 +1449,9 @@ def process_woocommerce_order_updated(
     if shipping_data.get("shipping_province") and order.shipping_province != shipping_data.get("shipping_province"):
         needs_update = True
     if shipping_data.get("shipping_country") and order.shipping_country != shipping_data.get("shipping_country"):
+        needs_update = True
+    # Compare channel
+    if order.channel != channel:
         needs_update = True
 
     if not needs_update:
@@ -1435,6 +1495,9 @@ def process_woocommerce_order_updated(
             order.shipping_province = shipping_data["shipping_province"]
         if shipping_data.get("shipping_country"):
             order.shipping_country = shipping_data["shipping_country"]
+
+        # Update channel
+        order.channel = channel
 
         db.flush()
 
