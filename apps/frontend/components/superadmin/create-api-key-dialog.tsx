@@ -211,7 +211,7 @@ export function CreateAPIKeyDialog({ open, onOpenChange, onSuccess, apiEndpoint,
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="default">Mi tenant (predeterminado)</SelectItem>
-                  {tenants.map((tenant) => (
+                  {tenants?.filter((t) => !t.is_platform).map((tenant) => (
                     <SelectItem key={tenant.id} value={tenant.id.toString()}>
                       {tenant.name}
                     </SelectItem>

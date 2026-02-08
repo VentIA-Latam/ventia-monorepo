@@ -841,6 +841,11 @@ class TestShopifyDraftOrderUpdate:
         order.total_price = 100.0
         order.currency = "USD"
         order.line_items = []
+        order.channel = "shopify"
+        order.shipping_address = None
+        order.shipping_city = None
+        order.shipping_province = None
+        order.shipping_country = None
         return order
 
     @pytest.fixture
@@ -1125,6 +1130,11 @@ class TestShopifyOrderUpdated:
         order.validado = False
         order.status = "Pendiente"
         order.validated_at = None
+        order.channel = "shopify"
+        order.shipping_address = None
+        order.shipping_city = None
+        order.shipping_province = None
+        order.shipping_country = None
         return order
 
     @pytest.fixture
@@ -1499,6 +1509,11 @@ class TestWooCommerceOrderUpdated:
         order.validado = False
         order.validated_at = None
         order.payment_method = "Credit Card"
+        order.channel = "woocommerce"
+        order.shipping_address = None
+        order.shipping_city = None
+        order.shipping_province = None
+        order.shipping_country = None
         order.line_items = [
             {
                 "sku": "OLD-SKU",

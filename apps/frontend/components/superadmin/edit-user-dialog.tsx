@@ -127,7 +127,7 @@ export function EditUserDialog({ user, open, onOpenChange, onSuccess, tenants }:
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Sin tenant (Super Admin)</SelectItem>
-                  {tenants.map((tenant) => (
+                  {tenants.filter((t) => !t.is_platform).map((tenant) => (
                     <SelectItem key={tenant.id} value={tenant.id.toString()}>
                       {tenant.name}
                     </SelectItem>

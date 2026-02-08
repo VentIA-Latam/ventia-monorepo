@@ -30,6 +30,7 @@ import { CancelOrderDialog } from "./cancel-order-dialog";
 
 interface OrdersTableProps {
   orders: Order[];
+  basePath?: string;
 }
 
 
@@ -156,11 +157,11 @@ function InvoiceBadge({ invoices }: { invoices: Order["invoices"] }) {
   );
 }
 
-export function OrdersTable({ orders }: OrdersTableProps) {
+export function OrdersTable({ orders, basePath = '/dashboard' }: OrdersTableProps) {
   const router = useRouter();
 
   const handleOrderClick = (orderId: number) => {
-    router.push(`/dashboard/orders/${orderId}`);
+    router.push(`${basePath}/orders/${orderId}`);
   };
 
   return (
@@ -280,7 +281,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                     <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      <Link href={`/dashboard/orders/${order.id}`}>
+                      <Link href={`${basePath}/orders/${order.id}`}>
                         <DropdownMenuItem>
                           <Eye className="h-4 w-4 mr-2" />
                           Ver detalles
@@ -289,7 +290,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                       <DropdownMenuItem
                         onClick={(e) => {
                           e.stopPropagation();
-                          router.push(`/dashboard/invoices/new?orderId=${order.id}`);
+                          router.push(`${basePath}/invoices/new?orderId=${order.id}`);
                         }}
                       >
                         <FileText className="h-4 w-4 mr-2" />

@@ -11,9 +11,10 @@ import { FileText } from "lucide-react";
 interface OrderInvoicesListProps {
   order: Order;
   invoices: Invoice[];
+  basePath?: string;
 }
 
-export function OrderInvoicesList({ order, invoices }: OrderInvoicesListProps) {
+export function OrderInvoicesList({ order, invoices, basePath = '/dashboard' }: OrderInvoicesListProps) {
   const router = useRouter();
 
   return (
@@ -32,7 +33,7 @@ export function OrderInvoicesList({ order, invoices }: OrderInvoicesListProps) {
             </p>
             {order.validado && (
               <Button
-                onClick={() => router.push(`/dashboard/invoices/new?orderId=${order.id}`)}
+                onClick={() => router.push(`${basePath}/invoices/new?orderId=${order.id}`)}
                 className="gap-2"
               >
                 <FileText className="h-4 w-4" />
@@ -76,7 +77,7 @@ export function OrderInvoicesList({ order, invoices }: OrderInvoicesListProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => router.push(`/dashboard/invoices/${invoice.id}`)}
+                    onClick={() => router.push(`${basePath}/invoices/${invoice.id}`)}
                   >
                     Ver Detalle
                   </Button>
@@ -85,7 +86,7 @@ export function OrderInvoicesList({ order, invoices }: OrderInvoicesListProps) {
             </div>
             {order.validado && (
               <Button
-                onClick={() => router.push(`/dashboard/invoices/new?orderId=${order.id}`)}
+                onClick={() => router.push(`${basePath}/invoices/new?orderId=${order.id}`)}
                 variant="outline"
                 className="w-full gap-2"
               >

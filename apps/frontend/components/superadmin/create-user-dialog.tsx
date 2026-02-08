@@ -103,7 +103,7 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess, tenants }: Cre
                   <SelectValue placeholder="Seleccionar tenant" />
                 </SelectTrigger>
                 <SelectContent>
-                  {tenants.map((tenant) => (
+                  {tenants.filter((t) => !t.is_platform).map((tenant) => (
                     <SelectItem key={tenant.id} value={tenant.id.toString()}>
                       {tenant.name}
                     </SelectItem>
