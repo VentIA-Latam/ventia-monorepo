@@ -151,6 +151,14 @@ class Order(Base, TimestampMixin):
         comment="Country name (e.g., 'Peru', 'United States')",
     )
 
+    # Sales channel
+    channel = Column(
+        String,
+        nullable=True,
+        index=True,
+        comment="Sales channel: shopify, woocommerce, venta_whatsapp",
+    )
+
     # Relationships
     invoices = relationship("Invoice", back_populates="order", cascade="all, delete-orphan")
 

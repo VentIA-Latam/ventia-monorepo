@@ -67,8 +67,8 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
       order.status === filters.paymentStatus;
 
     const matchesChannel =
-      filters.channel === "all";
-      // Note: channel filtering removed as it's not in backend Order type
+      filters.channel === "all" ||
+      order.channel === filters.channel;
 
     return matchesSearch && matchesPaymentStatus && matchesChannel;
   });
@@ -130,16 +130,20 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
           </SelectContent>
         </Select>
 
-        {/*         <select
-          value={filters.dateRange}
-          onChange={(e) => setFilters({ ...filters, dateRange: e.target.value })}
-          className="px-3 py-2 border rounded-md bg-background min-w-[150px]"
+        <Select
+          value={filters.channel}
+          onValueChange={(value) => setFilters({ ...filters, channel: value })}
         >
-          <option value="7">Últimos 7 días</option>
-          <option value="30">Últimos 30 días</option>
-          <option value="90">Últimos 90 días</option>
-          <option value="365">Último año</option>
-        </select> */}
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Canal" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Canal</SelectItem>
+            <SelectItem value="venta_whatsapp">WhatsApp AI</SelectItem>
+            <SelectItem value="shopify">Shopify</SelectItem>
+            <SelectItem value="woocommerce">WooCommerce</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Table or Empty State */}

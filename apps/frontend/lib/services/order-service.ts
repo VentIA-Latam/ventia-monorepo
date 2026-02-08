@@ -2,6 +2,8 @@
  * Order service - API calls to backend
  */
 
+import type { Invoice } from '@/lib/types/invoice';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 export interface Order {
@@ -23,6 +25,8 @@ export interface Order {
   shipping_address: string | null;
   notes: string | null;
   status: string;
+  channel: string | null;
+  invoices: Invoice[] | null;
   created_at: string;
   updated_at: string;
 }
