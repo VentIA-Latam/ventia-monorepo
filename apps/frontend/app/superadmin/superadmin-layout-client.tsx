@@ -17,7 +17,12 @@ export default function SuperAdminLayoutClient({
     if (pathname.includes('/tenants')) return 'Gestión de Tenants';
     if (pathname.includes('/users')) return 'Gestión de Usuarios';
     if (pathname.includes('/api-keys')) return 'Gestión de API Keys';
-    if (pathname.includes('/invoices/series')) return 'Series de facturación';
+    if (pathname.includes('/invoices-series')) return 'Series de facturación';
+    if (pathname.includes('/invoices/new')) return 'Nuevo Comprobante';
+    if (pathname.match(/\/invoices\/\d+/)) return 'Detalle de Comprobante';
+    if (pathname === '/superadmin/invoices') return 'Facturación';
+    if (pathname.match(/\/orders\/\d+/)) return 'Detalle de Pedido';
+    if (pathname === '/superadmin/orders') return 'Pedidos';
     if (pathname.includes('/settings/api-keys')) return 'Credenciales (API Key)';
     if (pathname.includes('/chatwoot')) return 'Chatwoot';
     return 'SuperAdmin';

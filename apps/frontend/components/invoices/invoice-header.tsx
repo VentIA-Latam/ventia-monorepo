@@ -20,9 +20,10 @@ import {
 
 interface InvoiceHeaderProps {
   invoice: Invoice;
+  basePath?: string;
 }
 
-export function InvoiceHeader({ invoice }: InvoiceHeaderProps) {
+export function InvoiceHeader({ invoice, basePath = '/dashboard' }: InvoiceHeaderProps) {
   const tipoComprobante = INVOICE_TYPE_NAMES[invoice.invoice_type] || invoice.invoice_type;
 
   return (
@@ -30,7 +31,7 @@ export function InvoiceHeader({ invoice }: InvoiceHeaderProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard/invoices">
+          <Link href={`${basePath}/invoices`}>
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Volver a Facturación
@@ -41,11 +42,11 @@ export function InvoiceHeader({ invoice }: InvoiceHeaderProps) {
 
       {/* Breadcrumb */}
       <nav className="flex text-sm text-muted-foreground">
-        <Link href="/dashboard" className="hover:text-foreground">
-          Dashboard
+        <Link href={basePath} className="hover:text-foreground">
+          {basePath === '/dashboard' ? 'Dashboard' : 'SuperAdmin'}
         </Link>
         <span className="mx-2">/</span>
-        <Link href="/dashboard/invoices" className="hover:text-foreground">
+        <Link href={`${basePath}/invoices`} className="hover:text-foreground">
           Facturación
         </Link>
         <span className="mx-2">/</span>

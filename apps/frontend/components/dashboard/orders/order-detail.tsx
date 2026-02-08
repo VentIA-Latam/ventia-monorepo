@@ -14,6 +14,7 @@ import { OrderInvoicesList } from "./order-invoices-list";
 interface OrderDetailProps {
   order: Order;
   invoices: Invoice[];
+  basePath?: string;
 }
 
 /**
@@ -26,7 +27,7 @@ interface OrderDetailProps {
  * - Permite generar facturas/boletas
  * - Navega de vuelta a la lista
  */
-export function OrderDetail({ order, invoices }: OrderDetailProps) {
+export function OrderDetail({ order, invoices, basePath = '/dashboard' }: OrderDetailProps) {
   const router = useRouter();
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +64,7 @@ export function OrderDetail({ order, invoices }: OrderDetailProps) {
         isValidating={isValidating}
         error={error}
         onValidatePago={handleValidatePago}
+        basePath={basePath}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -78,6 +80,7 @@ export function OrderDetail({ order, invoices }: OrderDetailProps) {
             order={order}
             isValidating={isValidating}
             onValidatePago={handleValidatePago}
+            basePath={basePath}
           />
 
           {/* Notas */}
@@ -92,7 +95,7 @@ export function OrderDetail({ order, invoices }: OrderDetailProps) {
             </Card>
           )}
 
-          <OrderInvoicesList order={order} invoices={invoices} />
+          <OrderInvoicesList order={order} invoices={invoices} basePath={basePath} />
         </div>
       </div>
     </div>

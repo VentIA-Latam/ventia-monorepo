@@ -29,6 +29,7 @@ interface InvoiceActionsCardProps {
   onCheckStatus: () => Promise<void>;
   onOpenEmailDialog: () => void;
   onConfirmSendEmail: (email: string, includeXml: boolean) => Promise<void>;
+  basePath?: string;
 }
 
 export function InvoiceActionsCard({
@@ -44,6 +45,7 @@ export function InvoiceActionsCard({
   onCheckStatus,
   onOpenEmailDialog,
   onConfirmSendEmail,
+  basePath = '/dashboard',
 }: InvoiceActionsCardProps) {
   return (
     <div className="space-y-6">
@@ -170,7 +172,7 @@ export function InvoiceActionsCard({
           <CardTitle>Orden Relacionada</CardTitle>
         </CardHeader>
         <CardContent>
-          <Link href={`/dashboard/orders/${invoice.order_id}`}>
+          <Link href={`${basePath}/orders/${invoice.order_id}`}>
             <Button variant="outline" className="w-full" size="sm">
               <FileText className="h-4 w-4 mr-2" />
               Ver Orden #{invoice.order_id}

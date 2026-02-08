@@ -11,6 +11,8 @@ import { apiGet, apiPost, apiPatch } from './client';
 import type { Tenant, TenantDetail } from '@/lib/types/tenant';
 import type { User } from '@/lib/types/user';
 import type { APIKey } from '@/lib/types/api-key';
+import type { InvoiceListResponse } from '@/lib/types/invoice';
+import type { Order, OrderListResponse } from '@/lib/services/order-service';
 
 export interface TenantSummary {
   id: number;
@@ -171,6 +173,32 @@ export async function getGlobalOrders(limit: number = 20): Promise<GlobalOrder[]
     { limit }
   );
   return response.items;
+}
+
+/**
+ * Obtener orders filtradas por tenant (full Order type for OrdersTable)
+ * GET /api/superadmin/global-orders?tenant_id=X
+ */
+export async function getOrdersByTenant(tenantId?: number, limit: number = 100): Promise<OrderListResponse> {
+  const params: Record<string, number> = { limit };
+  if (tenantId) params.tenant_id = tenantId;
+  return apiGet<OrderListResponse>(
+    '/api/superadmin/global-orders',
+    params
+  );
+}
+
+/**
+ * Obtener invoices filtradas por tenant
+ * GET /api/superadmin/invoices?tenant_id=X
+ */
+export async function getInvoicesByTenant(tenantId?: number, limit: number = 100): Promise<InvoiceListResponse> {
+  const params: Record<string, number> = { limit };
+  if (tenantId) params.tenant_id = tenantId;
+  return apiGet<InvoiceListResponse>(
+    '/api/superadmin/invoices',
+    params
+  );
 }
 
 // ==================== STATS ====================
