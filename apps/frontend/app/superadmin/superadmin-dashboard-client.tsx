@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, Users, Key, Shield, Package, Activity, Clock, AlertTriangle, ArrowUpRight, Search, CheckCircle2 } from "lucide-react";
+import { Building2, Users, Key, Shield, Package, Activity, Clock, AlertTriangle, ArrowUpRight, Search, CheckCircle2, XCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { Badge } from "@/components/ui/badge";
@@ -168,10 +168,15 @@ export function SuperAdminDashboardClient({ stats, tenants, globalOrders, activi
                   className="flex items-center justify-between p-2 md:p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                 >
                   <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
-                    <div className={`p-1.5 md:p-2 rounded-lg shrink-0 ${order.status === 'Pagado' ? 'bg-success-bg' : 'bg-warning-bg'
+                    <div className={`p-1.5 md:p-2 rounded-lg shrink-0 ${
+                      order.status === 'Pagado' ? 'bg-success-bg' :
+                      order.status === 'Cancelado' ? 'bg-muted/50' :
+                      'bg-warning-bg'
                       }`}>
                       {order.status === 'Pagado' ? (
                         <CheckCircle2 className="h-3 w-3 md:h-4 md:w-4 text-success" />
+                      ) : order.status === 'Cancelado' ? (
+                        <XCircle className="h-3 w-3 md:h-4 md:w-4 text-foreground" />
                       ) : (
                         <Clock className="h-3 w-3 md:h-4 md:w-4 text-warning" />
                       )}
@@ -191,7 +196,11 @@ export function SuperAdminDashboardClient({ stats, tenants, globalOrders, activi
                       {order.currency} {order.total_price?.toFixed(2) || '0.00'}
                     </p>
                     <Badge
-                      className={`text-[10px] md:text-xs mt-1 ${order.status === 'Pagado' ? "bg-success-bg text-success border-success/30" : "bg-warning-bg text-warning border-warning/30"}`}
+                      className={`text-[10px] md:text-xs mt-1 ${
+                        order.status === 'Pagado' ? "bg-success-bg text-success border-success/30" :
+                        order.status === 'Cancelado' ? "bg-muted/50 text-foreground border-border" :
+                        "bg-warning-bg text-warning border-warning/30"
+                      }`}
                     >
                       {order.status}
                     </Badge>
