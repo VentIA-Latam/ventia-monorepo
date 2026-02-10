@@ -1,0 +1,122 @@
+services:
+  # PostgreSQL Database (opcional - comenta si usas PostgreSQL local)
+  postgres:
+    image: postgres:16-alpine
+    container_name: messaging-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DATABASE:-messaging_db}
+      POSTGRES_USER: ${POSTGRES_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-messaging_password}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"  # Puerto 5433 para no conflictuar con PostgreSQL local
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USERNAME:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - messaging-network
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: messaging-redis
+    ports:
+      - "${REDIS_PORT:-6380}:6379"  # Puerto 6380 para no conflictuar
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - messaging-network
+    restart: unless-stopped
+
+  # Messaging Service (Rails API)
+  messaging:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: messaging-app
+    environment:
+      RAILS_ENV: ${RAILS_ENV:-development}
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
+      POSTGRES_PORT: ${POSTGRES_PORT_INTERNAL:-5432}
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE:-messaging_db}
+      POSTGRES_USERNAME: ${POSTGRES_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-messaging_password}
+      REDIS_URL: redis://redis:6379/1
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:-dev-secret-key-change-in-production-please}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      MESSAGING_SERVICE_URL: ${MESSAGING_SERVICE_URL:-http://localhost:3001}
+      # WhatsApp/Facebook (opcional)
+      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
+      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET:-}
+      WHATSAPP_CLOUD_BASE_URL: ${WHATSAPP_CLOUD_BASE_URL:-https://graph.facebook.com/v13.0}
+    ports:
+      - "${MESSAGING_PORT:-3001}:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      # Hot reload para development (solo app/ y lib/)
+      # NOTA: config/ NO está montado para que use la versión de la imagen con gems
+      - ./app:/app/app
+      - ./lib:/app/lib
+      - ./db:/app/db
+    networks:
+      - messaging-network
+    restart: unless-stopped
+    command: bundle exec rails server -b 0.0.0.0 -p 3001
+
+  # Sidekiq (Background Jobs)
+  sidekiq:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: messaging-sidekiq
+    environment:
+      RAILS_ENV: ${RAILS_ENV:-development}
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
+      POSTGRES_PORT: ${POSTGRES_PORT_INTERNAL:-5432}
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE:-messaging_db}
+      POSTGRES_USERNAME: ${POSTGRES_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-messaging_password}
+      REDIS_URL: redis://redis:6379/1
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:-dev-secret-key-change-in-production-please}
+      # WhatsApp/Facebook (opcional)
+      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
+      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      # Hot reload para development (solo app/ y lib/)
+      # NOTA: config/ NO está montado para que use la versión de la imagen con gems
+      - ./app:/app/app
+      - ./lib:/app/lib
+    networks:
+      - messaging-network
+    restart: unless-stopped
+    command: bundle exec sidekiq
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  messaging-network:
+    driver: bridge

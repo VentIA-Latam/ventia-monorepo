@@ -1,0 +1,1949 @@
+openapi: 3.0.1
+info:
+  title: Ventia Messaging API
+  version: v1
+  description: |
+    API de mensajería con soporte para WhatsApp, automatizaciones, campañas y webhooks.
+
+    ## Autenticación
+    Usa el header `X-Tenant-Id` para identificar el tenant de Ventia.
+
+    ## Funcionalidades
+    - 📬 **Inboxes**: Gestión de canales de comunicación (WhatsApp, etc.)
+    - 💬 **Conversations**: Manejo de conversaciones con clientes
+    - 📨 **Messages**: Envío y recepción de mensajes
+    - 👥 **Contacts**: Gestión de contactos
+    - 🏷️ **Labels**: Etiquetas para organizar conversaciones
+    - 📢 **Campaigns**: Campañas de mensajería masiva
+    - 🤖 **Automation Rules**: Reglas de automatización
+    - 🔧 **Macros**: Acciones predefinidas
+    - 📊 **Reports**: Reportes y métricas
+
+servers:
+  - url: http://localhost:3001
+    description: Development
+  - url: https://api.ventia.com/messaging
+    description: Production
+
+paths:
+  # ==================== SYSTEM ====================
+  /health:
+    get:
+      summary: Health Check
+      tags:
+        - System
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: OK
+
+  # ==================== ACCOUNTS ====================
+  /api/v1/accounts:
+    get:
+      summary: List accounts
+      tags:
+        - Accounts
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      responses:
+        '200':
+          description: List of accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Create account
+      tags:
+        - Accounts
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  example: "Acme Corp"
+                locale:
+                  type: string
+                  example: "es"
+                settings:
+                  type: object
+                  example: { "auto_resolve_after": 24 }
+      responses:
+        '201':
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+
+  /api/v1/accounts/{id}:
+    get:
+      summary: Show account
+      tags:
+        - Accounts
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Account details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+
+    patch:
+      summary: Update account
+      tags:
+        - Accounts
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                locale:
+                  type: string
+                settings:
+                  type: object
+      responses:
+        '200':
+          description: Account updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+
+  # ==================== INBOXES ====================
+  /api/v1/inboxes:
+    get:
+      summary: List inboxes
+      tags:
+        - Inboxes
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      responses:
+        '200':
+          description: List of inboxes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Inbox'
+
+    post:
+      summary: Create inbox
+      tags:
+        - Inboxes
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - channel_type
+              properties:
+                name:
+                  type: string
+                  example: "WhatsApp Support"
+                channel_type:
+                  type: string
+                  enum: [whatsapp]
+                  example: whatsapp
+                channel_data:
+                  type: object
+                  example: { "phone_number": "+1234567890" }
+      responses:
+        '201':
+          description: Inbox created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inbox'
+
+  /api/v1/inboxes/{id}:
+    get:
+      summary: Show inbox
+      tags:
+        - Inboxes
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Inbox details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inbox'
+
+    patch:
+      summary: Update inbox
+      tags:
+        - Inboxes
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                settings:
+                  type: object
+      responses:
+        '200':
+          description: Inbox updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inbox'
+
+    delete:
+      summary: Delete inbox
+      tags:
+        - Inboxes
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          description: Inbox deleted
+
+  # ==================== CONVERSATIONS ====================
+  /api/v1/conversations:
+    get:
+      summary: List conversations
+      tags:
+        - Conversations
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, resolved, pending, snoozed]
+        - name: inbox_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Conversation'
+
+  /api/v1/conversations/{id}:
+    get:
+      summary: Show conversation
+      tags:
+        - Conversations
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Conversation details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+
+    patch:
+      summary: Update conversation
+      tags:
+        - Conversations
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [open, resolved, pending, snoozed]
+                priority:
+                  type: string
+                  enum: [low, medium, high, urgent]
+      responses:
+        '200':
+          description: Conversation updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+
+  /api/v1/conversations/{id}/toggle_status:
+    post:
+      summary: Toggle conversation status
+      tags:
+        - Conversations
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Status toggled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+
+  /api/v1/conversations/{id}/assign_agent:
+    post:
+      summary: Assign agent to conversation
+      tags:
+        - Conversations
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agent_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Agent assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+
+  /api/v1/conversations/{id}/assign_team:
+    post:
+      summary: Assign team to conversation
+      tags:
+        - Conversations
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                team_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Team assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+
+  # ==================== MESSAGES ====================
+  /api/v1/conversations/{conversation_id}/messages:
+    get:
+      summary: List messages in conversation
+      tags:
+        - Messages
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+
+    post:
+      summary: Send a message
+      tags:
+        - Messages
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  example: "Hola, ¿cómo puedo ayudarte?"
+                content_type:
+                  type: string
+                  enum: [text, image, video, audio, file]
+                  example: text
+                private:
+                  type: boolean
+                  example: false
+                attachments:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      file_url:
+                        type: string
+                      file_type:
+                        type: string
+      responses:
+        '201':
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+
+  # ==================== CONTACTS ====================
+  /api/v1/contacts:
+    get:
+      summary: List contacts
+      tags:
+        - Contacts
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 25
+      responses:
+        '200':
+          description: List of contacts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Contact'
+
+    post:
+      summary: Create contact
+      tags:
+        - Contacts
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Juan Pérez"
+                email:
+                  type: string
+                  format: email
+                  example: "juan@example.com"
+                phone_number:
+                  type: string
+                  example: "+1234567890"
+                custom_attributes:
+                  type: object
+      responses:
+        '201':
+          description: Contact created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contact'
+
+  /api/v1/contacts/search:
+    post:
+      summary: Search contacts
+      tags:
+        - Contacts
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                q:
+                  type: string
+                  example: "Juan"
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Contact'
+
+  /api/v1/contacts/import:
+    post:
+      summary: Import contacts from CSV
+      tags:
+        - Contacts
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '202':
+          description: Import started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Import job queued"
+
+  /api/v1/contacts/{id}:
+    get:
+      summary: Show contact
+      tags:
+        - Contacts
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Contact details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contact'
+
+    patch:
+      summary: Update contact
+      tags:
+        - Contacts
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                phone_number:
+                  type: string
+                custom_attributes:
+                  type: object
+      responses:
+        '200':
+          description: Contact updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contact'
+
+    delete:
+      summary: Delete contact
+      tags:
+        - Contacts
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          description: Contact deleted
+
+  # ==================== LABELS ====================
+  /api/v1/labels:
+    get:
+      summary: List labels
+      tags:
+        - Labels
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      responses:
+        '200':
+          description: List of labels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Label'
+
+    post:
+      summary: Create label
+      tags:
+        - Labels
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                  example: "Urgent"
+                description:
+                  type: string
+                  example: "Requires immediate attention"
+                color:
+                  type: string
+                  example: "#FF0000"
+      responses:
+        '201':
+          description: Label created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Label'
+
+  /api/v1/labels/{id}:
+    get:
+      summary: Show label
+      tags:
+        - Labels
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Label details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Label'
+
+    patch:
+      summary: Update label
+      tags:
+        - Labels
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                color:
+                  type: string
+      responses:
+        '200':
+          description: Label updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Label'
+
+    delete:
+      summary: Delete label
+      tags:
+        - Labels
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          description: Label deleted
+
+  /api/v1/conversations/{conversation_id}/labels:
+    get:
+      summary: List conversation labels
+      tags:
+        - Labels
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of labels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Label'
+
+    post:
+      summary: Add label to conversation
+      tags:
+        - Labels
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - label_id
+              properties:
+                label_id:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Label added
+
+  /api/v1/conversations/{conversation_id}/labels/{id}:
+    delete:
+      summary: Remove label from conversation
+      tags:
+        - Labels
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          description: Label removed
+
+  # ==================== CAMPAIGNS ====================
+  /api/v1/campaigns:
+    get:
+      summary: List campaigns
+      tags:
+        - Campaigns
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      responses:
+        '200':
+          description: List of campaigns
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Campaign'
+
+    post:
+      summary: Create campaign
+      tags:
+        - Campaigns
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - message
+                - inbox_id
+              properties:
+                title:
+                  type: string
+                  example: "Black Friday Sale"
+                message:
+                  type: string
+                  example: "Get 50% off on all products!"
+                inbox_id:
+                  type: string
+                  format: uuid
+                audience:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      enum: [all, filtered, csv]
+                    filters:
+                      type: object
+                scheduled_at:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          description: Campaign created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+
+  /api/v1/campaigns/{id}:
+    get:
+      summary: Show campaign
+      tags:
+        - Campaigns
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Campaign details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+
+    patch:
+      summary: Update campaign
+      tags:
+        - Campaigns
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                message:
+                  type: string
+                scheduled_at:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Campaign updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+
+    delete:
+      summary: Delete campaign
+      tags:
+        - Campaigns
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          description: Campaign deleted
+
+  /api/v1/campaigns/{id}/trigger:
+    post:
+      summary: Trigger campaign immediately
+      tags:
+        - Campaigns
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Campaign triggered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+
+  /api/v1/campaigns/{id}/pause:
+    post:
+      summary: Pause campaign
+      tags:
+        - Campaigns
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Campaign paused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+
+  /api/v1/campaigns/{id}/resume:
+    post:
+      summary: Resume campaign
+      tags:
+        - Campaigns
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Campaign resumed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+
+  # ==================== AUTOMATION RULES ====================
+  /api/v1/automation_rules:
+    get:
+      summary: List automation rules
+      tags:
+        - Automation Rules
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      responses:
+        '200':
+          description: List of automation rules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AutomationRule'
+
+    post:
+      summary: Create automation rule
+      tags:
+        - Automation Rules
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - event_name
+                - conditions
+                - actions
+              properties:
+                name:
+                  type: string
+                  example: "Auto-assign to support team"
+                description:
+                  type: string
+                event_name:
+                  type: string
+                  enum: [conversation_created, message_created, conversation_updated]
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      attribute_key:
+                        type: string
+                      filter_operator:
+                        type: string
+                      values:
+                        type: array
+                actions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      action_name:
+                        type: string
+                      action_params:
+                        type: array
+      responses:
+        '201':
+          description: Automation rule created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRule'
+
+  /api/v1/automation_rules/{id}:
+    get:
+      summary: Show automation rule
+      tags:
+        - Automation Rules
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Automation rule details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRule'
+
+    patch:
+      summary: Update automation rule
+      tags:
+        - Automation Rules
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                conditions:
+                  type: array
+                actions:
+                  type: array
+      responses:
+        '200':
+          description: Automation rule updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRule'
+
+    delete:
+      summary: Delete automation rule
+      tags:
+        - Automation Rules
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          description: Automation rule deleted
+
+  /api/v1/automation_rules/{id}/toggle:
+    post:
+      summary: Toggle automation rule (enable/disable)
+      tags:
+        - Automation Rules
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Automation rule toggled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRule'
+
+  /api/v1/automation_rules/{id}/clone:
+    post:
+      summary: Clone automation rule
+      tags:
+        - Automation Rules
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '201':
+          description: Automation rule cloned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRule'
+
+  # ==================== AGENT BOTS ====================
+  /api/v1/agent_bots:
+    get:
+      summary: List agent bots
+      tags:
+        - Agent Bots
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      responses:
+        '200':
+          description: List of agent bots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgentBot'
+
+    post:
+      summary: Create agent bot
+      tags:
+        - Agent Bots
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  example: "Support Bot"
+                description:
+                  type: string
+                outgoing_url:
+                  type: string
+                  format: uri
+      responses:
+        '201':
+          description: Agent bot created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentBot'
+
+  /api/v1/agent_bots/{id}:
+    get:
+      summary: Show agent bot
+      tags:
+        - Agent Bots
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Agent bot details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentBot'
+
+    patch:
+      summary: Update agent bot
+      tags:
+        - Agent Bots
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                outgoing_url:
+                  type: string
+      responses:
+        '200':
+          description: Agent bot updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentBot'
+
+    delete:
+      summary: Delete agent bot
+      tags:
+        - Agent Bots
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          description: Agent bot deleted
+
+  # ==================== MACROS ====================
+  /api/v1/macros:
+    get:
+      summary: List macros
+      tags:
+        - Macros
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      responses:
+        '200':
+          description: List of macros
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Macro'
+
+    post:
+      summary: Create macro
+      tags:
+        - Macros
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - actions
+              properties:
+                name:
+                  type: string
+                  example: "Resolve and send thank you"
+                visibility:
+                  type: string
+                  enum: [personal, global]
+                  default: personal
+                actions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      action_name:
+                        type: string
+                        example: "send_message"
+                      action_params:
+                        type: array
+                        example: ["Thank you for contacting us!"]
+      responses:
+        '201':
+          description: Macro created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Macro'
+
+  /api/v1/macros/{id}:
+    get:
+      summary: Show macro
+      tags:
+        - Macros
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Macro details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Macro'
+
+    patch:
+      summary: Update macro
+      tags:
+        - Macros
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                actions:
+                  type: array
+      responses:
+        '200':
+          description: Macro updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Macro'
+
+    delete:
+      summary: Delete macro
+      tags:
+        - Macros
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          description: Macro deleted
+
+  /api/v1/macros/{id}/execute:
+    post:
+      summary: Execute macro on a conversation
+      tags:
+        - Macros
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - conversation_id
+              properties:
+                conversation_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Macro executed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Macro executed successfully"
+
+  # ==================== WHATSAPP ====================
+  /api/v1/whatsapp/embedded_signup:
+    post:
+      summary: WhatsApp Embedded Signup (OAuth)
+      description: Connect a WhatsApp Business Account using Facebook's Embedded Signup
+      tags:
+        - WhatsApp
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - code
+              properties:
+                code:
+                  type: string
+                  description: OAuth code from Facebook
+                inbox_name:
+                  type: string
+                  example: "WhatsApp Business"
+      responses:
+        '201':
+          description: WhatsApp channel created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  inbox_id:
+                    type: string
+                    format: uuid
+                  phone_number:
+                    type: string
+                  status:
+                    type: string
+
+  /api/v1/whatsapp/embedded_signup/status:
+    get:
+      summary: Check WhatsApp connection status
+      tags:
+        - WhatsApp
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: inbox_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Connection status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connected:
+                    type: boolean
+                  phone_number:
+                    type: string
+
+  /api/v1/whatsapp/webhooks/{inbox_id}:
+    get:
+      summary: WhatsApp webhook verification (Meta)
+      description: Endpoint for Meta to verify webhook ownership
+      tags:
+        - WhatsApp
+      parameters:
+        - name: inbox_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: hub.mode
+          in: query
+          schema:
+            type: string
+        - name: hub.verify_token
+          in: query
+          schema:
+            type: string
+        - name: hub.challenge
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Verification successful
+          content:
+            text/plain:
+              schema:
+                type: string
+
+    post:
+      summary: WhatsApp webhook receiver
+      description: Receives incoming WhatsApp messages from Meta
+      tags:
+        - WhatsApp
+      parameters:
+        - name: inbox_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook processed
+
+  # ==================== REPORTS ====================
+  /api/v1/reports/conversations:
+    get:
+      summary: Conversation reports
+      tags:
+        - Reports
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: inbox_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Conversation metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_conversations:
+                    type: integer
+                  open_conversations:
+                    type: integer
+                  resolved_conversations:
+                    type: integer
+                  avg_resolution_time:
+                    type: number
+
+  /api/v1/reports/conversations/summary:
+    get:
+      summary: Conversation summary
+      tags:
+        - Reports
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+      responses:
+        '200':
+          description: Summary statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  today:
+                    type: object
+                  this_week:
+                    type: object
+                  this_month:
+                    type: object
+
+  /api/v1/reports/agents:
+    get:
+      summary: Agent performance reports
+      tags:
+        - Reports
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Agent metrics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    agent_id:
+                      type: string
+                      format: uuid
+                    agent_name:
+                      type: string
+                    conversations_handled:
+                      type: integer
+                    avg_response_time:
+                      type: number
+
+# ==================== COMPONENTS ====================
+components:
+  parameters:
+    TenantHeader:
+      name: X-Tenant-Id
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: UUID del tenant de Ventia
+
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Resource ID
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Resource not found"
+
+  schemas:
+    Account:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Acme Corp"
+        ventia_tenant_id:
+          type: string
+          format: uuid
+        locale:
+          type: string
+          example: "es"
+        status:
+          type: string
+          enum: [active, suspended]
+          example: active
+        settings:
+          type: object
+        limits:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Inbox:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "WhatsApp Support"
+        channel_type:
+          type: string
+          enum: [whatsapp]
+        settings:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        inbox_id:
+          type: string
+          format: uuid
+        contact_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [open, resolved, pending, snoozed]
+          example: open
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+          example: medium
+        assigned_agent_id:
+          type: string
+          format: uuid
+        assigned_team_id:
+          type: string
+          format: uuid
+        last_activity_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversation_id:
+          type: string
+          format: uuid
+        content:
+          type: string
+          example: "Hello, how can I help you?"
+        message_type:
+          type: string
+          enum: [incoming, outgoing, activity, template]
+          example: outgoing
+        content_type:
+          type: string
+          enum: [text, image, video, audio, file]
+          example: text
+        private:
+          type: boolean
+          default: false
+        sender_type:
+          type: string
+          enum: [User, Contact]
+        sender_id:
+          type: string
+          format: uuid
+        attachments:
+          type: array
+          items:
+            type: object
+        created_at:
+          type: string
+          format: date-time
+
+    Contact:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Juan Pérez"
+        email:
+          type: string
+          format: email
+        phone_number:
+          type: string
+          example: "+1234567890"
+        avatar_url:
+          type: string
+          format: uri
+        custom_attributes:
+          type: object
+        last_activity_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    Label:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: "Urgent"
+        description:
+          type: string
+        color:
+          type: string
+          example: "#FF0000"
+        created_at:
+          type: string
+          format: date-time
+
+    Campaign:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        inbox_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: "Black Friday Sale"
+        message:
+          type: string
+        status:
+          type: string
+          enum: [draft, scheduled, running, paused, completed, failed]
+        audience:
+          type: object
+        scheduled_at:
+          type: string
+          format: date-time
+        triggered_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        stats:
+          type: object
+          properties:
+            total_recipients:
+              type: integer
+            sent_count:
+              type: integer
+            failed_count:
+              type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    AutomationRule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Auto-assign to support"
+        description:
+          type: string
+        event_name:
+          type: string
+          enum: [conversation_created, message_created, conversation_updated]
+        conditions:
+          type: array
+          items:
+            type: object
+        actions:
+          type: array
+          items:
+            type: object
+        active:
+          type: boolean
+          default: true
+        created_at:
+          type: string
+          format: date-time
+
+    AgentBot:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Support Bot"
+        description:
+          type: string
+        outgoing_url:
+          type: string
+          format: uri
+        created_at:
+          type: string
+          format: date-time
+
+    Macro:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Resolve and thank"
+        visibility:
+          type: string
+          enum: [personal, global]
+          default: personal
+        actions:
+          type: array
+          items:
+            type: object
+            properties:
+              action_name:
+                type: string
+              action_params:
+                type: array
+        created_by_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+  securitySchemes:
+    TenantHeader:
+      type: apiKey
+      in: header
+      name: X-Tenant-Id
+      description: UUID del tenant de Ventia
+
+security:
+  - TenantHeader: []
