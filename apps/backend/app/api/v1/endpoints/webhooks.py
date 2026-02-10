@@ -24,6 +24,7 @@ from app.services.webhook_service import (
     process_shopify_draft_order_update,
     process_shopify_order_cancelled,
     process_shopify_order_updated,
+    process_shopify_orders_create,
     process_shopify_orders_paid,
     process_woocommerce_order_created,
     process_woocommerce_order_deleted,
@@ -38,7 +39,7 @@ router = APIRouter()
 # These events will be logged but not processed
 # TODO: Implement handlers for these event types as needed
 SHOPIFY_STUB_TOPICS = [
-    "orders/create",
+    # "orders/create" - Now implemented (see process_shopify_orders_create)
 ]
 
 
@@ -294,6 +295,34 @@ async def _receive_shopify_webhook_impl(
             except Exception as process_error:
                 logger.error(
                     f"Failed to process orders/paid webhook: {str(process_error)}",
+                    exc_info=True,
+                )
+                # Event is already logged, just return error in response
+                return {
+                    "success": False,
+                    "message": f"Webhook logged but processing failed: {str(process_error)}",
+                    "webhook_event_id": webhook_event.id,
+                }
+        elif topic == "orders/create":
+            try:
+                order = process_shopify_orders_create(
+                    db=db,
+                    webhook_event=webhook_event,
+                    payload=payload,
+                    tenant=tenant,
+                )
+                if order:
+                    logger.info(
+                        f"Processed orders/create: created/updated order_id={order.id}, "
+                        f"status={order.status}, validado={order.validado}"
+                    )
+                else:
+                    logger.warning(
+                        f"Processed orders/create but order not returned for tenant={tenant.id}"
+                    )
+            except Exception as process_error:
+                logger.error(
+                    f"Failed to process orders/create webhook: {str(process_error)}",
                     exc_info=True,
                 )
                 # Event is already logged, just return error in response
