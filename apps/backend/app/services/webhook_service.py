@@ -399,6 +399,298 @@ def process_shopify_orders_paid(
         raise
 
 
+def process_shopify_orders_create(
+    db: Session,
+    webhook_event: WebhookEvent,
+    payload: dict[str, Any],
+    tenant: Tenant,
+) -> Order | None:
+    """
+    Process Shopify orders/create webhook event.
+
+    Creates or updates order from Shopify. Handles two scenarios:
+    1. Direct web purchase: Creates new order with shopify_order_id
+    2. Draft order completion: Updates existing order with shopify_order_id
+
+    Flow:
+    1. Extract shopify_order_id from payload
+    2. Try to find existing order by shopify_order_id (idempotency)
+    3. If not found, try to find by email + price (draft order scenario)
+    4. If found from draft: UPDATE with shopify_order_id and status
+    5. If not found: CREATE new order
+
+    Args:
+        db: Database session
+        webhook_event: WebhookEvent instance (already saved in DB)
+        payload: Shopify order payload
+        tenant: Tenant instance
+
+    Returns:
+        Order instance (created or updated)
+
+    Raises:
+        ValueError: If required fields are missing from payload
+    """
+    # 1. Extract order ID
+    order_id = payload.get("id")
+    if not order_id:
+        error_msg = "Missing 'id' field in Shopify orders/create payload"
+        logger.error(f"{error_msg}: {payload}")
+        webhook_event.processed = True
+        webhook_event.error = error_msg
+        db.commit()
+        raise ValueError(error_msg)
+
+    # Convert to GraphQL ID format if it's a numeric ID
+    if isinstance(order_id, int):
+        shopify_order_id = f"gid://shopify/Order/{order_id}"
+    else:
+        shopify_order_id = order_id
+
+    # 2. Try to find order by shopify_order_id first (idempotency check)
+    order = order_repository.get_by_shopify_order_id(
+        db, tenant_id=tenant.id, shopify_order_id=shopify_order_id
+    )
+
+    if order:
+        logger.info(
+            f"Order already exists with shopify_order_id (idempotent): tenant={tenant.id}, "
+            f"shopify_order_id={shopify_order_id}, order_id={order.id}"
+        )
+        # Update webhook event with existing order
+        webhook_event.processed = True
+        webhook_event.order_id = order.id
+        db.commit()
+        return order
+
+    # 3. Extract customer and order data for matching/creation
+    customer_email = payload.get("email")
+    customer = payload.get("customer", {})
+
+    if not customer_email and customer:
+        customer_email = customer.get("email")
+
+    if not customer_email:
+        error_msg = "Missing customer email in Shopify orders/create payload"
+        logger.error(f"{error_msg}: {payload}")
+        webhook_event.processed = True
+        webhook_event.error = error_msg
+        db.commit()
+        raise ValueError(error_msg)
+
+    # Extract total price for matching
+    total_price_str = payload.get("total_price")
+    total_price = 0.0
+    if total_price_str is not None:
+        try:
+            total_price = float(total_price_str)
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid total_price value: {total_price_str}, setting to 0.0")
+            total_price = 0.0
+
+    # 4. Try to find by email + price (draft order scenario)
+    # This prevents duplicates when draft_orders/create already created the order
+    logger.info(
+        f"Order not found by shopify_order_id={shopify_order_id}, "
+        f"searching for draft order by email and price..."
+    )
+
+    potential_orders = (
+        db.query(Order)
+        .filter(
+            Order.tenant_id == tenant.id,
+            Order.customer_email == customer_email,
+            Order.shopify_order_id == None,  # Must not have order_id yet
+            Order.shopify_draft_order_id != None,  # Must be from draft
+        )
+        .order_by(Order.created_at.desc())
+        .limit(5)
+        .all()
+    )
+
+    # Try to match by total_price
+    if potential_orders:
+        for potential_order in potential_orders:
+            if abs(potential_order.total_price - total_price) < 0.01:  # Allow small float diff
+                order = potential_order
+                logger.info(
+                    f"Found draft order by email and price match: order_id={order.id}, "
+                    f"draft_order_id={order.shopify_draft_order_id}"
+                )
+                break
+
+    # 5. If found draft order, UPDATE it with shopify_order_id and status
+    if order:
+        try:
+            financial_status = payload.get("financial_status", "pending")
+
+            # Update order with shopify_order_id and status
+            order.shopify_order_id = shopify_order_id
+
+            # Update status based on financial_status
+            if financial_status == "paid":
+                order.status = "Pagado"
+                order.validado = True
+                order.validated_at = datetime.utcnow()
+
+            # Extract payment method if available
+            payment_gateway_names = payload.get("payment_gateway_names", [])
+            if payment_gateway_names:
+                order.payment_method = ", ".join(payment_gateway_names)
+
+            # Update channel if not set
+            if not order.channel:
+                order.channel = _extract_channel(payload, "shopify")
+
+            db.flush()
+
+            # Update webhook event
+            webhook_event.processed = True
+            webhook_event.order_id = order.id
+
+            db.commit()
+            db.refresh(order)
+
+            logger.info(
+                f"Updated draft order with shopify_order_id: tenant={tenant.id}, "
+                f"order_id={order.id}, shopify_order_id={shopify_order_id}, "
+                f"status={order.status}, financial_status={financial_status}"
+            )
+
+            return order
+
+        except Exception as e:
+            db.rollback()
+            error_msg = f"Failed to update draft order with shopify_order_id: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            webhook_event.processed = True
+            webhook_event.error = error_msg
+            db.commit()
+            raise
+
+    # 6. No existing order found - CREATE new order (direct web purchase scenario)
+    logger.info(
+        f"No draft order found, creating new order from orders/create: "
+        f"shopify_order_id={shopify_order_id}"
+    )
+
+    # Extract customer name
+    customer_name = None
+    if customer:
+        first_name = customer.get("first_name", "")
+        last_name = customer.get("last_name", "")
+        if first_name or last_name:
+            customer_name = f"{first_name} {last_name}".strip()
+    if not customer_name:
+        customer_name = payload.get("name") or payload.get("contact_email")
+
+    # Extract currency
+    currency = payload.get("currency", "USD")
+
+    # Extract financial status and determine initial status
+    financial_status = payload.get("financial_status", "pending")
+    status = "Pagado" if financial_status == "paid" else "Pendiente"
+    validado = financial_status == "paid"
+
+    # Extract payment method
+    payment_method = None
+    payment_gateway_names = payload.get("payment_gateway_names", [])
+    if payment_gateway_names:
+        payment_method = ", ".join(payment_gateway_names)
+
+    # Extract and transform line items
+    line_items_raw = payload.get("line_items", [])
+    line_items = []
+    if line_items_raw:
+        for item in line_items_raw:
+            try:
+                transformed_item = {
+                    "sku": item.get("sku", item.get("variant_id", str(item.get("id", "")))),
+                    "product": item.get("title", item.get("name", "Unknown Product")),
+                    "unitPrice": float(item.get("price", 0.0)),
+                    "quantity": int(item.get("quantity", 1)),
+                }
+                transformed_item["subtotal"] = transformed_item["unitPrice"] * transformed_item["quantity"]
+                line_items.append(transformed_item)
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Failed to transform line item: {item}, error: {e}")
+                continue
+
+    # Extract shipping lines
+    shipping_lines = payload.get("shipping_lines", [])
+    if shipping_lines:
+        for shipping_line in shipping_lines:
+            try:
+                shipping_price = float(shipping_line.get("price", 0.0))
+                if shipping_price > 0:
+                    shipping_item = {
+                        "sku": "DELIVERY",
+                        "product": shipping_line.get("title", "Shipping"),
+                        "unitPrice": shipping_price,
+                        "quantity": 1,
+                        "subtotal": shipping_price,
+                    }
+                    line_items.append(shipping_item)
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Failed to add shipping line item: {shipping_line}, error: {e}")
+
+    # Extract shipping data
+    shipping_address_raw = payload.get("shipping_address") or payload.get("billing_address")
+    shipping_data = _extract_shipping_data(shipping_address_raw, "shopify")
+
+    # Extract channel
+    channel = _extract_channel(payload, "shopify")
+
+    # Extract order number for notes
+    order_number = payload.get("order_number")
+
+    # Create new order
+    try:
+        order = Order(
+            tenant_id=tenant.id,
+            shopify_order_id=shopify_order_id,
+            customer_email=customer_email,
+            customer_name=customer_name,
+            total_price=total_price,
+            currency=currency,
+            line_items=line_items if line_items else None,
+            status=status,
+            validado=validado,
+            validated_at=datetime.utcnow() if validado else None,
+            payment_method=payment_method,
+            channel=channel,
+            notes=f"Orden #{order_number} creada desde Shopify web checkout" if order_number else "Orden creada desde Shopify",
+            **shipping_data,
+        )
+
+        db.add(order)
+        db.flush()
+
+        # Update webhook event
+        webhook_event.processed = True
+        webhook_event.order_id = order.id
+
+        db.commit()
+        db.refresh(order)
+
+        logger.info(
+            f"Created order from Shopify orders/create: tenant={tenant.id}, "
+            f"shopify_order_id={shopify_order_id}, order_id={order.id}, "
+            f"status={status}, validado={validado}, financial_status={financial_status}"
+        )
+
+        return order
+
+    except Exception as e:
+        db.rollback()
+        error_msg = f"Failed to create order from Shopify orders/create: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        webhook_event.processed = True
+        webhook_event.error = error_msg
+        db.commit()
+        raise
+
+
 def _map_woo_status(woo_status: str) -> tuple[str, bool]:
     """
     Map WooCommerce order status to Ventia (status, validado).
