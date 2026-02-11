@@ -25,6 +25,9 @@ gem 'faraday'
 gem 'aasm', '~> 5.5'
 gem 'wisper', '2.0.0'
 
+# Notification settings bitmask (alternative to FlagShihTzu - using custom implementation)
+# Bitmask flags are implemented manually in NotificationSetting model
+
 # Utilities
 gem 'kaminari'
 gem 'email_reply_parser'

@@ -1,5 +1,5 @@
 Rails.application.routes.draw do
-  # Ruta raíz: API info
+  # Ruta raiz: API info
   root 'system#index'
 
   # Health check: JSON response
@@ -18,8 +18,22 @@ Rails.application.routes.draw do
       # Accounts
       resources :accounts, only: [:index, :show, :create, :update]
 
+      # Users (synced from Ventia)
+      resources :users, only: [:index, :show, :create, :update, :destroy]
+
+      # Teams
+      resources :teams do
+        member do
+          post :add_members
+          post :remove_members
+        end
+      end
+
       # Inboxes
       resources :inboxes, only: [:index, :show, :create, :update, :destroy] do
+        # Inbox members (agent access control)
+        resources :members, controller: 'inbox_members', only: [:index, :create, :destroy]
+
         # Conversations within inbox
         resources :conversations, only: [:index, :show] do
           member do
@@ -37,6 +51,8 @@ Rails.application.routes.draw do
           post :toggle_status
           post :assign_agent
           post :assign_team
+          patch :assign, controller: 'conversation_assignments'
+          post :unassign, controller: 'conversation_assignments'
         end
         resources :messages, only: [:index, :create]
         resources :labels, only: [:index, :create, :destroy], controller: 'conversations/labels'
@@ -79,6 +95,20 @@ Rails.application.routes.draw do
           post :execute
         end
       end
+
+      # Notifications
+      resources :notifications, only: [:index] do
+        collection do
+          post :read_all
+        end
+        member do
+          patch :read
+          patch :snooze
+        end
+      end
+
+      # Canned Responses
+      resources :canned_responses
 
       # WhatsApp
       namespace :whatsapp do

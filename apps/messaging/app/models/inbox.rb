@@ -43,6 +43,8 @@ class Inbox < ApplicationRecord
   has_many :messages, dependent: :destroy
   has_many :campaigns, dependent: :destroy
   has_many :webhooks, dependent: :destroy
+  has_many :inbox_members, dependent: :destroy
+  has_many :members, through: :inbox_members, source: :user
   has_one :agent_bot_inbox, dependent: :destroy
   has_one :agent_bot, through: :agent_bot_inbox
 

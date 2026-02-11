@@ -3,7 +3,7 @@ app_redis_config = {
   timeout: 5
 }
 
-# Redis instance for general use
+# Redis instance for general use (Redis.current removed in Redis 5.x)
 $redis = Redis.new(app_redis_config)
 
 # Separate Redis for ActionCable

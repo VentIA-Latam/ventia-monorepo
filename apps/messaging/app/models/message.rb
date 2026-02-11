@@ -48,6 +48,8 @@ class Message < ApplicationRecord
   belongs_to :conversation
   belongs_to :sender, polymorphic: true, optional: true
 
+  has_many :attachments, dependent: :destroy
+
   # Enums
   enum :message_type, { incoming: 0, outgoing: 1, activity: 2, template: 3 }
   enum :content_type, {
@@ -98,7 +100,8 @@ class Message < ApplicationRecord
       status: status,
       created_at: created_at.to_i,
       conversation_id: conversation_id,
-      sender: sender&.webhook_data
+      sender: sender&.webhook_data,
+      attachments: attachments.map(&:push_event_data)
     }
   end
 

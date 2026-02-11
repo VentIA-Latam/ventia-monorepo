@@ -14,5 +14,14 @@ Rails.application.config.after_initialize do
   # Campaigns - execute synchronously for immediate logging
   Wisper.subscribe(CampaignListener.instance)
 
-  Rails.logger.info "[Wisper] Event listeners registered successfully"
+  # Notifications - creates notifications on conversation/message events
+  Wisper.subscribe(NotificationListener.instance)
+
+  # ActionCable - broadcasts real-time updates via WebSocket
+  Wisper.subscribe(ActionCableListener.instance)
+
+  # Participation - auto-creates participants when assignee changes
+  Wisper.subscribe(ParticipationListener.instance)
+
+  Rails.logger.info "[Wisper] Event listeners registered successfully (6 listeners)"
 end

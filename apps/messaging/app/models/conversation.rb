@@ -37,6 +37,8 @@
 class Conversation < ApplicationRecord
   include AASM
   include Wisper::Publisher
+  include AssignmentHandler
+  include AutoAssignmentHandler
 
   # Validations
   validates :account_id, presence: true
@@ -126,6 +128,8 @@ class Conversation < ApplicationRecord
       account_id: account_id,
       inbox_id: inbox_id,
       contact_id: contact_id,
+      assignee_id: assignee_id,
+      team_id: team_id,
       additional_attributes: additional_attributes
     }
   end

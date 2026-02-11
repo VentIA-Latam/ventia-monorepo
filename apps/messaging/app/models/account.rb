@@ -37,6 +37,11 @@ class Account < ApplicationRecord
   has_many :agent_bots, dependent: :destroy
   has_many :webhooks, dependent: :destroy
   has_many :whatsapp_channels, dependent: :destroy, class_name: 'Channel::Whatsapp'
+  has_many :account_users, dependent: :destroy
+  has_many :users, through: :account_users
+  has_many :teams, dependent: :destroy
+  has_many :canned_responses, dependent: :destroy
+  has_many :notifications, dependent: :destroy
 
   # Enums
   enum :status, { active: 0, suspended: 1 }
