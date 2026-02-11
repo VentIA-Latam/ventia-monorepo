@@ -170,7 +170,7 @@ class TestShopifyDraftOrderCreate:
         assert "Missing 'id' field" in mock_webhook_event.error
 
     def test_create_draft_order_missing_email(self, mock_db, mock_tenant, mock_webhook_event):
-        """Test that missing customer email raises ValueError."""
+        """Test that missing customer email generates placeholder email."""
         from app.services.webhook_service import process_shopify_draft_order_create
 
         payload = {
@@ -178,19 +178,30 @@ class TestShopifyDraftOrderCreate:
             "name": "#D1001",
             # Missing email in both top-level and customer object
             "customer": {"first_name": "John", "last_name": "Doe"},
+            "total_price": "100.00",
+            "currency": "PEN",
+            "line_items": [],
         }
 
         with patch("app.services.webhook_service.order_repository") as mock_repo:
             mock_repo.get_by_shopify_draft_id.return_value = None
 
-            with pytest.raises(ValueError, match="Missing customer email"):
-                process_shopify_draft_order_create(
-                    db=mock_db, webhook_event=mock_webhook_event, payload=payload, tenant=mock_tenant
-                )
+            created_order = MagicMock(spec=Order)
+            created_order.id = 10
+            mock_repo.create.return_value = created_order
 
-            # Verify webhook event was marked with error
+            process_shopify_draft_order_create(
+                db=mock_db, webhook_event=mock_webhook_event, payload=payload, tenant=mock_tenant
+            )
+
+            # Verify order was created with placeholder email
+            call_args = mock_repo.create.call_args
+            order_create = call_args.kwargs["obj_in"]
+            assert "no-email-shopify-123456789@example.com" in order_create.customer_email
+
+            # Verify webhook event was processed successfully
             assert mock_webhook_event.processed is True
-            assert "Missing customer email" in mock_webhook_event.error
+            assert mock_webhook_event.error is None
 
     def test_create_draft_order_with_line_items(
         self, mock_db, mock_tenant, mock_webhook_event, draft_order_payload
@@ -721,21 +732,37 @@ class TestWooCommerceOrderCreated:
             )
 
     def test_create_woo_order_missing_email(self, mock_db, mock_tenant, mock_webhook_event):
-        """Test that missing billing email raises ValueError."""
+        """Test that missing billing email generates placeholder email."""
         from app.services.webhook_service import process_woocommerce_order_created
 
         payload = {
             "id": 789,
             "billing": {"first_name": "Jane"},  # Missing email
+            "status": "processing",
+            "total": "100.00",
+            "currency": "PEN",
+            "line_items": [],
         }
 
         with patch("app.services.webhook_service.order_repository") as mock_repo:
             mock_repo.get_by_woocommerce_order_id.return_value = None
 
-            with pytest.raises(ValueError, match="Missing customer email"):
-                process_woocommerce_order_created(
-                    db=mock_db, webhook_event=mock_webhook_event, payload=payload, tenant=mock_tenant
-                )
+            created_order = MagicMock(spec=Order)
+            created_order.id = 20
+            mock_repo.create.return_value = created_order
+
+            process_woocommerce_order_created(
+                db=mock_db, webhook_event=mock_webhook_event, payload=payload, tenant=mock_tenant
+            )
+
+            # Verify order was created with placeholder email
+            call_args = mock_repo.create.call_args
+            order_create = call_args.kwargs["obj_in"]
+            assert "no-email-woo-789@example.com" in order_create.customer_email
+
+            # Verify webhook event was processed successfully
+            assert mock_webhook_event.processed is True
+            assert mock_webhook_event.error is None
 
     def test_create_woo_order_with_line_items(
         self, mock_db, mock_tenant, mock_webhook_event, woo_order_payload
@@ -1455,12 +1482,30 @@ class TestMapWooStatus:
         assert _map_woo_status("CANCELLED") == ("Cancelado", False)  # Case insensitive
 
     def test_map_woo_status_pending_states(self):
-        """Test that pending/on-hold/unknown map to Pendiente."""
+        """Test explicitly mapped pending statuses."""
         from app.services.webhook_service import _map_woo_status
 
         assert _map_woo_status("pending") == ("Pendiente", False)
         assert _map_woo_status("on-hold") == ("Pendiente", False)
-        assert _map_woo_status("unknown") == ("Pendiente", False)
+        assert _map_woo_status("pending-payment") == ("Pendiente", False)
+        assert _map_woo_status("checkout-draft") == ("Pendiente", False)
+
+    def test_map_woo_status_unmapped_returns_none(self):
+        """Test that unmapped/unknown statuses return None."""
+        from app.services.webhook_service import _map_woo_status
+
+        assert _map_woo_status("unknown") is None
+        assert _map_woo_status("custom-status") is None
+        assert _map_woo_status("awaiting-shipment") is None
+        assert _map_woo_status("random-plugin-status") is None
+        assert _map_woo_status("") is None  # Empty string
+
+    def test_map_woo_status_unmapped_case_insensitive(self):
+        """Test that unmapped statuses return None regardless of case."""
+        from app.services.webhook_service import _map_woo_status
+
+        assert _map_woo_status("CUSTOM-STATUS") is None
+        assert _map_woo_status("Custom-Status") is None
 
 
 class TestWooCommerceOrderUpdated:
