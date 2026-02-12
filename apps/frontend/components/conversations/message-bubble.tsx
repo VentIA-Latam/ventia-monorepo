@@ -58,7 +58,7 @@ export const MessageBubble = memo(function MessageBubble({
         ) : null}
 
         {/* Attachments */}
-        {message.attachments.length > 0 && (
+        {message.attachments && message.attachments.length > 0 && (
           <div className="mt-2 space-y-2">
             {message.attachments.map((att) => {
               if (att.file_type?.startsWith("image")) {
