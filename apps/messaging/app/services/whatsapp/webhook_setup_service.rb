@@ -1,49 +1,69 @@
 class Whatsapp::WebhookSetupService
-  WEBHOOK_EVENTS = %w[messages message_template_status_update].freeze
-
-  def initialize(whatsapp_channel, business_account_id, api_key)
-    @whatsapp_channel = whatsapp_channel
+  def initialize(channel, business_account_id, api_key)
+    @channel = channel
     @business_account_id = business_account_id
     @api_key = api_key
+    @api_client = Whatsapp::FacebookApiClient.new(api_key)
   end
 
   def perform
-    callback_url = webhook_callback_url
-    verify_token = @whatsapp_channel.provider_config['webhook_verify_token']
+    validate_parameters!
 
-    response = HTTParty.post(
-      "https://graph.facebook.com/v13.0/#{@business_account_id}/subscribed_apps",
-      headers: {
-        'Authorization' => "Bearer #{@api_key}",
-        'Content-Type' => 'application/json'
-      },
-      body: {
-        override_callback_url: callback_url,
-        verify_token: verify_token
-      }.to_json
-    )
-
-    if response.success?
-      Rails.logger.info "[WhatsApp] Webhook setup successful for #{@whatsapp_channel.phone_number}"
-      true
-    else
-      Rails.logger.error "[WhatsApp] Webhook setup failed: #{response.body}"
-      false
-    end
-  rescue StandardError => e
-    Rails.logger.error "[WhatsApp] Webhook setup error: #{e.message}"
-    false
+    register_phone_number unless phone_number_verified?
+    setup_webhook
   end
 
   private
 
-  def webhook_callback_url
-    inbox = @whatsapp_channel.inbox
-    return unless inbox
+  def validate_parameters!
+    raise ArgumentError, 'Channel is required' if @channel.blank?
+    raise ArgumentError, 'WABA ID is required' if @business_account_id.blank?
+    raise ArgumentError, 'Access token is required' if @api_key.blank?
+  end
 
-    # This should point to your messaging service webhook endpoint
-    # Format: https://your-domain.com/api/v1/whatsapp/webhooks/:inbox_id
+  def register_phone_number
+    phone_number_id = @channel.provider_config['phone_number_id']
+    pin = fetch_or_create_pin
+
+    @api_client.register_phone_number(phone_number_id, pin)
+    store_pin(pin)
+  rescue StandardError => e
+    Rails.logger.warn("[WHATSAPP] Phone registration failed but continuing: #{e.message}")
+  end
+
+  def fetch_or_create_pin
+    existing_pin = @channel.provider_config['verification_pin']
+    return existing_pin.to_i if existing_pin.present?
+
+    SecureRandom.random_number(900_000) + 100_000
+  end
+
+  def store_pin(pin)
+    @channel.provider_config['verification_pin'] = pin
+    @channel.save!
+  end
+
+  def setup_webhook
+    callback_url = build_callback_url
+    verify_token = @channel.provider_config['webhook_verify_token']
+
+    @api_client.subscribe_waba_webhook(@business_account_id, callback_url, verify_token)
+  rescue StandardError => e
+    Rails.logger.error("[WHATSAPP] Webhook setup failed: #{e.message}")
+    raise "Webhook setup failed: #{e.message}"
+  end
+
+  def build_callback_url
     base_url = ENV.fetch('MESSAGING_SERVICE_URL', 'http://localhost:3001')
-    "#{base_url}/api/v1/whatsapp/webhooks/#{inbox.id}"
+    phone_number = @channel.phone_number
+    "#{base_url}/webhooks/whatsapp/#{phone_number}"
+  end
+
+  def phone_number_verified?
+    phone_number_id = @channel.provider_config['phone_number_id']
+    @api_client.phone_number_verified?(phone_number_id)
+  rescue StandardError => e
+    Rails.logger.error("[WHATSAPP] Phone verification status check failed: #{e.message}")
+    false
   end
 end

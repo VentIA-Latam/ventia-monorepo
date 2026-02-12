@@ -12,6 +12,10 @@ Rails.application.routes.draw do
   # Mount ActionCable for WebSocket connections
   mount ActionCable.server => '/cable'
 
+  # WhatsApp webhooks (public, no auth required)
+  get 'webhooks/whatsapp/:phone_number', to: 'webhooks/whatsapp#verify'
+  post 'webhooks/whatsapp/:phone_number', to: 'webhooks/whatsapp#process_payload'
+
   # API routes
   namespace :api do
     namespace :v1 do
@@ -114,8 +118,6 @@ Rails.application.routes.draw do
       namespace :whatsapp do
         post 'embedded_signup', to: 'embedded_signup#create'
         get 'embedded_signup/status', to: 'embedded_signup#status'
-        get 'webhooks/:inbox_id', to: 'webhooks#verify'
-        post 'webhooks/:inbox_id', to: 'webhooks#process_payload'
       end
 
       # Reports

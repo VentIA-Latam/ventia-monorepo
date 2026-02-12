@@ -2,7 +2,8 @@ class Api::V1::Whatsapp::EmbeddedSignupController < Api::V1::BaseController
   def create
     service = Whatsapp::EmbeddedSignupService.new(
       account: current_account,
-      params: embedded_signup_params
+      params: embedded_signup_params,
+      inbox_id: params[:inbox_id]
     )
 
     channel = service.perform
@@ -26,7 +27,6 @@ class Api::V1::Whatsapp::EmbeddedSignupController < Api::V1::BaseController
   end
 
   def status
-    # Check if account has WhatsApp channels
     channels = current_account.whatsapp_channels.includes(:inbox)
 
     render_success(
