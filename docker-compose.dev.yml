@@ -106,7 +106,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ventia_password_dev}
       REDIS_URL: redis://redis:6379/1
       SECRET_KEY_BASE: ${MESSAGING_SECRET_KEY_BASE:-dev-secret-key-change-in-production}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      CORS_ORIGINS: https://app.ventia-latam.com
       MESSAGING_SERVICE_URL: ${MESSAGING_SERVICE_URL:-http://localhost:3001}
       # Facebook/WhatsApp
       FACEBOOK_APP_ID: ${FACEBOOK_APP_ID}

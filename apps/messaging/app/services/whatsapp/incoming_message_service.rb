@@ -167,7 +167,6 @@ class Whatsapp::IncomingMessageService
       inbox: @inbox,
       sender: @contact,
       message_type: :incoming,
-      content_type: file_content_type(msg_type),
       content: content,
       source_id: msg_id,
       content_attributes: build_content_attributes(in_reply_to_external_id)
