@@ -8,7 +8,7 @@
 #  status                :integer          default("active")
 #  settings              :jsonb            default({})
 #  limits                :jsonb            default({})
-#  ventia_tenant_id      :uuid             # Reference to ventia.tenants
+#  ventia_tenant_id      :string           # Reference to ventia.tenants (integer ID as string)
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
 #

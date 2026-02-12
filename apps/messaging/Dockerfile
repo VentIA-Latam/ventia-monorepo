@@ -26,23 +26,23 @@ RUN bundle install --jobs 4 --retry 3
 # Copy application code
 COPY . .
 
+# Fix Windows CRLF line endings in bin/ scripts
+RUN sed -i 's/\r$//' bin/*
+
 # Precompile bootsnap code for faster boot times
 RUN bundle exec bootsnap precompile --gemfile app/ lib/
 
 # Expose port
 EXPOSE 3001
 
-# Default command
-CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "3001"]
-
 # Development stage
 FROM base AS development
 ENV RAILS_ENV=development
-CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "3001"]
+CMD ["sh", "-c", "bin/rails db:prepare && bin/rails server -b 0.0.0.0 -p 3001"]
 
 # Production stage
 FROM base AS production
 ENV RAILS_ENV=production
 ENV RAILS_LOG_TO_STDOUT=true
 ENV RAILS_SERVE_STATIC_FILES=true
-CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "3001"]
+CMD ["sh", "-c", "bin/rails db:migrate && bin/rails server -b 0.0.0.0 -p 3001"]

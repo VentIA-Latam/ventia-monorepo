@@ -45,9 +45,10 @@ module Api
 
       def set_current_user
         user_id = request.headers['X-User-Id'] || params[:user_id]
-        @current_user = @current_account.users.find(user_id)
-      rescue ActiveRecord::RecordNotFound
-        render_error('User not found', :unauthorized)
+        @current_user = @current_account.users.find_by(ventia_user_id: user_id) ||
+                        @current_account.users.find_by(id: user_id)
+
+        render_error('User not found', :unauthorized) unless @current_user
       end
     end
   end

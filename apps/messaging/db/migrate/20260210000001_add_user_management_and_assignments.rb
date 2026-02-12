@@ -1,7 +1,5 @@
 class AddUserManagementAndAssignments < ActiveRecord::Migration[7.2]
   def up
-    execute "SET search_path TO messaging, public"
-
     # Users table (synced from Ventia)
     create_table :users, id: :uuid do |t|
       t.uuid :ventia_user_id, null: false
@@ -158,13 +156,9 @@ class AddUserManagementAndAssignments < ActiveRecord::Migration[7.2]
     add_index :conversations, :assignee_id
     add_index :conversations, :team_id
 
-    # Reset search path
-    execute "SET search_path TO public"
   end
 
   def down
-    execute "SET search_path TO messaging, public"
-
     remove_foreign_key :conversations, column: :assignee_id
     remove_foreign_key :conversations, column: :team_id
     remove_index :conversations, :assignee_id, if_exists: true
@@ -180,7 +174,5 @@ class AddUserManagementAndAssignments < ActiveRecord::Migration[7.2]
     drop_table :teams, if_exists: true
     drop_table :account_users, if_exists: true
     drop_table :users, if_exists: true
-
-    execute "SET search_path TO public"
   end
 end

@@ -6,7 +6,8 @@ module Api
       # GET /api/v1/users
       def index
         @users = @current_account.users.order_by_name
-        render_success(@users)
+        @users = @users.where(ventia_user_id: params[:ventia_user_id]) if params[:ventia_user_id].present?
+        render_success(@users.map(&:push_event_data))
       end
 
       # GET /api/v1/users/:id
@@ -27,7 +28,7 @@ module Api
           render json: { user: @user.push_event_data, account_user: account_user.push_event_data },
                  status: @user.previously_new_record? ? :created : :ok
         else
-          render_error(@user.errors.full_messages, :unprocessable_entity)
+          render_error('Failed to save user', errors: @user.errors.full_messages)
         end
       end
 
@@ -36,7 +37,7 @@ module Api
         if @user.update(user_params)
           render_success(@user.push_event_data)
         else
-          render_error(@user.errors.full_messages, :unprocessable_entity)
+          render_error('Failed to save user', errors: @user.errors.full_messages)
         end
       end
 

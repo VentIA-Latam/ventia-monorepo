@@ -1,25 +1,27 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database (COMENTADO - usando PostgreSQL local)
-  # postgres:
-  #   image: postgres:16-alpine
-  #   container_name: ventia-postgres
-  #   environment:
-  #     POSTGRES_DB: ${POSTGRES_DB:-ventia_db}
-  #     POSTGRES_USER: ${POSTGRES_USER:-postgres}
-  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ventia_password_dev}
-  #   ports:
-  #     - "${POSTGRES_PORT:-5432}:5432"
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
-  #     interval: 5s
-  #     timeout: 5s
-  #     retries: 5
-  #   networks:
-  #     - ventia-network
+  # PostgreSQL Database (shared: schema ventia + schema messaging)
+  postgres:
+    image: postgres:16-alpine
+    container_name: ventia-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ventia_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ventia_password_dev}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ventia-network
+    restart: unless-stopped
 
   # Redis Cache (for messaging service)
   redis:
@@ -38,49 +40,55 @@ services:
       - ventia-network
     restart: unless-stopped
 
-  # Backend FastAPI (COMENTADO - ejecutándose localmente fuera de Docker)
-  # backend:
-  #   build:
-  #     context: .
-  #     dockerfile: docker/backend.Dockerfile
-  #   container_name: ventia-backend
-  #   environment:
-  #     DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-ventia_password_dev}@host.docker.internal:5432/${POSTGRES_DB:-ventia_db}
-  #     ENVIRONMENT: ${ENVIRONMENT:-development}
-  #     LOG_LEVEL: ${LOG_LEVEL:-info}
-  #     CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000"]}
-  #     SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
-  #     AUTH0_DOMAIN: ${AUTH0_DOMAIN}
-  #     AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
-  #     AUTH0_ISSUER: ${AUTH0_ISSUER}
-  #     AUTH0_ALGORITHM: ${AUTH0_ALGORITHM:-RS256}
-  #     # Auth0 Management API
-  #     AUTH0_MANAGEMENT_CLIENT_ID: ${AUTH0_MANAGEMENT_CLIENT_ID}
-  #     AUTH0_MANAGEMENT_CLIENT_SECRET: ${AUTH0_MANAGEMENT_CLIENT_SECRET}
-  #     AUTH0_MANAGEMENT_AUDIENCE: ${AUTH0_MANAGEMENT_AUDIENCE}
-  #     AUTH0_CONNECTION: ${AUTH0_CONNECTION:-Username-Password-Authentication}
-  #     # eFact-OSE
-  #     EFACT_BASE_URL: ${EFACT_BASE_URL:-https://ose-gw1.efact.pe/api-efact-ose}
-  #     EFACT_RUC_VENTIA: ${EFACT_RUC_VENTIA}
-  #     EFACT_PASSWORD_REST: ${EFACT_PASSWORD_REST}
-  #     EFACT_TOKEN_CACHE_HOURS: ${EFACT_TOKEN_CACHE_HOURS:-11}
-  #     # Resend (Email)
-  #     RESEND_API_KEY: ${RESEND_API_KEY}
-  #     RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-noreply@ventia-latam.com}
-  #     RESEND_FROM_NAME: ${RESEND_FROM_NAME:-VentIA - Facturación}
-  #     # Chatwoot SSO
-  #     CHATWOOT_PLATFORM_API_TOKEN: ${CHATWOOT_PLATFORM_API_TOKEN}
-  #     CHATWOOT_BASE_URL: ${CHATWOOT_BASE_URL:-http://chatwoot-rails:3000}
-  #   ports:
-  #     - "${BACKEND_PORT:-8000}:8000"
-  #   # depends_on postgres eliminado - usa PostgreSQL local
-  #   volumes:
-  #     # Hot reload for development
-  #     - ./apps/backend/app:/app/app
-  #     - ./apps/backend/alembic:/app/alembic
-  #   networks:
-  #     - ventia-network
-  #   restart: unless-stopped
+  # Backend FastAPI
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    container_name: ventia-backend
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-ventia_password_dev}@postgres:5432/${POSTGRES_DB:-ventia_db}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000"]}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      # Auth0
+      AUTH0_DOMAIN: ${AUTH0_DOMAIN}
+      AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
+      AUTH0_ISSUER: ${AUTH0_ISSUER}
+      AUTH0_ALGORITHM: ${AUTH0_ALGORITHM:-RS256}
+      # Auth0 Management API
+      AUTH0_MANAGEMENT_CLIENT_ID: ${AUTH0_MANAGEMENT_CLIENT_ID}
+      AUTH0_MANAGEMENT_CLIENT_SECRET: ${AUTH0_MANAGEMENT_CLIENT_SECRET}
+      AUTH0_MANAGEMENT_AUDIENCE: ${AUTH0_MANAGEMENT_AUDIENCE}
+      AUTH0_CONNECTION: ${AUTH0_CONNECTION:-Username-Password-Authentication}
+      # eFact-OSE
+      EFACT_BASE_URL: ${EFACT_BASE_URL:-https://ose-gw1.efact.pe/api-efact-ose}
+      EFACT_RUC_VENTIA: ${EFACT_RUC_VENTIA}
+      EFACT_PASSWORD_REST: ${EFACT_PASSWORD_REST}
+      EFACT_TOKEN_CACHE_HOURS: ${EFACT_TOKEN_CACHE_HOURS:-11}
+      # Resend (Email)
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-noreply@ventia-latam.com}
+      RESEND_FROM_NAME: ${RESEND_FROM_NAME:-VentIA - Facturación}
+      # Chatwoot SSO
+      CHATWOOT_PLATFORM_API_TOKEN: ${CHATWOOT_PLATFORM_API_TOKEN}
+      CHATWOOT_BASE_URL: ${CHATWOOT_BASE_URL:-http://chatwoot-rails:3000}
+      # Messaging Service
+      MESSAGING_SERVICE_URL: http://messaging:3001
+      MESSAGING_SERVICE_API_KEY: ${MESSAGING_SERVICE_API_KEY:-}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      # Hot reload for development
+      - ./apps/backend/app:/app/app
+      - ./apps/backend/alembic:/app/alembic
+    networks:
+      - ventia-network
+    restart: unless-stopped
 
   # Messaging Service (Rails API)
   messaging:
@@ -91,9 +99,9 @@ services:
     container_name: ventia-messaging
     environment:
       RAILS_ENV: development
-      POSTGRES_HOST: host.docker.internal  # Conecta a PostgreSQL local
+      POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
-      POSTGRES_DATABASE: ${POSTGRES_DB:-ventia_db}
+      POSTGRES_DATABASE: messaging_db
       POSTGRES_USERNAME: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ventia_password_dev}
       REDIS_URL: redis://redis:6379/1
@@ -106,6 +114,8 @@ services:
     ports:
       - "${MESSAGING_PORT:-3001}:3001"
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
     volumes:
@@ -127,9 +137,9 @@ services:
     container_name: ventia-messaging-sidekiq
     environment:
       RAILS_ENV: development
-      POSTGRES_HOST: host.docker.internal  # Conecta a PostgreSQL local
+      POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
-      POSTGRES_DATABASE: ${POSTGRES_DB:-ventia_db}
+      POSTGRES_DATABASE: messaging_db
       POSTGRES_USERNAME: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ventia_password_dev}
       REDIS_URL: redis://redis:6379/1
@@ -138,6 +148,8 @@ services:
       FACEBOOK_APP_ID: ${FACEBOOK_APP_ID}
       FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET}
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
     volumes:
@@ -150,7 +162,8 @@ services:
     command: bundle exec sidekiq
 
 volumes:
-  # postgres_data - no se usa, PostgreSQL está en local
+  postgres_data:
+    driver: local
   redis_data:
     driver: local
 

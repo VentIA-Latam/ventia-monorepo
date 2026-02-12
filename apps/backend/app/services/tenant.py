@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.models.tenant import Tenant
 from app.repositories.tenant import tenant_repository
+from app.services.messaging_service import messaging_service
 from app.schemas.tenant import TenantCreate, TenantUpdate
 from app.schemas.tenant_settings import (
     EcommerceSettings,
@@ -162,6 +163,19 @@ class TenantService:
             else:
                 # Re-raise for other integrity errors
                 raise ValueError(f"Failed to create tenant: {str(e.orig)}") from e
+
+        # Provision messaging account (non-blocking)
+        try:
+            await messaging_service.create_account(
+                tenant_id=tenant.id,
+                account_data={
+                    "name": tenant.name,
+                    "ventia_tenant_id": str(tenant.id),
+                }
+            )
+            logger.info(f"Provisioned messaging account for tenant {tenant.id}")
+        except Exception as e:
+            logger.warning(f"Failed to provision messaging account for tenant {tenant.id}: {e}")
 
         # Generate initial access token for Shopify if OAuth credentials provided
         if tenant_in.ecommerce_platform == "shopify" and tenant_in.shopify_client_id:

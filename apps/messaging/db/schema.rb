@@ -10,12 +10,24 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_05_000002) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_11_000001) do
   create_schema "messaging"
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
+
+  create_table "account_users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.uuid "user_id", null: false
+    t.integer "role", default: 0, null: false
+    t.integer "availability", default: 0, null: false
+    t.boolean "auto_offline", default: true, null: false
+    t.datetime "active_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "user_id"], name: "index_account_users_on_account_id_and_user_id", unique: true
+  end
 
   create_table "accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "name", null: false
@@ -23,7 +35,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_05_000002) do
     t.integer "status", default: 0, null: false
     t.jsonb "settings", default: {}
     t.jsonb "limits", default: {}
-    t.uuid "ventia_tenant_id", null: false
+    t.string "ventia_tenant_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["status"], name: "index_accounts_on_status"
@@ -49,6 +61,21 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_05_000002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_agent_bots_on_account_id"
+  end
+
+  create_table "attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.uuid "message_id", null: false
+    t.integer "file_type", default: 0
+    t.string "external_url"
+    t.string "extension"
+    t.float "coordinates_lat", default: 0.0
+    t.float "coordinates_long", default: 0.0
+    t.jsonb "meta", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_attachments_on_account_id"
+    t.index ["message_id"], name: "index_attachments_on_message_id"
   end
 
   create_table "automation_rules", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -83,6 +110,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_05_000002) do
     t.index ["account_id"], name: "index_campaigns_on_account_id"
     t.index ["campaign_status"], name: "index_campaigns_on_campaign_status"
     t.index ["inbox_id"], name: "index_campaigns_on_inbox_id"
+  end
+
+  create_table "canned_responses", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.string "short_code", null: false
+    t.text "content", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "short_code"], name: "index_canned_responses_on_account_id_and_short_code", unique: true
   end
 
   create_table "channel_whatsapp", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -138,6 +174,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_05_000002) do
     t.index ["label_id"], name: "index_conversation_labels_on_label_id"
   end
 
+  create_table "conversation_participants", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.uuid "conversation_id", null: false
+    t.uuid "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["conversation_id", "user_id"], name: "index_conversation_participants_on_conversation_id_and_user_id", unique: true
+  end
+
   create_table "conversations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "uuid", default: -> { "gen_random_uuid()" }, null: false
     t.integer "status", default: 0, null: false
@@ -161,12 +206,22 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_05_000002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_conversations_on_account_id"
+    t.index ["assignee_id"], name: "index_conversations_on_assignee_id"
     t.index ["campaign_id"], name: "index_conversations_on_campaign_id"
     t.index ["contact_id"], name: "index_conversations_on_contact_id"
     t.index ["contact_inbox_id"], name: "index_conversations_on_contact_inbox_id"
     t.index ["inbox_id"], name: "index_conversations_on_inbox_id"
     t.index ["status"], name: "index_conversations_on_status"
+    t.index ["team_id"], name: "index_conversations_on_team_id"
     t.index ["uuid"], name: "index_conversations_on_uuid", unique: true
+  end
+
+  create_table "inbox_members", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "inbox_id", null: false
+    t.uuid "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["inbox_id", "user_id"], name: "index_inbox_members_on_inbox_id_and_user_id", unique: true
   end
 
   create_table "inboxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -240,6 +295,66 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_05_000002) do
     t.index ["source_id"], name: "index_messages_on_source_id"
   end
 
+  create_table "notification_settings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.uuid "user_id", null: false
+    t.integer "email_flags", default: 0, null: false
+    t.integer "push_flags", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "user_id"], name: "index_notification_settings_on_account_id_and_user_id", unique: true
+  end
+
+  create_table "notifications", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.uuid "user_id", null: false
+    t.integer "notification_type", null: false
+    t.string "primary_actor_type", null: false
+    t.uuid "primary_actor_id", null: false
+    t.string "secondary_actor_type"
+    t.uuid "secondary_actor_id"
+    t.datetime "read_at"
+    t.datetime "snoozed_until"
+    t.datetime "last_activity_at"
+    t.jsonb "meta", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["primary_actor_type", "primary_actor_id"], name: "index_notifications_on_primary_actor_type_and_primary_actor_id"
+    t.index ["user_id", "account_id", "read_at"], name: "index_notifications_on_user_id_and_account_id_and_read_at"
+  end
+
+  create_table "team_members", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "team_id", null: false
+    t.uuid "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["team_id", "user_id"], name: "index_team_members_on_team_id_and_user_id", unique: true
+  end
+
+  create_table "teams", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.string "name", null: false
+    t.text "description"
+    t.boolean "allow_auto_assign", default: true
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "name"], name: "index_teams_on_account_id_and_name", unique: true
+  end
+
+  create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "ventia_user_id", null: false
+    t.string "name", null: false
+    t.string "email", null: false
+    t.string "avatar_url"
+    t.string "pubsub_token"
+    t.jsonb "custom_attributes", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_users_on_email"
+    t.index ["pubsub_token"], name: "index_users_on_pubsub_token", unique: true
+    t.index ["ventia_user_id"], name: "index_users_on_ventia_user_id", unique: true
+  end
+
   create_table "webhooks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "url", null: false
     t.uuid "account_id", null: false
@@ -251,28 +366,47 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_05_000002) do
     t.index ["inbox_id"], name: "index_webhooks_on_inbox_id"
   end
 
+  add_foreign_key "account_users", "accounts"
+  add_foreign_key "account_users", "users"
   add_foreign_key "agent_bot_inboxes", "agent_bots"
   add_foreign_key "agent_bot_inboxes", "inboxes"
   add_foreign_key "agent_bots", "accounts"
+  add_foreign_key "attachments", "accounts"
+  add_foreign_key "attachments", "messages"
   add_foreign_key "automation_rules", "accounts"
   add_foreign_key "campaigns", "accounts"
   add_foreign_key "campaigns", "inboxes"
+  add_foreign_key "canned_responses", "accounts"
   add_foreign_key "channel_whatsapp", "accounts"
   add_foreign_key "contact_inboxes", "contacts"
   add_foreign_key "contact_inboxes", "inboxes"
   add_foreign_key "contacts", "accounts"
   add_foreign_key "conversation_labels", "conversations"
   add_foreign_key "conversation_labels", "labels"
+  add_foreign_key "conversation_participants", "accounts"
+  add_foreign_key "conversation_participants", "conversations"
+  add_foreign_key "conversation_participants", "users"
   add_foreign_key "conversations", "accounts"
   add_foreign_key "conversations", "contact_inboxes"
   add_foreign_key "conversations", "contacts"
   add_foreign_key "conversations", "inboxes"
+  add_foreign_key "conversations", "teams"
+  add_foreign_key "conversations", "users", column: "assignee_id"
+  add_foreign_key "inbox_members", "inboxes"
+  add_foreign_key "inbox_members", "users"
   add_foreign_key "inboxes", "accounts"
   add_foreign_key "labels", "accounts"
   add_foreign_key "macros", "accounts"
   add_foreign_key "messages", "accounts"
   add_foreign_key "messages", "conversations"
   add_foreign_key "messages", "inboxes"
+  add_foreign_key "notification_settings", "accounts"
+  add_foreign_key "notification_settings", "users"
+  add_foreign_key "notifications", "accounts"
+  add_foreign_key "notifications", "users"
+  add_foreign_key "team_members", "teams"
+  add_foreign_key "team_members", "users"
+  add_foreign_key "teams", "accounts"
   add_foreign_key "webhooks", "accounts"
   add_foreign_key "webhooks", "inboxes"
 end

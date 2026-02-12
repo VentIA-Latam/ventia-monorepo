@@ -1,13 +1,7 @@
 class CreateMessagingSchemaAndCoreTables < ActiveRecord::Migration[7.2]
   def up
-    # Create messaging schema
-    execute "CREATE SCHEMA IF NOT EXISTS messaging"
-
     # Enable UUID extension if not already enabled
     enable_extension 'pgcrypto' unless extension_enabled?('pgcrypto')
-
-    # Set search path to include messaging schema
-    execute "SET search_path TO messaging, public"
 
     # Accounts table
     create_table :accounts, id: :uuid do |t|
@@ -280,12 +274,22 @@ class CreateMessagingSchemaAndCoreTables < ActiveRecord::Migration[7.2]
     add_foreign_key :webhooks, :accounts, column: :account_id
     add_foreign_key :webhooks, :inboxes, column: :inbox_id
 
-    # Reset search path
-    execute "SET search_path TO public"
   end
 
   def down
-    # Drop all tables in messaging schema
-    execute "DROP SCHEMA IF EXISTS messaging CASCADE"
+    drop_table :webhooks, if_exists: true
+    drop_table :agent_bot_inboxes, if_exists: true
+    drop_table :agent_bots, if_exists: true
+    drop_table :automation_rules, if_exists: true
+    drop_table :campaigns, if_exists: true
+    drop_table :conversation_labels, if_exists: true
+    drop_table :labels, if_exists: true
+    drop_table :messages, if_exists: true
+    drop_table :conversations, if_exists: true
+    drop_table :contact_inboxes, if_exists: true
+    drop_table :contacts, if_exists: true
+    drop_table :inboxes, if_exists: true
+    drop_table :channel_whatsapp, if_exists: true
+    drop_table :accounts, if_exists: true
   end
 end

@@ -52,6 +52,8 @@ class User < ApplicationRecord
       name: name,
       email: email,
       avatar_url: avatar_url,
+      ventia_user_id: ventia_user_id,
+      pubsub_token: pubsub_token,
       type: 'user'
     }
   end

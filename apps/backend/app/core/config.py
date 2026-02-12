@@ -68,6 +68,10 @@ class Settings(BaseSettings):
     CHATWOOT_PLATFORM_API_TOKEN: str = ""  # Platform App token for SSO
     CHATWOOT_BASE_URL: str = "http://localhost:3001"  # Chatwoot base URL
 
+    # Messaging Service (standalone Rails messaging module)
+    MESSAGING_SERVICE_URL: str = "http://messaging:3001"
+    MESSAGING_SERVICE_API_KEY: str = ""
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: str | List[str]) -> List[str]:
