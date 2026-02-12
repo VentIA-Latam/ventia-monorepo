@@ -147,6 +147,7 @@ services:
       AUTH0_CLIENT_ID: ${NEXT_PUBLIC_AUTH0_CLIENT_ID:-0MuQMTd3dP8E2v9uEeZ3V8ebqkfzxs5y}
       AUTH0_CLIENT_SECRET: ${AUTH0_CLIENT_SECRET}
       AUTH0_SECRET: ${AUTH0_SECRET}
+      AUTH0_AUDIENCE: ${AUTH0_AUDIENCE:-https://api-dev.ventia.com}
       APP_BASE_URL: ${APP_BASE_URL:-https://app.ventia-latam.com}
     depends_on:
       - backend
