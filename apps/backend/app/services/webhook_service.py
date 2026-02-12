@@ -21,6 +21,55 @@ from app.schemas.order import OrderCreate, OrderUpdate
 logger = logging.getLogger(__name__)
 
 
+def generate_placeholder_email(
+    platform: str,
+    platform_order_id: str | int,
+) -> str:
+    """
+    Generate placeholder email for orders without customer email.
+
+    Creates a unique, identifiable placeholder email that:
+    - Satisfies database NOT NULL constraint
+    - Passes EmailStr validation (uses example.com per RFC 2606)
+    - Is easily searchable in database
+    - Contains platform and order ID for debugging
+
+    Args:
+        platform: "shopify" or "woocommerce"
+        platform_order_id: Order ID from the platform (can be GraphQL ID or int)
+
+    Returns:
+        Placeholder email like "no-email-woo-4123@example.com"
+
+    Examples:
+        >>> generate_placeholder_email("woocommerce", 4123)
+        'no-email-woo-4123@example.com'
+
+        >>> generate_placeholder_email("shopify", "gid://shopify/Order/12345")
+        'no-email-shopify-12345@example.com'
+
+        >>> generate_placeholder_email("shopify", 7750411255970)
+        'no-email-shopify-7750411255970@example.com'
+    """
+    # Extract numeric ID from Shopify GraphQL ID if needed
+    if isinstance(platform_order_id, str) and platform_order_id.startswith("gid://"):
+        numeric_id = platform_order_id.split("/")[-1]
+    else:
+        numeric_id = str(platform_order_id)
+
+    # Generate placeholder with platform prefix
+    # Use example.com (RFC 2606 reserved domain for documentation/testing)
+    prefix = "woo" if platform == "woocommerce" else "shopify"
+    placeholder = f"no-email-{prefix}-{numeric_id}@example.com"
+
+    logger.info(
+        f"Generated placeholder email '{placeholder}' for {platform} "
+        f"order {platform_order_id} (missing customer email)"
+    )
+
+    return placeholder
+
+
 def process_shopify_draft_order_create(
     db: Session,
     webhook_event: WebhookEvent,
@@ -85,13 +134,13 @@ def process_shopify_draft_order_create(
     if not customer_email and customer:
         customer_email = customer.get("email")
 
+    # Use placeholder email if missing (draft orders may not have customer yet)
     if not customer_email:
-        error_msg = "Missing customer email in Shopify draft order payload"
-        logger.error(f"{error_msg}: {payload}")
-        webhook_event.processed = True
-        webhook_event.error = error_msg
-        db.commit()
-        raise ValueError(error_msg)
+        customer_email = generate_placeholder_email("shopify", shopify_draft_order_id)
+        logger.warning(
+            f"Shopify draft order {shopify_draft_order_id} created without customer email. "
+            f"Using placeholder: {customer_email}"
+        )
 
     # Extract customer name (combine first_name and last_name if available)
     customer_name = None
@@ -399,7 +448,299 @@ def process_shopify_orders_paid(
         raise
 
 
-def _map_woo_status(woo_status: str) -> tuple[str, bool]:
+def process_shopify_orders_create(
+    db: Session,
+    webhook_event: WebhookEvent,
+    payload: dict[str, Any],
+    tenant: Tenant,
+) -> Order | None:
+    """
+    Process Shopify orders/create webhook event.
+
+    Creates or updates order from Shopify. Handles two scenarios:
+    1. Direct web purchase: Creates new order with shopify_order_id
+    2. Draft order completion: Updates existing order with shopify_order_id
+
+    Flow:
+    1. Extract shopify_order_id from payload
+    2. Try to find existing order by shopify_order_id (idempotency)
+    3. If not found, try to find by email + price (draft order scenario)
+    4. If found from draft: UPDATE with shopify_order_id and status
+    5. If not found: CREATE new order
+
+    Args:
+        db: Database session
+        webhook_event: WebhookEvent instance (already saved in DB)
+        payload: Shopify order payload
+        tenant: Tenant instance
+
+    Returns:
+        Order instance (created or updated)
+
+    Raises:
+        ValueError: If required fields are missing from payload
+    """
+    # 1. Extract order ID
+    order_id = payload.get("id")
+    if not order_id:
+        error_msg = "Missing 'id' field in Shopify orders/create payload"
+        logger.error(f"{error_msg}: {payload}")
+        webhook_event.processed = True
+        webhook_event.error = error_msg
+        db.commit()
+        raise ValueError(error_msg)
+
+    # Convert to GraphQL ID format if it's a numeric ID
+    if isinstance(order_id, int):
+        shopify_order_id = f"gid://shopify/Order/{order_id}"
+    else:
+        shopify_order_id = order_id
+
+    # 2. Try to find order by shopify_order_id first (idempotency check)
+    order = order_repository.get_by_shopify_order_id(
+        db, tenant_id=tenant.id, shopify_order_id=shopify_order_id
+    )
+
+    if order:
+        logger.info(
+            f"Order already exists with shopify_order_id (idempotent): tenant={tenant.id}, "
+            f"shopify_order_id={shopify_order_id}, order_id={order.id}"
+        )
+        # Update webhook event with existing order
+        webhook_event.processed = True
+        webhook_event.order_id = order.id
+        db.commit()
+        return order
+
+    # 3. Extract customer and order data for matching/creation
+    customer_email = payload.get("email")
+    customer = payload.get("customer", {})
+
+    if not customer_email and customer:
+        customer_email = customer.get("email")
+
+    # Use placeholder email if missing (guest orders or orders without email)
+    if not customer_email:
+        customer_email = generate_placeholder_email("shopify", shopify_order_id)
+        logger.warning(
+            f"Shopify order {shopify_order_id} created without customer email. "
+            f"Using placeholder: {customer_email}"
+        )
+
+    # Extract total price for matching
+    total_price_str = payload.get("total_price")
+    total_price = 0.0
+    if total_price_str is not None:
+        try:
+            total_price = float(total_price_str)
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid total_price value: {total_price_str}, setting to 0.0")
+            total_price = 0.0
+
+    # 4. Try to find by email + price (draft order scenario)
+    # This prevents duplicates when draft_orders/create already created the order
+    logger.info(
+        f"Order not found by shopify_order_id={shopify_order_id}, "
+        f"searching for draft order by email and price..."
+    )
+
+    potential_orders = (
+        db.query(Order)
+        .filter(
+            Order.tenant_id == tenant.id,
+            Order.customer_email == customer_email,
+            Order.shopify_order_id == None,  # Must not have order_id yet
+            Order.shopify_draft_order_id != None,  # Must be from draft
+        )
+        .order_by(Order.created_at.desc())
+        .limit(5)
+        .all()
+    )
+
+    # Try to match by total_price
+    if potential_orders:
+        for potential_order in potential_orders:
+            if abs(potential_order.total_price - total_price) < 0.01:  # Allow small float diff
+                order = potential_order
+                logger.info(
+                    f"Found draft order by email and price match: order_id={order.id}, "
+                    f"draft_order_id={order.shopify_draft_order_id}"
+                )
+                break
+
+    # 5. If found draft order, UPDATE it with shopify_order_id and status
+    if order:
+        try:
+            financial_status = payload.get("financial_status", "pending")
+
+            # Update order with shopify_order_id and status
+            order.shopify_order_id = shopify_order_id
+
+            # Update status based on financial_status
+            if financial_status == "paid":
+                order.status = "Pagado"
+                order.validado = True
+                order.validated_at = datetime.utcnow()
+
+            # Extract payment method if available
+            payment_gateway_names = payload.get("payment_gateway_names", [])
+            if payment_gateway_names:
+                order.payment_method = ", ".join(payment_gateway_names)
+
+            # Update channel if not set
+            if not order.channel:
+                order.channel = _extract_channel(payload, "shopify")
+
+            db.flush()
+
+            # Update webhook event
+            webhook_event.processed = True
+            webhook_event.order_id = order.id
+
+            db.commit()
+            db.refresh(order)
+
+            logger.info(
+                f"Updated draft order with shopify_order_id: tenant={tenant.id}, "
+                f"order_id={order.id}, shopify_order_id={shopify_order_id}, "
+                f"status={order.status}, financial_status={financial_status}"
+            )
+
+            return order
+
+        except Exception as e:
+            db.rollback()
+            error_msg = f"Failed to update draft order with shopify_order_id: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            webhook_event.processed = True
+            webhook_event.error = error_msg
+            db.commit()
+            raise
+
+    # 6. No existing order found - CREATE new order (direct web purchase scenario)
+    logger.info(
+        f"No draft order found, creating new order from orders/create: "
+        f"shopify_order_id={shopify_order_id}"
+    )
+
+    # Extract customer name
+    customer_name = None
+    if customer:
+        first_name = customer.get("first_name", "")
+        last_name = customer.get("last_name", "")
+        if first_name or last_name:
+            customer_name = f"{first_name} {last_name}".strip()
+    if not customer_name:
+        customer_name = payload.get("name") or payload.get("contact_email")
+
+    # Extract currency
+    currency = payload.get("currency", "USD")
+
+    # Extract financial status and determine initial status
+    financial_status = payload.get("financial_status", "pending")
+    status = "Pagado" if financial_status == "paid" else "Pendiente"
+    validado = financial_status == "paid"
+
+    # Extract payment method
+    payment_method = None
+    payment_gateway_names = payload.get("payment_gateway_names", [])
+    if payment_gateway_names:
+        payment_method = ", ".join(payment_gateway_names)
+
+    # Extract and transform line items
+    line_items_raw = payload.get("line_items", [])
+    line_items = []
+    if line_items_raw:
+        for item in line_items_raw:
+            try:
+                transformed_item = {
+                    "sku": item.get("sku", item.get("variant_id", str(item.get("id", "")))),
+                    "product": item.get("title", item.get("name", "Unknown Product")),
+                    "unitPrice": float(item.get("price", 0.0)),
+                    "quantity": int(item.get("quantity", 1)),
+                }
+                transformed_item["subtotal"] = transformed_item["unitPrice"] * transformed_item["quantity"]
+                line_items.append(transformed_item)
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Failed to transform line item: {item}, error: {e}")
+                continue
+
+    # Extract shipping lines
+    shipping_lines = payload.get("shipping_lines", [])
+    if shipping_lines:
+        for shipping_line in shipping_lines:
+            try:
+                shipping_price = float(shipping_line.get("price", 0.0))
+                if shipping_price > 0:
+                    shipping_item = {
+                        "sku": "DELIVERY",
+                        "product": shipping_line.get("title", "Shipping"),
+                        "unitPrice": shipping_price,
+                        "quantity": 1,
+                        "subtotal": shipping_price,
+                    }
+                    line_items.append(shipping_item)
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Failed to add shipping line item: {shipping_line}, error: {e}")
+
+    # Extract shipping data
+    shipping_address_raw = payload.get("shipping_address") or payload.get("billing_address")
+    shipping_data = _extract_shipping_data(shipping_address_raw, "shopify")
+
+    # Extract channel
+    channel = _extract_channel(payload, "shopify")
+
+    # Extract order number for notes
+    order_number = payload.get("order_number")
+
+    # Create new order
+    try:
+        order = Order(
+            tenant_id=tenant.id,
+            shopify_order_id=shopify_order_id,
+            customer_email=customer_email,
+            customer_name=customer_name,
+            total_price=total_price,
+            currency=currency,
+            line_items=line_items if line_items else None,
+            status=status,
+            validado=validado,
+            validated_at=datetime.utcnow() if validado else None,
+            payment_method=payment_method,
+            channel=channel,
+            notes=f"Orden #{order_number} creada desde Shopify web checkout" if order_number else "Orden creada desde Shopify",
+            **shipping_data,
+        )
+
+        db.add(order)
+        db.flush()
+
+        # Update webhook event
+        webhook_event.processed = True
+        webhook_event.order_id = order.id
+
+        db.commit()
+        db.refresh(order)
+
+        logger.info(
+            f"Created order from Shopify orders/create: tenant={tenant.id}, "
+            f"shopify_order_id={shopify_order_id}, order_id={order.id}, "
+            f"status={status}, validado={validado}, financial_status={financial_status}"
+        )
+
+        return order
+
+    except Exception as e:
+        db.rollback()
+        error_msg = f"Failed to create order from Shopify orders/create: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        webhook_event.processed = True
+        webhook_event.error = error_msg
+        db.commit()
+        raise
+
+
+def _map_woo_status(woo_status: str) -> tuple[str, bool] | None:
     """
     Map WooCommerce order status to Ventia (status, validado).
 
@@ -412,7 +753,8 @@ def _map_woo_status(woo_status: str) -> tuple[str, bool]:
         woo_status: WooCommerce order status string
 
     Returns:
-        tuple: (status_string, validado_boolean)
+        tuple: (status_string, validado_boolean) if status is known/mapped
+        None: if status is unknown/unmapped (caller should skip status update)
 
     Examples:
         >>> _map_woo_status("pending")
@@ -423,8 +765,10 @@ def _map_woo_status(woo_status: str) -> tuple[str, bool]:
         ("Pagado", True)
         >>> _map_woo_status("cancelled")
         ("Cancelado", False)
+        >>> _map_woo_status("custom-status")
+        None  # Unknown status, skip update
     """
-    woo_status_lower = woo_status.lower()
+    woo_status_lower = woo_status.lower().strip()
 
     # Estados donde el pago YA está confirmado en WooCommerce
     if woo_status_lower in ["processing", "completed"]:
@@ -434,8 +778,19 @@ def _map_woo_status(woo_status: str) -> tuple[str, bool]:
     if woo_status_lower in ["cancelled", "refunded", "failed"]:
         return ("Cancelado", False)
 
-    # Estados pendientes (pending, on-hold, unknown, etc.)
-    return ("Pendiente", False)
+    # Known pending statuses (explicitly mapped)
+    # These are official WooCommerce statuses that represent pending payment
+    if woo_status_lower in ["pending", "on-hold", "pending-payment", "checkout-draft"]:
+        return ("Pendiente", False)
+
+    # Unknown/unmapped status - do NOT update order
+    # This allows custom statuses from plugins to not interfere with order state
+    logger.warning(
+        f"Unmapped WooCommerce status '{woo_status}' detected. "
+        f"Order status will NOT be updated. Consider adding explicit mapping "
+        f"if this is a valid status that requires handling."
+    )
+    return None
 
 
 def _extract_shipping_data(
@@ -1175,13 +1530,14 @@ def process_woocommerce_order_created(
     billing = payload.get("billing", {})
     customer_email = billing.get("email")
 
+    # Use placeholder email if missing (admin-created orders may not have email initially)
     if not customer_email:
-        error_msg = "Missing customer email in WooCommerce order payload"
-        logger.error(f"{error_msg}: {payload}")
-        webhook_event.processed = True
-        webhook_event.error = error_msg
-        db.commit()
-        raise ValueError(error_msg)
+        customer_email = generate_placeholder_email("woocommerce", woocommerce_order_id)
+        logger.warning(
+            f"WooCommerce order {woocommerce_order_id} created without customer email "
+            f"(created_via={payload.get('created_via', 'unknown')}). "
+            f"Using placeholder: {customer_email}"
+        )
 
     # Construir nombre del cliente
     first_name = billing.get("first_name", "")
@@ -1200,7 +1556,19 @@ def process_woocommerce_order_created(
 
     # 5. Mapear status de WooCommerce a status interno
     woo_status = payload.get("status", "pending")
-    status, validado = _map_woo_status(woo_status)
+    status_mapping = _map_woo_status(woo_status)
+
+    # If status is unmapped, use default "Pendiente" for new orders
+    # (this is safe because order is being created, not updated)
+    if status_mapping is None:
+        logger.info(
+            f"Creating order with default status 'Pendiente' due to unmapped "
+            f"WooCommerce status '{woo_status}' (tenant={tenant.id})"
+        )
+        status = "Pendiente"
+        validado = False
+    else:
+        status, validado = status_mapping
 
     # 6. Transformar line items
     line_items_raw = payload.get("line_items", [])
@@ -1369,11 +1737,24 @@ def process_woocommerce_order_updated(
 
     # 5. Map status
     woo_status = payload.get("status", "pending")
-    new_status, new_validado = _map_woo_status(woo_status)
+    status_mapping = _map_woo_status(woo_status)
 
     # Track previous state for logging
     prev_status = order.status
     prev_validado = order.validado
+
+    # If status is unmapped, KEEP current status (do not update)
+    # This prevents regressions where "Pagado" orders become "Pendiente"
+    if status_mapping is None:
+        logger.warning(
+            f"Skipping status update for unmapped WooCommerce status '{woo_status}' "
+            f"(order_id={order.id}, woo_order_id={woocommerce_order_id}, "
+            f"current_status={order.status}, current_validado={order.validado})"
+        )
+        new_status = order.status  # Keep current status
+        new_validado = order.validado  # Keep current validado
+    else:
+        new_status, new_validado = status_mapping
 
     # 6. Transform line items
     line_items_raw = payload.get("line_items", [])

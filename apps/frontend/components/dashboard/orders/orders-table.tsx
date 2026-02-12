@@ -31,6 +31,7 @@ import { CancelOrderDialog } from "./cancel-order-dialog";
 interface OrdersTableProps {
   orders: Order[];
   basePath?: string;
+  onCancelled?: (orderId: number) => void;
 }
 
 
@@ -157,7 +158,7 @@ function InvoiceBadge({ invoices }: { invoices: Order["invoices"] }) {
   );
 }
 
-export function OrdersTable({ orders, basePath = '/dashboard' }: OrdersTableProps) {
+export function OrdersTable({ orders, basePath = '/dashboard', onCancelled }: OrdersTableProps) {
   const router = useRouter();
 
   const handleOrderClick = (orderId: number) => {
@@ -301,7 +302,7 @@ export function OrdersTable({ orders, basePath = '/dashboard' }: OrdersTableProp
                           <DropdownMenuSeparator />
                           <CancelOrderDialog
                             order={order}
-                            onCancelled={() => router.refresh()}
+                            onCancelled={() => onCancelled ? onCancelled(order.id) : router.refresh()}
                             trigger={
                               <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"

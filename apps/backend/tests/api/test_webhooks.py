@@ -454,9 +454,14 @@ class TestShopifyWebhooks:
 
     def test_shopify_webhook_all_stub_topics(self, client, mock_shopify_tenant, mock_db):
         """Test that all stub topics are handled correctly."""
+        # orders/create is now implemented, no longer a stub
         stub_topics = [
-            "orders/create",
+            # Empty - all previously stub topics are now implemented
         ]
+
+        # If no stub topics, test passes
+        if not stub_topics:
+            return
 
         def override_get_db():
             yield mock_db
