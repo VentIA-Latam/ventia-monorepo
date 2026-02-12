@@ -40,6 +40,13 @@ export function SuperAdminOrdersClient({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // rerender-functional-setstate + rerender-move-effect-to-event: optimistic update in event handler
+  const handleOrderCancelled = useCallback((orderId: number) => {
+    setOrders(prev => prev.map(o =>
+      o.id === orderId ? { ...o, status: 'Cancelado' } : o
+    ));
+  }, []);
+
   // rerender-functional-setstate: stable callback
   const handleTenantChange = useCallback(async (tenantId: number | null) => {
     setSelectedTenant(tenantId);
@@ -160,7 +167,7 @@ export function SuperAdminOrdersClient({
           }
         />
       ) : (
-        <OrdersTable orders={currentOrders} basePath="/superadmin" />
+        <OrdersTable orders={currentOrders} basePath="/superadmin" onCancelled={handleOrderCancelled} />
       )}
 
       {/* Pagination */}
