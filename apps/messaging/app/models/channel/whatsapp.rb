@@ -40,7 +40,7 @@ class Channel::Whatsapp < ApplicationRecord
   # Callbacks
   before_validation :ensure_webhook_verify_token
   after_create :sync_templates
-  after_create :setup_webhooks, if: :should_auto_setup_webhooks?
+  after_commit :setup_webhooks, on: :create, if: :should_auto_setup_webhooks?
   before_destroy :teardown_webhooks
 
   def name
