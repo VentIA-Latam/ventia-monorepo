@@ -1,20 +1,16 @@
-# Frontend Dockerfile - Next.js 16 with standalone output
+# Frontend Dockerfile - Next.js with standalone output
 
 FROM node:20-alpine AS base
-
-# Install pnpm
-RUN npm install -g pnpm
 
 # Dependencies stage
 FROM base AS deps
 WORKDIR /app
 
-# Copy package files
+# Copy package file
 COPY apps/frontend/package.json ./
-COPY pnpm-workspace.yaml ../
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Install dependencies with npm (avoids pnpm workspace/symlink issues)
+RUN npm install
 
 # Builder stage
 FROM base AS builder
@@ -41,7 +37,7 @@ ENV NEXT_PUBLIC_CHATWOOT_BASE_URL=$NEXT_PUBLIC_CHATWOOT_BASE_URL
 ENV NEXT_PUBLIC_CHATWOOT_ACCOUNT_ID=$NEXT_PUBLIC_CHATWOOT_ACCOUNT_ID
 
 # Build Next.js app with standalone output
-RUN pnpm build
+RUN npm run build
 
 # Runner stage
 FROM base AS runner
