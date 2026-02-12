@@ -1,6 +1,6 @@
 class NotificationListener < BaseListener
   def conversation_created(event)
-    conversation = event.data[:conversation]
+    conversation = event[:data][:conversation]
     account = conversation.account
 
     return if conversation.pending?
@@ -16,7 +16,7 @@ class NotificationListener < BaseListener
   end
 
   def assignee_changed(event)
-    conversation = event.data[:conversation]
+    conversation = event[:data][:conversation]
     assignee = conversation.assignee
     account = conversation.account
 
@@ -31,7 +31,7 @@ class NotificationListener < BaseListener
   end
 
   def message_created(event)
-    message = event.data[:message]
+    message = event[:data][:message]
     conversation = message.conversation
     account = message.account
 

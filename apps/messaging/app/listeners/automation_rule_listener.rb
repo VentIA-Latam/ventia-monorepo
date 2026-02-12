@@ -17,7 +17,7 @@ class AutomationRuleListener < BaseListener
   end
 
   def conversation_status_changed(event)
-    conversation = event.data[:conversation]
+    conversation = event[:data][:conversation]
 
     case conversation.status
     when 'open'
@@ -29,7 +29,7 @@ class AutomationRuleListener < BaseListener
 
   # Message events
   def message_created(event)
-    message = event.data[:message]
+    message = event[:data][:message]
 
     return if ignore_message_created_event?(message)
 
@@ -51,7 +51,7 @@ class AutomationRuleListener < BaseListener
   def process_conversation_event(event, event_name)
     return if performed_by_automation?(event)
 
-    conversation = event.data[:conversation]
+    conversation = event[:data][:conversation]
     account = conversation.account
 
     return unless rule_present?(event_name, account)
@@ -79,7 +79,7 @@ class AutomationRuleListener < BaseListener
   end
 
   def performed_by_automation?(event)
-    event.data[:performed_by].present? && event.data[:performed_by].instance_of?(AutomationRule)
+    event[:data][:performed_by].present? && event[:data][:performed_by].instance_of?(AutomationRule)
   end
 
   def ignore_message_created_event?(message)
