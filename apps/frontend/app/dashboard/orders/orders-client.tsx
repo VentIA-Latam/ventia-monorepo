@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -43,6 +43,15 @@ interface OrdersClientViewProps {
  * Recibe las órdenes ya cargadas desde el Server Component
  */
 export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
+  const [orders, setOrders] = useState<Order[]>(initialOrders);
+
+  // rerender-functional-setstate + rerender-move-effect-to-event: optimistic update in event handler
+  const handleOrderCancelled = useCallback((orderId: number) => {
+    setOrders(prev => prev.map(o =>
+      o.id === orderId ? { ...o, status: 'Cancelado' } : o
+    ));
+  }, []);
+
   const [filters, setFilters] = useState<OrderFilters>({
     search: "",
     paymentStatus: "all",
@@ -54,7 +63,7 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
   const itemsPerPage = 10;
 
   // Filter orders based on current filters
-  const filteredOrders = initialOrders.filter((order) => {
+  const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       (order.shopify_draft_order_id?.toLowerCase().includes(filters.search.toLowerCase()) ||
        order.shopify_order_id?.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -163,7 +172,7 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
           }
         />
       ) : (
-        <OrdersTable orders={currentOrders} />
+        <OrdersTable orders={currentOrders} onCancelled={handleOrderCancelled} />
       )}
 
       {/* Pagination */}
