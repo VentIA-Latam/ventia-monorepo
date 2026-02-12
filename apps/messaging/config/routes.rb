@@ -50,7 +50,7 @@ Rails.application.routes.draw do
       end
 
       # Conversations (global)
-      resources :conversations, only: [:index, :show, :update] do
+      resources :conversations, only: [:index, :show, :update, :destroy] do
         member do
           post :toggle_status
           post :assign_agent

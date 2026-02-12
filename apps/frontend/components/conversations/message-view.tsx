@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ArrowLeft, User, MessageSquare, Loader2 } from "lucide-react";
 import { MessageBubble } from "./message-bubble";
 import { MessageComposer } from "./message-composer";
+import { useMessaging } from "./messaging-provider";
 import { getMessages, sendMessage } from "@/lib/api-client/messaging";
 import type { Conversation, Message, SendMessagePayload } from "@/lib/types/messaging";
 
@@ -28,6 +29,7 @@ function getInitials(name: string | null | undefined): string {
 }
 
 export function MessageView({ conversation, onBack, onOpenInfo }: MessageViewProps) {
+  const { lastEvent } = useMessaging();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -69,6 +71,34 @@ export function MessageView({ conversation, onBack, onOpenInfo }: MessageViewPro
       cancelled = true;
     };
   }, [conversation?.id]);
+
+  // Append new messages from WebSocket events
+  useEffect(() => {
+    if (!lastEvent || !conversation) return;
+    if (lastEvent.event !== "message.created") return;
+
+    const msgData = lastEvent.data;
+    if (String(msgData.conversation_id) !== String(conversation.id)) return;
+
+    // Avoid duplicates (e.g. our own optimistic message)
+    const msgId = String(msgData.id);
+    setMessages((prev) => {
+      if (prev.some((m) => String(m.id) === msgId)) return prev;
+      const newMsg: Message = {
+        id: msgId,
+        content: (msgData.content as string) ?? "",
+        message_type: (msgData.message_type as string) ?? "incoming",
+        sender: null,
+        attachments: [],
+        created_at: (msgData.created_at as string) ?? new Date().toISOString(),
+      };
+      return [...prev, newMsg];
+    });
+
+    requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    });
+  }, [lastEvent, conversation?.id]);
 
   // Load older messages
   const loadOlderMessages = useCallback(async () => {

@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Search, MessageSquare, Loader2 } from "lucide-react";
 import { ConversationItem } from "./conversation-item";
-import { getConversations } from "@/lib/api-client/messaging";
+import { useMessaging } from "./messaging-provider";
+import { getConversations, deleteConversation } from "@/lib/api-client/messaging";
 import type { Conversation, ConversationStatus } from "@/lib/types/messaging";
 
 interface ConversationListProps {
@@ -15,6 +16,7 @@ interface ConversationListProps {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onConversationsChange: (conversations: Conversation[]) => void;
+  onDeleteConversation?: (id: string) => void;
 }
 
 const STATUS_TABS: { value: ConversationStatus; label: string }[] = [
@@ -28,10 +30,14 @@ export function ConversationList({
   selectedId,
   onSelect,
   onConversationsChange,
+  onDeleteConversation,
 }: ConversationListProps) {
+  const { lastEvent } = useMessaging();
   const [statusFilter, setStatusFilter] = useState<ConversationStatus>("open");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const statusFilterRef = useRef(statusFilter);
+  statusFilterRef.current = statusFilter;
 
   const handleStatusChange = useCallback(
     async (status: ConversationStatus) => {
@@ -48,6 +54,35 @@ export function ConversationList({
     },
     [onConversationsChange]
   );
+
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await deleteConversation(id);
+        onConversationsChange(conversations.filter((c) => c.id !== id));
+        onDeleteConversation?.(id);
+      } catch (error) {
+        console.error("Error deleting conversation:", error);
+      }
+    },
+    [conversations, onConversationsChange, onDeleteConversation]
+  );
+
+  // Refresh conversation list on real-time events
+  useEffect(() => {
+    if (!lastEvent) return;
+    const { event } = lastEvent;
+    if (
+      event === "message.created" ||
+      event === "conversation.created" ||
+      event === "conversation.updated" ||
+      event === "conversation.status_changed"
+    ) {
+      getConversations({ status: statusFilterRef.current })
+        .then((data) => onConversationsChange(data.data ?? []))
+        .catch((err) => console.error("Error refreshing conversations:", err));
+    }
+  }, [lastEvent, onConversationsChange]);
 
   const filteredConversations = searchQuery
     ? conversations.filter((c) => {
@@ -121,6 +156,7 @@ export function ConversationList({
               conversation={conversation}
               isSelected={selectedId === conversation.id}
               onClick={() => onSelect(conversation.id)}
+              onDelete={handleDelete}
             />
           ))
         )}

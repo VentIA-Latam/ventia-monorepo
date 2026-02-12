@@ -158,6 +158,25 @@ async def get_conversation(
     return result
 
 
+@router.delete(
+    "/conversations/{conversation_id}",
+    summary="Delete a conversation",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def delete_conversation(
+    conversation_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    tenant_id = _get_tenant_id(current_user)
+
+    result = await messaging_service.delete_conversation(tenant_id, conversation_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
 # --- Messages ---
 
 @router.get(

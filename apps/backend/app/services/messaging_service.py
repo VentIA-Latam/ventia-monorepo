@@ -124,6 +124,14 @@ class MessagingService:
             "GET", f"/api/v1/conversations/{conversation_id}", tenant_id
         )
 
+    async def delete_conversation(
+        self, tenant_id: int, conversation_id: str
+    ) -> Optional[dict]:
+        """Delete a conversation."""
+        return await self._request(
+            "DELETE", f"/api/v1/conversations/{conversation_id}", tenant_id
+        )
+
     # --- Messages ---
 
     async def get_messages(

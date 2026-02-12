@@ -58,6 +58,13 @@ export function ConversationsClient({
     setConversations(newConversations);
   }, []);
 
+  const handleDeleteConversation = useCallback((id: string) => {
+    if (selectedId === id) {
+      setSelectedId(null);
+      setShowInfo(false);
+    }
+  }, [selectedId]);
+
   // Mobile layout: stack navigation
   if (isMobile) {
     return (
@@ -70,6 +77,7 @@ export function ConversationsClient({
               selectedId={selectedId}
               onSelect={handleSelect}
               onConversationsChange={handleConversationsChange}
+              onDeleteConversation={handleDeleteConversation}
             />
           </div>
         ) : (

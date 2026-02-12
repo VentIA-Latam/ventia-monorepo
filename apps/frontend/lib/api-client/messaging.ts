@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "./client";
+import { apiGet, apiPost, apiDelete } from "./client";
 import type {
   ConversationListResponse,
   Conversation,
@@ -23,6 +23,10 @@ export async function getConversations(params?: {
 
 export async function getConversation(id: string): Promise<Conversation> {
   return apiGet(`/api/messaging/conversations/${id}`);
+}
+
+export async function deleteConversation(id: string): Promise<unknown> {
+  return apiDelete(`/api/messaging/conversations/${id}`);
 }
 
 export async function getMessages(

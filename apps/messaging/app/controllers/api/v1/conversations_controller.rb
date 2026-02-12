@@ -1,5 +1,5 @@
 class Api::V1::ConversationsController < Api::V1::BaseController
-  before_action :set_conversation, only: [:show, :update, :toggle_status]
+  before_action :set_conversation, only: [:show, :update, :toggle_status, :destroy]
 
   def index
     conversations = current_account.conversations
@@ -31,6 +31,11 @@ class Api::V1::ConversationsController < Api::V1::BaseController
     else
       render_error('Failed to update conversation', errors: @conversation.errors.full_messages)
     end
+  end
+
+  def destroy
+    @conversation.destroy!
+    head :no_content
   end
 
   def toggle_status
