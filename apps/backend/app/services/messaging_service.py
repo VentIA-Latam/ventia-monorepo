@@ -216,6 +216,38 @@ class MessagingService:
             "GET", "/api/v1/notifications", tenant_id, user_id=user_id
         )
 
+    # --- WhatsApp ---
+
+    async def whatsapp_connect(
+        self, tenant_id: int, payload: dict
+    ) -> Optional[dict]:
+        """Connect a WhatsApp number via embedded signup."""
+        return await self._request(
+            "POST", "/api/v1/whatsapp/embedded_signup", tenant_id, json_data=payload
+        )
+
+    async def whatsapp_status(self, tenant_id: int) -> Optional[dict]:
+        """Get status of connected WhatsApp channels."""
+        return await self._request(
+            "GET", "/api/v1/whatsapp/embedded_signup/status", tenant_id
+        )
+
+    async def whatsapp_health(
+        self, tenant_id: int, inbox_id: str
+    ) -> Optional[dict]:
+        """Get health status of a WhatsApp channel."""
+        return await self._request(
+            "GET", f"/api/v1/whatsapp/health/{inbox_id}", tenant_id
+        )
+
+    async def create_whatsapp_inbox(
+        self, tenant_id: int, payload: dict
+    ) -> Optional[dict]:
+        """Create a WhatsApp inbox with manual credentials."""
+        return await self._request(
+            "POST", "/api/v1/inboxes", tenant_id, json_data=payload
+        )
+
 
 # Global service instance
 messaging_service = MessagingService()

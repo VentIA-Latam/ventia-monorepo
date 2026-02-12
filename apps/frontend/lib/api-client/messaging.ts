@@ -11,6 +11,7 @@ import type {
   AssignConversationPayload,
   WhatsAppConnectParams,
   WhatsAppConnectResponse,
+  ManualWhatsAppConnectParams,
 } from "@/lib/types/messaging";
 
 export async function getConversations(params?: {
@@ -72,4 +73,10 @@ export async function connectWhatsApp(
   params: WhatsAppConnectParams
 ): Promise<WhatsAppConnectResponse> {
   return apiPost("/api/messaging/whatsapp/connect", params);
+}
+
+export async function connectWhatsAppManually(
+  params: ManualWhatsAppConnectParams
+): Promise<unknown> {
+  return apiPost("/api/messaging/whatsapp/manual-connect", params);
 }

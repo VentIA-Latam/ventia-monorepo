@@ -135,6 +135,23 @@ class AccountResponse(BaseModel):
     status: Optional[str] = None
 
 
+# --- WhatsApp models ---
+
+class WhatsAppConnectRequest(BaseModel):
+    code: str
+    business_id: str
+    waba_id: str
+    phone_number_id: Optional[str] = None
+
+
+class ManualWhatsAppRequest(BaseModel):
+    name: Optional[str] = None
+    phone_number: str
+    api_key: str
+    phone_number_id: str
+    business_account_id: str
+
+
 # --- Error models ---
 
 class MessagingError(BaseModel):

@@ -11,10 +11,12 @@ from app.api.deps import get_current_user, get_db
 from app.models.user import User
 from app.schemas.messaging import (
     AssignConversationRequest,
+    ManualWhatsAppRequest,
     MessagingError,
     SendMessageRequest,
     UserSyncRequest,
     WebSocketTokenResponse,
+    WhatsAppConnectRequest,
 )
 from app.services.messaging_service import messaging_service
 
@@ -354,6 +356,100 @@ async def list_notifications(
     result = await messaging_service.get_notifications(
         tenant_id, current_user.auth0_user_id
     )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+# --- WhatsApp ---
+
+
+@router.post(
+    "/whatsapp/connect",
+    summary="Connect WhatsApp via embedded signup",
+    tags=["messaging", "whatsapp"],
+    responses={503: {"model": MessagingError}},
+)
+async def connect_whatsapp(
+    payload: WhatsAppConnectRequest,
+    current_user: User = Depends(get_current_user),
+):
+    tenant_id = _get_tenant_id(current_user)
+
+    result = await messaging_service.whatsapp_connect(
+        tenant_id, payload.model_dump(exclude_none=True)
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.get(
+    "/whatsapp/status",
+    summary="List connected WhatsApp channels",
+    tags=["messaging", "whatsapp"],
+    responses={503: {"model": MessagingError}},
+)
+async def whatsapp_status(
+    current_user: User = Depends(get_current_user),
+):
+    tenant_id = _get_tenant_id(current_user)
+
+    result = await messaging_service.whatsapp_status(tenant_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.get(
+    "/whatsapp/health/{inbox_id}",
+    summary="Get WhatsApp channel health status",
+    tags=["messaging", "whatsapp"],
+    responses={503: {"model": MessagingError}},
+)
+async def whatsapp_health(
+    inbox_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    tenant_id = _get_tenant_id(current_user)
+
+    result = await messaging_service.whatsapp_health(tenant_id, inbox_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/whatsapp/manual-connect",
+    summary="Connect WhatsApp with manual credentials",
+    tags=["messaging", "whatsapp"],
+    responses={503: {"model": MessagingError}},
+)
+async def manual_connect_whatsapp(
+    payload: ManualWhatsAppRequest,
+    current_user: User = Depends(get_current_user),
+):
+    tenant_id = _get_tenant_id(current_user)
+
+    inbox_data = {
+        "name": payload.name or f"{payload.phone_number} WhatsApp",
+        "channel": {
+            "type": "whatsapp",
+            "phone_number": payload.phone_number,
+            "provider": "whatsapp_cloud",
+            "provider_config": {
+                "api_key": payload.api_key,
+                "phone_number_id": payload.phone_number_id,
+                "business_account_id": payload.business_account_id,
+            },
+        },
+    }
+
+    result = await messaging_service.create_whatsapp_inbox(tenant_id, inbox_data)
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")
 

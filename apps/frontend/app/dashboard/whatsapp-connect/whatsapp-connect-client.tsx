@@ -13,11 +13,15 @@ import {
   AlertCircle,
   ExternalLink,
   ArrowRight,
+  Settings,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { connectWhatsApp } from "@/lib/api-client/messaging";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
+import { connectWhatsApp, connectWhatsAppManually } from "@/lib/api-client/messaging";
 import {
   setupFacebookSdk,
   initWhatsAppEmbeddedSignup,
@@ -52,6 +56,177 @@ const STEPS = [
     description: "Via SMS, llamada o QR segun indique Meta.",
   },
 ];
+
+function SuccessView({
+  result,
+  onGoToConversations,
+}: {
+  result: WhatsAppConnectResponse["data"];
+  onGoToConversations: () => void;
+}) {
+  return (
+    <div className="mx-auto max-w-2xl space-y-6">
+      <Card className="border-green-200 bg-green-50/50">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+            <CheckCircle2 className="h-8 w-8 text-green-600" />
+          </div>
+          <CardTitle className="text-2xl">WhatsApp conectado exitosamente</CardTitle>
+          <CardDescription>
+            Tu canal de WhatsApp Business esta listo para recibir mensajes.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-lg border bg-white p-4 space-y-2">
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">Numero</span>
+              <span className="font-medium">{result.phone_number}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">Inbox</span>
+              <span className="font-medium">{result.inbox_name}</span>
+            </div>
+          </div>
+          <Button className="w-full" onClick={onGoToConversations}>
+            Ir a Conversaciones
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ManualConnectForm({
+  onSuccess,
+  onError,
+}: {
+  onSuccess: (data: WhatsAppConnectResponse["data"]) => void;
+  onError: (message: string) => void;
+}) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    phone_number: "",
+    api_key: "",
+    phone_number_id: "",
+    business_account_id: "",
+  });
+
+  const handleChange = (field: string, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const isValid =
+    form.phone_number.trim() !== "" &&
+    form.api_key.trim() !== "" &&
+    form.phone_number_id.trim() !== "" &&
+    form.business_account_id.trim() !== "";
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isValid || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = (await connectWhatsAppManually({
+        name: form.name || undefined,
+        phone_number: form.phone_number,
+        api_key: form.api_key,
+        phone_number_id: form.phone_number_id,
+        business_account_id: form.business_account_id,
+      })) as { success: boolean; data: WhatsAppConnectResponse["data"] };
+
+      onSuccess(response.data);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "Error al conectar WhatsApp");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="name">Nombre del inbox (opcional)</Label>
+        <Input
+          id="name"
+          placeholder="Mi WhatsApp Business"
+          value={form.name}
+          onChange={(e) => handleChange("name", e.target.value)}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="phone_number">Numero de telefono</Label>
+        <Input
+          id="phone_number"
+          placeholder="+51987654321"
+          value={form.phone_number}
+          onChange={(e) => handleChange("phone_number", e.target.value)}
+          required
+        />
+        <p className="text-xs text-muted-foreground">Formato E.164 con codigo de pais</p>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="api_key">API Key (Access Token)</Label>
+        <Input
+          id="api_key"
+          type="password"
+          placeholder="EAAxxxxxxx..."
+          value={form.api_key}
+          onChange={(e) => handleChange("api_key", e.target.value)}
+          required
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="phone_number_id">Phone Number ID</Label>
+          <Input
+            id="phone_number_id"
+            placeholder="1234567890"
+            value={form.phone_number_id}
+            onChange={(e) => handleChange("phone_number_id", e.target.value)}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="business_account_id">Business Account ID</Label>
+          <Input
+            id="business_account_id"
+            placeholder="9876543210"
+            value={form.business_account_id}
+            onChange={(e) => handleChange("business_account_id", e.target.value)}
+            required
+          />
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Encuentra estos valores en tu{" "}
+        <a
+          href="https://developers.facebook.com/apps"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline"
+        >
+          Meta Developer Dashboard
+        </a>
+        .
+      </p>
+      <Button
+        type="submit"
+        className="w-full bg-green-600 hover:bg-green-700"
+        disabled={!isValid || isSubmitting}
+      >
+        {isSubmitting ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Settings className="mr-2 h-4 w-4" />
+        )}
+        {isSubmitting ? "Conectando..." : "Conectar manualmente"}
+      </Button>
+    </form>
+  );
+}
 
 export function WhatsAppConnectClient() {
   const router = useRouter();
@@ -172,42 +347,24 @@ export function WhatsAppConnectClient() {
     connectingRef.current = false;
   };
 
+  const handleManualSuccess = (data: WhatsAppConnectResponse["data"]) => {
+    setResult(data);
+    setStatus("success");
+  };
+
+  const handleManualError = (message: string) => {
+    setErrorMessage(message);
+    setStatus("error");
+  };
+
   const isLoading = status === "loading-sdk" || status === "authenticating" || status === "connecting";
 
   if (status === "success" && result) {
     return (
-      <div className="mx-auto max-w-2xl space-y-6">
-        <Card className="border-green-200 bg-green-50/50">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-              <CheckCircle2 className="h-8 w-8 text-green-600" />
-            </div>
-            <CardTitle className="text-2xl">WhatsApp conectado exitosamente</CardTitle>
-            <CardDescription>
-              Tu canal de WhatsApp Business esta listo para recibir mensajes.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-lg border bg-white p-4 space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Numero</span>
-                <span className="font-medium">{result.phone_number}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Inbox</span>
-                <span className="font-medium">{result.inbox_name}</span>
-              </div>
-            </div>
-            <Button
-              className="w-full"
-              onClick={() => router.push("/dashboard/conversations")}
-            >
-              Ir a Conversaciones
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <SuccessView
+        result={result}
+        onGoToConversations={() => router.push("/dashboard/conversations")}
+      />
     );
   }
 
@@ -243,57 +400,78 @@ export function WhatsAppConnectClient() {
             </div>
           ) : null}
 
-          <div className="flex flex-wrap gap-3">
-            <Button
-              size="lg"
-              onClick={handleConnect}
-              disabled={isLoading}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {isLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <MessageSquare className="mr-2 h-4 w-4" />
-              )}
-              {status === "loading-sdk"
-                ? "Cargando..."
-                : status === "authenticating"
-                  ? "Esperando autorizacion..."
-                  : status === "connecting"
-                    ? "Conectando canal..."
-                    : "Conectar WhatsApp"}
-            </Button>
-            <Button variant="outline" size="lg" asChild>
-              <a
-                href="https://wa.me/51987654321"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Contactar soporte
-                <ExternalLink className="ml-2 h-4 w-4" />
-              </a>
-            </Button>
-          </div>
+          <Tabs defaultValue="embedded">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="embedded">Conexion automatica</TabsTrigger>
+              <TabsTrigger value="manual">Conexion manual</TabsTrigger>
+            </TabsList>
 
-          <div>
-            <Badge variant="secondary" className="mb-3">
-              WhatsApp Business API
-            </Badge>
-            <h3 className="text-lg font-semibold mb-4">Pasos para conectar</h3>
-            <div className="space-y-4">
-              {STEPS.map((step, index) => (
-                <div key={index} className="flex items-start gap-4">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                    {index + 1}
-                  </div>
-                  <div>
-                    <p className="font-medium">{step.title}</p>
-                    <p className="text-sm text-muted-foreground">{step.description}</p>
-                  </div>
+            <TabsContent value="embedded" className="space-y-6 pt-4">
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  size="lg"
+                  onClick={handleConnect}
+                  disabled={isLoading}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {isLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                  )}
+                  {status === "loading-sdk"
+                    ? "Cargando..."
+                    : status === "authenticating"
+                      ? "Esperando autorizacion..."
+                      : status === "connecting"
+                        ? "Conectando canal..."
+                        : "Conectar WhatsApp"}
+                </Button>
+                <Button variant="outline" size="lg" asChild>
+                  <a
+                    href="https://wa.me/51987654321"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Contactar soporte
+                    <ExternalLink className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
+
+              <div>
+                <Badge variant="secondary" className="mb-3">
+                  WhatsApp Business API
+                </Badge>
+                <h3 className="text-lg font-semibold mb-4">Pasos para conectar</h3>
+                <div className="space-y-4">
+                  {STEPS.map((step, index) => (
+                    <div key={index} className="flex items-start gap-4">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <p className="font-medium">{step.title}</p>
+                        <p className="text-sm text-muted-foreground">{step.description}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="manual" className="pt-4">
+              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                <p className="text-sm text-amber-800">
+                  Usa esta opcion si ya tienes tus credenciales de WhatsApp Cloud API. Necesitaras tu Access Token, Phone Number ID y Business Account ID del Meta Developer Dashboard.
+                </p>
+              </div>
+              <ManualConnectForm
+                onSuccess={handleManualSuccess}
+                onError={handleManualError}
+              />
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>

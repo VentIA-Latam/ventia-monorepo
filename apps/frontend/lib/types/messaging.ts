@@ -129,3 +129,11 @@ export interface WhatsAppConnectResponse {
   };
   message: string;
 }
+
+export interface ManualWhatsAppConnectParams {
+  name?: string;
+  phone_number: string;
+  api_key: string;
+  phone_number_id: string;
+  business_account_id: string;
+}
