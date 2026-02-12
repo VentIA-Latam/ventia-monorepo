@@ -19,7 +19,7 @@ class LineItemBase(BaseModel):
 
     sku: str = Field(..., description="Product SKU")
     product: str = Field(..., description="Product name")
-    unitPrice: float = Field(..., gt=0, description="Unit price (must be > 0)")
+    unitPrice: float = Field(..., ge=0, description="Unit price (must be >= 0)")
     quantity: int = Field(..., gt=0, description="Quantity (must be > 0)")
     subtotal: float | None = Field(None, description="Subtotal (calculated if not provided)")
 
@@ -109,7 +109,7 @@ class OrderUpdate(BaseModel):
     customer_name: str | None = None
     customer_document_type: str | None = None
     customer_document_number: str | None = None
-    total_price: float | None = Field(None, gt=0)
+    total_price: float | None = Field(None, ge=0)
     currency: str | None = None
     line_items: list[LineItemBase] | None = None
     payment_method: str | None = None
