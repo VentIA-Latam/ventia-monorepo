@@ -117,7 +117,7 @@ class Conversation < ApplicationRecord
   end
 
   def can_reply?
-    true # Implement message window logic later if needed
+    Conversations::MessageWindowService.new(self).can_reply?
   end
 
   def webhook_data

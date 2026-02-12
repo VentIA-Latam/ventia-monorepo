@@ -78,6 +78,11 @@ const dataPlatform = [
     icon: MessageSquare,
   },
   {
+    title: "WhatsApp",
+    url: "/dashboard/whatsapp-connect",
+    icon: MessageSquare,
+  },
+  {
     title: "Campañas",
     url: "/dashboard/campaigns",
     icon: Bell,

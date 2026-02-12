@@ -21,7 +21,7 @@ class Attachment < ApplicationRecord
 
   has_one_attached :file
 
-  enum :file_type, { image: 0, audio: 1, video: 2, file: 3, location: 4 }
+  enum :file_type, { image: 0, audio: 1, video: 2, file: 3, location: 4, contact: 5 }
 
   validates :external_url, length: { maximum: 2048 }, allow_blank: true
 

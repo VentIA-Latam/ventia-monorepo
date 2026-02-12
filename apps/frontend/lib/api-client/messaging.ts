@@ -9,6 +9,8 @@ import type {
   Team,
   SendMessagePayload,
   AssignConversationPayload,
+  WhatsAppConnectParams,
+  WhatsAppConnectResponse,
 } from "@/lib/types/messaging";
 
 export async function getConversations(params?: {
@@ -64,4 +66,10 @@ export async function getCannedResponses(): Promise<CannedResponse[]> {
 
 export async function getTeams(): Promise<Team[]> {
   return apiGet("/api/messaging/teams");
+}
+
+export async function connectWhatsApp(
+  params: WhatsAppConnectParams
+): Promise<WhatsAppConnectResponse> {
+  return apiPost("/api/messaging/whatsapp/connect", params);
 }

@@ -74,6 +74,7 @@ class Message < ApplicationRecord
   # Callbacks
   before_save :ensure_processed_message_content
   after_create_commit :broadcast_created
+  after_create_commit :send_reply
   after_update_commit :broadcast_updated, if: :saved_change_to_status?
 
   # Scopes
@@ -109,6 +110,17 @@ class Message < ApplicationRecord
 
   def ensure_processed_message_content
     self.processed_message_content = content if processed_message_content.blank?
+  end
+
+  def send_reply
+    return unless outgoing? || template?
+    return if private?
+
+    if attachments.any?
+      ::SendReplyJob.set(wait: 2.seconds).perform_later(id)
+    else
+      ::SendReplyJob.perform_later(id)
+    end
   end
 
   def broadcast_created

@@ -1,12 +1,13 @@
 class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseService
   API_BASE_URL = ENV.fetch('WHATSAPP_CLOUD_BASE_URL', 'https://graph.facebook.com')
-  API_VERSION = 'v13.0'
 
   def send_message(phone_number, message)
-    if message.content_type == 'text'
-      send_text_message(phone_number, message)
+    if message.attachments.present?
+      send_attachment_message(phone_number, message)
+    elsif message.content_attributes&.dig('items').present?
+      send_interactive_text_message(phone_number, message)
     else
-      send_text_message(phone_number, message) # Fallback to text for now
+      send_text_message(phone_number, message)
     end
   end
 
@@ -31,7 +32,6 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   end
 
   def sync_templates
-    # Mark as updated first to prevent infinite retries on error
     whatsapp_channel.mark_message_templates_updated
 
     url = "#{business_account_path}/message_templates"
@@ -63,10 +63,24 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   end
 
   def media_url(media_id)
-    "#{API_BASE_URL}/#{API_VERSION}/#{media_id}"
+    "#{API_BASE_URL}/#{api_version}/#{media_id}"
+  end
+
+  def download_media(media_id)
+    url_response = HTTParty.get(media_url(media_id), headers: api_headers)
+    return nil unless url_response.success?
+
+    Down.download(url_response.parsed_response['url'], headers: api_headers)
+  rescue Down::Error => e
+    Rails.logger.error "[WhatsApp] Media download failed: #{e.message}"
+    nil
   end
 
   private
+
+  def api_version
+    ENV.fetch('WHATSAPP_API_VERSION', 'v22.0')
+  end
 
   def api_key
     whatsapp_channel.provider_config['api_key']
@@ -81,27 +95,65 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   end
 
   def phone_id_path
-    "#{API_BASE_URL}/#{API_VERSION}/#{phone_number_id}"
+    "#{API_BASE_URL}/#{api_version}/#{phone_number_id}"
   end
 
   def business_account_path
-    "#{API_BASE_URL}/v14.0/#{business_account_id}"
+    "#{API_BASE_URL}/#{api_version}/#{business_account_id}"
   end
 
   def send_text_message(phone_number, message)
     request_body = {
       messaging_product: 'whatsapp',
+      context: whatsapp_reply_context(message),
       to: phone_number,
       type: 'text',
       text: { body: message.content }
-    }
+    }.compact
 
-    # Add context for replies
-    if message.content_attributes['in_reply_to'].present?
-      request_body[:context] = {
-        message_id: message.content_attributes['in_reply_to']
-      }
-    end
+    response = HTTParty.post(
+      "#{phone_id_path}/messages",
+      headers: api_headers,
+      body: request_body.to_json
+    )
+
+    process_response(response, message)
+  end
+
+  def send_attachment_message(phone_number, message)
+    attachment = message.attachments.first
+    type = %w[image audio video].include?(attachment.file_type) ? attachment.file_type : 'document'
+
+    type_content = { link: attachment.file_url }
+    type_content[:caption] = message.content unless %w[audio sticker].include?(type)
+    type_content[:filename] = attachment.file.filename.to_s if type == 'document' && attachment.file.attached?
+
+    request_body = {
+      messaging_product: 'whatsapp',
+      context: whatsapp_reply_context(message),
+      to: phone_number,
+      type: type,
+      type.to_s => type_content
+    }.compact
+
+    response = HTTParty.post(
+      "#{phone_id_path}/messages",
+      headers: api_headers,
+      body: request_body.to_json
+    )
+
+    process_response(response, message)
+  end
+
+  def send_interactive_text_message(phone_number, message)
+    payload = create_payload_based_on_items(message)
+
+    request_body = {
+      messaging_product: 'whatsapp',
+      to: phone_number,
+      type: 'interactive',
+      interactive: payload
+    }
 
     response = HTTParty.post(
       "#{phone_id_path}/messages",
@@ -121,16 +173,7 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
       }
     }
 
-    # Add parameters if present
-    if template_info[:parameters].present?
-      body[:components] = [
-        {
-          type: 'body',
-          parameters: template_info[:parameters].map { |param| { type: 'text', text: param } }
-        }
-      ]
-    end
-
+    body[:components] = template_info[:parameters] if template_info[:parameters].present?
     body
   end
 
@@ -140,11 +183,8 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
 
     templates = response['data'] || []
 
-    # Handle pagination
     next_url = response.dig('paging', 'next')
-    if next_url.present?
-      templates += fetch_whatsapp_templates(next_url)
-    end
+    templates += fetch_whatsapp_templates(next_url) if next_url.present?
 
     templates
   end

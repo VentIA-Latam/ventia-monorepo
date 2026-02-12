@@ -109,3 +109,23 @@ export interface AssignConversationPayload {
   assignee_id?: string;
   team_id?: string;
 }
+
+// --- WhatsApp Connect ---
+
+export interface WhatsAppConnectParams {
+  code: string;
+  business_id: string;
+  waba_id: string;
+  phone_number_id?: string;
+}
+
+export interface WhatsAppConnectResponse {
+  success: boolean;
+  data: {
+    channel_id: string;
+    phone_number: string;
+    inbox_id: string;
+    inbox_name: string;
+  };
+  message: string;
+}

@@ -1,58 +1,51 @@
-class Whatsapp::SendOnWhatsappService
-  def initialize(conversation:, message:)
-    @conversation = conversation
-    @message = message
-    @inbox = @conversation.inbox
-    @channel = @inbox.channel
-  end
-
-  def perform
-    return unless valid_message?
-
-    # Get the phone number from the contact
-    phone_number = @conversation.contact.phone_number
-    phone_number = normalize_phone_number(phone_number)
-
-    # Send via provider service
-    source_id = @channel.provider_service.send_message(phone_number, @message)
-
-    # Update message with external ID and status
-    if source_id.present?
-      @message.update!(
-        source_id: source_id,
-        status: :sent
-      )
-    else
-      @message.update!(status: :failed)
-    end
-
-    source_id
-  rescue StandardError => e
-    Rails.logger.error "[WhatsApp] Send message failed: #{e.message}"
-    @message.update!(
-      status: :failed,
-      content_attributes: @message.content_attributes.merge('external_error' => e.message)
-    )
-    nil
-  end
-
+class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
   private
 
-  def valid_message?
-    return false unless @message.outgoing?
-    return false if @message.source_id.present? # Already sent
-    return false unless @channel.is_a?(Channel::Whatsapp)
-
-    true
+  def channel_class
+    Channel::Whatsapp
   end
 
-  def normalize_phone_number(phone)
-    # Remove any non-numeric characters except +
-    phone = phone.gsub(/[^\d+]/, '')
+  def perform_reply
+    should_send_template_message = template_params.present? || !message.conversation.can_reply?
+    if should_send_template_message
+      send_template_message
+    else
+      send_session_message
+    end
+  rescue StandardError => e
+    Rails.logger.error "[WhatsApp] Send failed: #{e.message}"
+    message.update!(status: :failed, external_error: e.message)
+  end
 
-    # Ensure it starts with +
-    phone = "+#{phone}" unless phone.start_with?('+')
+  def send_template_message
+    processor = Whatsapp::TemplateProcessorService.new(
+      channel: channel,
+      template_params: template_params,
+      message: message
+    )
 
-    phone
+    name, namespace, lang_code, processed_parameters = processor.call
+
+    if name.blank?
+      message.update!(status: :failed, external_error: 'Template not found or invalid template name')
+      return
+    end
+
+    message_id = channel.send_template(message.conversation.contact_inbox.source_id, {
+                                         name: name,
+                                         namespace: namespace,
+                                         lang_code: lang_code,
+                                         parameters: processed_parameters
+                                       }, message)
+    message.update!(source_id: message_id) if message_id.present?
+  end
+
+  def send_session_message
+    message_id = channel.send_message(message.conversation.contact_inbox.source_id, message)
+    message.update!(source_id: message_id) if message_id.present?
+  end
+
+  def template_params
+    message.additional_attributes && message.additional_attributes['template_params']
   end
 end

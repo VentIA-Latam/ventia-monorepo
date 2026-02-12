@@ -118,6 +118,7 @@ Rails.application.routes.draw do
       namespace :whatsapp do
         post 'embedded_signup', to: 'embedded_signup#create'
         get 'embedded_signup/status', to: 'embedded_signup#status'
+        get 'health/:inbox_id', to: 'embedded_signup#health'
       end
 
       # Reports

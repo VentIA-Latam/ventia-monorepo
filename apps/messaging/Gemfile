@@ -20,6 +20,7 @@ gem 'active_model_serializers', '~> 0.10.0'
 gem 'twilio-ruby', '~> 7.3.3'
 gem 'httparty'
 gem 'faraday'
+gem 'down', '~> 5.4'
 
 # State machines & Events
 gem 'aasm', '~> 5.5'

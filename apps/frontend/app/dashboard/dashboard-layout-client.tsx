@@ -15,6 +15,7 @@ const PAGE_META: Record<string, { title: string; breadcrumb: string[] }> = {
   '/campaigns': { title: 'Campañas', breadcrumb: ['Campañas'] },
   '/agent-customization': { title: 'Personalización del Agente', breadcrumb: ['Personalización'] },
   '/metrics': { title: 'Métricas', breadcrumb: ['Métricas'] },
+  '/whatsapp-connect': { title: 'Conectar WhatsApp', breadcrumb: ['WhatsApp'] },
   '/get-started': { title: 'Inicio', breadcrumb: [] },
   '/payments': { title: 'Pagos', breadcrumb: ['Pagos'] },
   '/invoices-series': { title: 'Series de facturación', breadcrumb: ['Facturación', 'Series'] },

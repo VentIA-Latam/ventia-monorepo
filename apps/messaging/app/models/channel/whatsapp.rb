@@ -19,8 +19,11 @@
 #
 
 class Channel::Whatsapp < ApplicationRecord
+  include Reauthorizable
+
   self.table_name = 'channel_whatsapp'
 
+  AUTHORIZATION_ERROR_THRESHOLD = 2
   PROVIDERS = %w[whatsapp_cloud].freeze
   EDITABLE_ATTRS = [:phone_number, :provider, { provider_config: {} }].freeze
 
