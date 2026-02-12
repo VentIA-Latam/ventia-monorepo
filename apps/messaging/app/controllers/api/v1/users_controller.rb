@@ -7,7 +7,8 @@ module Api
       def index
         @users = @current_account.users.order_by_name
         @users = @users.where(ventia_user_id: params[:ventia_user_id]) if params[:ventia_user_id].present?
-        render_success(@users.map(&:push_event_data))
+        users_data = @users.map { |u| u.push_event_data.merge(account_id: @current_account.id) }
+        render_success(users_data)
       end
 
       # GET /api/v1/users/:id

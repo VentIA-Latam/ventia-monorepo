@@ -103,7 +103,7 @@ class MessagingService:
             if pubsub_token:
                 return {
                     "pubsub_token": pubsub_token,
-                    "account_id": str(tenant_id),
+                    "account_id": str(user.get("account_id", tenant_id)),
                     "user_id": str(user.get("id")),
                 }
         return None

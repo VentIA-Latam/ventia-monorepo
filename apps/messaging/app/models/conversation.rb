@@ -70,7 +70,7 @@ class Conversation < ApplicationRecord
 
   # Callbacks
   before_validation :ensure_uuid
-  before_create :set_initial_status
+  before_validation :set_initial_status, on: :create
   after_create_commit :broadcast_created
   after_update_commit :broadcast_updated
   after_update_commit :broadcast_status_changed, if: :saved_change_to_status?
