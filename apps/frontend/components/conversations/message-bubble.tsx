@@ -35,7 +35,7 @@ export const MessageBubble = memo(function MessageBubble({
 
   return (
     <div
-      className={cn("flex gap-2 max-w-[85%]", isOutgoing ? "ml-auto" : "mr-auto")}
+      className={cn("flex gap-2 max-w-[85%]", isOutgoing ? "ml-auto justify-end" : "mr-auto")}
     >
       <div
         className={cn(

@@ -80,14 +80,39 @@ export function MessageView({ conversation, onBack, onOpenInfo }: MessageViewPro
     const msgData = lastEvent.data;
     if (String(msgData.conversation_id) !== String(conversation.id)) return;
 
-    // Avoid duplicates (e.g. our own optimistic message)
     const msgId = String(msgData.id);
+    const msgType = (msgData.message_type as string) ?? "incoming";
+
     setMessages((prev) => {
+      // Skip if real message already exists
       if (prev.some((m) => String(m.id) === msgId)) return prev;
+
+      // For outgoing messages, replace the temp message instead of appending
+      if (msgType === "outgoing") {
+        const hasTempMsg = prev.some((m) => String(m.id).startsWith("temp-"));
+        if (hasTempMsg) {
+          // Replace the last temp message with the real one
+          const lastTempIdx = prev.findLastIndex((m) => String(m.id).startsWith("temp-"));
+          const updated = [...prev];
+          updated[lastTempIdx] = {
+            id: msgId,
+            content: (msgData.content as string) ?? "",
+            message_type: msgType as MessageType,
+            sender: null,
+            attachments: [],
+            created_at: (msgData.created_at as string) ?? new Date().toISOString(),
+          };
+          return updated;
+        }
+        // No temp message found — skip, we already have it from optimistic update or API response
+        return prev;
+      }
+
+      // Incoming messages — append
       const newMsg: Message = {
         id: msgId,
         content: (msgData.content as string) ?? "",
-        message_type: (msgData.message_type as MessageType) ?? "incoming",
+        message_type: msgType as MessageType,
         sender: null,
         attachments: [],
         created_at: (msgData.created_at as string) ?? new Date().toISOString(),
