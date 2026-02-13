@@ -10,7 +10,7 @@ import { MessageBubble } from "./message-bubble";
 import { MessageComposer } from "./message-composer";
 import { useMessaging } from "./messaging-provider";
 import { getMessages, sendMessage } from "@/lib/api-client/messaging";
-import type { Conversation, Message, SendMessagePayload } from "@/lib/types/messaging";
+import type { Conversation, Message, MessageType, SendMessagePayload } from "@/lib/types/messaging";
 
 interface MessageViewProps {
   conversation: Conversation | null;
@@ -87,7 +87,7 @@ export function MessageView({ conversation, onBack, onOpenInfo }: MessageViewPro
       const newMsg: Message = {
         id: msgId,
         content: (msgData.content as string) ?? "",
-        message_type: (msgData.message_type as string) ?? "incoming",
+        message_type: (msgData.message_type as MessageType) ?? "incoming",
         sender: null,
         attachments: [],
         created_at: (msgData.created_at as string) ?? new Date().toISOString(),
