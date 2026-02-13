@@ -36,6 +36,7 @@ export interface Conversation {
   contact: ContactBrief | null;
   assignee: AgentBrief | null;
   team: TeamBrief | null;
+  ai_agent_enabled: boolean;
   messages_count: number | null;
   last_message_at: string | null;
   created_at: string | null;

@@ -7,7 +7,7 @@
  * desde componentes cliente. Todas las funciones llaman a /api/superadmin/* routes.
  */
 
-import { apiGet, apiPost, apiPatch } from './client';
+import { apiGet, apiPost, apiPatch, apiDelete } from './client';
 import type { Tenant, TenantDetail } from '@/lib/types/tenant';
 import type { User } from '@/lib/types/user';
 import type { APIKey } from '@/lib/types/api-key';
@@ -253,4 +253,44 @@ export async function createApiKey(data: {
  */
 export async function revokeApiKey(apiKeyId: number): Promise<void> {
   return apiPost(`/api/superadmin/api-keys/${apiKeyId}`, {});
+}
+
+// ==================== MESSAGING WEBHOOKS ====================
+
+export interface WebhookConfig {
+  id: string;
+  url: string;
+  subscriptions: string[];
+}
+
+/**
+ * Obtener webhook de messaging configurado para un tenant
+ * GET /api/superadmin/tenants/:id/messaging-webhook
+ */
+export async function getTenantWebhook(tenantId: number): Promise<WebhookConfig | null> {
+  const data = await apiGet<WebhookConfig | Record<string, never>>(
+    `/api/superadmin/tenants/${tenantId}/messaging-webhook`
+  );
+  // Empty object means no webhook configured
+  if (!data || !('id' in data)) return null;
+  return data as WebhookConfig;
+}
+
+/**
+ * Crear o actualizar webhook de messaging para un tenant
+ * POST /api/superadmin/tenants/:id/messaging-webhook
+ */
+export async function saveTenantWebhook(
+  tenantId: number,
+  data: { url: string; subscriptions: string[] }
+): Promise<WebhookConfig> {
+  return apiPost(`/api/superadmin/tenants/${tenantId}/messaging-webhook`, data);
+}
+
+/**
+ * Eliminar webhook de messaging para un tenant
+ * DELETE /api/superadmin/tenants/:id/messaging-webhook
+ */
+export async function deleteTenantWebhook(tenantId: number): Promise<void> {
+  return apiDelete(`/api/superadmin/tenants/${tenantId}/messaging-webhook`);
 }

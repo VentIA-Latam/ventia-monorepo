@@ -102,6 +102,7 @@ class Message < ApplicationRecord
       status: status,
       created_at: created_at.to_i,
       conversation_id: conversation_id,
+      ai_agent_enabled: conversation.ai_agent_enabled,
       sender: sender&.webhook_data,
       attachments: attachments.map(&:push_event_data)
     }

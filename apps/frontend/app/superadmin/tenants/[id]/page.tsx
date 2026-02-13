@@ -1,16 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getTenant } from "@/lib/api-client";
-import { ArrowLeft, Building2, Calendar, Globe, Users, Package, Shield, Store, ShoppingBag, CheckCircle2, XCircle } from "lucide-react";
+import { getTenant, getTenantWebhook, saveTenantWebhook, deleteTenantWebhook } from "@/lib/api-client";
+import type { WebhookConfig } from "@/lib/api-client/superadmin";
+import { ArrowLeft, Building2, Calendar, Globe, Users, Package, Shield, Store, ShoppingBag, CheckCircle2, XCircle, Webhook, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { TenantDetail, EcommercePlatform } from "@/lib/types/tenant";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatDateTime } from "@/lib/utils";
+
+const WEBHOOK_EVENTS = [
+  { value: "message_created", label: "Mensaje creado", description: "Cuando se recibe un nuevo mensaje (principal para n8n)" },
+  { value: "conversation_created", label: "Conversación creada", description: "Cuando se crea una nueva conversación" },
+  { value: "conversation_updated", label: "Conversación actualizada", description: "Cuando se actualiza una conversación" },
+  { value: "conversation_status_changed", label: "Estado cambiado", description: "Cuando cambia el estado de una conversación" },
+] as const;
 
 export default function TenantDetailPage() {
   const params = useParams();
@@ -18,6 +29,14 @@ export default function TenantDetailPage() {
   const [tenant, setTenant] = useState<TenantDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Webhook state
+  const [webhook, setWebhook] = useState<WebhookConfig | null>(null);
+  const [webhookLoading, setWebhookLoading] = useState(true);
+  const [webhookSaving, setWebhookSaving] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [webhookSubscriptions, setWebhookSubscriptions] = useState<string[]>(["message_created"]);
+  const [webhookError, setWebhookError] = useState<string | null>(null);
 
   // Helper para obtener plataforma del tenant
   const getTenantPlatform = (): EcommercePlatform => {
@@ -70,8 +89,79 @@ export default function TenantDetailPage() {
     }
   };
 
+  const fetchWebhook = useCallback(async () => {
+    try {
+      setWebhookLoading(true);
+      setWebhookError(null);
+      const data = await getTenantWebhook(parseInt(params.id as string));
+      setWebhook(data);
+      if (data) {
+        setWebhookUrl(data.url);
+        setWebhookSubscriptions(data.subscriptions);
+      } else {
+        setWebhookUrl("");
+        setWebhookSubscriptions(["message_created"]);
+      }
+    } catch {
+      setWebhookError("Error al cargar configuración de webhook");
+    } finally {
+      setWebhookLoading(false);
+    }
+  }, [params.id]);
+
+  const handleSaveWebhook = useCallback(async () => {
+    if (!webhookUrl.trim()) {
+      setWebhookError("La URL es requerida");
+      return;
+    }
+    if (webhookSubscriptions.length === 0) {
+      setWebhookError("Selecciona al menos un evento");
+      return;
+    }
+
+    try {
+      setWebhookSaving(true);
+      setWebhookError(null);
+      const result = await saveTenantWebhook(parseInt(params.id as string), {
+        url: webhookUrl.trim(),
+        subscriptions: webhookSubscriptions,
+      });
+      // The response may come wrapped in { data: ... } or directly
+      const webhookData = result && "data" in result ? (result as { data: WebhookConfig }).data : result;
+      setWebhook(webhookData as WebhookConfig);
+    } catch (err) {
+      setWebhookError(err instanceof Error ? err.message : "Error al guardar webhook");
+    } finally {
+      setWebhookSaving(false);
+    }
+  }, [params.id, webhookUrl, webhookSubscriptions]);
+
+  const handleDeleteWebhook = useCallback(async () => {
+    try {
+      setWebhookSaving(true);
+      setWebhookError(null);
+      await deleteTenantWebhook(parseInt(params.id as string));
+      setWebhook(null);
+      setWebhookUrl("");
+      setWebhookSubscriptions(["message_created"]);
+    } catch (err) {
+      setWebhookError(err instanceof Error ? err.message : "Error al eliminar webhook");
+    } finally {
+      setWebhookSaving(false);
+    }
+  }, [params.id]);
+
+  const toggleSubscription = useCallback((event: string) => {
+    setWebhookSubscriptions((prev) =>
+      prev.includes(event)
+        ? prev.filter((e) => e !== event)
+        : [...prev, event]
+    );
+  }, []);
+
   useEffect(() => {
     fetchTenantDetail();
+    fetchWebhook();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
@@ -436,6 +526,114 @@ export default function TenantDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Webhook Configuration */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Webhook className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <CardTitle>Configuración de Webhook</CardTitle>
+                <CardDescription>
+                  URL donde se envían los eventos de messaging (n8n)
+                </CardDescription>
+              </div>
+            </div>
+            {webhook ? (
+              <Badge className="bg-success-bg text-success border-success/30">
+                <CheckCircle2 className="mr-1 h-3 w-3" />
+                Configurado
+              </Badge>
+            ) : (
+              <Badge className="bg-muted/50 text-foreground border-border">
+                Sin configurar
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {webhookLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="webhook-url">URL del Webhook</Label>
+                <Input
+                  id="webhook-url"
+                  type="url"
+                  placeholder="https://n8n.ejemplo.com/webhook/..."
+                  value={webhookUrl}
+                  onChange={(e) => {
+                    setWebhookUrl(e.target.value);
+                    setWebhookError(null);
+                  }}
+                  disabled={webhookSaving}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label>Eventos suscritos</Label>
+                <div className="grid gap-2">
+                  {WEBHOOK_EVENTS.map((event) => (
+                    <div
+                      key={event.value}
+                      className="flex items-start space-x-3 rounded-md border p-3"
+                    >
+                      <Checkbox
+                        id={`event-${event.value}`}
+                        checked={webhookSubscriptions.includes(event.value)}
+                        onCheckedChange={() => toggleSubscription(event.value)}
+                        disabled={webhookSaving}
+                      />
+                      <div className="grid gap-0.5 leading-none">
+                        <Label
+                          htmlFor={`event-${event.value}`}
+                          className="text-sm font-medium cursor-pointer"
+                        >
+                          {event.label}
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          {event.description}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {webhookError && (
+                <p className="text-sm text-destructive">{webhookError}</p>
+              )}
+
+              <div className="flex items-center gap-2 pt-2">
+                <Button
+                  onClick={handleSaveWebhook}
+                  disabled={webhookSaving || !webhookUrl.trim()}
+                >
+                  {webhookSaving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  Guardar
+                </Button>
+                {webhook && (
+                  <Button
+                    variant="destructive"
+                    onClick={handleDeleteWebhook}
+                    disabled={webhookSaving}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Eliminar
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

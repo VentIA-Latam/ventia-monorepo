@@ -65,6 +65,12 @@ export function ConversationsClient({
     }
   }, [selectedId]);
 
+  const handleConversationUpdate = useCallback((updated: Conversation) => {
+    setConversations((prev) =>
+      prev.map((c) => (c.id === updated.id ? updated : c))
+    );
+  }, []);
+
   // Mobile layout: stack navigation
   if (isMobile) {
     return (
@@ -86,6 +92,7 @@ export function ConversationsClient({
               conversation={selectedConversation}
               onBack={handleBack}
               onOpenInfo={handleOpenInfo}
+              onConversationUpdate={handleConversationUpdate}
             />
           </div>
         )}
@@ -128,6 +135,7 @@ export function ConversationsClient({
       <MessageView
         conversation={selectedConversation}
         onOpenInfo={handleOpenInfo}
+        onConversationUpdate={handleConversationUpdate}
       />
 
       {/* Contact info panel */}

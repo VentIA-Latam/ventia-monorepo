@@ -54,7 +54,7 @@ class Api::V1::ConversationsController < Api::V1::BaseController
   end
 
   def conversation_params
-    params.require(:conversation).permit(:status, :priority, custom_attributes: {})
+    params.require(:conversation).permit(:status, :priority, :ai_agent_enabled, custom_attributes: {})
   end
 
   def conversation_json(conversation)
@@ -73,6 +73,7 @@ class Api::V1::ConversationsController < Api::V1::BaseController
         id: conversation.inbox.id,
         name: conversation.inbox.name
       },
+      ai_agent_enabled: conversation.ai_agent_enabled,
       messages_count: conversation.messages.count,
       unread_count: conversation.unread_messages.count
     }

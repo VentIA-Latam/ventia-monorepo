@@ -1,54 +1,51 @@
 class WebhookListener < BaseListener
-  # Mapping of event methods to webhook event names
-  WEBHOOK_EVENTS = {
-    conversation_created: 'conversation_created',
-    conversation_updated: 'conversation_updated',
-    conversation_status_changed: 'conversation_status_changed',
-    message_created: 'message_created',
-    message_updated: 'message_updated',
-    contact_created: 'contact_created',
-    contact_updated: 'contact_updated'
-  }.freeze
+  def conversation_created(event)
+    conversation, account = extract_conversation_and_account(event)
+    dispatch_webhooks(account, 'conversation_created', conversation.webhook_data)
+  end
 
-  # Define methods for each event
-  WEBHOOK_EVENTS.each do |event, webhook_event_name|
-    define_method(event) do |resource|
-      deliver_webhooks(resource, webhook_event_name)
-    end
+  def conversation_updated(event)
+    conversation, account = extract_conversation_and_account(event)
+    dispatch_webhooks(account, 'conversation_updated', conversation.webhook_data)
+  end
+
+  def conversation_status_changed(event)
+    conversation, account = extract_conversation_and_account(event)
+    dispatch_webhooks(account, 'conversation_status_changed', conversation.webhook_data)
+  end
+
+  def message_created(event)
+    message, account = extract_message_and_account(event)
+    # Solo despachar para mensajes incoming de conversaciones con AI habilitada
+    return unless message.incoming? && message.conversation.ai_agent_enabled?
+
+    dispatch_webhooks(account, 'message_created', message.webhook_data)
+  end
+
+  def message_updated(event)
+    message, account = extract_message_and_account(event)
+    dispatch_webhooks(account, 'message_updated', message.webhook_data)
+  end
+
+  def contact_created(event)
+    contact, account = extract_contact_and_account(event)
+    dispatch_webhooks(account, 'contact_created', contact.webhook_data)
+  end
+
+  def contact_updated(event)
+    contact, account = extract_contact_and_account(event)
+    dispatch_webhooks(account, 'contact_updated', contact.webhook_data)
   end
 
   private
 
-  def deliver_webhooks(resource, event_name)
-    account = extract_account(resource)
+  def dispatch_webhooks(account, event_name, data)
     return unless account
 
-    # Find webhooks that listen to this event
-    webhooks = account.webhooks.where(
-      "subscriptions @> ?", [event_name].to_json
-    )
-
-    webhooks.each do |webhook|
-      webhook.dispatch_event(event_name, extract_webhook_data(resource))
+    account.webhooks.where("subscriptions @> ?", [event_name].to_json).each do |webhook|
+      webhook.dispatch_event(event_name, data)
     end
   rescue StandardError => e
     Rails.logger.error "[WebhookListener] Error delivering webhooks for #{event_name}: #{e.message}"
-  end
-
-  def extract_account(resource)
-    if resource.respond_to?(:account)
-      resource.account
-    elsif resource.respond_to?(:conversation)
-      resource.conversation.account
-    end
-  end
-
-  def extract_webhook_data(resource)
-    if resource.respond_to?(:webhook_data)
-      resource.webhook_data
-    else
-      Rails.logger.warn "[WebhookListener] Resource #{resource.class} does not respond to webhook_data"
-      { id: resource.id }
-    end
   end
 end

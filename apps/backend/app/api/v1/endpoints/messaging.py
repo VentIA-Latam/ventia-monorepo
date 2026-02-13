@@ -158,6 +158,28 @@ async def get_conversation(
     return result
 
 
+@router.patch(
+    "/conversations/{conversation_id}",
+    summary="Update a conversation",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def update_conversation(
+    conversation_id: str,
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+):
+    tenant_id = _get_tenant_id(current_user)
+
+    result = await messaging_service.update_conversation(
+        tenant_id, conversation_id, payload
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
 @router.delete(
     "/conversations/{conversation_id}",
     summary="Delete a conversation",

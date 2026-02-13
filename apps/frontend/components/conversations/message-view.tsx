@@ -5,17 +5,25 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ArrowLeft, User, MessageSquare, Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { ArrowLeft, User, MessageSquare, Loader2, Bot } from "lucide-react";
 import { MessageBubble } from "./message-bubble";
 import { MessageComposer } from "./message-composer";
 import { useMessaging } from "./messaging-provider";
-import { getMessages, sendMessage } from "@/lib/api-client/messaging";
+import { getMessages, sendMessage, updateConversation } from "@/lib/api-client/messaging";
 import type { Conversation, Message, MessageType, SendMessagePayload } from "@/lib/types/messaging";
 
 interface MessageViewProps {
   conversation: Conversation | null;
   onBack?: () => void;
   onOpenInfo?: () => void;
+  onConversationUpdate?: (updated: Conversation) => void;
 }
 
 function getInitials(name: string | null | undefined): string {
@@ -28,7 +36,7 @@ function getInitials(name: string | null | undefined): string {
     .slice(0, 2);
 }
 
-export function MessageView({ conversation, onBack, onOpenInfo }: MessageViewProps) {
+export function MessageView({ conversation, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
   const { lastEvent } = useMessaging();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -216,6 +224,23 @@ export function MessageView({ conversation, onBack, onOpenInfo }: MessageViewPro
     [conversation?.id]
   );
 
+  // Toggle AI agent
+  const handleToggleAI = useCallback(
+    async (checked: boolean) => {
+      if (!conversation) return;
+      const updated = { ...conversation, ai_agent_enabled: checked };
+      onConversationUpdate?.(updated);
+
+      try {
+        await updateConversation(conversation.id, { ai_agent_enabled: checked });
+      } catch (err) {
+        console.error("Error toggling AI agent:", err);
+        onConversationUpdate?.(conversation);
+      }
+    },
+    [conversation, onConversationUpdate]
+  );
+
   // No conversation selected
   if (!conversation) {
     return (
@@ -255,6 +280,24 @@ export function MessageView({ conversation, onBack, onOpenInfo }: MessageViewPro
             {contact?.phone_number || contact?.email || ""}
           </p>
         </div>
+
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Bot className={`h-4 w-4 ${conversation.ai_agent_enabled ? "text-primary" : "text-muted-foreground"}`} />
+                <Switch
+                  checked={conversation.ai_agent_enabled}
+                  onCheckedChange={handleToggleAI}
+                  className="scale-75"
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{conversation.ai_agent_enabled ? "IA activada" : "IA desactivada"}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         {onOpenInfo && (
           <Button variant="ghost" size="icon" onClick={onOpenInfo}>

@@ -124,6 +124,17 @@ class MessagingService:
             "GET", f"/api/v1/conversations/{conversation_id}", tenant_id
         )
 
+    async def update_conversation(
+        self, tenant_id: int, conversation_id: str, payload: dict
+    ) -> Optional[dict]:
+        """Update a conversation (status, priority, ai_agent_enabled, etc.)."""
+        return await self._request(
+            "PATCH",
+            f"/api/v1/conversations/{conversation_id}",
+            tenant_id,
+            json_data={"conversation": payload},
+        )
+
     async def delete_conversation(
         self, tenant_id: int, conversation_id: str
     ) -> Optional[dict]:
@@ -254,6 +265,38 @@ class MessagingService:
         """Create a WhatsApp inbox with manual credentials."""
         return await self._request(
             "POST", "/api/v1/inboxes", tenant_id, json_data=payload
+        )
+
+    # --- Webhooks ---
+
+    async def get_webhooks(self, tenant_id: int) -> Optional[dict]:
+        """List all webhooks for an account."""
+        return await self._request("GET", "/api/v1/webhooks", tenant_id)
+
+    async def create_webhook(
+        self, tenant_id: int, payload: dict
+    ) -> Optional[dict]:
+        """Create a webhook for an account."""
+        return await self._request(
+            "POST", "/api/v1/webhooks", tenant_id,
+            json_data={"webhook": payload},
+        )
+
+    async def update_webhook(
+        self, tenant_id: int, webhook_id: str, payload: dict
+    ) -> Optional[dict]:
+        """Update a webhook."""
+        return await self._request(
+            "PATCH", f"/api/v1/webhooks/{webhook_id}", tenant_id,
+            json_data={"webhook": payload},
+        )
+
+    async def delete_webhook(
+        self, tenant_id: int, webhook_id: str
+    ) -> Optional[dict]:
+        """Delete a webhook."""
+        return await self._request(
+            "DELETE", f"/api/v1/webhooks/{webhook_id}", tenant_id,
         )
 
 

@@ -130,6 +130,7 @@ class Conversation < ApplicationRecord
       contact_id: contact_id,
       assignee_id: assignee_id,
       team_id: team_id,
+      ai_agent_enabled: ai_agent_enabled,
       additional_attributes: additional_attributes
     }
   end

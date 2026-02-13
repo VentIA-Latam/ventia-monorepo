@@ -111,6 +111,9 @@ Rails.application.routes.draw do
         end
       end
 
+      # Webhooks
+      resources :webhooks, only: [:index, :show, :create, :update, :destroy]
+
       # Canned Responses
       resources :canned_responses
 
