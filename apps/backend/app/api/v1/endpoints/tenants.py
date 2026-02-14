@@ -385,8 +385,15 @@ async def save_tenant_messaging_webhook(
     Create or update the messaging webhook for a tenant (upsert).
 
     If a webhook already exists, updates it. Otherwise creates a new one.
-    Payload: { "url": "https://...", "subscriptions": ["message_created", ...] }
+    Payload: { "url": "https://..." }
+    Always subscribes to message_created event (used by n8n AI Agent).
     """
+    # Always use message_created - it's the only event n8n needs
+    webhook_payload = {
+        "url": payload.get("url"),
+        "subscriptions": ["message_created"],
+    }
+
     # Check if webhook already exists
     existing = await messaging_service.get_webhooks(tenant_id)
     if existing is None:
@@ -399,10 +406,10 @@ async def save_tenant_messaging_webhook(
     if isinstance(webhooks, list) and len(webhooks) > 0:
         # Update existing webhook
         webhook_id = webhooks[0].get("id")
-        result = await messaging_service.update_webhook(tenant_id, webhook_id, payload)
+        result = await messaging_service.update_webhook(tenant_id, webhook_id, webhook_payload)
     else:
         # Create new webhook
-        result = await messaging_service.create_webhook(tenant_id, payload)
+        result = await messaging_service.create_webhook(tenant_id, webhook_payload)
 
     if result is None:
         raise HTTPException(

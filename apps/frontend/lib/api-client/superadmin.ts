@@ -260,7 +260,6 @@ export async function revokeApiKey(apiKeyId: number): Promise<void> {
 export interface WebhookConfig {
   id: string;
   url: string;
-  subscriptions: string[];
 }
 
 /**
@@ -282,7 +281,7 @@ export async function getTenantWebhook(tenantId: number): Promise<WebhookConfig 
  */
 export async function saveTenantWebhook(
   tenantId: number,
-  data: { url: string; subscriptions: string[] }
+  data: { url: string }
 ): Promise<WebhookConfig> {
   return apiPost(`/api/superadmin/tenants/${tenantId}/messaging-webhook`, data);
 }

@@ -10,18 +10,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { TenantDetail, EcommercePlatform } from "@/lib/types/tenant";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatDateTime } from "@/lib/utils";
-
-const WEBHOOK_EVENTS = [
-  { value: "message_created", label: "Mensaje creado", description: "Cuando se recibe un nuevo mensaje (principal para n8n)" },
-  { value: "conversation_created", label: "Conversación creada", description: "Cuando se crea una nueva conversación" },
-  { value: "conversation_updated", label: "Conversación actualizada", description: "Cuando se actualiza una conversación" },
-  { value: "conversation_status_changed", label: "Estado cambiado", description: "Cuando cambia el estado de una conversación" },
-] as const;
 
 export default function TenantDetailPage() {
   const params = useParams();
@@ -35,7 +27,6 @@ export default function TenantDetailPage() {
   const [webhookLoading, setWebhookLoading] = useState(true);
   const [webhookSaving, setWebhookSaving] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState("");
-  const [webhookSubscriptions, setWebhookSubscriptions] = useState<string[]>(["message_created"]);
   const [webhookError, setWebhookError] = useState<string | null>(null);
 
   // Helper para obtener plataforma del tenant
@@ -97,10 +88,8 @@ export default function TenantDetailPage() {
       setWebhook(data);
       if (data) {
         setWebhookUrl(data.url);
-        setWebhookSubscriptions(data.subscriptions);
       } else {
         setWebhookUrl("");
-        setWebhookSubscriptions(["message_created"]);
       }
     } catch {
       setWebhookError("Error al cargar configuración de webhook");
@@ -114,17 +103,12 @@ export default function TenantDetailPage() {
       setWebhookError("La URL es requerida");
       return;
     }
-    if (webhookSubscriptions.length === 0) {
-      setWebhookError("Selecciona al menos un evento");
-      return;
-    }
 
     try {
       setWebhookSaving(true);
       setWebhookError(null);
       const result = await saveTenantWebhook(parseInt(params.id as string), {
         url: webhookUrl.trim(),
-        subscriptions: webhookSubscriptions,
       });
       // The response may come wrapped in { data: ... } or directly
       const webhookData = result && "data" in result ? (result as { data: WebhookConfig }).data : result;
@@ -134,7 +118,7 @@ export default function TenantDetailPage() {
     } finally {
       setWebhookSaving(false);
     }
-  }, [params.id, webhookUrl, webhookSubscriptions]);
+  }, [params.id, webhookUrl]);
 
   const handleDeleteWebhook = useCallback(async () => {
     try {
@@ -143,21 +127,12 @@ export default function TenantDetailPage() {
       await deleteTenantWebhook(parseInt(params.id as string));
       setWebhook(null);
       setWebhookUrl("");
-      setWebhookSubscriptions(["message_created"]);
     } catch (err) {
       setWebhookError(err instanceof Error ? err.message : "Error al eliminar webhook");
     } finally {
       setWebhookSaving(false);
     }
   }, [params.id]);
-
-  const toggleSubscription = useCallback((event: string) => {
-    setWebhookSubscriptions((prev) =>
-      prev.includes(event)
-        ? prev.filter((e) => e !== event)
-        : [...prev, event]
-    );
-  }, []);
 
   useEffect(() => {
     fetchTenantDetail();
@@ -561,7 +536,7 @@ export default function TenantDetailPage() {
           ) : (
             <>
               <div className="space-y-2">
-                <Label htmlFor="webhook-url">URL del Webhook</Label>
+                <Label htmlFor="webhook-url">URL del Webhook (n8n)</Label>
                 <Input
                   id="webhook-url"
                   type="url"
@@ -573,36 +548,9 @@ export default function TenantDetailPage() {
                   }}
                   disabled={webhookSaving}
                 />
-              </div>
-
-              <div className="space-y-3">
-                <Label>Eventos suscritos</Label>
-                <div className="grid gap-2">
-                  {WEBHOOK_EVENTS.map((event) => (
-                    <div
-                      key={event.value}
-                      className="flex items-start space-x-3 rounded-md border p-3"
-                    >
-                      <Checkbox
-                        id={`event-${event.value}`}
-                        checked={webhookSubscriptions.includes(event.value)}
-                        onCheckedChange={() => toggleSubscription(event.value)}
-                        disabled={webhookSaving}
-                      />
-                      <div className="grid gap-0.5 leading-none">
-                        <Label
-                          htmlFor={`event-${event.value}`}
-                          className="text-sm font-medium cursor-pointer"
-                        >
-                          {event.label}
-                        </Label>
-                        <p className="text-xs text-muted-foreground">
-                          {event.description}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  Los mensajes entrantes se enviarán a esta URL cuando el AI Agent esté activado en la conversación.
+                </p>
               </div>
 
               {webhookError && (

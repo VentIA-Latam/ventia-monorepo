@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, require_permission_dual
 from app.models.user import User
 from app.schemas.messaging import (
     AssignConversationRequest,
@@ -233,7 +233,7 @@ async def list_messages(
 async def send_message(
     conversation_id: str,
     payload: SendMessageRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
     tenant_id = _get_tenant_id(current_user)
 
