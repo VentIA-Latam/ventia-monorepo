@@ -21,11 +21,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
     message.message_type = :outgoing
 
     if message.save
-      # Send via WhatsApp
-      Whatsapp::SendOnWhatsappService.new(
-        message: message
-      ).perform
-
+      # WhatsApp delivery is handled by after_create_commit :send_reply callback → SendReplyJob
       render_success(message_json(message), message: 'Message sent', status: :created)
     else
       render_error('Failed to send message', errors: message.errors.full_messages)
