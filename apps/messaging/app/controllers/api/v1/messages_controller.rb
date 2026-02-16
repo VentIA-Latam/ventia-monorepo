@@ -23,7 +23,6 @@ class Api::V1::MessagesController < Api::V1::BaseController
     if message.save
       # Send via WhatsApp
       Whatsapp::SendOnWhatsappService.new(
-        conversation: @conversation,
         message: message
       ).perform
 
