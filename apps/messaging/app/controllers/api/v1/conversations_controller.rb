@@ -63,7 +63,9 @@ class Api::V1::ConversationsController < Api::V1::BaseController
       uuid: conversation.uuid,
       status: conversation.status,
       priority: conversation.priority,
+      can_reply: conversation.can_reply?,
       last_activity_at: conversation.last_activity_at,
+      last_message_at: conversation.messages.maximum(:created_at),
       contact: {
         id: conversation.contact.id,
         name: conversation.contact.name,

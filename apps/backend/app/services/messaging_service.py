@@ -165,7 +165,7 @@ class MessagingService:
             f"/api/v1/conversations/{conversation_id}/messages",
             tenant_id,
             user_id=user_id,
-            json_data=payload,
+            json_data={"message": payload},
         )
 
     # --- Assignments ---

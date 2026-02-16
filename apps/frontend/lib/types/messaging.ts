@@ -104,7 +104,7 @@ export interface WebSocketToken {
 
 export interface SendMessagePayload {
   content: string;
-  message_type?: string;
+  content_type?: string;
 }
 
 export interface AssignConversationPayload {

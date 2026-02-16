@@ -240,7 +240,7 @@ async def send_message(
     result = await messaging_service.send_message(
         tenant_id,
         conversation_id,
-        payload.model_dump(),
+        payload.model_dump(exclude_none=True),
         user_id=current_user.auth0_user_id,
     )
     if result is None:

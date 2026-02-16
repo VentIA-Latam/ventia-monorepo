@@ -113,7 +113,7 @@ class WebSocketTokenResponse(BaseModel):
 
 class SendMessageRequest(BaseModel):
     content: str
-    message_type: str = "outgoing"
+    content_type: Optional[str] = None
 
 
 class AssignConversationRequest(BaseModel):

@@ -213,7 +213,6 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
       try {
         const result = await sendMessage(conversation.id, {
           content,
-          message_type: "outgoing",
         });
         // Replace temp message with real one if API returns it
         if (result && typeof result === "object" && "id" in result) {
