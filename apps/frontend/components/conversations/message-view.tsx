@@ -12,7 +12,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ArrowLeft, User, MessageSquare, Loader2, Bot } from "lucide-react";
+import { ArrowLeft, User, MessageSquare, Loader2, Bot, AlertTriangle } from "lucide-react";
 import { MessageBubble } from "./message-bubble";
 import { MessageComposer } from "./message-composer";
 import { useMessaging } from "./messaging-provider";
@@ -95,6 +95,11 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
       // Skip if real message already exists
       if (prev.some((m) => String(m.id) === msgId)) return prev;
 
+      const rawCreatedAt = msgData.created_at ?? new Date().toISOString();
+      const createdAt = typeof rawCreatedAt === "number" || typeof rawCreatedAt === "string"
+        ? rawCreatedAt
+        : new Date().toISOString();
+
       // For outgoing messages, replace the temp message instead of appending
       if (msgType === "outgoing") {
         const hasTempMsg = prev.some((m) => String(m.id).startsWith("temp-"));
@@ -108,7 +113,7 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
             message_type: msgType as MessageType,
             sender: null,
             attachments: [],
-            created_at: (msgData.created_at as string) ?? new Date().toISOString(),
+            created_at: createdAt,
           };
           return updated;
         }
@@ -123,7 +128,7 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         message_type: msgType as MessageType,
         sender: null,
         attachments: [],
-        created_at: (msgData.created_at as string) ?? new Date().toISOString(),
+        created_at: createdAt,
       };
       return [...prev, newMsg];
     });
@@ -339,8 +344,16 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         <div ref={bottomRef} />
       </div>
 
+      {/* 24-hour window warning */}
+      {conversation.can_reply === false && (
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-warning-bg border-t border-warning/30 text-warning text-sm">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <p>La ventana de 24 horas ha expirado. No se pueden enviar mensajes hasta que el contacto responda.</p>
+        </div>
+      )}
+
       {/* Composer */}
-      <MessageComposer onSend={handleSend} disabled={loading} />
+      <MessageComposer onSend={handleSend} disabled={loading || conversation.can_reply === false} />
     </div>
   );
 }

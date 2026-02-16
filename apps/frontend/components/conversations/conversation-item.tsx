@@ -35,9 +35,22 @@ function getInitials(name: string | null | undefined): string {
     .slice(0, 2);
 }
 
-function getRelativeTime(dateStr: string | null): string {
-  if (!dateStr) return "";
-  const date = new Date(dateStr);
+function parseTimestamp(value: string | number | null): Date | null {
+  if (value == null || value === "") return null;
+  const num = typeof value === "number" ? value : Number(value);
+  if (!Number.isNaN(num) && num > 1_000_000_000 && num < 10_000_000_000) {
+    return new Date(num * 1000);
+  }
+  if (!Number.isNaN(num) && num > 1_000_000_000_000) {
+    return new Date(num);
+  }
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function getRelativeTime(dateStr: string | number | null): string {
+  const date = parseTimestamp(dateStr);
+  if (!date) return "";
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMin = Math.floor(diffMs / 60000);

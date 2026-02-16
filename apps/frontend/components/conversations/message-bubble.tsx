@@ -9,9 +9,27 @@ interface MessageBubbleProps {
   message: Message;
 }
 
-function formatTime(dateStr: string | null): string {
-  if (!dateStr) return "";
-  return new Date(dateStr).toLocaleTimeString("es-PE", {
+function parseTimestamp(value: string | number | null): Date | null {
+  if (value == null || value === "") return null;
+  // Numeric value or numeric string → Unix epoch seconds
+  const num = typeof value === "number" ? value : Number(value);
+  if (!Number.isNaN(num) && num > 1_000_000_000 && num < 10_000_000_000) {
+    // Seconds-based epoch (10 digits) → convert to ms
+    return new Date(num * 1000);
+  }
+  if (!Number.isNaN(num) && num > 1_000_000_000_000) {
+    // Already milliseconds
+    return new Date(num);
+  }
+  // ISO string or other parseable format
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatTime(dateStr: string | number | null): string {
+  const date = parseTimestamp(dateStr);
+  if (!date) return "";
+  return date.toLocaleTimeString("es-PE", {
     hour: "2-digit",
     minute: "2-digit",
   });

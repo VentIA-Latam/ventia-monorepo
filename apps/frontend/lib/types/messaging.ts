@@ -37,9 +37,10 @@ export interface Conversation {
   assignee: AgentBrief | null;
   team: TeamBrief | null;
   ai_agent_enabled: boolean;
+  can_reply: boolean;
   messages_count: number | null;
-  last_message_at: string | null;
-  created_at: string | null;
+  last_message_at: string | number | null;
+  created_at: string | number | null;
 }
 
 export interface ConversationListResponse {
@@ -58,7 +59,7 @@ export interface Message {
   message_type: MessageType | null;
   sender: AgentBrief | ContactBrief | null;
   attachments: AttachmentBrief[];
-  created_at: string | null;
+  created_at: string | number | null;
 }
 
 export interface MessageListResponse {
