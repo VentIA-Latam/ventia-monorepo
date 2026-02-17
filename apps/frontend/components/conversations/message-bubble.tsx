@@ -60,7 +60,7 @@ export const MessageBubble = memo(function MessageBubble({
         className={cn(
           "relative rounded-lg px-3 py-1.5 text-sm shadow-sm",
           isOutgoing
-            ? "bg-primary rounded-tr-[4px]"
+            ? "bg-cielo rounded-tr-[4px]"
             : "bg-card rounded-tl-[4px]"
         )}
       >
