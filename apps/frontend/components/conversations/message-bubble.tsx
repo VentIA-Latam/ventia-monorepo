@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { cn } from "@/lib/utils";
-import { FileDown } from "lucide-react";
+import { FileDown, CheckCheck } from "lucide-react";
 import type { Message } from "@/lib/types/messaging";
 
 interface MessageBubbleProps {
@@ -11,17 +11,13 @@ interface MessageBubbleProps {
 
 function parseTimestamp(value: string | number | null): Date | null {
   if (value == null || value === "") return null;
-  // Numeric value or numeric string → Unix epoch seconds
   const num = typeof value === "number" ? value : Number(value);
   if (!Number.isNaN(num) && num > 1_000_000_000 && num < 10_000_000_000) {
-    // Seconds-based epoch (10 digits) → convert to ms
     return new Date(num * 1000);
   }
   if (!Number.isNaN(num) && num > 1_000_000_000_000) {
-    // Already milliseconds
     return new Date(num);
   }
-  // ISO string or other parseable format
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? null : d;
 }
@@ -44,40 +40,49 @@ export const MessageBubble = memo(function MessageBubble({
   if (isActivity) {
     return (
       <div className="flex justify-center py-1">
-        <p className="text-xs text-muted-foreground italic bg-muted/50 px-3 py-1 rounded-full">
+        <p className="text-[12px] text-muted-foreground bg-card/80 shadow-sm px-3 py-1.5 rounded-lg">
           {message.content}
         </p>
       </div>
     );
   }
 
+  const time = formatTime(message.created_at);
+
   return (
     <div
-      className={cn("flex gap-2 max-w-[85%]", isOutgoing ? "ml-auto justify-end" : "mr-auto")}
+      className={cn(
+        "flex max-w-[65%]",
+        isOutgoing ? "ml-auto justify-end" : "mr-auto"
+      )}
     >
       <div
         className={cn(
-          "rounded-2xl px-4 py-2.5 text-sm",
+          "relative rounded-lg px-3 py-1.5 text-sm shadow-sm",
           isOutgoing
-            ? "bg-primary text-primary-foreground rounded-br-md"
-            : "bg-muted rounded-bl-md"
+            ? "bg-primary/15 rounded-tr-[4px]"
+            : "bg-card rounded-tl-[4px]"
         )}
       >
         {/* Sender name for incoming */}
         {!isOutgoing && message.sender && "name" in message.sender && (
-          <p className="text-xs font-medium mb-1 opacity-70">
+          <p className="text-xs font-medium text-primary/80 mb-0.5">
             {message.sender.name}
           </p>
         )}
 
         {/* Content */}
         {message.content ? (
-          <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          <p className="whitespace-pre-wrap break-words">
+            {message.content}
+            {/* Invisible spacer so time+check don't overlap text */}
+            <span className="inline-block w-[70px]" />
+          </p>
         ) : null}
 
         {/* Attachments */}
         {message.attachments && message.attachments.length > 0 && (
-          <div className="mt-2 space-y-2">
+          <div className="mt-1.5 space-y-1.5">
             {message.attachments.map((att) => {
               if (att.file_type?.startsWith("image")) {
                 return (
@@ -85,7 +90,7 @@ export const MessageBubble = memo(function MessageBubble({
                     key={att.id}
                     src={att.file_url || ""}
                     alt={att.filename || "Imagen"}
-                    className="rounded-lg max-w-full max-h-64 object-cover"
+                    className="rounded-md max-w-full max-h-64 object-cover"
                     loading="lazy"
                   />
                 );
@@ -108,7 +113,7 @@ export const MessageBubble = memo(function MessageBubble({
                     key={att.id}
                     controls
                     src={att.file_url || ""}
-                    className="rounded-lg max-w-full max-h-64"
+                    className="rounded-md max-w-full max-h-64"
                   />
                 );
               }
@@ -119,10 +124,7 @@ export const MessageBubble = memo(function MessageBubble({
                   href={att.file_url || "#"}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={cn(
-                    "flex items-center gap-2 text-xs underline",
-                    isOutgoing ? "text-primary-foreground/80" : "text-primary"
-                  )}
+                  className="flex items-center gap-2 text-xs text-primary underline"
                 >
                   <FileDown className="h-3.5 w-3.5" />
                   {att.filename || "Archivo adjunto"}
@@ -132,15 +134,18 @@ export const MessageBubble = memo(function MessageBubble({
           </div>
         )}
 
-        {/* Time */}
-        <p
+        {/* Timestamp + checkmarks (WhatsApp style: bottom-right inside bubble) */}
+        <span
           className={cn(
-            "text-[10px] mt-1",
-            isOutgoing ? "text-primary-foreground/60" : "text-muted-foreground"
+            "absolute bottom-1 right-2 flex items-center gap-0.5 text-[11px]",
+            isOutgoing ? "text-muted-foreground/60" : "text-muted-foreground/50"
           )}
         >
-          {formatTime(message.created_at)}
-        </p>
+          {time}
+          {isOutgoing && (
+            <CheckCheck className="h-[14px] w-[14px] text-primary/60" />
+          )}
+        </span>
       </div>
     </div>
   );

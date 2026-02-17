@@ -75,7 +75,7 @@ export function ConversationsClient({
   if (isMobile) {
     return (
       <MessagingProvider>
-      <div className="h-[calc(100vh-8rem)]">
+      <div className="h-[calc(100vh-4rem)]">
         {selectedId === null ? (
           <div className="h-full rounded-lg border overflow-hidden">
             <ConversationList
@@ -120,9 +120,9 @@ export function ConversationsClient({
   // Desktop layout: 3 panels
   return (
     <MessagingProvider>
-    <div className="flex h-[calc(100vh-8rem)] rounded-lg border overflow-hidden">
+    <div className="flex h-[calc(100vh-4rem)] rounded-lg border overflow-hidden">
       {/* Conversation list */}
-      <div className="w-80 border-r shrink-0">
+      <div className="w-[400px] border-r shrink-0">
         <ConversationList
           conversations={conversations}
           selectedId={selectedId}

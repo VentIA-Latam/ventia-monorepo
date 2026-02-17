@@ -2,13 +2,13 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Search, MessageSquare, Loader2 } from "lucide-react";
 import { ConversationItem } from "./conversation-item";
 import { useMessaging } from "./messaging-provider";
 import { getConversations, deleteConversation } from "@/lib/api-client/messaging";
+import { cn } from "@/lib/utils";
 import type { Conversation, ConversationStatus } from "@/lib/types/messaging";
 
 interface ConversationListProps {
@@ -19,7 +19,10 @@ interface ConversationListProps {
   onDeleteConversation?: (id: string) => void;
 }
 
-const STATUS_TABS: { value: ConversationStatus; label: string }[] = [
+type FilterValue = "all" | ConversationStatus;
+
+const FILTER_CHIPS: { value: FilterValue; label: string }[] = [
+  { value: "all", label: "Todos" },
   { value: "open", label: "Abiertas" },
   { value: "pending", label: "Pendientes" },
   { value: "resolved", label: "Resueltas" },
@@ -33,18 +36,20 @@ export function ConversationList({
   onDeleteConversation,
 }: ConversationListProps) {
   const { lastEvent } = useMessaging();
-  const [statusFilter, setStatusFilter] = useState<ConversationStatus>("open");
+  const [statusFilter, setStatusFilter] = useState<FilterValue>("open");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const statusFilterRef = useRef(statusFilter);
   statusFilterRef.current = statusFilter;
 
   const handleStatusChange = useCallback(
-    async (status: ConversationStatus) => {
-      setStatusFilter(status);
+    async (filter: FilterValue) => {
+      setStatusFilter(filter);
       setLoading(true);
       try {
-        const data = await getConversations({ status });
+        const params: Record<string, string> = {};
+        if (filter !== "all") params.status = filter;
+        const data = await getConversations(params);
         onConversationsChange(data.data ?? []);
       } catch (error) {
         console.error("Error fetching conversations:", error);
@@ -78,7 +83,9 @@ export function ConversationList({
       event === "conversation.updated" ||
       event === "conversation.status_changed"
     ) {
-      getConversations({ status: statusFilterRef.current })
+      const params: Record<string, string> = {};
+      if (statusFilterRef.current !== "all") params.status = statusFilterRef.current;
+      getConversations(params)
         .then((data) => onConversationsChange(data.data ?? []))
         .catch((err) => console.error("Error refreshing conversations:", err));
     }
@@ -96,45 +103,53 @@ export function ConversationList({
     : conversations;
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Status tabs */}
-      <div className="p-3 border-b space-y-3">
-        <div className="flex gap-1">
-          {STATUS_TABS.map((tab) => (
-            <Button
-              key={tab.value}
-              variant={statusFilter === tab.value ? "default" : "ghost"}
-              size="sm"
-              className="flex-1 text-xs"
-              onClick={() => handleStatusChange(tab.value)}
-            >
-              {tab.label}
-            </Button>
-          ))}
-        </div>
+    <div className="flex flex-col h-full bg-background">
+      {/* Header */}
+      <div className="px-4 pt-4 pb-2">
+        <h2 className="text-xl font-bold">Chats</h2>
+      </div>
 
-        {/* Search */}
+      {/* Search */}
+      <div className="px-3 pb-2">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar contacto..."
+            placeholder="Buscar o iniciar chat"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9 text-sm"
+            className="pl-9 h-9 text-sm rounded-full bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/30"
           />
         </div>
       </div>
 
+      {/* Filter chips */}
+      <div className="px-3 pb-2 flex gap-1.5 overflow-x-auto no-scrollbar">
+        {FILTER_CHIPS.map((chip) => (
+          <button
+            key={chip.value}
+            onClick={() => handleStatusChange(chip.value)}
+            className={cn(
+              "shrink-0 rounded-full text-xs px-3 py-1.5 font-medium transition-colors",
+              statusFilter === chip.value
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted/60 text-muted-foreground hover:bg-muted"
+            )}
+          >
+            {chip.label}
+          </button>
+        ))}
+      </div>
+
       {/* List */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+      <div className="flex-1 overflow-y-auto">
         {loading ? (
-          <div className="space-y-1 p-2">
+          <div className="space-y-0">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 p-3">
-                <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+              <div key={i} className="flex items-center gap-3 py-3 px-4 border-b border-border/30">
+                <Skeleton className="h-12 w-12 rounded-full shrink-0" />
                 <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-4 w-36" />
+                  <Skeleton className="h-3 w-48" />
                 </div>
               </div>
             ))}
@@ -161,15 +176,6 @@ export function ConversationList({
           ))
         )}
       </div>
-
-      {/* Count */}
-      {!loading && filteredConversations.length > 0 && (
-        <div className="p-3 border-t">
-          <p className="text-xs text-muted-foreground text-center">
-            {filteredConversations.length} conversación{filteredConversations.length !== 1 ? "es" : ""}
-          </p>
-        </div>
-      )}
     </div>
   );
 }

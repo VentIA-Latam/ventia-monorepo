@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, Smile } from "lucide-react";
+import { Send, Smile, Plus, Mic } from "lucide-react";
 import dynamic from "next/dynamic";
 
 const EmojiPicker = dynamic(() => import("emoji-picker-react"), { ssr: false });
@@ -53,8 +53,10 @@ export function MessageComposer({ onSend, disabled }: MessageComposerProps) {
     []
   );
 
+  const hasContent = content.trim().length > 0;
+
   return (
-    <div className="relative border-t bg-background p-3">
+    <div className="relative bg-muted/30 px-4 py-2.5 border-t border-border/30">
       {/* Emoji picker */}
       {showEmoji && (
         <div className="absolute bottom-full left-3 mb-2 z-50">
@@ -67,16 +69,28 @@ export function MessageComposer({ onSend, disabled }: MessageComposerProps) {
       )}
 
       <div className="flex items-end gap-2">
+        {/* Emoji button */}
         <Button
           variant="ghost"
           size="icon"
-          className="shrink-0 h-9 w-9"
+          className="shrink-0 h-10 w-10 rounded-full text-muted-foreground hover:text-foreground"
           onClick={() => setShowEmoji((prev) => !prev)}
           type="button"
         >
-          <Smile className="h-5 w-5 text-muted-foreground" />
+          <Smile className="h-5 w-5" />
         </Button>
 
+        {/* Attach button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="shrink-0 h-10 w-10 rounded-full text-muted-foreground hover:text-foreground"
+          type="button"
+        >
+          <Plus className="h-5 w-5" />
+        </Button>
+
+        {/* Text input — WhatsApp style rounded */}
         <textarea
           ref={textareaRef}
           value={content}
@@ -85,19 +99,24 @@ export function MessageComposer({ onSend, disabled }: MessageComposerProps) {
             adjustHeight();
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Escribe un mensaje..."
+          placeholder="Escribe un mensaje"
           disabled={disabled}
           rows={1}
-          className="flex-1 resize-none rounded-xl border bg-muted/30 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+          className="flex-1 resize-none rounded-lg bg-card px-4 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-primary/20 disabled:opacity-50"
         />
 
+        {/* Send or Mic button — circular WhatsApp style */}
         <Button
           size="icon"
-          className="shrink-0 h-9 w-9"
-          onClick={handleSend}
-          disabled={disabled || !content.trim()}
+          className="shrink-0 h-10 w-10 rounded-full"
+          onClick={hasContent ? handleSend : undefined}
+          disabled={disabled || (hasContent && !content.trim())}
         >
-          <Send className="h-4 w-4" />
+          {hasContent ? (
+            <Send className="h-4 w-4" />
+          ) : (
+            <Mic className="h-5 w-5" />
+          )}
         </Button>
       </div>
     </div>

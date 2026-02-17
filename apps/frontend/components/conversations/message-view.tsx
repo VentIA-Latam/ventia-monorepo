@@ -7,17 +7,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Switch } from "@/components/ui/switch";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { ArrowLeft, User, MessageSquare, Loader2, Bot, AlertTriangle } from "lucide-react";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ArrowLeft, MessageSquare, Loader2, Bot, AlertTriangle, MoreVertical, User, Search } from "lucide-react";
 import { MessageBubble } from "./message-bubble";
 import { MessageComposer } from "./message-composer";
 import { useMessaging } from "./messaging-provider";
 import { getMessages, sendMessage, updateConversation } from "@/lib/api-client/messaging";
-import type { Conversation, Message, MessageType, SendMessagePayload } from "@/lib/types/messaging";
+import type { Conversation, Message, MessageType } from "@/lib/types/messaging";
 
 interface MessageViewProps {
   conversation: Conversation | null;
@@ -64,7 +65,6 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         if (!cancelled) {
           setMessages(data.data ?? []);
           setLoading(false);
-          // Scroll to bottom after initial load
           requestAnimationFrame(() => {
             bottomRef.current?.scrollIntoView({ behavior: "instant" });
           });
@@ -92,7 +92,6 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
     const msgType = (msgData.message_type as string) ?? "incoming";
 
     setMessages((prev) => {
-      // Skip if real message already exists
       if (prev.some((m) => String(m.id) === msgId)) return prev;
 
       const rawCreatedAt = msgData.created_at ?? new Date().toISOString();
@@ -100,11 +99,9 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         ? rawCreatedAt
         : new Date().toISOString();
 
-      // For outgoing messages, try to replace the temp message first
       if (msgType === "outgoing") {
         const hasTempMsg = prev.some((m) => String(m.id).startsWith("temp-"));
         if (hasTempMsg) {
-          // Replace the last temp message with the real one
           const lastTempIdx = prev.findLastIndex((m) => String(m.id).startsWith("temp-"));
           const updated = [...prev];
           updated[lastTempIdx] = {
@@ -117,10 +114,8 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
           };
           return updated;
         }
-        // No temp message — fall through to append (e.g., sent from another tab or API)
       }
 
-      // Append message (incoming or outgoing without temp)
       const newMsg: Message = {
         id: msgId,
         content: (msgData.content as string) ?? "",
@@ -158,7 +153,6 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         setMessages((prev) => [...olderMessages, ...prev]);
         setPage(nextPage);
 
-        // Preserve scroll position
         requestAnimationFrame(() => {
           container.scrollTop = container.scrollHeight - prevHeight;
         });
@@ -193,7 +187,6 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
     async (content: string) => {
       if (!conversation) return;
 
-      // Optimistic append
       const tempMessage: Message = {
         id: `temp-${Date.now()}`,
         content,
@@ -213,7 +206,6 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         const result = await sendMessage(conversation.id, {
           content,
         });
-        // Replace temp message with real one if API returns it
         if (result && typeof result === "object" && "id" in result) {
           setMessages((prev) =>
             prev.map((m) => (m.id === tempMessage.id ? (result as Message) : m))
@@ -221,7 +213,6 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         }
       } catch (err) {
         console.error("Error sending message:", err);
-        // Mark temp message as failed (keep it visible)
       }
     },
     [conversation?.id]
@@ -247,7 +238,7 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
   // No conversation selected
   if (!conversation) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center bg-muted/20">
         <EmptyState
           icon={<MessageSquare className="h-8 w-8" />}
           title="Selecciona una conversación"
@@ -261,22 +252,22 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
 
   return (
     <div className="flex-1 flex flex-col h-full">
-      {/* Header */}
-      <div className="px-4 py-3 border-b flex items-center gap-3 shrink-0">
+      {/* Header — WhatsApp style with bg-muted/30 */}
+      <div className="px-4 py-2.5 bg-muted/30 flex items-center gap-3 shrink-0 border-b border-border/30">
         {onBack && (
-          <Button variant="ghost" size="icon" className="shrink-0 md:hidden" onClick={onBack}>
+          <Button variant="ghost" size="icon" className="shrink-0 md:hidden h-8 w-8" onClick={onBack}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
 
-        <Avatar className="h-9 w-9 shrink-0">
-          <AvatarFallback className="text-xs">
+        <Avatar className="h-10 w-10 shrink-0 cursor-pointer" onClick={onOpenInfo}>
+          <AvatarFallback className="text-sm bg-muted">
             {getInitials(contact?.name)}
           </AvatarFallback>
         </Avatar>
 
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={onOpenInfo}>
+          <p className="text-[15px] font-medium truncate">
             {contact?.name || contact?.phone_number || "Sin nombre"}
           </p>
           <p className="text-xs text-muted-foreground truncate">
@@ -284,35 +275,44 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
           </p>
         </div>
 
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <Bot className={`h-4 w-4 ${conversation.ai_agent_enabled ? "text-primary" : "text-muted-foreground"}`} />
-                <Switch
-                  checked={conversation.ai_agent_enabled}
-                  onCheckedChange={handleToggleAI}
-                  className="scale-75"
-                />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{conversation.ai_agent_enabled ? "IA activada" : "IA desactivada"}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        {/* Search icon (visual, no functionality yet) */}
+        <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 text-muted-foreground">
+          <Search className="h-5 w-5" />
+        </Button>
 
-        {onOpenInfo && (
-          <Button variant="ghost" size="icon" onClick={onOpenInfo}>
-            <User className="h-5 w-5" />
-          </Button>
-        )}
+        {/* 3-dot menu — WhatsApp style */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 text-muted-foreground">
+              <MoreVertical className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            {/* AI toggle */}
+            <div className="flex items-center justify-between px-2 py-1.5">
+              <div className="flex items-center gap-2">
+                <Bot className={`h-4 w-4 ${conversation.ai_agent_enabled ? "text-primary" : "text-muted-foreground"}`} />
+                <span className="text-sm">Agente IA</span>
+              </div>
+              <Switch
+                checked={conversation.ai_agent_enabled}
+                onCheckedChange={handleToggleAI}
+                className="scale-75"
+              />
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onOpenInfo}>
+              <User className="h-4 w-4 mr-2" />
+              Información del contacto
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      {/* Messages */}
+      {/* Messages — WhatsApp style with chat wallpaper */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto px-4 py-3 space-y-3"
+        className="flex-1 overflow-y-auto bg-muted/20 px-4 md:px-16 py-3 space-y-1"
       >
         {/* Sentinel for loading more */}
         <div ref={sentinelRef} className="h-1" />
@@ -324,10 +324,10 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         )}
 
         {loading ? (
-          <div className="space-y-4 py-4">
+          <div className="space-y-3 py-4">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className={`flex ${i % 2 === 0 ? "justify-start" : "justify-end"}`}>
-                <Skeleton className={`h-10 rounded-2xl ${i % 2 === 0 ? "w-56" : "w-40"}`} />
+                <Skeleton className={`h-10 rounded-lg ${i % 2 === 0 ? "w-56" : "w-40"}`} />
               </div>
             ))}
           </div>

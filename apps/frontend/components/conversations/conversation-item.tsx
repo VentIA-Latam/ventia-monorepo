@@ -2,7 +2,6 @@
 
 import { memo, useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -48,27 +47,23 @@ function parseTimestamp(value: string | number | null): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function getRelativeTime(dateStr: string | number | null): string {
+function getWhatsAppTime(dateStr: string | number | null): string {
   const date = parseTimestamp(dateStr);
   if (!date) return "";
+
   const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  const diffHr = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHr / 24);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today.getTime() - 86400000);
+  const msgDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
-  if (diffMin < 1) return "ahora";
-  if (diffMin < 60) return `${diffMin}m`;
-  if (diffHr < 24) return `${diffHr}h`;
-  if (diffDay < 7) return `${diffDay}d`;
-  return date.toLocaleDateString("es-PE", { day: "2-digit", month: "short" });
+  if (msgDay.getTime() === today.getTime()) {
+    return date.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
+  }
+  if (msgDay.getTime() === yesterday.getTime()) {
+    return "Ayer";
+  }
+  return date.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
-
-const statusConfig: Record<string, { label: string; className: string }> = {
-  open: { label: "Abierta", className: "bg-success-bg text-success border-success/30" },
-  pending: { label: "Pendiente", className: "bg-warning-bg text-warning border-warning/30" },
-  resolved: { label: "Resuelta", className: "bg-muted/50 text-foreground border-border" },
-};
 
 export const ConversationItem = memo(function ConversationItem({
   conversation,
@@ -78,41 +73,37 @@ export const ConversationItem = memo(function ConversationItem({
 }: ConversationItemProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const contact = conversation.contact;
-  const config = statusConfig[conversation.status] ?? statusConfig.open;
 
   return (
     <>
       <div
         className={cn(
-          "group w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors cursor-pointer",
+          "group w-full flex items-center gap-3 py-3 px-4 text-left transition-colors cursor-pointer border-b border-border/30",
           isSelected
-            ? "bg-primary/10 border border-primary/20"
-            : "hover:bg-muted/50"
+            ? "bg-primary/10 border-l-4 border-l-primary"
+            : "hover:bg-muted/30"
         )}
         onClick={onClick}
       >
-        <Avatar className="h-10 w-10 shrink-0">
-          <AvatarFallback className="text-xs font-medium">
+        <Avatar className="h-12 w-12 shrink-0">
+          <AvatarFallback className="text-sm font-medium bg-muted">
             {getInitials(contact?.name)}
           </AvatarFallback>
         </Avatar>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-medium truncate">
+            <p className="text-[15px] font-medium truncate">
               {contact?.name || contact?.phone_number || "Sin nombre"}
             </p>
-            <span className="text-[10px] text-muted-foreground shrink-0">
-              {getRelativeTime(conversation.last_message_at)}
+            <span className="text-xs text-muted-foreground shrink-0">
+              {getWhatsAppTime(conversation.last_message_at)}
             </span>
           </div>
           <div className="flex items-center justify-between gap-2 mt-0.5">
-            <p className="text-xs text-muted-foreground truncate">
+            <p className="text-[13px] text-muted-foreground truncate">
               {contact?.phone_number || contact?.email || ""}
             </p>
-            <Badge variant="outline" className={cn("text-[10px] shrink-0", config.className)}>
-              {config.label}
-            </Badge>
           </div>
         </div>
 
