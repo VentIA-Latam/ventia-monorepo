@@ -312,7 +312,8 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
       {/* Messages — WhatsApp style with chat wallpaper */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto bg-muted/20 px-4 md:px-16 py-3 space-y-1"
+        className="flex-1 overflow-y-auto px-4 md:px-16 py-3 space-y-1"
+        style={{ backgroundImage: "url('/images/fondo-conversacion.png')", backgroundRepeat: "repeat", backgroundSize: "400px" }}
       >
         {/* Sentinel for loading more */}
         <div ref={sentinelRef} className="h-1" />
