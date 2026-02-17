@@ -310,37 +310,46 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
       </div>
 
       {/* Messages — WhatsApp style with chat wallpaper */}
-      <div
-        ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto px-4 md:px-16 py-3 space-y-1"
-        style={{ backgroundImage: "url('/images/fondo-conversacion.png')", backgroundRepeat: "repeat", backgroundSize: "400px" }}
-      >
-        {/* Sentinel for loading more */}
-        <div ref={sentinelRef} className="h-1" />
+      <div className="relative flex-1 overflow-hidden">
+        {/* Wallpaper layer with warm filter */}
+        <div
+          className="absolute inset-0 brightness-[0.98] contrast-[0.82] sepia-[0.18]"
+          style={{ backgroundImage: "url('/images/fondo-conversacion.png')", backgroundRepeat: "repeat", backgroundSize: "400px" }}
+        />
+        <div className="absolute inset-0 bg-orange-50 opacity-[0.12] mix-blend-multiply" />
 
-        {loadingMore && (
-          <div className="flex justify-center py-2">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
-        )}
+        {/* Scrollable messages */}
+        <div
+          ref={scrollContainerRef}
+          className="relative h-full overflow-y-auto px-4 md:px-16 py-3 space-y-1"
+        >
+          {/* Sentinel for loading more */}
+          <div ref={sentinelRef} className="h-1" />
 
-        {loading ? (
-          <div className="space-y-3 py-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className={`flex ${i % 2 === 0 ? "justify-start" : "justify-end"}`}>
-                <Skeleton className={`h-10 rounded-lg ${i % 2 === 0 ? "w-56" : "w-40"}`} />
-              </div>
-            ))}
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-sm text-muted-foreground">No hay mensajes aún</p>
-          </div>
-        ) : (
-          messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)
-        )}
+          {loadingMore && (
+            <div className="flex justify-center py-2">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
 
-        <div ref={bottomRef} />
+          {loading ? (
+            <div className="space-y-3 py-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className={`flex ${i % 2 === 0 ? "justify-start" : "justify-end"}`}>
+                  <Skeleton className={`h-10 rounded-lg ${i % 2 === 0 ? "w-56" : "w-40"}`} />
+                </div>
+              ))}
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-sm text-muted-foreground">No hay mensajes aún</p>
+            </div>
+          ) : (
+            messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)
+          )}
+
+          <div ref={bottomRef} />
+        </div>
       </div>
 
       {/* 24-hour window warning */}
