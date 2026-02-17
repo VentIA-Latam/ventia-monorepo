@@ -100,7 +100,7 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         ? rawCreatedAt
         : new Date().toISOString();
 
-      // For outgoing messages, replace the temp message instead of appending
+      // For outgoing messages, try to replace the temp message first
       if (msgType === "outgoing") {
         const hasTempMsg = prev.some((m) => String(m.id).startsWith("temp-"));
         if (hasTempMsg) {
@@ -117,11 +117,10 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
           };
           return updated;
         }
-        // No temp message found — skip, we already have it from optimistic update or API response
-        return prev;
+        // No temp message — fall through to append (e.g., sent from another tab or API)
       }
 
-      // Incoming messages — append
+      // Append message (incoming or outgoing without temp)
       const newMsg: Message = {
         id: msgId,
         content: (msgData.content as string) ?? "",
