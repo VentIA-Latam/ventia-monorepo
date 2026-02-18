@@ -367,7 +367,7 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto px-4 md:px-16 py-3 space-y-1"
-        style={{ backgroundImage: "url('/images/fondo-conversacion.png')", backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" }}
+        style={{ backgroundImage: "url('/images/fondo-conversacion.png')", backgroundRepeat: "repeat", backgroundAttachment: "fixed" }}
       >
         {/* Sentinel for loading more */}
         <div ref={sentinelRef} className="h-1" />
