@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -163,12 +163,21 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
     scrollBehaviorRef.current = "smooth";
   }, [lastEvent, conversation?.id]);
 
-  // Scroll to bottom after DOM commits when flagged (handles initial load, send, and WS messages)
-  useEffect(() => {
-    if (scrollBehaviorRef.current) {
-      const behavior = scrollBehaviorRef.current;
-      scrollBehaviorRef.current = false;
-      bottomRef.current?.scrollIntoView({ behavior });
+  // Scroll to bottom BEFORE paint (useLayoutEffect) to avoid flash at top
+  useLayoutEffect(() => {
+    if (!scrollBehaviorRef.current) return;
+    const behavior = scrollBehaviorRef.current;
+    scrollBehaviorRef.current = false;
+
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    if (behavior === "instant") {
+      // Jump immediately — no animation, no flash
+      container.scrollTop = container.scrollHeight;
+    } else {
+      // Smooth scroll for new messages
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
 
