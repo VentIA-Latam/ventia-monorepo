@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
+// useLayoutEffect: scroll before paint | ResizeObserver: re-scroll when content grows (images load)
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -73,11 +74,14 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
   const [hasMore, setHasMore] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const scrollBehaviorRef = useRef<false | "instant" | "smooth">(false);
   // Chatwoot pattern: track scroll state before loading older messages
   const heightBeforeLoadRef = useRef(0);
   const scrollTopBeforeLoadRef = useRef(0);
   const isLoadingPreviousRef = useRef(false);
+  // Track if we should stay pinned to the bottom
+  const isPinnedToBottomRef = useRef(true);
 
   // Load messages when conversation changes
   useEffect(() => {
@@ -163,7 +167,7 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
     scrollBehaviorRef.current = "smooth";
   }, [lastEvent, conversation?.id]);
 
-  // Scroll to bottom BEFORE paint (useLayoutEffect) to avoid flash at top
+  // Scroll to bottom after DOM commits
   useLayoutEffect(() => {
     if (!scrollBehaviorRef.current) return;
     const behavior = scrollBehaviorRef.current;
@@ -172,14 +176,33 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
     const container = scrollContainerRef.current;
     if (!container) return;
 
+    isPinnedToBottomRef.current = true;
+
     if (behavior === "instant") {
-      // Jump immediately — no animation, no flash
-      container.scrollTop = container.scrollHeight;
+      // Use rAF so browser has completed layout (images with min-height are measured)
+      requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight;
+      });
     } else {
-      // Smooth scroll for new messages
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
+
+  // ResizeObserver: when content grows (images load, maps render) keep scroll at bottom
+  useEffect(() => {
+    const content = contentRef.current;
+    const container = scrollContainerRef.current;
+    if (!content || !container) return;
+
+    const observer = new ResizeObserver(() => {
+      if (isPinnedToBottomRef.current && !isLoadingPreviousRef.current) {
+        container.scrollTop = container.scrollHeight;
+      }
+    });
+
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [conversation?.id]);
 
   // Load older messages (Chatwoot pattern: save/restore scroll position)
   const loadOlderMessages = useCallback(async () => {
@@ -220,16 +243,19 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
     }
   }, [conversation?.id, page, loadingMore, hasMore]);
 
-  // Scroll event handler for loading older messages (replaces IntersectionObserver)
-  // Chatwoot pattern: only trigger when user scrolls near the top (scrollTop < 100)
+  // Scroll event handler: load older messages on scroll up + track pinned state
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container || !conversation || loading) return;
 
     const handleScroll = () => {
-      // Skip during programmatic scroll restoration
       if (isLoadingPreviousRef.current) return;
 
+      // Track if user is near the bottom (within 150px)
+      const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+      isPinnedToBottomRef.current = distanceFromBottom < 150;
+
+      // Load older messages when near the top
       if (container.scrollTop < 100 && hasMore && !loadingMore) {
         loadOlderMessages();
       }
@@ -385,33 +411,39 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
       {/* Messages — WhatsApp style with chat wallpaper */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto px-4 md:px-16 py-3 space-y-1"
-        style={{ backgroundImage: "url('/images/fondo-conversacion.png')", backgroundRepeat: "repeat", backgroundAttachment: "fixed" }}
+        className="flex-1 overflow-y-auto px-4 md:px-16 py-3"
+        style={{ backgroundImage: "url('/images/fondo-conversacion.png')", backgroundRepeat: "repeat" }}
       >
-        {loadingMore && (
-          <div className="flex justify-center py-2">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
-        )}
+        <div ref={contentRef} className="space-y-1">
+          {loadingMore && (
+            <div className="flex justify-center py-2">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
 
-        {loading ? (
-          <div className="space-y-3 py-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className={`flex ${i % 2 === 0 ? "justify-start" : "justify-end"}`}>
-                <Skeleton className={`h-10 rounded-lg ${i % 2 === 0 ? "w-56" : "w-40"}`} />
+          {loading ? (
+            <div className="space-y-3 py-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className={`flex ${i % 2 === 0 ? "justify-start" : "justify-end"}`}>
+                  <Skeleton className={`h-10 rounded-lg ${i % 2 === 0 ? "w-56" : "w-40"}`} />
+                </div>
+              ))}
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-sm text-muted-foreground">No hay mensajes aún</p>
+            </div>
+          ) : (
+            messages.map((msg) => (
+              <div key={msg.id} style={{ overflowAnchor: "none" }}>
+                <MessageBubble message={msg} />
               </div>
-            ))}
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-sm text-muted-foreground">No hay mensajes aún</p>
-          </div>
-        ) : (
-          messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)
-        )}
+            ))
+          )}
 
-        {/* Scroll anchor — overflow-anchor keeps browser pinned to bottom */}
-        <div ref={bottomRef} style={{ overflowAnchor: "auto" }} />
+          {/* Scroll anchor — only element with overflow-anchor: auto */}
+          <div ref={bottomRef} className="h-px" style={{ overflowAnchor: "auto" }} />
+        </div>
       </div>
 
       {/* 24-hour window warning */}

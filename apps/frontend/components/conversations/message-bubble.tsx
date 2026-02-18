@@ -164,7 +164,7 @@ export const MessageBubble = memo(function MessageBubble({
                     src={imgUrl}
                     alt={att.filename || "Imagen"}
                     className="rounded-md max-w-full max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                    loading="lazy"
+                    style={{ minHeight: "100px", minWidth: "100px" }}
                     onClick={() => setLightboxSrc(imgUrl)}
                   />
                 );
