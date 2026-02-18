@@ -38,4 +38,7 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions
   config.action_controller.raise_on_missing_callback_actions = true
+
+  # Public URL for external services (WhatsApp media links, etc.)
+  Rails.application.routes.default_url_options = { host: ENV.fetch('FRONTEND_URL', 'https://app.ventia-latam.com') }
 end

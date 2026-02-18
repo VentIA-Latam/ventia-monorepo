@@ -53,6 +53,16 @@ class Attachment < ApplicationRecord
     Rails.application.routes.url_helpers.rails_blob_url(file, only_path: true)
   end
 
+  # Direct URL for external services (WhatsApp, etc.) that can't follow redirects.
+  # Uses FRONTEND_URL so the URL is publicly accessible.
+  def download_url
+    return external_url if external_url.present?
+    return '' unless file.attached?
+
+    ActiveStorage::Current.url_options = Rails.application.routes.default_url_options if ActiveStorage::Current.url_options.blank?
+    file.blob.url
+  end
+
   private
 
   def check_file_size

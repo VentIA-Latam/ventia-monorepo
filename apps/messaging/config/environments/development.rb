@@ -35,4 +35,7 @@ Rails.application.configure do
 
   # Allow Docker internal hostnames
   config.hosts.clear
+
+  # Public URL for external services (WhatsApp media links, etc.)
+  Rails.application.routes.default_url_options = { host: ENV.fetch('FRONTEND_URL', 'http://localhost:3000') }
 end
