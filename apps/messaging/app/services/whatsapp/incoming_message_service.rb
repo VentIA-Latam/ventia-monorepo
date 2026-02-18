@@ -162,7 +162,7 @@ class Whatsapp::IncomingMessageService
   def create_regular_message(message_data, msg_type, msg_id, in_reply_to_external_id)
     content = extract_message_content(message_data, msg_type)
 
-    @message = @conversation.messages.create!(
+    @message = @conversation.messages.new(
       account: @inbox.account,
       inbox: @inbox,
       sender: @contact,
@@ -174,7 +174,7 @@ class Whatsapp::IncomingMessageService
 
     attach_files(message_data, msg_type)
     attach_location(message_data) if msg_type == 'location'
-    @message.save! if @message.changed?
+    @message.save!
   end
 
   def create_contact_messages(message_data, msg_id, in_reply_to_external_id)
@@ -183,7 +183,7 @@ class Whatsapp::IncomingMessageService
     contacts_list.each do |contact_data|
       formatted_name = contact_data.dig('name', 'formatted_name') || contact_data.dig(:name, :formatted_name) || ''
 
-      @message = @conversation.messages.create!(
+      @message = @conversation.messages.new(
         account: @inbox.account,
         inbox: @inbox,
         sender: @contact,
@@ -195,7 +195,7 @@ class Whatsapp::IncomingMessageService
       )
 
       attach_contact(contact_data)
-      @message.save! if @message.changed?
+      @message.save!
     end
   end
 

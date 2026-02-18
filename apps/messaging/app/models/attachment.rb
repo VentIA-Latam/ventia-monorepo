@@ -48,6 +48,7 @@ class Attachment < ApplicationRecord
 
   def file_url
     return '' unless file.attached?
+    return '' if new_record? || !file.blob&.persisted?
 
     Rails.application.routes.url_helpers.rails_blob_url(file, only_path: true)
   end
