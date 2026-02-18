@@ -1,5 +1,5 @@
 import { getAccessToken } from "@/lib/auth0";
-import { fetchConversations, fetchInboxes } from "@/lib/services/messaging-service";
+import { fetchConversations, fetchInboxes, fetchLabels } from "@/lib/services/messaging-service";
 import { ConversationsClient } from "./conversations-client";
 
 export const dynamic = "force-dynamic";
@@ -7,16 +7,19 @@ export const dynamic = "force-dynamic";
 export default async function ConversationsPage() {
   let initialConversations: unknown[] = [];
   let initialInboxes: unknown[] = [];
+  let initialLabels: unknown[] = [];
 
   try {
     const token = await getAccessToken();
     if (token) {
-      const [convResponse, inboxesResponse] = await Promise.all([
+      const [convResponse, inboxesResponse, labelsResponse] = await Promise.allSettled([
         fetchConversations(token, { status: "open" }),
         fetchInboxes(token),
+        fetchLabels(token),
       ]);
-      initialConversations = convResponse.data ?? [];
-      initialInboxes = inboxesResponse ?? [];
+      initialConversations = convResponse.status === "fulfilled" ? convResponse.value.data ?? [] : [];
+      initialInboxes = inboxesResponse.status === "fulfilled" ? inboxesResponse.value ?? [] : [];
+      initialLabels = labelsResponse.status === "fulfilled" ? labelsResponse.value.data ?? [] : [];
     }
   } catch (error) {
     console.error("Error loading conversations:", error);
@@ -26,6 +29,7 @@ export default async function ConversationsPage() {
     <ConversationsClient
       initialConversations={initialConversations}
       initialInboxes={initialInboxes}
+      initialLabels={initialLabels}
     />
   );
 }

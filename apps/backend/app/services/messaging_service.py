@@ -314,6 +314,47 @@ class MessagingService:
             "POST", "/api/v1/inboxes", tenant_id, json_data=payload
         )
 
+    # --- Labels ---
+
+    async def get_labels(self, tenant_id: int) -> Optional[dict]:
+        """List all labels for an account."""
+        return await self._request("GET", "/api/v1/labels", tenant_id)
+
+    async def create_label(self, tenant_id: int, payload: dict) -> Optional[dict]:
+        """Create a label."""
+        return await self._request(
+            "POST", "/api/v1/labels", tenant_id, json_data={"label": payload}
+        )
+
+    async def get_conversation_labels(
+        self, tenant_id: int, conversation_id: str
+    ) -> Optional[dict]:
+        """List labels for a conversation."""
+        return await self._request(
+            "GET", f"/api/v1/conversations/{conversation_id}/labels", tenant_id
+        )
+
+    async def add_conversation_label(
+        self, tenant_id: int, conversation_id: str, label_id: str
+    ) -> Optional[dict]:
+        """Add a label to a conversation."""
+        return await self._request(
+            "POST",
+            f"/api/v1/conversations/{conversation_id}/labels",
+            tenant_id,
+            json_data={"label_id": label_id},
+        )
+
+    async def remove_conversation_label(
+        self, tenant_id: int, conversation_id: str, label_id: str
+    ) -> Optional[dict]:
+        """Remove a label from a conversation."""
+        return await self._request(
+            "DELETE",
+            f"/api/v1/conversations/{conversation_id}/labels/{label_id}",
+            tenant_id,
+        )
+
     # --- Webhooks ---
 
     async def get_webhooks(self, tenant_id: int) -> Optional[dict]:

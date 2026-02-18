@@ -14,7 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { Trash2 } from "lucide-react";
+import { Trash2, Snowflake, Thermometer, Flame } from "lucide-react";
 import type { Conversation } from "@/lib/types/messaging";
 
 interface ConversationItemProps {
@@ -101,9 +101,26 @@ export const ConversationItem = memo(function ConversationItem({
             </span>
           </div>
           <div className="flex items-center justify-between gap-2 mt-0.5">
-            <p className="text-[13px] text-muted-foreground truncate">
-              {contact?.phone_number || contact?.email || ""}
-            </p>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <p className="text-[13px] text-muted-foreground truncate">
+                {contact?.phone_number || contact?.email || ""}
+              </p>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              {/* Temperature icon */}
+              {conversation.temperature === "cold" && <Snowflake className="h-3 w-3 text-blue-500" />}
+              {conversation.temperature === "warm" && <Thermometer className="h-3 w-3 text-orange-500" />}
+              {conversation.temperature === "hot" && <Flame className="h-3 w-3 text-red-500" />}
+              {/* Label dots */}
+              {conversation.labels?.slice(0, 3).map((label) => (
+                <span
+                  key={label.id}
+                  className="h-2 w-2 rounded-full shrink-0"
+                  style={{ backgroundColor: label.color }}
+                  title={label.title}
+                />
+              ))}
+            </div>
           </div>
         </div>
 

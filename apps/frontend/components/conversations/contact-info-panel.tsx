@@ -14,13 +14,18 @@ import {
 } from "@/components/ui/select";
 import { Phone, Mail, UserCircle, Users, X } from "lucide-react";
 import { assignConversation, unassignConversation } from "@/lib/api-client/messaging";
+import { TemperatureSelector } from "./temperature-selector";
+import { LabelManager } from "./label-manager";
 import { useToast } from "@/hooks/use-toast";
-import type { Conversation, Team } from "@/lib/types/messaging";
+import type { Conversation, Team, Label, ConversationTemperature } from "@/lib/types/messaging";
 
 interface ContactInfoPanelProps {
   conversation: Conversation;
   teams: Team[];
+  allLabels: Label[];
   onClose?: () => void;
+  onConversationUpdate?: (updated: Conversation) => void;
+  onLabelCreated?: (label: Label) => void;
 }
 
 function getInitials(name: string | null | undefined): string {
@@ -42,7 +47,10 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 export function ContactInfoPanel({
   conversation,
   teams,
+  allLabels,
   onClose,
+  onConversationUpdate,
+  onLabelCreated,
 }: ContactInfoPanelProps) {
   const { toast } = useToast();
   const [assigning, setAssigning] = useState(false);
@@ -123,6 +131,40 @@ export function ContactInfoPanel({
               <span className="truncate">{contact.email}</span>
             </div>
           )}
+        </div>
+
+        <Separator />
+
+        {/* Temperature */}
+        <div className="space-y-3">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Temperatura
+          </p>
+          <TemperatureSelector
+            conversationId={conversation.id}
+            value={conversation.temperature}
+            onChange={(temp: ConversationTemperature) =>
+              onConversationUpdate?.({ ...conversation, temperature: temp })
+            }
+          />
+        </div>
+
+        <Separator />
+
+        {/* Labels */}
+        <div className="space-y-3">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Etiquetas
+          </p>
+          <LabelManager
+            conversationId={conversation.id}
+            labels={conversation.labels ?? []}
+            allLabels={allLabels}
+            onChange={(labels: Label[]) =>
+              onConversationUpdate?.({ ...conversation, labels })
+            }
+            onLabelsCreated={onLabelCreated}
+          />
         </div>
 
         <Separator />

@@ -6,14 +6,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Search, MessageSquare, Loader2 } from "lucide-react";
 import { ConversationItem } from "./conversation-item";
+import { ConversationFilters, type ActiveFilters } from "./conversation-filters";
 import { useMessaging } from "./messaging-provider";
-import { getConversations, deleteConversation } from "@/lib/api-client/messaging";
+import { getConversations, deleteConversation, type ConversationFilters as ConversationFilterParams } from "@/lib/api-client/messaging";
 import { cn } from "@/lib/utils";
-import type { Conversation, ConversationStatus } from "@/lib/types/messaging";
+import type { Conversation, ConversationStatus, Label } from "@/lib/types/messaging";
 
 interface ConversationListProps {
   conversations: Conversation[];
   selectedId: string | null;
+  allLabels: Label[];
   onSelect: (id: string) => void;
   onConversationsChange: (conversations: Conversation[]) => void;
   onDeleteConversation?: (id: string) => void;
@@ -31,24 +33,41 @@ const FILTER_CHIPS: { value: FilterValue; label: string }[] = [
 export function ConversationList({
   conversations,
   selectedId,
+  allLabels,
   onSelect,
   onConversationsChange,
   onDeleteConversation,
 }: ConversationListProps) {
   const { lastEvent } = useMessaging();
   const [statusFilter, setStatusFilter] = useState<FilterValue>("open");
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const statusFilterRef = useRef(statusFilter);
   statusFilterRef.current = statusFilter;
+  const activeFiltersRef = useRef(activeFilters);
+  activeFiltersRef.current = activeFilters;
 
-  const handleStatusChange = useCallback(
-    async (filter: FilterValue) => {
-      setStatusFilter(filter);
+  const buildParams = useCallback(
+    (status: FilterValue, filters: ActiveFilters): ConversationFilterParams => {
+      const params: ConversationFilterParams = {};
+      if (status !== "all") params.status = status;
+      if (filters.label) params.label = filters.label;
+      if (filters.temperature) params.temperature = filters.temperature;
+      if (filters.dateRange) {
+        params.created_after = filters.dateRange.from;
+        params.created_before = filters.dateRange.to;
+      }
+      if (filters.unread) params.unread = "true";
+      return params;
+    },
+    []
+  );
+
+  const fetchConversations = useCallback(
+    async (params: ConversationFilterParams) => {
       setLoading(true);
       try {
-        const params: Record<string, string> = {};
-        if (filter !== "all") params.status = filter;
         const data = await getConversations(params);
         onConversationsChange(data.data ?? []);
       } catch (error) {
@@ -58,6 +77,22 @@ export function ConversationList({
       }
     },
     [onConversationsChange]
+  );
+
+  const handleStatusChange = useCallback(
+    (filter: FilterValue) => {
+      setStatusFilter(filter);
+      fetchConversations(buildParams(filter, activeFiltersRef.current));
+    },
+    [fetchConversations, buildParams]
+  );
+
+  const handleFiltersChange = useCallback(
+    (filters: ActiveFilters) => {
+      setActiveFilters(filters);
+      fetchConversations(buildParams(statusFilterRef.current, filters));
+    },
+    [fetchConversations, buildParams]
   );
 
   const handleDelete = useCallback(
@@ -83,13 +118,12 @@ export function ConversationList({
       event === "conversation.updated" ||
       event === "conversation.status_changed"
     ) {
-      const params: Record<string, string> = {};
-      if (statusFilterRef.current !== "all") params.status = statusFilterRef.current;
+      const params = buildParams(statusFilterRef.current, activeFiltersRef.current);
       getConversations(params)
         .then((data) => onConversationsChange(data.data ?? []))
         .catch((err) => console.error("Error refreshing conversations:", err));
     }
-  }, [lastEvent, onConversationsChange]);
+  }, [lastEvent, onConversationsChange, buildParams]);
 
   const filteredConversations = searchQuery
     ? conversations.filter((c) => {
@@ -139,6 +173,13 @@ export function ConversationList({
           </button>
         ))}
       </div>
+
+      {/* Advanced filters */}
+      <ConversationFilters
+        allLabels={allLabels}
+        filters={activeFilters}
+        onChange={handleFiltersChange}
+      />
 
       {/* List */}
       <div className="flex-1 overflow-y-auto">

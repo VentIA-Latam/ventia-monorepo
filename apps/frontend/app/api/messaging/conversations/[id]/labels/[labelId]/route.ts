@@ -3,23 +3,22 @@ import { getAccessToken } from "@/lib/auth0";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
-export async function GET(request: Request) {
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string; labelId: string }> }
+) {
   try {
     const accessToken = await getAccessToken();
     if (!accessToken) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const params = new URLSearchParams();
-    for (const key of ["status", "page", "label", "temperature", "created_after", "created_before", "unread"]) {
-      const val = searchParams.get(key);
-      if (val) params.set(key, val);
-    }
+    const { id, labelId } = await params;
 
     const response = await fetch(
-      `${API_URL}/messaging/conversations${params.toString() ? "?" + params.toString() : ""}`,
+      `${API_URL}/messaging/conversations/${id}/labels/${labelId}`,
       {
+        method: "DELETE",
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
@@ -28,13 +27,13 @@ export async function GET(request: Request) {
     );
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: "Failed to fetch conversations" }));
+      const error = await response.json().catch(() => ({ detail: "Failed to remove label" }));
       return NextResponse.json({ error: error.detail }, { status: response.status });
     }
 
     return NextResponse.json(await response.json());
   } catch (error) {
-    console.error("Error fetching conversations:", error);
-    return NextResponse.json({ error: "Failed to fetch conversations" }, { status: 500 });
+    console.error("Error removing conversation label:", error);
+    return NextResponse.json({ error: "Failed to remove conversation label" }, { status: 500 });
   }
 }

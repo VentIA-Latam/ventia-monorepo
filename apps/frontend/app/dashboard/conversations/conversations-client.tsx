@@ -12,16 +12,18 @@ import { ConversationList } from "@/components/conversations/conversation-list";
 import { MessageView } from "@/components/conversations/message-view";
 import { ContactInfoPanel } from "@/components/conversations/contact-info-panel";
 import { MessagingProvider } from "@/components/conversations/messaging-provider";
-import type { Conversation, Inbox, Team } from "@/lib/types/messaging";
+import type { Conversation, Inbox, Team, Label } from "@/lib/types/messaging";
 
 interface ConversationsClientProps {
   initialConversations: unknown[];
   initialInboxes: unknown[];
+  initialLabels: unknown[];
 }
 
 export function ConversationsClient({
   initialConversations,
   initialInboxes,
+  initialLabels,
 }: ConversationsClientProps) {
   const isMobile = useIsMobile();
   const [conversations, setConversations] = useState<Conversation[]>(
@@ -30,6 +32,11 @@ export function ConversationsClient({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const [teams] = useState<Team[]>([]);
+  const [allLabels, setAllLabels] = useState<Label[]>(initialLabels as Label[]);
+
+  const handleLabelCreated = useCallback((label: Label) => {
+    setAllLabels((prev) => [...prev, label]);
+  }, []);
 
   const selectedConversation = useMemo(
     () => conversations.find((c) => c.id === selectedId) ?? null,
@@ -81,6 +88,7 @@ export function ConversationsClient({
             <ConversationList
               conversations={conversations}
               selectedId={selectedId}
+              allLabels={allLabels}
               onSelect={handleSelect}
               onConversationsChange={handleConversationsChange}
               onDeleteConversation={handleDeleteConversation}
@@ -107,7 +115,10 @@ export function ConversationsClient({
               <ContactInfoPanel
                 conversation={selectedConversation}
                 teams={teams}
+                allLabels={allLabels}
                 onClose={handleCloseInfo}
+                onConversationUpdate={handleConversationUpdate}
+                onLabelCreated={handleLabelCreated}
               />
             )}
           </SheetContent>
@@ -126,6 +137,7 @@ export function ConversationsClient({
         <ConversationList
           conversations={conversations}
           selectedId={selectedId}
+          allLabels={allLabels}
           onSelect={handleSelect}
           onConversationsChange={handleConversationsChange}
         />
@@ -144,7 +156,10 @@ export function ConversationsClient({
           <ContactInfoPanel
             conversation={selectedConversation}
             teams={teams}
+            allLabels={allLabels}
             onClose={handleCloseInfo}
+            onConversationUpdate={handleConversationUpdate}
+            onLabelCreated={handleLabelCreated}
           />
         </div>
       )}

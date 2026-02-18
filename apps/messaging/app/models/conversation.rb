@@ -62,11 +62,14 @@ class Conversation < ApplicationRecord
   # Enums
   enum :status, { open: 0, resolved: 1, pending: 2, snoozed: 3 }
   enum :priority, { low: 0, medium: 1, high: 2, urgent: 3 }
+  enum :temperature, { cold: 0, warm: 1, hot: 2 }, prefix: true
 
   # Scopes
   scope :unassigned, -> { where(assignee_id: nil) }
   scope :assigned, -> { where.not(assignee_id: nil) }
   scope :recent, -> { order(last_activity_at: :desc) }
+  scope :with_label, ->(title) { joins(:labels).where(labels: { title: title }).distinct }
+  scope :in_date_range, ->(from, to) { where(last_activity_at: from..to) }
 
   # Callbacks
   before_validation :ensure_uuid

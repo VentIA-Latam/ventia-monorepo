@@ -41,3 +41,7 @@ export async function fetchConversations(
 export async function fetchInboxes(accessToken: string) {
   return fetchWithAuth<unknown[]>("/inboxes", accessToken);
 }
+
+export async function fetchLabels(accessToken: string) {
+  return fetchWithAuth<{ success: boolean; data: unknown[] }>("/labels", accessToken);
+}

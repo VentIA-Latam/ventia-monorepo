@@ -31,9 +31,18 @@ export interface AttachmentBrief {
   meta?: Record<string, unknown> | null;
 }
 
+// --- Label ---
+
+export interface Label {
+  id: string;
+  title: string;
+  color: string;
+}
+
 // --- Conversation ---
 
 export type ConversationStatus = "open" | "resolved" | "pending";
+export type ConversationTemperature = "cold" | "warm" | "hot" | null;
 
 export interface Conversation {
   id: string;
@@ -44,6 +53,8 @@ export interface Conversation {
   team: TeamBrief | null;
   ai_agent_enabled: boolean;
   can_reply: boolean;
+  temperature: ConversationTemperature;
+  labels: Label[];
   messages_count: number | null;
   last_message_at: string | number | null;
   created_at: string | number | null;

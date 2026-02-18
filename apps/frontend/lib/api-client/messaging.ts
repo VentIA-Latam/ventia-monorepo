@@ -5,6 +5,7 @@ import type {
   MessageListResponse,
   WebSocketToken,
   Inbox,
+  Label,
   CannedResponse,
   Team,
   SendMessagePayload,
@@ -14,10 +15,17 @@ import type {
   ManualWhatsAppConnectParams,
 } from "@/lib/types/messaging";
 
-export async function getConversations(params?: {
+export interface ConversationFilters {
   status?: string;
   page?: number;
-}): Promise<ConversationListResponse> {
+  label?: string;
+  temperature?: string;
+  created_after?: string;
+  created_before?: string;
+  unread?: string;
+}
+
+export async function getConversations(params?: ConversationFilters): Promise<ConversationListResponse> {
   return apiGet("/api/messaging/conversations", params as Record<string, string | number>);
 }
 
@@ -97,6 +105,26 @@ export async function getCannedResponses(): Promise<CannedResponse[]> {
 export async function getTeams(): Promise<Team[]> {
   return apiGet("/api/messaging/teams");
 }
+
+// --- Labels ---
+
+export async function getLabels(): Promise<{ success: boolean; data: Label[] }> {
+  return apiGet("/api/messaging/labels");
+}
+
+export async function createLabel(payload: { title: string; color: string }): Promise<unknown> {
+  return apiPost("/api/messaging/labels", payload);
+}
+
+export async function addConversationLabel(conversationId: string, labelId: string): Promise<unknown> {
+  return apiPost(`/api/messaging/conversations/${conversationId}/labels`, { label_id: labelId });
+}
+
+export async function removeConversationLabel(conversationId: string, labelId: string): Promise<unknown> {
+  return apiDelete(`/api/messaging/conversations/${conversationId}/labels/${labelId}`);
+}
+
+// --- WhatsApp ---
 
 export async function connectWhatsApp(
   params: WhatsAppConnectParams

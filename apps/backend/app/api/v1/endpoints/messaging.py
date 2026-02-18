@@ -123,6 +123,11 @@ async def get_ws_token(
 async def list_conversations(
     status: Optional[str] = Query(None, description="Filter by status: open, resolved, pending"),
     page: Optional[int] = Query(None, description="Page number"),
+    label: Optional[str] = Query(None, description="Filter by label title"),
+    temperature: Optional[str] = Query(None, description="Filter by temperature: cold, warm, hot"),
+    created_after: Optional[str] = Query(None, description="Filter by date (ISO) from"),
+    created_before: Optional[str] = Query(None, description="Filter by date (ISO) to"),
+    unread: Optional[str] = Query(None, description="Filter unread only: true"),
     current_user: User = Depends(get_current_user),
 ):
     tenant_id = _get_tenant_id(current_user)
@@ -131,6 +136,16 @@ async def list_conversations(
         params["status"] = status
     if page:
         params["page"] = page
+    if label:
+        params["label"] = label
+    if temperature:
+        params["temperature"] = temperature
+    if created_after:
+        params["created_after"] = created_after
+    if created_before:
+        params["created_before"] = created_before
+    if unread:
+        params["unread"] = unread
 
     result = await messaging_service.get_conversations(tenant_id, params or None)
     if result is None:
@@ -382,6 +397,113 @@ async def list_canned_responses(
     tenant_id = _get_tenant_id(current_user)
 
     result = await messaging_service.get_canned_responses(tenant_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+# --- Labels ---
+
+
+@router.get(
+    "/labels",
+    summary="List labels",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def list_labels(
+    current_user: User = Depends(get_current_user),
+):
+    tenant_id = _get_tenant_id(current_user)
+
+    result = await messaging_service.get_labels(tenant_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/labels",
+    summary="Create a label",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def create_label(
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+):
+    tenant_id = _get_tenant_id(current_user)
+
+    result = await messaging_service.create_label(tenant_id, payload)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.get(
+    "/conversations/{conversation_id}/labels",
+    summary="List labels for a conversation",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def list_conversation_labels(
+    conversation_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    tenant_id = _get_tenant_id(current_user)
+
+    result = await messaging_service.get_conversation_labels(tenant_id, conversation_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/conversations/{conversation_id}/labels",
+    summary="Add a label to a conversation",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def add_conversation_label(
+    conversation_id: str,
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+):
+    tenant_id = _get_tenant_id(current_user)
+
+    label_id = payload.get("label_id")
+    if not label_id:
+        raise HTTPException(status_code=400, detail="label_id is required")
+
+    result = await messaging_service.add_conversation_label(
+        tenant_id, conversation_id, label_id
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.delete(
+    "/conversations/{conversation_id}/labels/{label_id}",
+    summary="Remove a label from a conversation",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def remove_conversation_label(
+    conversation_id: str,
+    label_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    tenant_id = _get_tenant_id(current_user)
+
+    result = await messaging_service.remove_conversation_label(
+        tenant_id, conversation_id, label_id
+    )
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")
 
