@@ -73,8 +73,11 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
   const [hasMore, setHasMore] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const sentinelRef = useRef<HTMLDivElement>(null);
   const scrollBehaviorRef = useRef<false | "instant" | "smooth">(false);
+  // Chatwoot pattern: track scroll state before loading older messages
+  const heightBeforeLoadRef = useRef(0);
+  const scrollTopBeforeLoadRef = useRef(0);
+  const isLoadingPreviousRef = useRef(false);
 
   // Load messages when conversation changes
   useEffect(() => {
@@ -169,14 +172,17 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
     }
   }, [messages]);
 
-  // Load older messages
+  // Load older messages (Chatwoot pattern: save/restore scroll position)
   const loadOlderMessages = useCallback(async () => {
     if (!conversation || loadingMore || !hasMore) return;
 
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const prevHeight = container.scrollHeight;
+    // Save scroll state before fetch (Chatwoot: setScrollParams)
+    heightBeforeLoadRef.current = container.scrollHeight;
+    scrollTopBeforeLoadRef.current = container.scrollTop;
+    isLoadingPreviousRef.current = true;
     setLoadingMore(true);
 
     try {
@@ -190,34 +196,39 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         setMessages((prev) => [...olderMessages, ...prev]);
         setPage(nextPage);
 
+        // Restore scroll position after DOM update (Chatwoot pattern)
         requestAnimationFrame(() => {
-          container.scrollTop = container.scrollHeight - prevHeight;
+          const heightDifference = container.scrollHeight - heightBeforeLoadRef.current;
+          container.scrollTop = scrollTopBeforeLoadRef.current + heightDifference;
+          isLoadingPreviousRef.current = false;
         });
       }
     } catch (err) {
       console.error("Error loading older messages:", err);
+      isLoadingPreviousRef.current = false;
     } finally {
       setLoadingMore(false);
     }
   }, [conversation?.id, page, loadingMore, hasMore]);
 
-  // Intersection observer for infinite scroll up
+  // Scroll event handler for loading older messages (replaces IntersectionObserver)
+  // Chatwoot pattern: only trigger when user scrolls near the top (scrollTop < 100)
   useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel || !conversation) return;
+    const container = scrollContainerRef.current;
+    if (!container || !conversation || loading) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loadingMore) {
-          loadOlderMessages();
-        }
-      },
-      { threshold: 0.1 }
-    );
+    const handleScroll = () => {
+      // Skip during programmatic scroll restoration
+      if (isLoadingPreviousRef.current) return;
 
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [loadOlderMessages, hasMore, loadingMore, conversation?.id]);
+      if (container.scrollTop < 100 && hasMore && !loadingMore) {
+        loadOlderMessages();
+      }
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [conversation?.id, loading, loadOlderMessages, hasMore, loadingMore]);
 
   // Send message
   const handleSend = useCallback(
@@ -368,9 +379,6 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         className="flex-1 overflow-y-auto px-4 md:px-16 py-3 space-y-1"
         style={{ backgroundImage: "url('/images/fondo-conversacion.png')", backgroundRepeat: "repeat", backgroundAttachment: "fixed" }}
       >
-        {/* Sentinel for loading more */}
-        <div ref={sentinelRef} className="h-1" />
-
         {loadingMore && (
           <div className="flex justify-center py-2">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -393,7 +401,8 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
           messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)
         )}
 
-        <div ref={bottomRef} />
+        {/* Scroll anchor — overflow-anchor keeps browser pinned to bottom */}
+        <div ref={bottomRef} style={{ overflowAnchor: "auto" }} />
       </div>
 
       {/* 24-hour window warning */}
