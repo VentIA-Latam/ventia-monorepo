@@ -74,6 +74,7 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const shouldAutoScrollRef = useRef(false);
 
   // Load messages when conversation changes
   useEffect(() => {
@@ -158,10 +159,16 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
       return [...prev, newMsg];
     });
 
-    requestAnimationFrame(() => {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    });
+    shouldAutoScrollRef.current = true;
   }, [lastEvent, conversation?.id]);
+
+  // Scroll to bottom after DOM commits when flagged (handles text, attachments, and WS messages)
+  useEffect(() => {
+    if (shouldAutoScrollRef.current) {
+      shouldAutoScrollRef.current = false;
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
   // Load older messages
   const loadOlderMessages = useCallback(async () => {
@@ -245,11 +252,8 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         created_at: new Date().toISOString(),
       };
 
+      shouldAutoScrollRef.current = true;
       setMessages((prev) => [...prev, tempMessage]);
-
-      requestAnimationFrame(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-      });
 
       try {
         const result = await sendMessage(conversation.id, { content }, file);
@@ -363,7 +367,7 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto px-4 md:px-16 py-3 space-y-1"
-        style={{ backgroundImage: "url('/images/fondo-conversacion.png')", backgroundRepeat: "repeat", backgroundSize: "400px", backgroundAttachment: "fixed" }}
+        style={{ backgroundImage: "url('/images/fondo-conversacion.png')", backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" }}
       >
         {/* Sentinel for loading more */}
         <div ref={sentinelRef} className="h-1" />
