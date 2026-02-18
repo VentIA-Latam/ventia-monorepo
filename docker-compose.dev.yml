@@ -124,6 +124,7 @@ services:
       - ./apps/messaging/app:/app/app
       - ./apps/messaging/config:/app/config
       - ./apps/messaging/lib:/app/lib
+      - messaging_storage:/app/storage
     networks:
       - ventia-network
     restart: unless-stopped
@@ -223,6 +224,7 @@ services:
       - ./apps/messaging/app:/app/app
       - ./apps/messaging/config:/app/config
       - ./apps/messaging/lib:/app/lib
+      - messaging_storage:/app/storage
     networks:
       - ventia-network
     restart: unless-stopped
@@ -232,6 +234,8 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  messaging_storage:
     driver: local
   certbot_www:
     driver: local

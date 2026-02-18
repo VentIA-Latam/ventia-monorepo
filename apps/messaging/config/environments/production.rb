@@ -14,7 +14,7 @@ Rails.application.configure do
   config.action_controller.perform_caching = true
 
   # Active Storage
-  config.active_storage.service = :amazon
+  config.active_storage.service = :google
 
   # Force all access to the app over SSL
   config.force_ssl = true

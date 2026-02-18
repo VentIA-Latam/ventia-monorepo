@@ -3,7 +3,20 @@
 import { memo } from "react";
 import { cn } from "@/lib/utils";
 import { FileDown, CheckCheck } from "lucide-react";
-import type { Message } from "@/lib/types/messaging";
+import { LocationBubble } from "./location-bubble";
+import { ContactBubble } from "./contact-bubble";
+import type { Message, AttachmentBrief } from "@/lib/types/messaging";
+
+function getAttUrl(att: AttachmentBrief): string {
+  return att.file_url || att.data_url || "";
+}
+
+function formatFileSize(bytes: number | null | undefined): string {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 interface MessageBubbleProps {
   message: Message;
@@ -84,11 +97,11 @@ export const MessageBubble = memo(function MessageBubble({
         {message.attachments && message.attachments.length > 0 && (
           <div className="mt-1.5 space-y-1.5">
             {message.attachments.map((att) => {
-              if (att.file_type?.startsWith("image")) {
+              if (att.file_type === "image") {
                 return (
                   <img
                     key={att.id}
-                    src={att.file_url || ""}
+                    src={getAttUrl(att)}
                     alt={att.filename || "Imagen"}
                     className="rounded-md max-w-full max-h-64 object-cover"
                     loading="lazy"
@@ -96,38 +109,52 @@ export const MessageBubble = memo(function MessageBubble({
                 );
               }
 
-              if (att.file_type?.startsWith("audio")) {
+              if (att.file_type === "audio") {
                 return (
                   <audio
                     key={att.id}
                     controls
-                    src={att.file_url || ""}
+                    src={getAttUrl(att)}
                     className="max-w-full"
                   />
                 );
               }
 
-              if (att.file_type?.startsWith("video")) {
+              if (att.file_type === "video") {
                 return (
                   <video
                     key={att.id}
                     controls
-                    src={att.file_url || ""}
+                    src={getAttUrl(att)}
                     className="rounded-md max-w-full max-h-64"
                   />
                 );
               }
 
+              if (att.file_type === "location") {
+                return <LocationBubble key={att.id} attachment={att} />;
+              }
+
+              if (att.file_type === "contact") {
+                return <ContactBubble key={att.id} attachment={att} />;
+              }
+
+              // Generic file download
               return (
                 <a
                   key={att.id}
-                  href={att.file_url || "#"}
+                  href={getAttUrl(att) || "#"}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-xs text-primary underline"
+                  className="flex items-center gap-2 rounded-md bg-muted/30 px-3 py-2"
                 >
-                  <FileDown className="h-3.5 w-3.5" />
-                  {att.filename || "Archivo adjunto"}
+                  <FileDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm truncate">{att.filename || "Archivo adjunto"}</p>
+                    {att.file_size ? (
+                      <p className="text-xs text-muted-foreground">{formatFileSize(att.file_size)}</p>
+                    ) : null}
+                  </div>
                 </a>
               );
             })}

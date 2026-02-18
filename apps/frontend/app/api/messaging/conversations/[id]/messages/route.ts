@@ -52,6 +52,41 @@ export async function POST(
     }
 
     const { id } = await params;
+    const contentType = request.headers.get("content-type") || "";
+
+    // Multipart: forward file upload to FastAPI /upload endpoint
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await request.formData();
+      const file = formData.get("file") as File | null;
+      const content = (formData.get("content") as string) || "";
+
+      // Build new FormData for FastAPI
+      const upstreamForm = new FormData();
+      upstreamForm.append("content", content);
+      if (file) {
+        upstreamForm.append("file", file);
+      }
+
+      const response = await fetch(
+        `${API_URL}/messaging/conversations/${id}/messages/upload`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: upstreamForm,
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: "Failed to upload message" }));
+        return NextResponse.json({ error: error.detail }, { status: response.status });
+      }
+
+      return NextResponse.json(await response.json());
+    }
+
+    // JSON: regular text message
     const body = await request.json();
 
     const response = await fetch(

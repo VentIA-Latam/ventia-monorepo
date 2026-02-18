@@ -18,7 +18,23 @@ import { MessageBubble } from "./message-bubble";
 import { MessageComposer } from "./message-composer";
 import { useMessaging } from "./messaging-provider";
 import { getMessages, sendMessage, updateConversation } from "@/lib/api-client/messaging";
-import type { Conversation, Message, MessageType } from "@/lib/types/messaging";
+import type { Conversation, Message, MessageType, AttachmentBrief } from "@/lib/types/messaging";
+
+function mapWebSocketAttachments(raw: unknown): AttachmentBrief[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((att: Record<string, unknown>) => ({
+    id: String(att.id ?? ""),
+    file_type: (att.file_type as string) ?? null,
+    file_url: (att.data_url as string) ?? null,
+    data_url: (att.data_url as string) ?? null,
+    filename: (att.filename as string) ?? null,
+    file_size: (att.file_size as number) ?? null,
+    extension: (att.extension as string) ?? null,
+    coordinates_lat: (att.coordinates_lat as number) ?? null,
+    coordinates_long: (att.coordinates_long as number) ?? null,
+    meta: (att.meta as Record<string, unknown>) ?? null,
+  }));
+}
 
 interface MessageViewProps {
   conversation: Conversation | null;
@@ -109,7 +125,7 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
             content: (msgData.content as string) ?? "",
             message_type: msgType as MessageType,
             sender: null,
-            attachments: [],
+            attachments: mapWebSocketAttachments(msgData.attachments),
             created_at: createdAt,
           };
           return updated;
@@ -121,7 +137,7 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         content: (msgData.content as string) ?? "",
         message_type: msgType as MessageType,
         sender: null,
-        attachments: [],
+        attachments: mapWebSocketAttachments(msgData.attachments),
         created_at: createdAt,
       };
       return [...prev, newMsg];
@@ -184,15 +200,33 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
 
   // Send message
   const handleSend = useCallback(
-    async (content: string) => {
+    async (content: string, file?: File) => {
       if (!conversation) return;
+
+      // Build temp attachment preview for optimistic UI
+      const tempAttachments: AttachmentBrief[] = [];
+      if (file) {
+        const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : null;
+        let fileType: string = "file";
+        if (file.type.startsWith("image/")) fileType = "image";
+        else if (file.type.startsWith("audio/")) fileType = "audio";
+        else if (file.type.startsWith("video/")) fileType = "video";
+
+        tempAttachments.push({
+          id: `temp-att-${Date.now()}`,
+          file_type: fileType,
+          file_url: previewUrl,
+          filename: file.name,
+          file_size: file.size,
+        });
+      }
 
       const tempMessage: Message = {
         id: `temp-${Date.now()}`,
         content,
         message_type: "outgoing",
         sender: null,
-        attachments: [],
+        attachments: tempAttachments,
         created_at: new Date().toISOString(),
       };
 
@@ -203,9 +237,7 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
       });
 
       try {
-        const result = await sendMessage(conversation.id, {
-          content,
-        });
+        const result = await sendMessage(conversation.id, { content }, file);
         if (result && typeof result === "object" && "id" in result) {
           setMessages((prev) =>
             prev.map((m) => (m.id === tempMessage.id ? (result as Message) : m))

@@ -4,7 +4,7 @@ Messaging API endpoints - proxy to the standalone Rails messaging service.
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db, require_permission_dual
@@ -241,6 +241,33 @@ async def send_message(
         tenant_id,
         conversation_id,
         payload.model_dump(exclude_none=True),
+        user_id=current_user.auth0_user_id,
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/conversations/{conversation_id}/messages/upload",
+    summary="Send a message with file attachment",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def send_message_with_attachment(
+    conversation_id: str,
+    content: str = Form(""),
+    file: UploadFile = File(...),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _get_tenant_id(current_user)
+
+    result = await messaging_service.send_message_with_file(
+        tenant_id,
+        conversation_id,
+        content=content,
+        file=file,
         user_id=current_user.auth0_user_id,
     )
     if result is None:

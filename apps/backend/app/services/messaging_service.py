@@ -168,6 +168,53 @@ class MessagingService:
             json_data={"message": payload},
         )
 
+    async def send_message_with_file(
+        self,
+        tenant_id: int,
+        conversation_id: str,
+        content: str,
+        file: Any,
+        user_id: Optional[str] = None,
+    ) -> Optional[dict]:
+        """Send a message with a file attachment via multipart/form-data."""
+        url = f"{self.base_url}/api/v1/conversations/{conversation_id}/messages"
+        headers: dict[str, str] = {
+            "X-Tenant-Id": str(tenant_id),
+        }
+        if self.api_key:
+            headers["X-API-Key"] = self.api_key
+        if user_id:
+            headers["X-User-Id"] = str(user_id)
+
+        try:
+            file_content = await file.read()
+            files = {
+                "message[file]": (file.filename, file_content, file.content_type),
+            }
+            data = {
+                "message[content]": content,
+            }
+
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    url,
+                    headers=headers,
+                    data=data,
+                    files=files,
+                )
+
+                if response.status_code in (200, 201):
+                    return response.json()
+                else:
+                    logger.error(
+                        f"Messaging upload error: POST {url} -> {response.status_code} - {response.text[:500]}"
+                    )
+                    return None
+
+        except httpx.RequestError as e:
+            logger.error(f"Messaging upload request failed: {e}")
+            return None
+
     # --- Assignments ---
 
     async def assign_conversation(

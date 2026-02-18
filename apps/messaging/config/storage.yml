@@ -12,3 +12,8 @@ amazon:
   secret_access_key: <%= ENV.fetch('AWS_SECRET_ACCESS_KEY', '') %>
   region: <%= ENV.fetch('AWS_REGION', '') %>
   bucket: <%= ENV.fetch('S3_BUCKET_NAME', '') %>
+
+google:
+  service: GCS
+  project: <%= ENV.fetch('GCS_PROJECT_ID', '') %>
+  bucket: <%= ENV.fetch('GCS_BUCKET_NAME', '') %>

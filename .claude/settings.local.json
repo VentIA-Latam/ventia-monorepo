@@ -4,7 +4,8 @@
       "mcp__clickup__clickup_create_task",
       "Bash(pnpm build:*)",
       "Bash(find:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(grep:*)"
     ]
   }
 }

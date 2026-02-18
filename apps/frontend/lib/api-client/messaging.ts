@@ -48,8 +48,26 @@ export async function getMessages(
 
 export async function sendMessage(
   conversationId: string,
-  payload: SendMessagePayload
+  payload: SendMessagePayload,
+  file?: File
 ): Promise<unknown> {
+  if (file) {
+    const formData = new FormData();
+    formData.append("content", payload.content || "");
+    formData.append("file", file);
+
+    const response = await fetch(
+      `/api/messaging/conversations/${conversationId}/messages`,
+      { method: "POST", body: formData }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
   return apiPost(`/api/messaging/conversations/${conversationId}/messages`, payload);
 }
 

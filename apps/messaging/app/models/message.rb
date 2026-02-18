@@ -34,6 +34,9 @@ class Message < ApplicationRecord
 
   MAX_CONTENT_LENGTH = 150_000
 
+  # Virtual attribute to skip automatic send_reply callback (used when file upload handles it manually)
+  attr_accessor :skip_send_reply
+
   # Validations
   validates :account_id, presence: true
   validates :inbox_id, presence: true
@@ -115,6 +118,7 @@ class Message < ApplicationRecord
   end
 
   def send_reply
+    return if skip_send_reply
     return unless outgoing? || template?
     return if private?
 

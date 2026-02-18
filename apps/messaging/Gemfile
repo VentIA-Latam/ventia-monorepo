@@ -42,6 +42,7 @@ gem 'liquid', '~> 5.5.0'
 # Image processing (for avatars)
 gem 'image_processing', '~> 1.2'
 gem 'aws-sdk-s3', require: false
+gem 'google-cloud-storage', '~> 1.50', require: false
 
 # Monitoring
 gem 'sentry-ruby'

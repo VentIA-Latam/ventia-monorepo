@@ -22,7 +22,13 @@ export interface AttachmentBrief {
   id: string;
   file_type: string | null;
   file_url: string | null;
+  data_url?: string | null;
   filename: string | null;
+  file_size?: number | null;
+  extension?: string | null;
+  coordinates_lat?: number | null;
+  coordinates_long?: number | null;
+  meta?: Record<string, unknown> | null;
 }
 
 // --- Conversation ---
