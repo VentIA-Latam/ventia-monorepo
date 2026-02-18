@@ -28,7 +28,7 @@ export function LocationBubble({ attachment }: LocationBubbleProps) {
       rel="noopener noreferrer"
       className="block rounded-md overflow-hidden w-56 hover:opacity-90 transition-opacity"
     >
-      <div className="h-32 w-full">
+      <div className="h-32 w-full isolate">
         <LocationMap lat={lat} lng={lng} />
       </div>
       <div className="flex items-center gap-1.5 px-2 py-1.5 bg-muted/30 text-xs text-muted-foreground">

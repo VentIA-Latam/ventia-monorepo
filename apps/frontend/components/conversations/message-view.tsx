@@ -74,7 +74,7 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const shouldAutoScrollRef = useRef(false);
+  const scrollBehaviorRef = useRef<false | "instant" | "smooth">(false);
 
   // Load messages when conversation changes
   useEffect(() => {
@@ -91,11 +91,9 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
     getMessages(conversation.id)
       .then((data) => {
         if (!cancelled) {
+          scrollBehaviorRef.current = "instant";
           setMessages(data.data ?? []);
           setLoading(false);
-          requestAnimationFrame(() => {
-            bottomRef.current?.scrollIntoView({ behavior: "instant" });
-          });
         }
       })
       .catch((err) => {
@@ -159,14 +157,15 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
       return [...prev, newMsg];
     });
 
-    shouldAutoScrollRef.current = true;
+    scrollBehaviorRef.current = "smooth";
   }, [lastEvent, conversation?.id]);
 
-  // Scroll to bottom after DOM commits when flagged (handles text, attachments, and WS messages)
+  // Scroll to bottom after DOM commits when flagged (handles initial load, send, and WS messages)
   useEffect(() => {
-    if (shouldAutoScrollRef.current) {
-      shouldAutoScrollRef.current = false;
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (scrollBehaviorRef.current) {
+      const behavior = scrollBehaviorRef.current;
+      scrollBehaviorRef.current = false;
+      bottomRef.current?.scrollIntoView({ behavior });
     }
   }, [messages]);
 
@@ -252,7 +251,7 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         created_at: new Date().toISOString(),
       };
 
-      shouldAutoScrollRef.current = true;
+      scrollBehaviorRef.current = "smooth";
       setMessages((prev) => [...prev, tempMessage]);
 
       try {
