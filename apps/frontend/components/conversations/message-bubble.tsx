@@ -1,8 +1,9 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
-import { FileDown, CheckCheck } from "lucide-react";
+import { FileDown, CheckCheck, X, Download } from "lucide-react";
 import { LocationBubble } from "./location-bubble";
 import { ContactBubble } from "./contact-bubble";
 import type { Message, AttachmentBrief } from "@/lib/types/messaging";
@@ -16,6 +17,61 @@ function formatFileSize(bytes: number | null | undefined): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/* ── Image Lightbox ── */
+function ImageLightbox({
+  src,
+  alt,
+  onClose,
+}: {
+  src: string;
+  alt: string;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      {/* Toolbar */}
+      <div className="absolute top-4 right-4 flex items-center gap-2 z-[101]">
+        <a
+          href={src}
+          download
+          onClick={(e) => e.stopPropagation()}
+          className="rounded-full bg-white/10 hover:bg-white/20 p-2 transition-colors"
+          title="Descargar"
+        >
+          <Download className="h-5 w-5 text-white" />
+        </a>
+        <button
+          onClick={onClose}
+          className="rounded-full bg-white/10 hover:bg-white/20 p-2 transition-colors"
+          title="Cerrar"
+        >
+          <X className="h-5 w-5 text-white" />
+        </button>
+      </div>
+
+      {/* Image */}
+      <img
+        src={src}
+        alt={alt}
+        className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>,
+    document.body
+  );
 }
 
 interface MessageBubbleProps {
@@ -47,6 +103,9 @@ function formatTime(dateStr: string | number | null): string {
 export const MessageBubble = memo(function MessageBubble({
   message,
 }: MessageBubbleProps) {
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const closeLightbox = useCallback(() => setLightboxSrc(null), []);
+
   const isOutgoing = message.message_type === "outgoing";
   const isActivity = message.message_type === "activity";
 
@@ -98,13 +157,15 @@ export const MessageBubble = memo(function MessageBubble({
           <div className="mt-1.5 space-y-1.5">
             {message.attachments.map((att) => {
               if (att.file_type === "image") {
+                const imgUrl = getAttUrl(att);
                 return (
                   <img
                     key={att.id}
-                    src={getAttUrl(att)}
+                    src={imgUrl}
                     alt={att.filename || "Imagen"}
-                    className="rounded-md max-w-full max-h-64 object-cover"
+                    className="rounded-md max-w-full max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity"
                     loading="lazy"
+                    onClick={() => setLightboxSrc(imgUrl)}
                   />
                 );
               }
@@ -174,6 +235,15 @@ export const MessageBubble = memo(function MessageBubble({
           )}
         </span>
       </div>
+
+      {/* Image Lightbox */}
+      {lightboxSrc && (
+        <ImageLightbox
+          src={lightboxSrc}
+          alt="Imagen ampliada"
+          onClose={closeLightbox}
+        />
+      )}
     </div>
   );
 });
