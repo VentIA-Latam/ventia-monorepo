@@ -50,7 +50,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
   end
 
   def message_params
-    params.require(:message).permit(:content, :content_type, :file)
+    params.require(:message).permit(:content, :content_type)
   end
 
   def determine_file_type(content_type)
