@@ -111,7 +111,7 @@ export function MessageComposer({ onSend, disabled }: MessageComposerProps) {
     <div className="relative bg-muted/30 px-4 py-2.5 border-t border-border/30">
       {/* Emoji picker */}
       {showEmoji && (
-        <div className="absolute bottom-full left-3 mb-2 z-50">
+        <div className="absolute bottom-full left-3 mb-2 z-[60]">
           <EmojiPicker
             onEmojiClick={handleEmojiClick}
             width={320}
