@@ -18,7 +18,7 @@ import { MessageBubble } from "./message-bubble";
 import { MessageComposer } from "./message-composer";
 import { useMessaging } from "./messaging-provider";
 import { getMessages, sendMessage, updateConversation } from "@/lib/api-client/messaging";
-import type { Conversation, Message, MessageType, AttachmentBrief } from "@/lib/types/messaging";
+import type { Conversation, Message, MessageType, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
 
 function mapWebSocketAttachments(raw: unknown): AttachmentBrief[] {
   if (!Array.isArray(raw)) return [];
@@ -34,6 +34,17 @@ function mapWebSocketAttachments(raw: unknown): AttachmentBrief[] {
     coordinates_long: (att.coordinates_long as number) ?? null,
     meta: (att.meta as Record<string, unknown>) ?? null,
   }));
+}
+
+function mapWebSocketSender(raw: unknown): ContactBrief | AgentBrief | null {
+  if (!raw || typeof raw !== "object") return null;
+  const s = raw as Record<string, unknown>;
+  return {
+    id: String(s.id ?? ""),
+    name: (s.name as string) ?? null,
+    ...("phone_number" in s ? { phone_number: (s.phone_number as string) ?? null } : {}),
+    ...("email" in s ? { email: (s.email as string) ?? null } : {}),
+  } as ContactBrief | AgentBrief;
 }
 
 interface MessageViewProps {
@@ -115,17 +126,21 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         ? rawCreatedAt
         : new Date().toISOString();
 
+      const wsAttachments = mapWebSocketAttachments(msgData.attachments);
+      const wsSender = mapWebSocketSender(msgData.sender);
+
       if (msgType === "outgoing") {
-        const hasTempMsg = prev.some((m) => String(m.id).startsWith("temp-"));
-        if (hasTempMsg) {
-          const lastTempIdx = prev.findLastIndex((m) => String(m.id).startsWith("temp-"));
+        const lastTempIdx = prev.findLastIndex((m) => String(m.id).startsWith("temp-"));
+        if (lastTempIdx >= 0) {
+          const tempMsg = prev[lastTempIdx];
           const updated = [...prev];
           updated[lastTempIdx] = {
             id: msgId,
             content: (msgData.content as string) ?? "",
             message_type: msgType as MessageType,
-            sender: null,
-            attachments: mapWebSocketAttachments(msgData.attachments),
+            sender: wsSender,
+            // Keep temp preview attachments if WS broadcast arrived before attachment was created
+            attachments: wsAttachments.length > 0 ? wsAttachments : tempMsg.attachments,
             created_at: createdAt,
           };
           return updated;
@@ -136,8 +151,8 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         id: msgId,
         content: (msgData.content as string) ?? "",
         message_type: msgType as MessageType,
-        sender: null,
-        attachments: mapWebSocketAttachments(msgData.attachments),
+        sender: wsSender,
+        attachments: wsAttachments,
         created_at: createdAt,
       };
       return [...prev, newMsg];
@@ -239,8 +254,11 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
       try {
         const result = await sendMessage(conversation.id, { content }, file);
         if (result && typeof result === "object" && "id" in result) {
+          const realId = String((result as Message).id);
           setMessages((prev) =>
-            prev.map((m) => (m.id === tempMessage.id ? (result as Message) : m))
+            prev.map((m) =>
+              m.id === tempMessage.id || String(m.id) === realId ? (result as Message) : m
+            )
           );
         }
       } catch (err) {
@@ -345,7 +363,7 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto px-4 md:px-16 py-3 space-y-1"
-        style={{ backgroundImage: "url('/images/fondo-conversacion.png')", backgroundRepeat: "repeat", backgroundSize: "400px" }}
+        style={{ backgroundImage: "url('/images/fondo-conversacion.png')", backgroundRepeat: "repeat", backgroundSize: "400px", backgroundAttachment: "fixed" }}
       >
         {/* Sentinel for loading more */}
         <div ref={sentinelRef} className="h-1" />
