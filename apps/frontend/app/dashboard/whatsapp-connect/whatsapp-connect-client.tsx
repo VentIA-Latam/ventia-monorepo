@@ -5,22 +5,21 @@ import { useRouter } from "next/navigation";
 import {
   MessageSquare,
   CheckCircle2,
+  Check,
   Loader2,
-  LogIn,
-  FileText,
-  Link2,
-  ShieldCheck,
   AlertCircle,
-  ExternalLink,
   ArrowRight,
   Settings,
+  ChevronDown,
+  Bot,
+  Clock,
+  Users,
+  Smartphone,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { connectWhatsApp, connectWhatsAppManually } from "@/lib/api-client/messaging";
 import {
   setupFacebookSdk,
@@ -34,27 +33,10 @@ import type { WhatsAppConnectResponse } from "@/lib/types/messaging";
 
 type FlowStatus = "idle" | "loading-sdk" | "authenticating" | "connecting" | "success" | "error";
 
-const STEPS = [
-  {
-    icon: LogIn,
-    title: "Conecta e inicia sesion",
-    description: "Inicia sesion con tu cuenta de Meta Business.",
-  },
-  {
-    icon: FileText,
-    title: "Completa los datos",
-    description: "Portafolio, empresa, sitio web y categoria.",
-  },
-  {
-    icon: Link2,
-    title: "Elige tipo de conexion",
-    description: 'Recomendamos "Vincular cuenta de WhatsApp Business".',
-  },
-  {
-    icon: ShieldCheck,
-    title: "Verifica tu numero",
-    description: "Via SMS, llamada o QR segun indique Meta.",
-  },
+const BENEFITS = [
+  { icon: Bot, text: "Respuestas automáticas con IA" },
+  { icon: Clock, text: "Gestión de ventana de 24 horas" },
+  { icon: Users, text: "Soporte multi-agente" },
 ];
 
 function SuccessView({
@@ -377,111 +359,137 @@ export function WhatsAppConnectClient() {
     );
   }
 
+  const [showManual, setShowManual] = useState(false);
+
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-100">
-              <MessageSquare className="h-6 w-6 text-green-600" />
-            </div>
-            <div>
-              <CardTitle className="text-2xl">Conecta tu WhatsApp Business</CardTitle>
-              <CardDescription>
-                Es el primer paso para empezar a vender con tu vendedor inteligente.
-              </CardDescription>
+    <div className="mx-auto max-w-4xl space-y-4">
+      {/* Error banner */}
+      {status === "error" && (
+        <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900 p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-red-800 dark:text-red-300">Error al conectar</p>
+              <p className="text-sm text-red-700 dark:text-red-400">{errorMessage}</p>
+              <Button variant="outline" size="sm" onClick={handleRetry}>
+                Reintentar
+              </Button>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {status === "error" ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-red-800">Error al conectar</p>
-                  <p className="text-sm text-red-700">{errorMessage}</p>
-                  <Button variant="outline" size="sm" onClick={handleRetry}>
-                    Reintentar
-                  </Button>
+        </div>
+      )}
+
+      {/* Split card */}
+      <Card className="overflow-hidden">
+        <div className="flex flex-col md:flex-row">
+          {/* Left: info */}
+          <div className="flex-1 p-8 flex flex-col justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-100 dark:bg-green-900/40 mb-5">
+              <MessageSquare className="h-6 w-6 text-green-600 dark:text-green-400" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight mb-2">
+              Conecta WhatsApp Business
+            </h1>
+            <p className="text-muted-foreground mb-6">
+              Activa tu vendedor inteligente y responde clientes 24/7 por WhatsApp.
+            </p>
+            <div className="space-y-3 mb-8">
+              {BENEFITS.map((benefit) => (
+                <div key={benefit.text} className="flex items-center gap-3">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/40 shrink-0">
+                    <benefit.icon className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <span className="text-sm">{benefit.text}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                size="lg"
+                onClick={handleConnect}
+                disabled={isLoading}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {isLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                )}
+                {status === "loading-sdk"
+                  ? "Cargando..."
+                  : status === "authenticating"
+                    ? "Esperando autorización..."
+                    : status === "connecting"
+                      ? "Conectando canal..."
+                      : "Conectar con Meta"}
+              </Button>
+            </div>
+          </div>
+
+          {/* Right: WhatsApp chat illustration */}
+          <div className="hidden md:flex w-[340px] bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/20 dark:to-green-900/10 items-center justify-center p-8 border-l">
+            <div className="w-[220px] rounded-2xl bg-background shadow-lg border overflow-hidden">
+              {/* Phone header */}
+              <div className="bg-green-600 px-4 py-3 flex items-center gap-2">
+                <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
+                  <Smartphone className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-white">VentIA Bot</p>
+                  <p className="text-[10px] text-green-100">en línea</p>
+                </div>
+              </div>
+              {/* Chat bubbles */}
+              <div className="p-3 space-y-2 bg-muted/30 min-h-[180px]">
+                <div className="flex justify-start">
+                  <div className="bg-background border rounded-lg rounded-tl-none px-3 py-1.5 max-w-[80%]">
+                    <p className="text-[11px]">Hola, quiero hacer un pedido</p>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <div className="bg-green-600 text-white rounded-lg rounded-tr-none px-3 py-1.5 max-w-[80%]">
+                    <p className="text-[11px]">¡Hola! Con gusto te ayudo. ¿Qué producto te interesa?</p>
+                  </div>
+                </div>
+                <div className="flex justify-start">
+                  <div className="bg-background border rounded-lg rounded-tl-none px-3 py-1.5 max-w-[80%]">
+                    <p className="text-[11px]">El pack de 6 unidades</p>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <div className="bg-green-600 text-white rounded-lg rounded-tr-none px-3 py-1.5 max-w-[80%]">
+                    <p className="text-[11px]">Perfecto, te envío el link de pago 🛒</p>
+                  </div>
                 </div>
               </div>
             </div>
-          ) : null}
+          </div>
+        </div>
+      </Card>
 
-          <Tabs defaultValue="embedded">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="embedded">Conexion automatica</TabsTrigger>
-              <TabsTrigger value="manual">Conexion manual</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="embedded" className="space-y-6 pt-4">
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  size="lg"
-                  onClick={handleConnect}
-                  disabled={isLoading}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  {isLoading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                  )}
-                  {status === "loading-sdk"
-                    ? "Cargando..."
-                    : status === "authenticating"
-                      ? "Esperando autorizacion..."
-                      : status === "connecting"
-                        ? "Conectando canal..."
-                        : "Conectar WhatsApp"}
-                </Button>
-                <Button variant="outline" size="lg" asChild>
-                  <a
-                    href="https://wa.me/51987654321"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Contactar soporte
-                    <ExternalLink className="ml-2 h-4 w-4" />
-                  </a>
-                </Button>
-              </div>
-
-              <div>
-                <Badge variant="secondary" className="mb-3">
-                  WhatsApp Business API
-                </Badge>
-                <h3 className="text-lg font-semibold mb-4">Pasos para conectar</h3>
-                <div className="space-y-4">
-                  {STEPS.map((step, index) => (
-                    <div key={index} className="flex items-start gap-4">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                        {index + 1}
-                      </div>
-                      <div>
-                        <p className="font-medium">{step.title}</p>
-                        <p className="text-sm text-muted-foreground">{step.description}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="manual" className="pt-4">
-              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                <p className="text-sm text-amber-800">
-                  Usa esta opcion si ya tienes tus credenciales de WhatsApp Cloud API. Necesitaras tu Access Token, Phone Number ID y Business Account ID del Meta Developer Dashboard.
-                </p>
-              </div>
-              <ManualConnectForm
-                onSuccess={handleManualSuccess}
-                onError={handleManualError}
-              />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
+      {/* Manual connect - collapsible */}
+      <Card>
+        <button
+          onClick={() => setShowManual(!showManual)}
+          className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors rounded-xl"
+        >
+          <div className="flex items-center gap-3">
+            <Settings className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium">Conexión manual</p>
+              <p className="text-xs text-muted-foreground">¿Ya tienes tus credenciales de WhatsApp Cloud API?</p>
+            </div>
+          </div>
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showManual ? "rotate-180" : ""}`} />
+        </button>
+        {showManual && (
+          <CardContent className="pt-0 border-t">
+            <ManualConnectForm
+              onSuccess={handleManualSuccess}
+              onError={handleManualError}
+            />
+          </CardContent>
+        )}
       </Card>
     </div>
   );
