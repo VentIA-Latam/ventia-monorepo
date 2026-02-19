@@ -118,11 +118,12 @@ function ManualConnectForm({
   };
 
   const sanitizedPhone = form.phone_number.replace(/[\s\-()]/g, "");
+  const isPhoneClean = /^\+[1-9]\d{7,14}$/.test(form.phone_number.trim());
   const isPhoneValid = /^\+[1-9]\d{7,14}$/.test(sanitizedPhone);
-  const showPhoneError = form.phone_number.trim() !== "" && !isPhoneValid;
+  const showPhoneError = form.phone_number.trim() !== "" && (!isPhoneValid || !isPhoneClean);
 
   const isValid =
-    isPhoneValid &&
+    isPhoneClean &&
     form.api_key.trim() !== "" &&
     form.phone_number_id.trim() !== "" &&
     form.business_account_id.trim() !== "";
