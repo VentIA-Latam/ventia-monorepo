@@ -117,8 +117,12 @@ function ManualConnectForm({
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const sanitizedPhone = form.phone_number.replace(/[\s\-()]/g, "");
+  const isPhoneValid = /^\+[1-9]\d{7,14}$/.test(sanitizedPhone);
+  const showPhoneError = form.phone_number.trim() !== "" && !isPhoneValid;
+
   const isValid =
-    form.phone_number.trim() !== "" &&
+    isPhoneValid &&
     form.api_key.trim() !== "" &&
     form.phone_number_id.trim() !== "" &&
     form.business_account_id.trim() !== "";
@@ -131,7 +135,7 @@ function ManualConnectForm({
     try {
       const response = (await connectWhatsAppManually({
         name: form.name || undefined,
-        phone_number: form.phone_number,
+        phone_number: sanitizedPhone,
         api_key: form.api_key,
         phone_number_id: form.phone_number_id,
         business_account_id: form.business_account_id,
@@ -165,7 +169,11 @@ function ManualConnectForm({
           onChange={(e) => handleChange("phone_number", e.target.value)}
           required
         />
-        <p className="text-xs text-muted-foreground">Formato E.164 con codigo de pais</p>
+        {showPhoneError ? (
+          <p className="text-xs text-destructive">Ingresa un número válido con código de país (ej: +51941190666), sin espacios</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">Formato E.164 con código de país (ej: +51941190666)</p>
+        )}
       </div>
       <div className="space-y-2">
         <Label htmlFor="api_key">API Key (Access Token)</Label>
