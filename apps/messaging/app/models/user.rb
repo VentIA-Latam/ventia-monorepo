@@ -2,8 +2,8 @@
 #
 # Table name: messaging.users
 #
-#  id                :uuid             not null, primary key
-#  ventia_user_id    :uuid             not null
+#  id                :bigint           not null, primary key
+#  ventia_user_id    :integer          not null
 #  name              :string           not null
 #  email             :string           not null
 #  avatar_url        :string

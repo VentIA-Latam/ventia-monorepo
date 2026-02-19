@@ -2,8 +2,8 @@
 #
 # Table name: messaging.teams
 #
-#  id                :uuid             not null, primary key
-#  account_id        :uuid             not null
+#  id                :bigint           not null, primary key
+#  account_id        :bigint           not null
 #  name              :string           not null
 #  description       :text
 #  allow_auto_assign :boolean          default(TRUE)

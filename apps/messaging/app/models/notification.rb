@@ -2,14 +2,14 @@
 #
 # Table name: messaging.notifications
 #
-#  id                   :uuid             not null, primary key
-#  account_id           :uuid             not null
-#  user_id              :uuid             not null
+#  id                   :bigint           not null, primary key
+#  account_id           :bigint           not null
+#  user_id              :bigint           not null
 #  notification_type    :integer          not null
 #  primary_actor_type   :string           not null
-#  primary_actor_id     :uuid             not null
+#  primary_actor_id     :bigint           not null
 #  secondary_actor_type :string
-#  secondary_actor_id   :uuid
+#  secondary_actor_id   :bigint
 #  read_at              :datetime
 #  snoozed_until        :datetime
 #  last_activity_at     :datetime

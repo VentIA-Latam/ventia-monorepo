@@ -27,6 +27,6 @@ class Conversations::MessageWindowService
   end
 
   def last_incoming_message
-    @last_incoming_message ||= @conversation.messages.incoming.last
+    @last_incoming_message ||= @conversation.messages.incoming.order(created_at: :asc).last
   end
 end

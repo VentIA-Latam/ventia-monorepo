@@ -2,9 +2,9 @@
 #
 # Table name: messaging.contact_inboxes
 #
-#  id                    :uuid             not null, primary key
-#  contact_id            :uuid             not null
-#  inbox_id              :uuid             not null
+#  id                    :bigint           not null, primary key
+#  contact_id            :bigint           not null
+#  inbox_id              :bigint           not null
 #  source_id             :string           not null
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null

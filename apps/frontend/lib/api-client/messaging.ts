@@ -29,23 +29,23 @@ export async function getConversations(params?: ConversationFilters): Promise<Co
   return apiGet("/api/messaging/conversations", params as Record<string, string | number>);
 }
 
-export async function getConversation(id: string): Promise<Conversation> {
+export async function getConversation(id: number | string): Promise<Conversation> {
   return apiGet(`/api/messaging/conversations/${id}`);
 }
 
 export async function updateConversation(
-  id: string,
+  id: number | string,
   payload: Record<string, unknown>
 ): Promise<unknown> {
   return apiPatch(`/api/messaging/conversations/${id}`, payload);
 }
 
-export async function deleteConversation(id: string): Promise<unknown> {
+export async function deleteConversation(id: number | string): Promise<unknown> {
   return apiDelete(`/api/messaging/conversations/${id}`);
 }
 
 export async function getMessages(
-  conversationId: string,
+  conversationId: number | string,
   page?: number
 ): Promise<MessageListResponse> {
   return apiGet(
@@ -55,7 +55,7 @@ export async function getMessages(
 }
 
 export async function sendMessage(
-  conversationId: string,
+  conversationId: number | string,
   payload: SendMessagePayload,
   file?: File
 ): Promise<unknown> {
@@ -80,13 +80,13 @@ export async function sendMessage(
 }
 
 export async function assignConversation(
-  conversationId: string,
+  conversationId: number | string,
   payload: AssignConversationPayload
 ): Promise<unknown> {
   return apiPost(`/api/messaging/conversations/${conversationId}/assign`, payload);
 }
 
-export async function unassignConversation(conversationId: string): Promise<unknown> {
+export async function unassignConversation(conversationId: number | string): Promise<unknown> {
   return apiPost(`/api/messaging/conversations/${conversationId}/unassign`);
 }
 
@@ -116,11 +116,11 @@ export async function createLabel(payload: { title: string; color: string }): Pr
   return apiPost("/api/messaging/labels", payload);
 }
 
-export async function addConversationLabel(conversationId: string, labelId: string): Promise<unknown> {
+export async function addConversationLabel(conversationId: number | string, labelId: number | string): Promise<unknown> {
   return apiPost(`/api/messaging/conversations/${conversationId}/labels`, { label_id: labelId });
 }
 
-export async function removeConversationLabel(conversationId: string, labelId: string): Promise<unknown> {
+export async function removeConversationLabel(conversationId: number | string, labelId: number | string): Promise<unknown> {
   return apiDelete(`/api/messaging/conversations/${conversationId}/labels/${labelId}`);
 }
 

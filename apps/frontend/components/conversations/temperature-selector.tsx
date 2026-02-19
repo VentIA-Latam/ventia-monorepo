@@ -7,7 +7,7 @@ import { updateConversation } from "@/lib/api-client/messaging";
 import type { ConversationTemperature } from "@/lib/types/messaging";
 
 interface TemperatureSelectorProps {
-  conversationId: string;
+  conversationId: number;
   value: ConversationTemperature;
   onChange?: (value: ConversationTemperature) => void;
 }

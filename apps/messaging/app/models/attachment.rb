@@ -2,9 +2,9 @@
 #
 # Table name: messaging.attachments
 #
-#  id               :uuid             not null, primary key
-#  account_id       :uuid             not null
-#  message_id       :uuid             not null
+#  id               :bigint           not null, primary key
+#  account_id       :bigint           not null
+#  message_id       :bigint           not null
 #  file_type        :integer          default("image")
 #  external_url     :string
 #  extension        :string

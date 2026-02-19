@@ -2,9 +2,9 @@
 #
 # Table name: messaging.account_users
 #
-#  id           :uuid             not null, primary key
-#  account_id   :uuid             not null
-#  user_id      :uuid             not null
+#  id           :bigint           not null, primary key
+#  account_id   :bigint           not null
+#  user_id      :bigint           not null
 #  role         :integer          default("agent")
 #  availability :integer          default("online")
 #  auto_offline :boolean          default(TRUE)

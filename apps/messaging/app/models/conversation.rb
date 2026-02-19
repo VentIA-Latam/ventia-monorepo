@@ -2,7 +2,7 @@
 #
 # Table name: messaging.conversations
 #
-#  id                     :uuid             not null, primary key
+#  id                     :bigint           not null, primary key
 #  uuid                   :uuid             not null
 #  status                 :integer          default("open")
 #  priority               :integer          default("low")
@@ -14,14 +14,14 @@
 #  first_reply_created_at :datetime
 #  waiting_since          :datetime
 #  snoozed_until          :datetime
-#  account_id             :uuid             not null
-#  inbox_id               :uuid             not null
-#  contact_id             :uuid             not null
-#  contact_inbox_id       :uuid             not null
-#  assignee_id            :uuid
-#  team_id                :uuid
-#  campaign_id            :uuid
-#  assignee_agent_bot_id  :uuid
+#  account_id             :bigint           not null
+#  inbox_id               :bigint           not null
+#  contact_id             :bigint           not null
+#  contact_inbox_id       :bigint           not null
+#  assignee_id            :bigint
+#  team_id                :bigint
+#  campaign_id            :bigint
+#  assignee_agent_bot_id  :bigint
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
 #
@@ -108,11 +108,11 @@ class Conversation < ApplicationRecord
   end
 
   def last_incoming_message
-    messages.incoming.last
+    messages.incoming.order(created_at: :asc).last
   end
 
   def last_outgoing_message
-    messages.outgoing.last
+    messages.outgoing.order(created_at: :asc).last
   end
 
   def unread_messages

@@ -1,16 +1,16 @@
 class CreateMessagingSchemaAndCoreTables < ActiveRecord::Migration[7.2]
   def up
-    # Enable UUID extension if not already enabled
+    # Enable UUID extension (needed for conversation.uuid secondary column)
     enable_extension 'pgcrypto' unless extension_enabled?('pgcrypto')
 
     # Accounts table
-    create_table :accounts, id: :uuid do |t|
+    create_table :accounts do |t|
       t.string :name, null: false
       t.string :locale, default: 'en'
       t.integer :status, default: 0, null: false
       t.jsonb :settings, default: {}
       t.jsonb :limits, default: {}
-      t.uuid :ventia_tenant_id, null: false
+      t.integer :ventia_tenant_id, null: false
 
       t.timestamps
     end
@@ -19,13 +19,13 @@ class CreateMessagingSchemaAndCoreTables < ActiveRecord::Migration[7.2]
     add_index :accounts, :ventia_tenant_id, unique: true
 
     # Channel WhatsApp table
-    create_table :channel_whatsapp, id: :uuid do |t|
+    create_table :channel_whatsapp do |t|
       t.string :phone_number, null: false
       t.string :provider, default: 'whatsapp_cloud'
       t.jsonb :provider_config, default: {}
       t.jsonb :message_templates, default: []
       t.datetime :message_templates_last_updated
-      t.uuid :account_id, null: false
+      t.bigint :account_id, null: false
 
       t.timestamps
     end
@@ -35,11 +35,11 @@ class CreateMessagingSchemaAndCoreTables < ActiveRecord::Migration[7.2]
     add_foreign_key :channel_whatsapp, :accounts, column: :account_id
 
     # Inboxes table
-    create_table :inboxes, id: :uuid do |t|
+    create_table :inboxes do |t|
       t.string :name, null: false
       t.string :channel_type, null: false
-      t.uuid :channel_id, null: false
-      t.uuid :account_id, null: false
+      t.bigint :channel_id, null: false
+      t.bigint :account_id, null: false
       t.boolean :greeting_enabled, default: false
       t.string :greeting_message
       t.boolean :enable_auto_assignment, default: true
@@ -58,7 +58,7 @@ class CreateMessagingSchemaAndCoreTables < ActiveRecord::Migration[7.2]
     add_foreign_key :inboxes, :accounts, column: :account_id
 
     # Contacts table
-    create_table :contacts, id: :uuid do |t|
+    create_table :contacts do |t|
       t.string :name, default: ''
       t.string :email
       t.string :phone_number
@@ -68,7 +68,7 @@ class CreateMessagingSchemaAndCoreTables < ActiveRecord::Migration[7.2]
       t.integer :contact_type, default: 0
       t.boolean :blocked, default: false
       t.datetime :last_activity_at
-      t.uuid :account_id, null: false
+      t.bigint :account_id, null: false
 
       t.timestamps
     end
@@ -80,9 +80,9 @@ class CreateMessagingSchemaAndCoreTables < ActiveRecord::Migration[7.2]
     add_foreign_key :contacts, :accounts, column: :account_id
 
     # Contact Inboxes (join table)
-    create_table :contact_inboxes, id: :uuid do |t|
-      t.uuid :contact_id, null: false
-      t.uuid :inbox_id, null: false
+    create_table :contact_inboxes do |t|
+      t.bigint :contact_id, null: false
+      t.bigint :inbox_id, null: false
       t.string :source_id, null: false
 
       t.timestamps
@@ -95,7 +95,7 @@ class CreateMessagingSchemaAndCoreTables < ActiveRecord::Migration[7.2]
     add_foreign_key :contact_inboxes, :inboxes, column: :inbox_id
 
     # Conversations table
-    create_table :conversations, id: :uuid do |t|
+    create_table :conversations do |t|
       t.uuid :uuid, null: false, default: -> { 'gen_random_uuid()' }
       t.integer :status, default: 0, null: false
       t.integer :priority, default: 0
@@ -107,14 +107,14 @@ class CreateMessagingSchemaAndCoreTables < ActiveRecord::Migration[7.2]
       t.datetime :first_reply_created_at
       t.datetime :waiting_since
       t.datetime :snoozed_until
-      t.uuid :account_id, null: false
-      t.uuid :inbox_id, null: false
-      t.uuid :contact_id, null: false
-      t.uuid :contact_inbox_id, null: false
-      t.uuid :assignee_id
-      t.uuid :team_id
-      t.uuid :campaign_id
-      t.uuid :assignee_agent_bot_id
+      t.bigint :account_id, null: false
+      t.bigint :inbox_id, null: false
+      t.bigint :contact_id, null: false
+      t.bigint :contact_inbox_id, null: false
+      t.bigint :assignee_id
+      t.bigint :team_id
+      t.bigint :campaign_id
+      t.bigint :assignee_agent_bot_id
 
       t.timestamps
     end
@@ -132,21 +132,21 @@ class CreateMessagingSchemaAndCoreTables < ActiveRecord::Migration[7.2]
     add_foreign_key :conversations, :contact_inboxes, column: :contact_inbox_id
 
     # Messages table
-    create_table :messages, id: :uuid do |t|
+    create_table :messages do |t|
       t.text :content
       t.integer :message_type, null: false
       t.integer :content_type, default: 0, null: false
       t.integer :status, default: 0
       t.boolean :private, default: false
       t.string :sender_type
-      t.uuid :sender_id
+      t.bigint :sender_id
       t.string :source_id
       t.jsonb :content_attributes, default: {}
       t.jsonb :additional_attributes, default: {}
       t.text :processed_message_content
-      t.uuid :account_id, null: false
-      t.uuid :inbox_id, null: false
-      t.uuid :conversation_id, null: false
+      t.bigint :account_id, null: false
+      t.bigint :inbox_id, null: false
+      t.bigint :conversation_id, null: false
 
       t.timestamps
     end
@@ -162,12 +162,12 @@ class CreateMessagingSchemaAndCoreTables < ActiveRecord::Migration[7.2]
     add_foreign_key :messages, :conversations, column: :conversation_id
 
     # Labels table
-    create_table :labels, id: :uuid do |t|
+    create_table :labels do |t|
       t.string :title, null: false
       t.string :description
       t.string :color, null: false
       t.boolean :show_on_sidebar, default: true
-      t.uuid :account_id, null: false
+      t.bigint :account_id, null: false
 
       t.timestamps
     end
@@ -177,9 +177,9 @@ class CreateMessagingSchemaAndCoreTables < ActiveRecord::Migration[7.2]
     add_foreign_key :labels, :accounts, column: :account_id
 
     # Conversation Labels (join table)
-    create_table :conversation_labels, id: :uuid do |t|
-      t.uuid :conversation_id, null: false
-      t.uuid :label_id, null: false
+    create_table :conversation_labels do |t|
+      t.bigint :conversation_id, null: false
+      t.bigint :label_id, null: false
 
       t.timestamps
     end
@@ -191,14 +191,14 @@ class CreateMessagingSchemaAndCoreTables < ActiveRecord::Migration[7.2]
     add_foreign_key :conversation_labels, :labels, column: :label_id
 
     # Campaigns table
-    create_table :campaigns, id: :uuid do |t|
+    create_table :campaigns do |t|
       t.string :title, null: false
       t.text :message
       t.integer :campaign_type, default: 0
       t.integer :campaign_status, default: 0
-      t.uuid :account_id, null: false
-      t.uuid :inbox_id, null: false
-      t.uuid :sender_id
+      t.bigint :account_id, null: false
+      t.bigint :inbox_id, null: false
+      t.bigint :sender_id
       t.boolean :enabled, default: true
       t.jsonb :audience, default: []
       t.datetime :scheduled_at
@@ -214,14 +214,14 @@ class CreateMessagingSchemaAndCoreTables < ActiveRecord::Migration[7.2]
     add_foreign_key :campaigns, :inboxes, column: :inbox_id
 
     # Automation Rules table
-    create_table :automation_rules, id: :uuid do |t|
+    create_table :automation_rules do |t|
       t.string :name, null: false
       t.text :description
       t.integer :event_name, null: false
       t.jsonb :conditions, default: []
       t.jsonb :actions, default: []
       t.boolean :active, default: true
-      t.uuid :account_id, null: false
+      t.bigint :account_id, null: false
 
       t.timestamps
     end
@@ -232,12 +232,12 @@ class CreateMessagingSchemaAndCoreTables < ActiveRecord::Migration[7.2]
     add_foreign_key :automation_rules, :accounts, column: :account_id
 
     # Agent Bots table
-    create_table :agent_bots, id: :uuid do |t|
+    create_table :agent_bots do |t|
       t.string :name, null: false
       t.text :description
       t.integer :bot_type, default: 0
       t.jsonb :bot_config, default: {}
-      t.uuid :account_id, null: false
+      t.bigint :account_id, null: false
 
       t.timestamps
     end
@@ -246,9 +246,9 @@ class CreateMessagingSchemaAndCoreTables < ActiveRecord::Migration[7.2]
     add_foreign_key :agent_bots, :accounts, column: :account_id
 
     # Agent Bot Inboxes (join table)
-    create_table :agent_bot_inboxes, id: :uuid do |t|
-      t.uuid :inbox_id, null: false
-      t.uuid :agent_bot_id, null: false
+    create_table :agent_bot_inboxes do |t|
+      t.bigint :inbox_id, null: false
+      t.bigint :agent_bot_id, null: false
       t.integer :status, default: 0
 
       t.timestamps
@@ -260,10 +260,10 @@ class CreateMessagingSchemaAndCoreTables < ActiveRecord::Migration[7.2]
     add_foreign_key :agent_bot_inboxes, :agent_bots, column: :agent_bot_id
 
     # Webhooks table
-    create_table :webhooks, id: :uuid do |t|
+    create_table :webhooks do |t|
       t.string :url, null: false
-      t.uuid :account_id, null: false
-      t.uuid :inbox_id
+      t.bigint :account_id, null: false
+      t.bigint :inbox_id
       t.jsonb :subscriptions, default: []
 
       t.timestamps

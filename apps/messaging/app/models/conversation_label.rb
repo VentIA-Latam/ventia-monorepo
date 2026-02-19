@@ -2,9 +2,9 @@
 #
 # Table name: messaging.conversation_labels
 #
-#  id              :uuid             not null, primary key
-#  conversation_id :uuid             not null
-#  label_id        :uuid             not null
+#  id              :bigint           not null, primary key
+#  conversation_id :bigint           not null
+#  label_id        :bigint           not null
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #

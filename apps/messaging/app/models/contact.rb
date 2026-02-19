@@ -2,7 +2,7 @@
 #
 # Table name: messaging.contacts
 #
-#  id                    :uuid             not null, primary key
+#  id                    :bigint           not null, primary key
 #  name                  :string           default("")
 #  email                 :string
 #  phone_number          :string
@@ -12,7 +12,7 @@
 #  contact_type          :integer          default("visitor")
 #  blocked               :boolean          default(FALSE)
 #  last_activity_at      :datetime
-#  account_id            :uuid             not null
+#  account_id            :bigint           not null
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
 #

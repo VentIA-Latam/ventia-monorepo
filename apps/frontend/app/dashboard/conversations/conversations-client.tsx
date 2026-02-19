@@ -29,7 +29,7 @@ export function ConversationsClient({
   const [conversations, setConversations] = useState<Conversation[]>(
     initialConversations as Conversation[]
   );
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const [teams] = useState<Team[]>([]);
   const [allLabels, setAllLabels] = useState<Label[]>(initialLabels as Label[]);
@@ -43,7 +43,7 @@ export function ConversationsClient({
     [conversations, selectedId]
   );
 
-  const handleSelect = useCallback((id: string) => {
+  const handleSelect = useCallback((id: number) => {
     setSelectedId(id);
     setShowInfo(false);
   }, []);
@@ -65,7 +65,7 @@ export function ConversationsClient({
     setConversations(newConversations);
   }, []);
 
-  const handleDeleteConversation = useCallback((id: string) => {
+  const handleDeleteConversation = useCallback((id: number) => {
     if (selectedId === id) {
       setSelectedId(null);
       setShowInfo(false);

@@ -21,7 +21,7 @@ interface ConversationItemProps {
   conversation: Conversation;
   isSelected: boolean;
   onClick: () => void;
-  onDelete?: (id: string) => void;
+  onDelete?: (id: number) => void;
 }
 
 function getInitials(name: string | null | undefined): string {

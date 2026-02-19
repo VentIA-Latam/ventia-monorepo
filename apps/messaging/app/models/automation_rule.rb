@@ -2,14 +2,14 @@
 #
 # Table name: messaging.automation_rules
 #
-#  id          :uuid             not null, primary key
+#  id          :bigint           not null, primary key
 #  name        :string           not null
 #  description :text
 #  event_name  :integer          not null
 #  conditions  :jsonb            default([])
 #  actions     :jsonb            default([])
 #  active      :boolean          default(TRUE)
-#  account_id  :uuid             not null
+#  account_id  :bigint           not null
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
 #

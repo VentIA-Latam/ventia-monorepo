@@ -2,9 +2,9 @@
 #
 # Table name: messaging.inbox_members
 #
-#  id         :uuid             not null, primary key
-#  inbox_id   :uuid             not null
-#  user_id    :uuid             not null
+#  id         :bigint           not null, primary key
+#  inbox_id   :bigint           not null
+#  user_id    :bigint           not null
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
 #

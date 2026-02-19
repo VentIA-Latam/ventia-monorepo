@@ -2,12 +2,12 @@
 #
 # Table name: messaging.labels
 #
-#  id              :uuid             not null, primary key
+#  id              :bigint           not null, primary key
 #  title           :string           not null
 #  description     :text
 #  color           :string           default("#1f93ff"), not null
 #  show_on_sidebar :boolean          default(TRUE)
-#  account_id      :uuid             not null
+#  account_id      :bigint           not null
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #

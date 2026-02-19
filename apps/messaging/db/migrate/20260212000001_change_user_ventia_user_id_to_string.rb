@@ -1,9 +1,9 @@
 class ChangeUserVentiaUserIdToString < ActiveRecord::Migration[7.2]
   def up
-    change_column :users, :ventia_user_id, :string, null: false
+    # Already handled in initial migration (ventia_user_id is now integer)
   end
 
   def down
-    change_column :users, :ventia_user_id, :uuid, null: false, using: 'ventia_user_id::uuid'
+    # No-op
   end
 end

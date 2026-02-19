@@ -61,7 +61,7 @@ export function ContactInfoPanel({
     async (teamId: string) => {
       setAssigning(true);
       try {
-        await assignConversation(conversation.id, { team_id: teamId });
+        await assignConversation(conversation.id, { team_id: Number(teamId) });
         toast({ title: "Equipo asignado" });
       } catch {
         toast({ title: "Error al asignar equipo", variant: "destructive" });
@@ -196,7 +196,7 @@ export function ContactInfoPanel({
           {/* Team selector */}
           {teams.length > 0 && (
             <Select
-              value={conversation.team?.id ?? ""}
+              value={conversation.team?.id != null ? String(conversation.team.id) : ""}
               onValueChange={handleTeamAssign}
               disabled={assigning}
             >
@@ -205,7 +205,7 @@ export function ContactInfoPanel({
               </SelectTrigger>
               <SelectContent>
                 {teams.map((team) => (
-                  <SelectItem key={team.id} value={team.id}>
+                  <SelectItem key={team.id} value={String(team.id)}>
                     {team.name}
                   </SelectItem>
                 ))}

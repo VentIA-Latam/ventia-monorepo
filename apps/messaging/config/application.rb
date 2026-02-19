@@ -70,7 +70,7 @@ module MessagingService
 
     # Generators
     config.generators do |g|
-      g.orm :active_record, primary_key_type: :uuid
+      g.orm :active_record, primary_key_type: :bigint
       g.test_framework :rspec
       g.factory_bot dir: 'spec/factories'
     end

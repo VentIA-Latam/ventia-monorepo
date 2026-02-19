@@ -1,8 +1,8 @@
 class AddUserManagementAndAssignments < ActiveRecord::Migration[7.2]
   def up
     # Users table (synced from Ventia)
-    create_table :users, id: :uuid do |t|
-      t.uuid :ventia_user_id, null: false
+    create_table :users do |t|
+      t.integer :ventia_user_id, null: false
       t.string :name, null: false
       t.string :email, null: false
       t.string :avatar_url
@@ -17,9 +17,9 @@ class AddUserManagementAndAssignments < ActiveRecord::Migration[7.2]
     add_index :users, :email
 
     # AccountUsers (join table with role/availability)
-    create_table :account_users, id: :uuid do |t|
-      t.uuid :account_id, null: false
-      t.uuid :user_id, null: false
+    create_table :account_users do |t|
+      t.bigint :account_id, null: false
+      t.bigint :user_id, null: false
       t.integer :role, default: 0, null: false
       t.integer :availability, default: 0, null: false
       t.boolean :auto_offline, default: true, null: false
@@ -33,8 +33,8 @@ class AddUserManagementAndAssignments < ActiveRecord::Migration[7.2]
     add_foreign_key :account_users, :users, column: :user_id
 
     # Teams
-    create_table :teams, id: :uuid do |t|
-      t.uuid :account_id, null: false
+    create_table :teams do |t|
+      t.bigint :account_id, null: false
       t.string :name, null: false
       t.text :description
       t.boolean :allow_auto_assign, default: true
@@ -46,9 +46,9 @@ class AddUserManagementAndAssignments < ActiveRecord::Migration[7.2]
     add_foreign_key :teams, :accounts
 
     # TeamMembers
-    create_table :team_members, id: :uuid do |t|
-      t.uuid :team_id, null: false
-      t.uuid :user_id, null: false
+    create_table :team_members do |t|
+      t.bigint :team_id, null: false
+      t.bigint :user_id, null: false
 
       t.timestamps
     end
@@ -58,9 +58,9 @@ class AddUserManagementAndAssignments < ActiveRecord::Migration[7.2]
     add_foreign_key :team_members, :users
 
     # InboxMembers (controls inbox access + round-robin)
-    create_table :inbox_members, id: :uuid do |t|
-      t.uuid :inbox_id, null: false
-      t.uuid :user_id, null: false
+    create_table :inbox_members do |t|
+      t.bigint :inbox_id, null: false
+      t.bigint :user_id, null: false
 
       t.timestamps
     end
@@ -70,10 +70,10 @@ class AddUserManagementAndAssignments < ActiveRecord::Migration[7.2]
     add_foreign_key :inbox_members, :users
 
     # ConversationParticipants
-    create_table :conversation_participants, id: :uuid do |t|
-      t.uuid :account_id, null: false
-      t.uuid :conversation_id, null: false
-      t.uuid :user_id, null: false
+    create_table :conversation_participants do |t|
+      t.bigint :account_id, null: false
+      t.bigint :conversation_id, null: false
+      t.bigint :user_id, null: false
 
       t.timestamps
     end
@@ -84,9 +84,9 @@ class AddUserManagementAndAssignments < ActiveRecord::Migration[7.2]
     add_foreign_key :conversation_participants, :users
 
     # Attachments
-    create_table :attachments, id: :uuid do |t|
-      t.uuid :account_id, null: false
-      t.uuid :message_id, null: false
+    create_table :attachments do |t|
+      t.bigint :account_id, null: false
+      t.bigint :message_id, null: false
       t.integer :file_type, default: 0
       t.string :external_url
       t.string :extension
@@ -103,14 +103,14 @@ class AddUserManagementAndAssignments < ActiveRecord::Migration[7.2]
     add_foreign_key :attachments, :messages
 
     # Notifications
-    create_table :notifications, id: :uuid do |t|
-      t.uuid :account_id, null: false
-      t.uuid :user_id, null: false
+    create_table :notifications do |t|
+      t.bigint :account_id, null: false
+      t.bigint :user_id, null: false
       t.integer :notification_type, null: false
       t.string :primary_actor_type, null: false
-      t.uuid :primary_actor_id, null: false
+      t.bigint :primary_actor_id, null: false
       t.string :secondary_actor_type
-      t.uuid :secondary_actor_id
+      t.bigint :secondary_actor_id
       t.datetime :read_at
       t.datetime :snoozed_until
       t.datetime :last_activity_at
@@ -125,9 +125,9 @@ class AddUserManagementAndAssignments < ActiveRecord::Migration[7.2]
     add_foreign_key :notifications, :users
 
     # NotificationSettings (bitmask flags)
-    create_table :notification_settings, id: :uuid do |t|
-      t.uuid :account_id, null: false
-      t.uuid :user_id, null: false
+    create_table :notification_settings do |t|
+      t.bigint :account_id, null: false
+      t.bigint :user_id, null: false
       t.integer :email_flags, default: 0, null: false
       t.integer :push_flags, default: 0, null: false
 
@@ -139,8 +139,8 @@ class AddUserManagementAndAssignments < ActiveRecord::Migration[7.2]
     add_foreign_key :notification_settings, :users
 
     # CannedResponses
-    create_table :canned_responses, id: :uuid do |t|
-      t.uuid :account_id, null: false
+    create_table :canned_responses do |t|
+      t.bigint :account_id, null: false
       t.string :short_code, null: false
       t.text :content, null: false
 

@@ -2,11 +2,11 @@
 #
 # Table name: messaging.webhooks
 #
-#  id            :uuid             not null, primary key
+#  id            :bigint           not null, primary key
 #  url           :string           not null
 #  subscriptions :jsonb            default([])
-#  account_id    :uuid             not null
-#  inbox_id      :uuid
+#  account_id    :bigint           not null
+#  inbox_id      :bigint
 #  created_at    :datetime         not null
 #  updated_at    :datetime         not null
 #

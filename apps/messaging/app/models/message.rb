@@ -2,21 +2,21 @@
 #
 # Table name: messaging.messages
 #
-#  id                        :uuid             not null, primary key
+#  id                        :bigint           not null, primary key
 #  content                   :text
 #  message_type              :integer          not null
 #  content_type              :integer          default("text")
 #  status                    :integer          default("sent")
 #  private                   :boolean          default(FALSE)
 #  sender_type               :string
-#  sender_id                 :uuid
+#  sender_id                 :bigint
 #  source_id                 :string
 #  content_attributes        :jsonb            default({})
 #  additional_attributes     :jsonb            default({})
 #  processed_message_content :text
-#  account_id                :uuid             not null
-#  inbox_id                  :uuid             not null
-#  conversation_id           :uuid             not null
+#  account_id                :bigint           not null
+#  inbox_id                  :bigint           not null
+#  conversation_id           :bigint           not null
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null
 #

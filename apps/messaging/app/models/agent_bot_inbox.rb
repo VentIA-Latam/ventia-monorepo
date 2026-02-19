@@ -2,9 +2,9 @@
 #
 # Table name: messaging.agent_bot_inboxes
 #
-#  id            :uuid             not null, primary key
-#  inbox_id      :uuid             not null
-#  agent_bot_id  :uuid             not null
+#  id            :bigint           not null, primary key
+#  inbox_id      :bigint           not null
+#  agent_bot_id  :bigint           not null
 #  status        :integer          default("active")
 #  created_at    :datetime         not null
 #  updated_at    :datetime         not null

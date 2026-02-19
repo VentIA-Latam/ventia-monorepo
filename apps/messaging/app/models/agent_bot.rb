@@ -2,12 +2,12 @@
 #
 # Table name: messaging.agent_bots
 #
-#  id          :uuid             not null, primary key
+#  id          :bigint           not null, primary key
 #  name        :string           not null
 #  description :text
 #  bot_type    :integer          default("webhook")
 #  bot_config  :jsonb            default({})
-#  account_id  :uuid             not null
+#  account_id  :bigint           not null
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
 #

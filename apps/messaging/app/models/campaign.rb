@@ -2,7 +2,7 @@
 #
 # Table name: messaging.campaigns
 #
-#  id              :uuid             not null, primary key
+#  id              :bigint           not null, primary key
 #  title           :string           not null
 #  message         :text
 #  campaign_type   :integer          default("one_off")
@@ -11,9 +11,9 @@
 #  audience        :jsonb            default([])
 #  scheduled_at    :datetime
 #  triggered_at    :datetime
-#  account_id      :uuid             not null
-#  inbox_id        :uuid             not null
-#  sender_id       :uuid
+#  account_id      :bigint           not null
+#  inbox_id        :bigint           not null
+#  sender_id       :bigint
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #

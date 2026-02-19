@@ -2,8 +2,8 @@
 #
 # Table name: messaging.canned_responses
 #
-#  id         :uuid             not null, primary key
-#  account_id :uuid             not null
+#  id         :bigint           not null, primary key
+#  account_id :bigint           not null
 #  short_code :string           not null
 #  content    :text             not null
 #  created_at :datetime         not null

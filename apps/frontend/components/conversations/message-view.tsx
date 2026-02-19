@@ -41,7 +41,7 @@ function mapWebSocketSender(raw: unknown): ContactBrief | AgentBrief | null {
   if (!raw || typeof raw !== "object") return null;
   const s = raw as Record<string, unknown>;
   return {
-    id: String(s.id ?? ""),
+    id: Number(s.id ?? 0),
     name: (s.name as string) ?? null,
     ...("phone_number" in s ? { phone_number: (s.phone_number as string) ?? null } : {}),
     ...("email" in s ? { email: (s.email as string) ?? null } : {}),

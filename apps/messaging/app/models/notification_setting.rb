@@ -2,9 +2,9 @@
 #
 # Table name: messaging.notification_settings
 #
-#  id          :uuid             not null, primary key
-#  account_id  :uuid             not null
-#  user_id     :uuid             not null
+#  id          :bigint           not null, primary key
+#  account_id  :bigint           not null
+#  user_id     :bigint           not null
 #  email_flags :integer          default(0), not null
 #  push_flags  :integer          default(0), not null
 #  created_at  :datetime         not null

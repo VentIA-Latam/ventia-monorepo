@@ -1,25 +1,25 @@
 // --- Nested models ---
 
 export interface ContactBrief {
-  id: string;
+  id: number;
   name: string | null;
   phone_number: string | null;
   email: string | null;
 }
 
 export interface AgentBrief {
-  id: string;
+  id: number;
   name: string | null;
   email: string | null;
 }
 
 export interface TeamBrief {
-  id: string;
+  id: number;
   name: string;
 }
 
 export interface AttachmentBrief {
-  id: string;
+  id: string | number;
   file_type: string | null;
   file_url: string | null;
   data_url?: string | null;
@@ -34,7 +34,7 @@ export interface AttachmentBrief {
 // --- Label ---
 
 export interface Label {
-  id: string;
+  id: number;
   title: string;
   color: string;
 }
@@ -45,9 +45,9 @@ export type ConversationStatus = "open" | "resolved" | "pending";
 export type ConversationTemperature = "cold" | "warm" | "hot" | null;
 
 export interface Conversation {
-  id: string;
+  id: number;
   status: ConversationStatus;
-  inbox_id: string | null;
+  inbox_id: number | null;
   contact: ContactBrief | null;
   assignee: AgentBrief | null;
   team: TeamBrief | null;
@@ -71,7 +71,7 @@ export interface ConversationListResponse {
 export type MessageType = "incoming" | "outgoing" | "activity" | "template";
 
 export interface Message {
-  id: string;
+  id: string | number;
   content: string | null;
   message_type: MessageType | null;
   sender: AgentBrief | ContactBrief | null;
@@ -88,7 +88,7 @@ export interface MessageListResponse {
 // --- Inbox ---
 
 export interface Inbox {
-  id: string;
+  id: number;
   name: string | null;
   channel_type: string | null;
 }
@@ -96,7 +96,7 @@ export interface Inbox {
 // --- Canned Response ---
 
 export interface CannedResponse {
-  id: string;
+  id: number;
   short_code: string;
   content: string;
 }
@@ -104,7 +104,7 @@ export interface CannedResponse {
 // --- Team ---
 
 export interface Team {
-  id: string;
+  id: number;
   name: string;
   members_count: number | null;
 }
@@ -125,8 +125,8 @@ export interface SendMessagePayload {
 }
 
 export interface AssignConversationPayload {
-  assignee_id?: string;
-  team_id?: string;
+  assignee_id?: number;
+  team_id?: number;
 }
 
 // --- WhatsApp Connect ---
@@ -141,9 +141,9 @@ export interface WhatsAppConnectParams {
 export interface WhatsAppConnectResponse {
   success: boolean;
   data: {
-    channel_id: string;
+    channel_id: number;
     phone_number: string;
-    inbox_id: string;
+    inbox_id: number;
     inbox_name: string;
   };
   message: string;

@@ -14,11 +14,11 @@ import type { Conversation, ConversationStatus, Label } from "@/lib/types/messag
 
 interface ConversationListProps {
   conversations: Conversation[];
-  selectedId: string | null;
+  selectedId: number | null;
   allLabels: Label[];
-  onSelect: (id: string) => void;
+  onSelect: (id: number) => void;
   onConversationsChange: (conversations: Conversation[]) => void;
-  onDeleteConversation?: (id: string) => void;
+  onDeleteConversation?: (id: number) => void;
 }
 
 type FilterValue = "all" | ConversationStatus;
@@ -96,7 +96,7 @@ export function ConversationList({
   );
 
   const handleDelete = useCallback(
-    async (id: string) => {
+    async (id: number) => {
       try {
         await deleteConversation(id);
         onConversationsChange(conversations.filter((c) => c.id !== id));

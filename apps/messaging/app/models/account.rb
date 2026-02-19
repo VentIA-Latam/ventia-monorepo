@@ -2,13 +2,13 @@
 #
 # Table name: messaging.accounts
 #
-#  id                    :uuid             not null, primary key
+#  id                    :bigint           not null, primary key
 #  name                  :string           not null
 #  locale                :string           default("en")
 #  status                :integer          default("active")
 #  settings              :jsonb            default({})
 #  limits                :jsonb            default({})
-#  ventia_tenant_id      :string           # Reference to ventia.tenants (integer ID as string)
+#  ventia_tenant_id      :integer          # Reference to ventia.tenants
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
 #

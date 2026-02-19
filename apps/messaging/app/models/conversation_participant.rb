@@ -2,10 +2,10 @@
 #
 # Table name: messaging.conversation_participants
 #
-#  id              :uuid             not null, primary key
-#  account_id      :uuid             not null
-#  conversation_id :uuid             not null
-#  user_id         :uuid             not null
+#  id              :bigint           not null, primary key
+#  account_id      :bigint           not null
+#  conversation_id :bigint           not null
+#  user_id         :bigint           not null
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #

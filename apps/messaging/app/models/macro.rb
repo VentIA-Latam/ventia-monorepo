@@ -2,13 +2,13 @@
 #
 # Table name: messaging.macros
 #
-#  id             :uuid             not null, primary key
+#  id             :bigint           not null, primary key
 #  name           :string           not null
 #  visibility     :integer          default("personal")
 #  actions        :jsonb            default([])
-#  account_id     :uuid             not null
-#  created_by_id  :uuid
-#  updated_by_id  :uuid
+#  account_id     :bigint           not null
+#  created_by_id  :bigint
+#  updated_by_id  :bigint
 #  created_at     :datetime         not null
 #  updated_at     :datetime         not null
 #

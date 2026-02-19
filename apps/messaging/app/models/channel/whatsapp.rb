@@ -2,13 +2,13 @@
 #
 # Table name: messaging.channel_whatsapp
 #
-#  id                             :uuid             not null, primary key
+#  id                             :bigint           not null, primary key
 #  phone_number                   :string           not null
 #  provider                       :string           default("whatsapp_cloud")
 #  provider_config                :jsonb            default({})
 #  message_templates              :jsonb            default([])
 #  message_templates_last_updated :datetime
-#  account_id                     :uuid             not null
+#  account_id                     :bigint           not null
 #  created_at                     :datetime         not null
 #  updated_at                     :datetime         not null
 #

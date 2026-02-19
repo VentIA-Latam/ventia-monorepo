@@ -2,11 +2,11 @@
 #
 # Table name: messaging.inboxes
 #
-#  id                            :uuid             not null, primary key
+#  id                            :bigint           not null, primary key
 #  name                          :string           not null
 #  channel_type                  :string           not null
-#  channel_id                    :uuid             not null
-#  account_id                    :uuid             not null
+#  channel_id                    :bigint           not null
+#  account_id                    :bigint           not null
 #  greeting_enabled              :boolean          default(FALSE)
 #  greeting_message              :string
 #  enable_auto_assignment        :boolean          default(TRUE)

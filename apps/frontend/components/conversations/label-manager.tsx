@@ -14,7 +14,7 @@ import { addConversationLabel, removeConversationLabel, createLabel } from "@/li
 import type { Label } from "@/lib/types/messaging";
 
 interface LabelManagerProps {
-  conversationId: string;
+  conversationId: number;
   labels: Label[];
   allLabels: Label[];
   onChange?: (labels: Label[]) => void;
@@ -57,7 +57,7 @@ export function LabelManager({
   );
 
   const handleRemove = useCallback(
-    async (labelId: string) => {
+    async (labelId: number) => {
       const updated = labels.filter((l) => l.id !== labelId);
       onChange?.(updated);
       try {
