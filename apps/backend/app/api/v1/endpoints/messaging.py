@@ -77,7 +77,7 @@ async def sync_user(
     tenant_id = _get_tenant_id(current_user)
 
     user_data = {
-        "ventia_user_id": current_user.auth0_user_id,
+        "ventia_user_id": current_user.id,
         "name": current_user.name or current_user.email,
         "email": current_user.email,
     }
@@ -102,7 +102,7 @@ async def get_ws_token(
 ):
     tenant_id = _get_tenant_id(current_user)
 
-    result = await messaging_service.get_user_token(tenant_id, current_user.auth0_user_id)
+    result = await messaging_service.get_user_token(tenant_id, current_user.id)
     if result is None:
         raise HTTPException(
             status_code=503,
@@ -256,7 +256,7 @@ async def send_message(
         tenant_id,
         conversation_id,
         payload.model_dump(exclude_none=True),
-        user_id=current_user.auth0_user_id,
+        user_id=current_user.id,
     )
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")
@@ -283,7 +283,7 @@ async def send_message_with_attachment(
         conversation_id,
         content=content,
         file=file,
-        user_id=current_user.auth0_user_id,
+        user_id=current_user.id,
     )
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")
@@ -544,7 +544,7 @@ async def list_notifications(
     tenant_id = _get_tenant_id(current_user)
 
     result = await messaging_service.get_notifications(
-        tenant_id, current_user.auth0_user_id
+        tenant_id, current_user.id
     )
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")
