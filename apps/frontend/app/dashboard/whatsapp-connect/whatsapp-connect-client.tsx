@@ -427,39 +427,54 @@ export function WhatsAppConnectClient() {
           </div>
 
           {/* Right: WhatsApp chat illustration */}
-          <div className="hidden md:flex w-[340px] bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/20 dark:to-green-900/10 items-center justify-center p-8 border-l">
-            <div className="w-[220px] rounded-2xl bg-background shadow-lg border overflow-hidden">
-              {/* Phone header */}
-              <div className="bg-green-600 px-4 py-3 flex items-center gap-2">
-                <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
-                  <Smartphone className="h-4 w-4 text-white" />
+          <div className="hidden md:flex w-[380px] items-center justify-center p-8 border-l relative overflow-hidden bg-muted/30 dark:bg-black/20">
+            {/* Decorative blurs */}
+            <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-green-500/10 blur-[80px] pointer-events-none" />
+            <div className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-green-500/5 blur-[60px] pointer-events-none" />
+
+            {/* Phone frame */}
+            <div className="relative w-[230px] rounded-[2.5rem] bg-black border-[6px] border-zinc-800 shadow-2xl overflow-hidden flex flex-col" style={{ aspectRatio: "9/18.5" }}>
+              {/* Notch */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-5 bg-black rounded-b-xl z-20" />
+
+              {/* WhatsApp header */}
+              <div className="bg-[#075e54] pt-7 pb-2 px-3 flex items-center gap-2">
+                <div className="h-7 w-7 rounded-full bg-white/20 flex items-center justify-center">
+                  <Smartphone className="h-3 w-3 text-white" />
                 </div>
-                <div>
-                  <p className="text-xs font-medium text-white">VentIA Bot</p>
-                  <p className="text-[10px] text-green-100">en línea</p>
+                <div className="flex-1">
+                  <p className="text-[10px] font-bold text-white leading-none">Mi Tienda Oficial</p>
+                  <p className="text-[8px] text-white/70 leading-none mt-0.5">en línea</p>
                 </div>
               </div>
-              {/* Chat bubbles */}
-              <div className="p-3 space-y-2 bg-muted/30 min-h-[180px]">
-                <div className="flex justify-start">
-                  <div className="bg-background border rounded-lg rounded-tl-none px-3 py-1.5 max-w-[80%]">
-                    <p className="text-[11px]">Hola, quiero hacer un pedido</p>
-                  </div>
+
+              {/* Chat area */}
+              <div className="flex-1 p-2.5 flex flex-col gap-2 bg-[#0b141a]" style={{ backgroundImage: "radial-gradient(#122017 1px, transparent 1px)", backgroundSize: "16px 16px" }}>
+                <div className="self-start max-w-[85%] bg-[#1f2c33] p-2 rounded-lg rounded-tl-none">
+                  <p className="text-[9px] text-slate-200">Hola! 👋 ¿En qué podemos ayudarte hoy?</p>
+                  <p className="text-[7px] text-slate-500 text-right mt-1">10:42 AM</p>
                 </div>
-                <div className="flex justify-end">
-                  <div className="bg-green-600 text-white rounded-lg rounded-tr-none px-3 py-1.5 max-w-[80%]">
-                    <p className="text-[11px]">¡Hola! Con gusto te ayudo. ¿Qué producto te interesa?</p>
-                  </div>
+                <div className="self-end max-w-[85%] bg-[#005c4b] p-2 rounded-lg rounded-tr-none">
+                  <p className="text-[9px] text-white">Hola, busco información sobre precios.</p>
+                  <p className="text-[7px] text-slate-300 text-right mt-1">10:43 AM</p>
                 </div>
-                <div className="flex justify-start">
-                  <div className="bg-background border rounded-lg rounded-tl-none px-3 py-1.5 max-w-[80%]">
-                    <p className="text-[11px]">El pack de 6 unidades</p>
-                  </div>
+                <div className="self-start max-w-[85%] bg-[#1f2c33] p-2 rounded-lg rounded-tl-none border-l-2 border-green-500">
+                  <p className="text-[9px] text-slate-200"><span className="font-bold text-green-400 italic">IA:</span> ¡Claro! Nuestros planes comienzan desde...</p>
+                  <p className="text-[7px] text-slate-500 text-right mt-1">10:43 AM</p>
                 </div>
-                <div className="flex justify-end">
-                  <div className="bg-green-600 text-white rounded-lg rounded-tr-none px-3 py-1.5 max-w-[80%]">
-                    <p className="text-[11px]">Perfecto, te envío el link de pago 🛒</p>
-                  </div>
+                <div className="self-end max-w-[85%] bg-[#005c4b] p-2 rounded-lg rounded-tr-none">
+                  <p className="text-[9px] text-white">¡Genial! Quiero el pack de 6 🛒</p>
+                  <p className="text-[7px] text-slate-300 text-right mt-1">10:44 AM</p>
+                </div>
+              </div>
+
+              {/* Chat input */}
+              <div className="p-2 bg-[#1f2c33] flex items-center gap-1.5">
+                <div className="flex-1 bg-[#2a3942] rounded-full h-6 px-3 flex items-center">
+                  <p className="text-[8px] text-slate-400 italic">Escribe un mensaje...</p>
+                </div>
+                <div className="w-6 h-6 rounded-full bg-[#00a884] flex items-center justify-center">
+                  <MessageSquare className="h-3 w-3 text-white" />
                 </div>
               </div>
             </div>
