@@ -4,7 +4,68 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-VentIA is a multitenant SaaS platform for managing ecommerce orders (Shopify & WooCommerce) with electronic invoicing integration (Peru/SUNAT). The monorepo contains a Next.js frontend and FastAPI backend.
+VentIA is a multitenant SaaS platform for managing ecommerce orders (Shopify & WooCommerce) with electronic invoicing integration (Peru/SUNAT). The monorepo contains a Next.js frontend, FastAPI backend, and Rails messaging app.
+
+## Workflow Preferences
+
+- **Feature-first approach**: User describes features (not code changes). Launch sub-agents to analyze the codebase, then create a plan before implementing.
+- **Always use plan mode** for non-trivial features via `EnterPlanMode`.
+- **Language**: Respond in Spanish unless code/docs require English.
+
+### Skills (apply automatically based on task)
+| Skill | When to use |
+|-------|-------------|
+| `brainstorming` | **ALWAYS before any new feature or creative work**. Explore intent, requirements, and design before implementing. |
+| `frontend-design` | Creating or modifying UI components, pages, layouts, or any visual element. |
+| `interface-design` | Building dashboards, admin panels, forms, tables, or interactive tools (NOT marketing/landing pages). |
+| `vercel-react-best-practices` | Writing, reviewing, or refactoring ANY React/Next.js code. Apply performance patterns automatically. |
+
+**Important**: These skills must be invoked proactively — do NOT wait for the user to mention them. If the task matches the "When to use" column, apply the skill.
+
+## Code Conventions
+
+### General
+- **pnpm** only (never npm/yarn) for frontend and root commands
+- **uv** for backend Python package management
+- Commit messages reference user stories when applicable (e.g., `US-001: ...`)
+
+### Frontend (TypeScript / Next.js / React)
+- **File naming**: kebab-case (`orders-table.tsx`, `use-auth.tsx`)
+- **Components**: PascalCase exports, functional components only
+- **Client components**: Split into `-client.tsx` suffix (e.g., `orders-client.tsx` for interactivity, server component for data fetching)
+- **Imports**: Use `@/` alias. Order: React → Next.js → UI components → hooks → utils
+- **Styling**: Tailwind CSS v4 with project tokens (volt, aqua, cielo, marino, noche). Use `cn()` utility for class merging
+- **UI components**: shadcn/ui with `cva` for variants
+- **Types**: Use `interface` (not `type`) for objects. Located in `lib/types/` grouped by domain
+- **API calls**: Service functions in `lib/services/` that take `accessToken` as first param
+- **Error handling**: try-catch with toast notifications via `useToast()`
+
+### Backend (Python / FastAPI)
+- **File naming**: snake_case (`order_service.py`)
+- **Layered architecture**: endpoint (thin) → service (business logic) → repository (data access)
+- **Services**: Class-based with module-level singleton instances (e.g., `order_service = OrderService()`)
+- **Repositories**: Extend `CRUDBase[Model, CreateSchema, UpdateSchema]` generic base
+- **Schemas**: Pydantic with `Field(description=...)`, `ConfigDict(from_attributes=True)` for responses
+- **Models**: Inherit `Base, TimestampMixin`. All business tables have `tenant_id` FK indexed with `ondelete="CASCADE"`
+- **Auth**: Dual auth via `get_current_user_or_api_key` (JWT + API Key)
+- **Permissions**: `require_permission_dual(method, path_pattern)` dependency
+- **SUPERADMIN pattern**: `if role == SUPERADMIN: get_all() else: get_by_tenant(tenant_id)`
+- **Logging**: `logger = logging.getLogger(__name__)` with structured context (`order_id=, tenant_id=, platform=`)
+- **Error mapping**: ValueError → 400, PermissionError → 403, not found → 404, catch-all → 500
+
+### Messaging App (Ruby / Rails)
+- **Controllers**: Inherit `Api::V1::BaseController`, use `before_action` for setup
+- **Services**: Class-based with `perform` method, constructor injection
+- **Queries**: Method chaining with `.includes()`, `.where()`, conditional filters
+- **Response format**: `{ success: true, data: ..., meta: ... }`
+- **Events**: Wisper for pub/sub event system
+
+### Testing (Backend)
+- **Framework**: pytest with `unittest.mock`
+- **File naming**: `test_*.py`, classes `Test[Feature][Scenario]`, methods `test_[feature]_[scenario]_[expectation]`
+- **Fixtures**: In `conftest.py` for shared setup (mock_db, mock_tenant, mock_order)
+- **Mocking**: `patch()` for service dependencies, `MagicMock(spec=Model)` for type safety
+- **Docstrings**: Reference user stories (`US-001: ...`)
 
 ## Commands
 

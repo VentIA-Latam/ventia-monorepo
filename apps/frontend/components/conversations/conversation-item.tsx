@@ -14,7 +14,19 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { Trash2, Snowflake, Thermometer, Flame } from "lucide-react";
+import {
+  Trash2,
+  Snowflake,
+  Thermometer,
+  Flame,
+  Check,
+  Image,
+  Mic,
+  Video,
+  FileText,
+  MapPin,
+  Paperclip,
+} from "lucide-react";
 import type { Conversation } from "@/lib/types/messaging";
 
 interface ConversationItemProps {
@@ -65,6 +77,55 @@ function getWhatsAppTime(dateStr: string | number | null): string {
   return date.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
+const ATTACHMENT_ICONS: Record<string, { icon: typeof Image; label: string }> = {
+  image: { icon: Image, label: "Foto" },
+  audio: { icon: Mic, label: "Audio" },
+  video: { icon: Video, label: "Video" },
+  file: { icon: FileText, label: "Archivo" },
+  document: { icon: FileText, label: "Documento" },
+  location: { icon: MapPin, label: "Ubicación" },
+};
+
+function getMessagePreview(conversation: Conversation): React.ReactNode {
+  const { last_message, contact } = conversation;
+
+  if (!last_message) {
+    return contact?.phone_number || contact?.email || "";
+  }
+
+  // Attachment message
+  if (last_message.attachment_type) {
+    const attachment = ATTACHMENT_ICONS[last_message.attachment_type] || {
+      icon: Paperclip,
+      label: "Adjunto",
+    };
+    const AttachmentIcon = attachment.icon;
+    return (
+      <span className="inline-flex items-center gap-1">
+        {last_message.message_type === "outgoing" && (
+          <Check className="h-3 w-3 shrink-0 text-muted-foreground" />
+        )}
+        <AttachmentIcon className="h-3 w-3 shrink-0" />
+        <span>{attachment.label}</span>
+      </span>
+    );
+  }
+
+  // Text message
+  if (last_message.content) {
+    return (
+      <span className="inline-flex items-center gap-1 min-w-0">
+        {last_message.message_type === "outgoing" && (
+          <Check className="h-3 w-3 shrink-0 text-muted-foreground" />
+        )}
+        <span className="truncate">{last_message.content}</span>
+      </span>
+    );
+  }
+
+  return contact?.phone_number || contact?.email || "";
+}
+
 export const ConversationItem = memo(function ConversationItem({
   conversation,
   isSelected,
@@ -73,6 +134,8 @@ export const ConversationItem = memo(function ConversationItem({
 }: ConversationItemProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const contact = conversation.contact;
+  const unreadCount = conversation.unread_count ?? 0;
+  const hasUnread = unreadCount > 0;
 
   return (
     <>
@@ -93,17 +156,32 @@ export const ConversationItem = memo(function ConversationItem({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[15px] font-medium truncate">
+            <p
+              className={cn(
+                "text-[15px] truncate",
+                hasUnread ? "font-semibold" : "font-medium"
+              )}
+            >
               {contact?.name || contact?.phone_number || "Sin nombre"}
             </p>
-            <span className="text-xs text-muted-foreground shrink-0">
+            <span
+              className={cn(
+                "text-xs shrink-0",
+                hasUnread ? "text-primary font-medium" : "text-muted-foreground"
+              )}
+            >
               {getWhatsAppTime(conversation.last_message_at)}
             </span>
           </div>
           <div className="flex items-center justify-between gap-2 mt-0.5">
             <div className="flex items-center gap-1.5 min-w-0">
-              <p className="text-[13px] text-muted-foreground truncate">
-                {contact?.phone_number || contact?.email || ""}
+              <p
+                className={cn(
+                  "text-[13px] truncate",
+                  hasUnread ? "text-foreground font-medium" : "text-muted-foreground"
+                )}
+              >
+                {getMessagePreview(conversation)}
               </p>
             </div>
             <div className="flex items-center gap-1 shrink-0">
@@ -120,6 +198,12 @@ export const ConversationItem = memo(function ConversationItem({
                   title={label.title}
                 />
               ))}
+              {/* Unread badge */}
+              {hasUnread && (
+                <span className="ml-0.5 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-semibold leading-none">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </div>
           </div>
         </div>

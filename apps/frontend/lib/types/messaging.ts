@@ -44,6 +44,13 @@ export interface Label {
 export type ConversationStatus = "open" | "resolved" | "pending";
 export type ConversationTemperature = "cold" | "warm" | "hot" | null;
 
+export interface LastMessageBrief {
+  content: string | null;
+  message_type: MessageType | null;
+  attachment_type: string | null;
+  created_at: string | number | null;
+}
+
 export interface Conversation {
   id: number;
   status: ConversationStatus;
@@ -56,7 +63,9 @@ export interface Conversation {
   temperature: ConversationTemperature;
   labels: Label[];
   messages_count: number | null;
+  unread_count: number | null;
   last_message_at: string | number | null;
+  last_message: LastMessageBrief | null;
   created_at: string | number | null;
 }
 

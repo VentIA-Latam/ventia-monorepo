@@ -3,7 +3,7 @@ class Api::V1::ConversationsController < Api::V1::BaseController
 
   def index
     conversations = current_account.conversations
-                                   .includes(:contact, :inbox, :labels)
+                                   .includes(:contact, :inbox, :labels, messages: :attachments)
                                    .recent
                                    .page(params[:page] || 1)
                                    .per(params[:per_page] || 25)
@@ -76,6 +76,8 @@ class Api::V1::ConversationsController < Api::V1::BaseController
   end
 
   def conversation_json(conversation)
+    last_msg = conversation.messages.where.not(message_type: :activity).order(created_at: :desc).first
+
     {
       id: conversation.id,
       uuid: conversation.uuid,
@@ -97,7 +99,13 @@ class Api::V1::ConversationsController < Api::V1::BaseController
       labels: conversation.labels.map { |l| { id: l.id, title: l.title, color: l.color } },
       ai_agent_enabled: conversation.ai_agent_enabled,
       messages_count: conversation.messages.count,
-      unread_count: conversation.unread_messages.count
+      unread_count: conversation.unread_messages.count,
+      last_message: last_msg ? {
+        content: last_msg.content&.truncate(100),
+        message_type: last_msg.message_type,
+        attachment_type: last_msg.attachments.any? ? last_msg.attachments.first.file_type : nil,
+        created_at: last_msg.created_at
+      } : nil
     }
   end
 end
