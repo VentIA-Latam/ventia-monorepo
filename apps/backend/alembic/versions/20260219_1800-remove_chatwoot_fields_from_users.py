@@ -3,7 +3,7 @@
 These fields are no longer needed because user provisioning to the
 messaging service is now automatic (sync_user called on user creation).
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: f1e2d3c4b5a6
 Revises: 7fbd9b64d81b
 Create Date: 2026-02-19 18:00:00.000000
 
@@ -15,7 +15,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'a1b2c3d4e5f6'
+revision: str = 'f1e2d3c4b5a6'
 down_revision: Union[str, None] = '7fbd9b64d81b'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
