@@ -23,7 +23,6 @@ const PAGE_META: Record<string, { title: string; breadcrumb: string[] }> = {
   '/invoices': { title: 'Facturación', breadcrumb: ['Facturación'] },
   '/orders': { title: 'Pedidos', breadcrumb: ['Pedidos'] },
   '/settings/api-keys': { title: 'Credenciales (API Key)', breadcrumb: ['Configuración', 'API Keys'] },
-  '/chatwoot': { title: 'Chatwoot', breadcrumb: ['Chatwoot'] },
 }
 
 function getPageMeta(pathname: string) {

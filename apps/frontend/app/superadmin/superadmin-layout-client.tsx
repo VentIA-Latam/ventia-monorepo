@@ -24,7 +24,6 @@ export default function SuperAdminLayoutClient({
     if (pathname.match(/\/orders\/\d+/)) return 'Detalle de Pedido';
     if (pathname === '/superadmin/orders') return 'Pedidos';
     if (pathname.includes('/settings/api-keys')) return 'Credenciales (API Key)';
-    if (pathname.includes('/chatwoot')) return 'Chatwoot';
     return 'SuperAdmin';
   };
 

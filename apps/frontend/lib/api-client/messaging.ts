@@ -124,6 +124,12 @@ export async function removeConversationLabel(conversationId: number | string, l
   return apiDelete(`/api/messaging/conversations/${conversationId}/labels/${labelId}`);
 }
 
+// --- User sync ---
+
+export async function syncUser(): Promise<unknown> {
+  return apiPost("/api/messaging/users/sync");
+}
+
 // --- WhatsApp ---
 
 export async function connectWhatsApp(

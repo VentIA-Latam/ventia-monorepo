@@ -9,7 +9,7 @@ import {
   useRef,
 } from "react";
 import { useActionCable, type ConnectionStatus, type ActionCableEvent } from "@/hooks/use-action-cable";
-import { getWsToken } from "@/lib/api-client/messaging";
+import { getWsToken, syncUser } from "@/lib/api-client/messaging";
 
 interface MessagingContextValue {
   connectionStatus: ConnectionStatus;
@@ -39,19 +39,28 @@ export function MessagingProvider({ children }: MessagingProviderProps) {
   } | null>(null);
   const [lastEvent, setLastEvent] = useState<ActionCableEvent | null>(null);
 
-  // Fetch WS token on mount
+  // Fetch WS token on mount — lazy sync if user not yet provisioned
   useEffect(() => {
     let cancelled = false;
-    getWsToken()
-      .then((data) => {
+
+    async function fetchToken() {
+      try {
+        const data = await getWsToken();
         if (!cancelled) setToken(data);
-      })
-      .catch((err) => {
-        console.error("Error getting WS token:", err);
-      });
-    return () => {
-      cancelled = true;
-    };
+      } catch {
+        // Token fetch failed — attempt lazy sync then retry once
+        try {
+          await syncUser();
+          const data = await getWsToken();
+          if (!cancelled) setToken(data);
+        } catch (retryErr) {
+          console.error("Error getting WS token after sync:", retryErr);
+        }
+      }
+    }
+
+    fetchToken();
+    return () => { cancelled = true; };
   }, []);
 
   const handleEvent = useCallback((event: ActionCableEvent) => {

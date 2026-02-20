@@ -11,6 +11,7 @@ from app.models.user import User
 from app.repositories.tenant import tenant_repository
 from app.repositories.user import user_repository
 from app.schemas.user import UserCreate, UserUpdate, UsersListResponse
+from app.services.messaging_service import messaging_service
 
 logger = logging.getLogger(__name__)
 
@@ -217,6 +218,20 @@ class UserService:
             logger.error(f"Failed to create user in database: {str(e)}")
             # TODO: Consider rollback - delete Auth0 user if DB creation fails
             raise ValueError(f"Failed to create user in database: {str(e)}")
+
+        # === SYNC USER TO MESSAGING SERVICE (non-blocking) ===
+        try:
+            await messaging_service.sync_user(
+                tenant_id=user.tenant_id,
+                user_data={
+                    "ventia_user_id": user.id,
+                    "name": user.name or user.email,
+                    "email": user.email,
+                }
+            )
+            logger.info(f"Synced user {user.id} to messaging service")
+        except Exception as e:
+            logger.warning(f"Failed to sync user {user.id} to messaging: {e}")
 
         # === SEND INVITATION EMAIL ===
         try:
