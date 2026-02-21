@@ -18,7 +18,7 @@ import { ArrowLeft, MessageSquare, Loader2, Bot, AlertTriangle, MoreVertical, Us
 import { MessageBubble } from "./message-bubble";
 import { MessageComposer } from "./message-composer";
 import { useMessaging } from "./messaging-provider";
-import { getMessages, sendMessage, updateConversation } from "@/lib/api-client/messaging";
+import { getMessages, sendMessage, updateConversation, markConversationRead } from "@/lib/api-client/messaging";
 import type { Conversation, Message, MessageType, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
 
 function mapWebSocketAttachments(raw: unknown): AttachmentBrief[] {
@@ -107,6 +107,9 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         console.error("Error loading messages:", err);
         if (!cancelled) setLoading(false);
       });
+
+    // Mark as read (fire-and-forget, non-blocking)
+    markConversationRead(conversation.id).catch(() => {});
 
     return () => {
       cancelled = true;

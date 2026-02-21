@@ -45,6 +45,11 @@ class ActionCableListener < BaseListener
     broadcast_to_account(conversation.account, 'conversation.status_changed', conversation.webhook_data)
   end
 
+  def conversation_read(event)
+    conversation = event[:data][:conversation]
+    broadcast_to_account(conversation.account, 'conversation.read', conversation.webhook_data)
+  end
+
   def assignee_changed(event)
     conversation = event[:data][:conversation]
     broadcast_to_account(conversation.account, 'conversation.assignee_changed', conversation.webhook_data)

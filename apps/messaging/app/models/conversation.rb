@@ -116,7 +116,11 @@ class Conversation < ApplicationRecord
   end
 
   def unread_messages
-    messages.unread
+    if agent_last_seen_at.present?
+      messages.incoming.where('created_at > ?', agent_last_seen_at)
+    else
+      messages.incoming
+    end
   end
 
   def can_reply?

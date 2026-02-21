@@ -53,6 +53,7 @@ Rails.application.routes.draw do
       resources :conversations, only: [:index, :show, :update, :destroy] do
         member do
           post :toggle_status
+          post :update_last_seen
           post :assign_agent
           post :assign_team
           patch :assign, controller: 'conversation_assignments'

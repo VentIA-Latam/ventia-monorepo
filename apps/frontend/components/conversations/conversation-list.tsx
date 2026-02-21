@@ -116,7 +116,8 @@ export function ConversationList({
       event === "message.created" ||
       event === "conversation.created" ||
       event === "conversation.updated" ||
-      event === "conversation.status_changed"
+      event === "conversation.status_changed" ||
+      event === "conversation.read"
     ) {
       const params = buildParams(statusFilterRef.current, activeFiltersRef.current);
       getConversations(params)

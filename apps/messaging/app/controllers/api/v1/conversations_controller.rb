@@ -1,5 +1,5 @@
 class Api::V1::ConversationsController < Api::V1::BaseController
-  before_action :set_conversation, only: [:show, :update, :toggle_status, :destroy]
+  before_action :set_conversation, only: [:show, :update, :toggle_status, :update_last_seen, :destroy]
 
   def index
     conversations = current_account.conversations
@@ -27,9 +27,11 @@ class Api::V1::ConversationsController < Api::V1::BaseController
       conversations = conversations.in_date_range(from, to)
     end
 
-    # Filter unread only
+    # Filter unread only (timestamp-based: incoming messages after agent_last_seen_at)
     if params[:unread] == 'true'
-      conversations = conversations.joins(:messages).where(messages: { status: :unread }).distinct
+      conversations = conversations.where(
+        "agent_last_seen_at IS NULL OR agent_last_seen_at < (SELECT MAX(created_at) FROM messages WHERE messages.conversation_id = conversations.id AND messages.message_type = 0)"
+      )
     end
 
     render json: {
@@ -65,6 +67,22 @@ class Api::V1::ConversationsController < Api::V1::BaseController
     )
   end
 
+  def update_last_seen
+    @conversation.update_columns(agent_last_seen_at: Time.current)
+
+    # Broadcast via ActionCable so other agents see unread_count drop
+    ActionCableBroadcastJob.perform_later(
+      ["account_#{current_account.id}"],
+      'conversation.read',
+      @conversation.reload.webhook_data.merge(
+        agent_last_seen_at: @conversation.agent_last_seen_at.to_i,
+        unread_count: @conversation.unread_messages.count
+      )
+    )
+
+    render_success(conversation_json(@conversation))
+  end
+
   private
 
   def set_conversation
@@ -86,6 +104,7 @@ class Api::V1::ConversationsController < Api::V1::BaseController
       temperature: conversation.temperature,
       can_reply: conversation.can_reply?,
       last_activity_at: conversation.last_activity_at,
+      agent_last_seen_at: conversation.agent_last_seen_at,
       last_message_at: conversation.messages.maximum(:created_at),
       contact: {
         id: conversation.contact.id,

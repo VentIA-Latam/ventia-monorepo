@@ -135,6 +135,14 @@ class MessagingService:
             json_data={"conversation": payload},
         )
 
+    async def update_last_seen(
+        self, tenant_id: int, conversation_id: str
+    ) -> Optional[dict]:
+        """Mark conversation as read (update agent_last_seen_at)."""
+        return await self._request(
+            "POST", f"/api/v1/conversations/{conversation_id}/update_last_seen", tenant_id
+        )
+
     async def delete_conversation(
         self, tenant_id: int, conversation_id: str
     ) -> Optional[dict]:

@@ -44,6 +44,10 @@ export async function deleteConversation(id: number | string): Promise<unknown> 
   return apiDelete(`/api/messaging/conversations/${id}`);
 }
 
+export async function markConversationRead(conversationId: number | string): Promise<unknown> {
+  return apiPost(`/api/messaging/conversations/${conversationId}/read`);
+}
+
 export async function getMessages(
   conversationId: number | string,
   page?: number

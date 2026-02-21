@@ -195,6 +195,25 @@ async def update_conversation(
     return result
 
 
+@router.post(
+    "/conversations/{conversation_id}/update_last_seen",
+    summary="Mark conversation as read",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def update_last_seen(
+    conversation_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    tenant_id = _get_tenant_id(current_user)
+
+    result = await messaging_service.update_last_seen(tenant_id, conversation_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
 @router.delete(
     "/conversations/{conversation_id}",
     summary="Delete a conversation",

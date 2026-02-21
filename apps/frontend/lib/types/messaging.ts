@@ -64,6 +64,7 @@ export interface Conversation {
   labels: Label[];
   messages_count: number | null;
   unread_count: number | null;
+  agent_last_seen_at: string | number | null;
   last_message_at: string | number | null;
   last_message: LastMessageBrief | null;
   created_at: string | number | null;
