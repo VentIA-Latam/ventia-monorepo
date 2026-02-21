@@ -173,7 +173,9 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
 
     // Re-mark as read so incoming messages don't show unread badge while viewing
     if (msgType === "incoming") {
-      markConversationRead(conversation.id).catch(() => {});
+      markConversationRead(conversation.id).catch((err) =>
+        console.error("[mark-read] Re-mark failed:", err)
+      );
     }
   }, [lastEvent, conversation?.id]);
 

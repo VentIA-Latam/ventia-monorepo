@@ -165,6 +165,7 @@ export const ConversationItem = memo(function ConversationItem({
               {contact?.name || contact?.phone_number || "Sin nombre"}
             </p>
             <span
+              suppressHydrationWarning
               className={cn(
                 "text-xs shrink-0",
                 hasUnread ? "text-primary font-medium" : "text-muted-foreground"

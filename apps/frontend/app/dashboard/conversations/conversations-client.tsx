@@ -46,6 +46,10 @@ export function ConversationsClient({
   const handleSelect = useCallback((id: number) => {
     setSelectedId(id);
     setShowInfo(false);
+    // Optimistic: clear unread badge immediately
+    setConversations((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, unread_count: 0 } : c))
+    );
   }, []);
 
   const handleBack = useCallback(() => {
