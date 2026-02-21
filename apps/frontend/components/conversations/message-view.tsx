@@ -170,6 +170,11 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
     });
 
     scrollBehaviorRef.current = "smooth";
+
+    // Re-mark as read so incoming messages don't show unread badge while viewing
+    if (msgType === "incoming") {
+      markConversationRead(conversation.id).catch(() => {});
+    }
   }, [lastEvent, conversation?.id]);
 
   // Scroll to bottom after DOM commits
