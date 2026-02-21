@@ -108,8 +108,10 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         if (!cancelled) setLoading(false);
       });
 
-    // Mark as read (fire-and-forget, non-blocking)
-    markConversationRead(conversation.id).catch(() => {});
+    // Mark as read (non-blocking, with logging for diagnostics)
+    markConversationRead(conversation.id)
+      .then(() => console.log(`[mark-read] Conversation ${conversation.id} marked as read`))
+      .catch((err) => console.error(`[mark-read] FAILED for conversation ${conversation.id}:`, err));
 
     return () => {
       cancelled = true;
