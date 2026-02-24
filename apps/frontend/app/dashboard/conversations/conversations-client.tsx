@@ -86,9 +86,9 @@ export function ConversationsClient({
   if (isMobile) {
     return (
       <MessagingProvider>
-      <div className="h-[calc(100vh-4rem)]">
+      <div className="h-full">
         {selectedId === null ? (
-          <div className="h-full rounded-lg border overflow-hidden">
+          <div className="h-full overflow-hidden">
             <ConversationList
               conversations={conversations}
               selectedId={selectedId}
@@ -99,7 +99,7 @@ export function ConversationsClient({
             />
           </div>
         ) : (
-          <div className="h-full rounded-lg border overflow-hidden">
+          <div className="h-full overflow-hidden">
             <MessageView
               conversation={selectedConversation}
               onBack={handleBack}
@@ -135,7 +135,7 @@ export function ConversationsClient({
   // Desktop layout: 3 panels
   return (
     <MessagingProvider>
-    <div className="flex h-[calc(100vh-4rem)] rounded-lg border overflow-hidden">
+    <div className="flex h-full overflow-hidden border-t border-border/30">
       {/* Conversation list */}
       <div className="w-[400px] border-r shrink-0">
         <ConversationList
