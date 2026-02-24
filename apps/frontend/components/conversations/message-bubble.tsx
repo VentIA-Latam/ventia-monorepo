@@ -106,7 +106,7 @@ export const MessageBubble = memo(function MessageBubble({
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const closeLightbox = useCallback(() => setLightboxSrc(null), []);
 
-  const isOutgoing = message.message_type === "outgoing";
+  const isOutgoing = message.message_type === "outgoing" || message.message_type === "template";
   const isActivity = message.message_type === "activity";
 
   if (isActivity) {
