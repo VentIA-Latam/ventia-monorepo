@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, MessageSquare, Loader2, Bot, AlertTriangle, MoreVertical, User, Search, FileText } from "lucide-react";
+import { ArrowLeft, MessageSquare, Loader2, Bot, AlertTriangle, MoreVertical, User, Search } from "lucide-react";
 import { MessageBubble } from "./message-bubble";
 import { MessageComposer } from "./message-composer";
 import { TemplatePicker } from "./template-picker";
@@ -460,22 +460,11 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         </div>
       </div>
 
-      {/* 24-hour window warning + template CTA */}
+      {/* 24-hour window warning */}
       {conversation.can_reply === false && (
         <div className="flex items-center gap-2 px-4 py-2.5 bg-warning-bg border-t border-warning/30 text-warning text-sm">
           <AlertTriangle className="h-4 w-4 shrink-0" />
-          <p className="flex-1">La ventana de 24 horas ha expirado. Envía una plantilla para reabrir la conversación.</p>
-          {conversation.inbox?.channel_type === "Channel::Whatsapp" && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="shrink-0 text-xs border-warning/40 text-warning hover:bg-warning/10"
-              onClick={() => setShowTemplatePicker(true)}
-            >
-              <FileText className="h-3.5 w-3.5 mr-1.5" />
-              Enviar plantilla
-            </Button>
-          )}
+          <p className="flex-1">La ventana de 24 horas ha expirado. Solo puedes enviar plantillas de WhatsApp.</p>
         </div>
       )}
 
