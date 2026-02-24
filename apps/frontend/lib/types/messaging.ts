@@ -51,10 +51,17 @@ export interface LastMessageBrief {
   created_at: string | number | null;
 }
 
+export interface InboxBrief {
+  id: number;
+  name: string | null;
+  channel_type: string | null;
+}
+
 export interface Conversation {
   id: number;
   status: ConversationStatus;
   inbox_id: number | null;
+  inbox: InboxBrief | null;
   contact: ContactBrief | null;
   assignee: AgentBrief | null;
   team: TeamBrief | null;
@@ -137,6 +144,45 @@ export interface SendMessagePayload {
 export interface AssignConversationPayload {
   assignee_id?: number;
   team_id?: number;
+}
+
+// --- WhatsApp Templates ---
+
+export interface WhatsAppTemplateButton {
+  type: "URL" | "PHONE_NUMBER" | "QUICK_REPLY" | "COPY_CODE";
+  text: string;
+  url?: string;
+  phone_number?: string;
+}
+
+export interface WhatsAppTemplateComponent {
+  type: "HEADER" | "BODY" | "FOOTER" | "BUTTONS";
+  format?: "TEXT" | "IMAGE" | "VIDEO" | "DOCUMENT";
+  text?: string;
+  buttons?: WhatsAppTemplateButton[];
+}
+
+export interface WhatsAppTemplate {
+  id: string;
+  name: string;
+  language: string;
+  status: string;
+  category: string;
+  namespace?: string;
+  parameter_format?: string;
+  components: WhatsAppTemplateComponent[];
+}
+
+export interface TemplateParams {
+  name: string;
+  namespace?: string;
+  language: string;
+  processed_params: Record<string, unknown>;
+}
+
+export interface SendTemplatePayload {
+  content: string;
+  template_params: TemplateParams;
 }
 
 // --- WhatsApp Connect ---

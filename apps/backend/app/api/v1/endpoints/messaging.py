@@ -14,6 +14,7 @@ from app.schemas.messaging import (
     ManualWhatsAppRequest,
     MessagingError,
     SendMessageRequest,
+    SendTemplateMessageRequest,
     UserSyncRequest,
     WebSocketTokenResponse,
     WhatsAppConnectRequest,
@@ -367,6 +368,76 @@ async def list_inboxes(
     tenant_id = _get_tenant_id(current_user)
 
     result = await messaging_service.get_inboxes(tenant_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.get(
+    "/inboxes/{inbox_id}/templates",
+    summary="Get WhatsApp templates for an inbox",
+    tags=["messaging", "whatsapp"],
+    responses={503: {"model": MessagingError}},
+)
+async def get_inbox_templates(
+    inbox_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    tenant_id = _get_tenant_id(current_user)
+
+    result = await messaging_service.get_inbox_templates(tenant_id, inbox_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/inboxes/{inbox_id}/sync_templates",
+    summary="Sync WhatsApp templates from Meta for an inbox",
+    tags=["messaging", "whatsapp"],
+    responses={503: {"model": MessagingError}},
+)
+async def sync_inbox_templates(
+    inbox_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    tenant_id = _get_tenant_id(current_user)
+
+    result = await messaging_service.sync_inbox_templates(tenant_id, inbox_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+# --- Template Messages ---
+
+@router.post(
+    "/conversations/{conversation_id}/messages/template",
+    summary="Send a template message",
+    tags=["messaging", "whatsapp"],
+    responses={503: {"model": MessagingError}},
+)
+async def send_template_message(
+    conversation_id: str,
+    payload: SendTemplateMessageRequest,
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _get_tenant_id(current_user)
+
+    message_data = {
+        "content": payload.content,
+        "template_params": payload.template_params.model_dump(exclude_none=True),
+    }
+
+    result = await messaging_service.send_message(
+        tenant_id,
+        conversation_id,
+        message_data,
+        user_id=current_user.id,
+    )
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")
 

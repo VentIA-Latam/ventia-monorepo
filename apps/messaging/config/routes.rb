@@ -35,6 +35,11 @@ Rails.application.routes.draw do
 
       # Inboxes
       resources :inboxes, only: [:index, :show, :create, :update, :destroy] do
+        member do
+          get :templates
+          post :sync_templates
+        end
+
         # Inbox members (agent access control)
         resources :members, controller: 'inbox_members', only: [:index, :create, :destroy]
 

@@ -116,6 +116,18 @@ class SendMessageRequest(BaseModel):
     content_type: Optional[str] = None
 
 
+class TemplateParamsRequest(BaseModel):
+    name: str
+    namespace: Optional[str] = None
+    language: str
+    processed_params: Optional[dict] = None
+
+
+class SendTemplateMessageRequest(BaseModel):
+    content: str
+    template_params: TemplateParamsRequest
+
+
 class AssignConversationRequest(BaseModel):
     assignee_id: Optional[str] = None
     team_id: Optional[str] = None

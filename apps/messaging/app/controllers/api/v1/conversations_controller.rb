@@ -111,9 +111,11 @@ class Api::V1::ConversationsController < Api::V1::BaseController
         name: conversation.contact.name,
         phone_number: conversation.contact.phone_number
       },
+      inbox_id: conversation.inbox_id,
       inbox: {
         id: conversation.inbox.id,
-        name: conversation.inbox.name
+        name: conversation.inbox.name,
+        channel_type: conversation.inbox.channel_type
       },
       labels: conversation.labels.map { |l| { id: l.id, title: l.title, color: l.color } },
       ai_agent_enabled: conversation.ai_agent_enabled,

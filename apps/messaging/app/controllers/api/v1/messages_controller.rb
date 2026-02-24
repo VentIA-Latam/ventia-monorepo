@@ -19,7 +19,18 @@ class Api::V1::MessagesController < Api::V1::BaseController
     message = @conversation.messages.new(message_params)
     message.account = current_account
     message.inbox = @conversation.inbox
-    message.message_type = :outgoing
+
+    # Template message: set type and store template_params in additional_attributes
+    if params.dig(:message, :template_params).present?
+      message.message_type = :template
+      permitted_template_params = params.require(:message).require(:template_params).permit(
+        :name, :namespace, :language,
+        processed_params: {}
+      )
+      message.additional_attributes = { 'template_params' => permitted_template_params.to_h }
+    else
+      message.message_type = :outgoing
+    end
 
     uploaded_file = params.dig(:message, :file)
     if uploaded_file.present?

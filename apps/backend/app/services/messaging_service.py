@@ -39,13 +39,14 @@ class MessagingService:
         user_id: Optional[str] = None,
         params: Optional[dict] = None,
         json_data: Optional[dict] = None,
+        timeout: float = 10.0,
     ) -> Optional[dict]:
         """Make an HTTP request to the messaging service."""
         url = f"{self.base_url}{path}"
         headers = self._headers(tenant_id, user_id)
 
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.request(
                     method,
                     url,
@@ -251,6 +252,23 @@ class MessagingService:
     async def get_inboxes(self, tenant_id: int) -> Optional[dict]:
         """List all inboxes for an account."""
         return await self._request("GET", "/api/v1/inboxes", tenant_id)
+
+    async def get_inbox_templates(
+        self, tenant_id: int, inbox_id: str
+    ) -> Optional[dict]:
+        """Get WhatsApp message templates for an inbox."""
+        return await self._request(
+            "GET", f"/api/v1/inboxes/{inbox_id}/templates", tenant_id
+        )
+
+    async def sync_inbox_templates(
+        self, tenant_id: int, inbox_id: str
+    ) -> Optional[dict]:
+        """Trigger WhatsApp template sync for an inbox (Meta API can be slow with pagination)."""
+        return await self._request(
+            "POST", f"/api/v1/inboxes/{inbox_id}/sync_templates", tenant_id,
+            timeout=30.0,
+        )
 
     # --- Contacts ---
 

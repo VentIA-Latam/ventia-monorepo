@@ -9,10 +9,12 @@ import type {
   CannedResponse,
   Team,
   SendMessagePayload,
+  SendTemplatePayload,
   AssignConversationPayload,
   WhatsAppConnectParams,
   WhatsAppConnectResponse,
   ManualWhatsAppConnectParams,
+  WhatsAppTemplate,
 } from "@/lib/types/messaging";
 
 export interface ConversationFilters {
@@ -146,4 +148,26 @@ export async function connectWhatsAppManually(
   params: ManualWhatsAppConnectParams
 ): Promise<unknown> {
   return apiPost("/api/messaging/whatsapp/manual-connect", params);
+}
+
+// --- WhatsApp Templates ---
+
+export async function getTemplates(
+  inboxId: number | string
+): Promise<{ success: boolean; data: WhatsAppTemplate[] }> {
+  return apiGet(`/api/messaging/inboxes/${inboxId}/templates`);
+}
+
+export async function syncTemplates(inboxId: number | string): Promise<unknown> {
+  return apiPost(`/api/messaging/inboxes/${inboxId}/templates`);
+}
+
+export async function sendTemplateMessage(
+  conversationId: number | string,
+  payload: SendTemplatePayload
+): Promise<unknown> {
+  return apiPost(
+    `/api/messaging/conversations/${conversationId}/messages/template`,
+    payload
+  );
 }

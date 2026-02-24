@@ -1,5 +1,5 @@
 class Api::V1::InboxesController < Api::V1::BaseController
-  before_action :set_inbox, only: [:show, :update, :destroy]
+  before_action :set_inbox, only: [:show, :update, :destroy, :templates, :sync_templates]
 
   def index
     inboxes = current_account.inboxes.order_by_name
@@ -35,6 +35,34 @@ class Api::V1::InboxesController < Api::V1::BaseController
   def destroy
     @inbox.destroy
     render_success(nil, message: 'Inbox deleted successfully')
+  end
+
+  def templates
+    channel = @inbox.channel
+
+    unless channel.is_a?(Channel::Whatsapp)
+      return render_error('Templates only available for WhatsApp inboxes', status: :unprocessable_entity)
+    end
+
+    templates = (channel.message_templates || []).select { |t| t['status']&.downcase == 'approved' }
+
+    templates.reject! do |t|
+      t['category'] == 'AUTHENTICATION' ||
+        t['components']&.any? { |c| %w[LIST PRODUCT CATALOG].include?(c['type']) }
+    end
+
+    render_success(templates)
+  end
+
+  def sync_templates
+    channel = @inbox.channel
+
+    unless channel.is_a?(Channel::Whatsapp)
+      return render_error('Template sync only available for WhatsApp inboxes', status: :unprocessable_entity)
+    end
+
+    channel.sync_templates
+    render_success(nil, message: 'Templates synced successfully')
   end
 
   private

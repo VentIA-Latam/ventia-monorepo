@@ -14,9 +14,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, MessageSquare, Loader2, Bot, AlertTriangle, MoreVertical, User, Search } from "lucide-react";
+import { ArrowLeft, MessageSquare, Loader2, Bot, AlertTriangle, MoreVertical, User, Search, FileText } from "lucide-react";
 import { MessageBubble } from "./message-bubble";
 import { MessageComposer } from "./message-composer";
+import { TemplatePicker } from "./template-picker";
 import { useMessaging } from "./messaging-provider";
 import { getMessages, sendMessage, updateConversation, markConversationRead } from "@/lib/api-client/messaging";
 import type { Conversation, Message, MessageType, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
@@ -76,6 +77,7 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
   const bottomRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const scrollBehaviorRef = useRef<false | "instant" | "smooth">(false);
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   // Chatwoot pattern: track scroll state before loading older messages
   const heightBeforeLoadRef = useRef(0);
   const scrollTopBeforeLoadRef = useRef(0);
@@ -458,16 +460,52 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         </div>
       </div>
 
-      {/* 24-hour window warning */}
+      {/* 24-hour window warning + template CTA */}
       {conversation.can_reply === false && (
         <div className="flex items-center gap-2 px-4 py-2.5 bg-warning-bg border-t border-warning/30 text-warning text-sm">
           <AlertTriangle className="h-4 w-4 shrink-0" />
-          <p>La ventana de 24 horas ha expirado. No se pueden enviar mensajes hasta que el contacto responda.</p>
+          <p className="flex-1">La ventana de 24 horas ha expirado. Envía una plantilla para reabrir la conversación.</p>
+          {conversation.inbox?.channel_type === "Channel::Whatsapp" && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0 text-xs border-warning/40 text-warning hover:bg-warning/10"
+              onClick={() => setShowTemplatePicker(true)}
+            >
+              <FileText className="h-3.5 w-3.5 mr-1.5" />
+              Enviar plantilla
+            </Button>
+          )}
         </div>
       )}
 
       {/* Composer */}
-      <MessageComposer onSend={handleSend} disabled={loading || conversation.can_reply === false} />
+      <MessageComposer
+        onSend={handleSend}
+        disabled={loading || conversation.can_reply === false}
+        onOpenTemplates={
+          conversation.inbox?.channel_type === "Channel::Whatsapp"
+            ? () => setShowTemplatePicker(true)
+            : undefined
+        }
+      />
+
+      {/* Template picker dialog */}
+      {conversation.inbox?.channel_type === "Channel::Whatsapp" && conversation.inbox_id && (
+        <TemplatePicker
+          open={showTemplatePicker}
+          onOpenChange={setShowTemplatePicker}
+          inboxId={conversation.inbox_id}
+          conversationId={conversation.id}
+          onSent={() => {
+            // Refresh messages after sending template
+            getMessages(conversation.id).then((data) => {
+              scrollBehaviorRef.current = "smooth";
+              setMessages(data.data ?? []);
+            }).catch((err) => console.error("Error refreshing messages:", err));
+          }}
+        />
+      )}
     </div>
   );
 }

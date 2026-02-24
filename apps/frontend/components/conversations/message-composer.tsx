@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, Smile, Plus, Mic, X, FileText, Image as ImageIcon } from "lucide-react";
+import { Send, Smile, Plus, Mic, X, FileText, Image as ImageIcon, LayoutTemplate } from "lucide-react";
 import dynamic from "next/dynamic";
 
 const EmojiPicker = dynamic(() => import("emoji-picker-react"), { ssr: false });
@@ -17,9 +17,10 @@ function isMediaFile(file: File): boolean {
 interface MessageComposerProps {
   onSend: (content: string, file?: File) => void;
   disabled?: boolean;
+  onOpenTemplates?: () => void;
 }
 
-export function MessageComposer({ onSend, disabled }: MessageComposerProps) {
+export function MessageComposer({ onSend, disabled, onOpenTemplates }: MessageComposerProps) {
   const [content, setContent] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -184,6 +185,20 @@ export function MessageComposer({ onSend, disabled }: MessageComposerProps) {
         >
           <Plus className="h-5 w-5" />
         </Button>
+
+        {/* Template button */}
+        {onOpenTemplates && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 h-10 w-10 rounded-full text-muted-foreground hover:text-foreground"
+            type="button"
+            onClick={onOpenTemplates}
+            title="Plantillas de WhatsApp"
+          >
+            <LayoutTemplate className="h-5 w-5" />
+          </Button>
+        )}
 
         {/* Text input — WhatsApp style rounded */}
         <textarea
