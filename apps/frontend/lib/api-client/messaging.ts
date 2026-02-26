@@ -136,10 +136,6 @@ export async function createLabel(payload: { title: string; color: string }): Pr
   return apiPost("/api/messaging/labels", payload);
 }
 
-export async function deleteLabel(id: number | string): Promise<unknown> {
-  return apiDelete(`/api/messaging/labels/${id}`);
-}
-
 export async function addConversationLabel(conversationId: number | string, labelId: number | string): Promise<unknown> {
   return apiPost(`/api/messaging/conversations/${conversationId}/labels`, { label_id: labelId });
 }

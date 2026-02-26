@@ -381,12 +381,6 @@ class MessagingService:
             "POST", "/api/v1/labels", tenant_id, json_data={"label": payload}
         )
 
-    async def delete_label(self, tenant_id: int, label_id: str) -> Optional[dict]:
-        """Delete a label."""
-        return await self._request(
-            "DELETE", f"/api/v1/labels/{label_id}", tenant_id
-        )
-
     async def get_conversation_labels(
         self, tenant_id: int, conversation_id: str
     ) -> Optional[dict]:

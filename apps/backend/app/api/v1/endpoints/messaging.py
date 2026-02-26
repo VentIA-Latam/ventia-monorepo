@@ -601,25 +601,6 @@ async def create_label(
     return result
 
 
-@router.delete(
-    "/labels/{label_id}",
-    summary="Delete a label",
-    tags=["messaging"],
-    responses={503: {"model": MessagingError}},
-)
-async def delete_label(
-    label_id: str,
-    current_user: User = Depends(get_current_user),
-):
-    tenant_id = _get_tenant_id(current_user)
-
-    result = await messaging_service.delete_label(tenant_id, label_id)
-    if result is None:
-        raise HTTPException(status_code=503, detail="Messaging service unavailable")
-
-    return result
-
-
 @router.get(
     "/conversations/{conversation_id}/labels",
     summary="List labels for a conversation",

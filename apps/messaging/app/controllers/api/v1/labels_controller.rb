@@ -3,18 +3,18 @@ class Api::V1::LabelsController < Api::V1::BaseController
 
   def index
     labels = current_account.labels
-    render_success(labels.map { |l| label_json(l) })
+    render_success(labels)
   end
 
   def show
-    render_success(label_json(@label))
+    render_success(@label)
   end
 
   def create
     label = current_account.labels.new(label_params)
 
     if label.save
-      render_success(label_json(label), message: 'Label created', status: :created)
+      render_success(label, message: 'Label created', status: :created)
     else
       render_error('Failed to create label', errors: label.errors.full_messages)
     end
@@ -22,14 +22,14 @@ class Api::V1::LabelsController < Api::V1::BaseController
 
   def update
     if @label.update(label_params)
-      render_success(label_json(@label), message: 'Label updated')
+      render_success(@label, message: 'Label updated')
     else
       render_error('Failed to update label', errors: @label.errors.full_messages)
     end
   end
 
   def destroy
-    @label.destroy!
+    @label.destroy
     render_success(nil, message: 'Label deleted')
   end
 
@@ -41,9 +41,5 @@ class Api::V1::LabelsController < Api::V1::BaseController
 
   def label_params
     params.require(:label).permit(:title, :description, :color, :show_on_sidebar)
-  end
-
-  def label_json(label)
-    { id: label.id, title: label.title, color: label.color, system: label.system }
   end
 end

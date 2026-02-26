@@ -38,16 +38,6 @@ export function ConversationsClient({
     setAllLabels((prev) => [...prev, label]);
   }, []);
 
-  const handleLabelDeleted = useCallback((labelId: number) => {
-    setAllLabels((prev) => prev.filter((l) => l.id !== labelId));
-    setConversations((prev) =>
-      prev.map((c) => ({
-        ...c,
-        labels: c.labels?.filter((l) => l.id !== labelId) ?? [],
-      }))
-    );
-  }, []);
-
   const selectedConversation = useMemo(
     () => conversations.find((c) => c.id === selectedId) ?? null,
     [conversations, selectedId]
@@ -106,8 +96,6 @@ export function ConversationsClient({
               onSelect={handleSelect}
               onConversationsChange={handleConversationsChange}
               onDeleteConversation={handleDeleteConversation}
-              onLabelCreated={handleLabelCreated}
-              onLabelDeleted={handleLabelDeleted}
             />
           </div>
         ) : (
@@ -156,8 +144,6 @@ export function ConversationsClient({
           allLabels={allLabels}
           onSelect={handleSelect}
           onConversationsChange={handleConversationsChange}
-          onLabelCreated={handleLabelCreated}
-          onLabelDeleted={handleLabelDeleted}
         />
       </div>
 
