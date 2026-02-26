@@ -45,8 +45,8 @@ const steps = [
   {
     id: 7,
     image: "/images/paso-7.jpg",
-    title: "Empaquetamos tu pedido",
-    description: "Preparamos el paquete con cuidado desde nuestro centro de fulfillment.",
+    title: "Nos integramos con tu operador logístico",
+    description: "Coordinamos el despacho directamente con tu operador logístico de confianza.",
   },
   {
     id: 8,
@@ -91,11 +91,11 @@ export default function Steps() {
           <div className="w-full lg:w-auto lg:max-w-[380px] xl:max-w-[420px]">
             <div className="relative">
               {/* Línea vertical */}
-              <div className="absolute left-[15px] top-2 bottom-2 w-px bg-[#182432]/10" />
+              <div className="absolute left-[23px] top-2 bottom-2 w-px bg-[#182432]/10 z-0" />
 
               {/* Línea de progreso animada */}
               <motion.div
-                className="absolute left-[15px] top-2 w-px bg-[#5ACAF0]"
+                className="absolute left-[23px] top-2 w-px bg-[#5ACAF0] z-0"
                 animate={{
                   height: `${((activeStep) / (steps.length - 1)) * 100}%`,
                 }}
@@ -126,7 +126,7 @@ export default function Steps() {
                           ${isActive
                             ? "bg-[#5ACAF0] border-[#5ACAF0] text-white scale-110"
                             : isPast
-                              ? "bg-[#5ACAF0]/20 border-[#5ACAF0]/40 text-[#5ACAF0]"
+                              ? "bg-[#ddf3fb] border-[#5ACAF0]/40 text-[#5ACAF0]"
                               : "bg-white border-[#182432]/15 text-[#182432]/40 group-hover:border-[#182432]/30"
                           }
                         `}
@@ -146,32 +146,13 @@ export default function Steps() {
                         </p>
 
                         {/* Descripción expandible */}
-                        <AnimatePresence>
-                          {isActive && (
-                            <motion.p
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: "auto" }}
-                              exit={{ opacity: 0, height: 0 }}
-                              transition={{ duration: 0.25, ease: "easeOut" }}
-                              className="text-xs text-[#182432]/50 font-sans leading-relaxed mt-1 overflow-hidden"
-                            >
-                              {step.description}
-                            </motion.p>
-                          )}
-                        </AnimatePresence>
+                        <div className={`grid transition-all duration-300 ${isActive ? "grid-rows-[1fr] opacity-100 mt-1" : "grid-rows-[0fr] opacity-0"}`}>
+                          <p className="text-xs text-[#182432]/50 font-sans leading-relaxed overflow-hidden">
+                            {step.description}
+                          </p>
+                        </div>
                       </div>
 
-                      {/* Flecha activa */}
-                      <div
-                        className={`
-                          shrink-0 mt-1 transition-all duration-300
-                          ${isActive ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-2"}
-                        `}
-                      >
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5ACAF0" strokeWidth="2.5" strokeLinecap="round">
-                          <path d="M6 4l4 4-4 4" />
-                        </svg>
-                      </div>
                     </button>
                   );
                 })}
@@ -182,7 +163,7 @@ export default function Steps() {
           {/* Imagen (derecha) */}
           <div className="w-full lg:w-auto">
             <FadeUp delay={0.2}>
-              <div className="relative aspect-[4/5] w-[320px] sm:w-[360px] lg:w-[400px] mx-auto rounded-2xl overflow-hidden shadow-xl shadow-[#182432]/15">
+              <div className="relative aspect-[4/5] w-[320px] sm:w-[360px] lg:w-[400px] mx-auto rounded-2xl overflow-hidden shadow-xl shadow-[#182432]/15 group">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={steps[activeStep].id}
@@ -200,35 +181,37 @@ export default function Steps() {
                     />
                   </motion.div>
                 </AnimatePresence>
+
+                {/* Flechas sobre la imagen */}
+                <div className="absolute inset-0 flex items-center justify-between px-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <button
+                    onClick={() => setActiveStep((p) => (p === 0 ? steps.length - 1 : p - 1))}
+                    className="flex items-center justify-center w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm text-[#182432]/70 hover:bg-white hover:text-[#5ACAF0] transition-all shadow-md cursor-pointer"
+                    aria-label="Paso anterior"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M15 6l-6 6 6 6" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setActiveStep((p) => (p + 1) % steps.length)}
+                    className="flex items-center justify-center w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm text-[#182432]/70 hover:bg-white hover:text-[#5ACAF0] transition-all shadow-md cursor-pointer"
+                    aria-label="Paso siguiente"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M9 6l6 6-6 6" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Indicador de paso */}
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-sm rounded-full px-3 py-1 shadow-md z-10">
+                  <span className="text-xs font-semibold text-[#182432]/70 font-sans tabular-nums">
+                    {activeStep + 1} / {steps.length}
+                  </span>
+                </div>
               </div>
             </FadeUp>
-
-            {/* Navegación rápida mobile (flechas debajo de la imagen) */}
-            <div className="flex items-center justify-center gap-4 mt-4 lg:hidden">
-              <button
-                onClick={() => setActiveStep((p) => (p === 0 ? steps.length - 1 : p - 1))}
-                className="flex items-center justify-center w-10 h-10 rounded-full border border-[#182432]/15 text-[#182432]/60 hover:border-[#5ACAF0] hover:text-[#5ACAF0] transition-colors"
-                aria-label="Paso anterior"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <path d="M15 6l-6 6 6 6" />
-                </svg>
-              </button>
-
-              <span className="text-sm font-semibold text-[#182432]/60 font-sans tabular-nums">
-                {activeStep + 1} / {steps.length}
-              </span>
-
-              <button
-                onClick={() => setActiveStep((p) => (p + 1) % steps.length)}
-                className="flex items-center justify-center w-10 h-10 rounded-full border border-[#182432]/15 text-[#182432]/60 hover:border-[#5ACAF0] hover:text-[#5ACAF0] transition-colors"
-                aria-label="Paso siguiente"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <path d="M9 6l6 6-6 6" />
-                </svg>
-              </button>
-            </div>
           </div>
 
         </div>

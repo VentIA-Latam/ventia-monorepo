@@ -178,7 +178,7 @@ export default function Plans() {
         </div>
 
         {/* Desktop: Grid de cards */}
-        <div className="hidden md:grid md:grid-cols-4 gap-4 lg:gap-5">
+        <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
           {plans.map((plan, index) => (
             <FadeUp key={plan.name} delay={0.05 * (index + 1)}>
               {renderCard(plan)}

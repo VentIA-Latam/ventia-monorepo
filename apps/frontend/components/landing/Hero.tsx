@@ -7,14 +7,14 @@ export default function Hero() {
   return (
     <section
       id="inicio"
-      className="relative bg-[url('/images/imagen-hero-mobile.avif')] md:bg-[url('/images/imagen-hero-desktop.avif')] bg-[50%_50%] bg-cover bg-no-repeat pt-36 md:pt-44 lg:pt-52 pb-14 md:pb-20 lg:pb-24 w-full"
+      className="relative bg-[url('/images/imagen-hero-mobile.avif')] md:bg-[url('/images/imagen-hero-desktop.avif')] bg-[50%_50%] bg-cover bg-no-repeat pt-24 md:pt-32 lg:pt-36 pb-8 md:pb-12 lg:pb-14 w-full"
     >
-      <div className="relative mx-auto max-w-7xl px-5 sm:px-8 md:px-10 lg:px-16 xl:px-20">
+      <div className="w-full max-w-[100%] mx-auto px-5 sm:px-8 md:px-10 lg:px-16 xl:px-20">
 
-        <div className="flex flex-col lg:flex-row items-center justify-center gap-10 md:gap-14 lg:gap-24 xl:gap-28 py-8 md:py-12 lg:py-16">
+        <div className="flex flex-col lg:flex-row items-center lg:items-start gap-10 md:gap-14 lg:gap-24 xl:gap-28 py-6 md:py-8 lg:py-12">
 
           {/* Texto */}
-          <div className="w-full lg:flex-1 lg:max-w-[45%] text-center lg:text-left order-1">
+          <div className="w-full lg:flex-1 lg:max-w-[45%] text-center lg:text-left order-1 lg:pt-12 xl:pt-32">
 
             <FadeUp delay={0}>
               <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-[40px] leading-tight lg:leading-[44px] font-bold text-[#182432] font-libre mb-4 md:mb-6 lg:mb-8">
@@ -53,25 +53,6 @@ export default function Hero() {
               </div>
             </FadeUp>
 
-            {/* Social proof */}
-            <FadeUp delay={0.3}>
-              <div className="mt-10 md:mt-12 flex flex-wrap items-center justify-center lg:justify-start gap-6 md:gap-8">
-                <div>
-                  <p className="text-2xl md:text-3xl font-bold text-[#182432] font-libre">200+</p>
-                  <p className="text-[11px] text-[#182432]/40 font-medium">pedidos / día</p>
-                </div>
-                <div className="h-8 w-px bg-[#182432]/10" />
-                <div>
-                  <p className="text-2xl md:text-3xl font-bold text-[#182432] font-libre">3 seg</p>
-                  <p className="text-[11px] text-[#182432]/40 font-medium">tiempo de respuesta</p>
-                </div>
-                <div className="h-8 w-px bg-[#182432]/10" />
-                <div>
-                  <p className="text-2xl md:text-3xl font-bold text-[#182432] font-libre">8+</p>
-                  <p className="text-[11px] text-[#182432]/40 font-medium">marcas activas</p>
-                </div>
-              </div>
-            </FadeUp>
           </div>
 
           {/* Mockup con sombra/glow */}

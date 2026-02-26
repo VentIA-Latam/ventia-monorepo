@@ -41,7 +41,7 @@ export default function Header() {
             alt="VentIA"
             width={110}
             height={28}
-            className="h-9 md:h-11 w-auto brightness-0 invert"
+            className="h-9 md:h-11 w-auto"
             priority
           />
         </Link>
@@ -52,7 +52,7 @@ export default function Header() {
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm font-medium text-white/55 hover:text-white transition-colors duration-200"
+              className="text-sm font-medium text-white hover:text-white/55 transition-colors duration-200"
             >
               {link.label}
             </Link>
@@ -63,9 +63,9 @@ export default function Header() {
         <div className="hidden lg:flex items-center gap-3">
           <Link
             href="/login"
-            className="text-sm font-medium text-white/55 hover:text-white transition-colors duration-200"
+            className="text-sm font-medium text-white hover:text-white/55 transition-colors duration-200"
           >
-            Ingresar
+            Iniciar Sesión
           </Link>
           <a
             href={CALENDLY_URL}
@@ -106,7 +106,7 @@ export default function Header() {
                   key={link.href}
                   href={link.href}
                   onClick={closeMenu}
-                  className="text-[14px] font-medium text-white/55 hover:text-white py-2.5 transition-colors"
+                  className="text-[14px] font-medium text-white hover:text-white/55 py-2.5 transition-colors"
                 >
                   {link.label}
                 </Link>

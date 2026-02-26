@@ -56,7 +56,7 @@ export default function Clients() {
                 key={`${client.name}-${i}`}
                 className="flex items-center justify-center px-8 sm:px-10 md:px-12 lg:px-14"
               >
-                <div className="relative h-10 sm:h-12 md:h-14 w-24 sm:w-28 md:w-32 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all duration-500">
+                <div className="relative h-10 sm:h-12 md:h-14 w-24 sm:w-28 md:w-32">
                   <Image
                     src={client.image}
                     alt={client.name}

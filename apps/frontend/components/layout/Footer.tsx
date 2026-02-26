@@ -53,9 +53,9 @@ export default function Footer() {
               alt="VentIA"
               width={130}
               height={36}
-              className="h-7 w-auto brightness-0 invert mb-4"
+              className="h-11 w-auto mb-4"
             />
-            <p className="text-white/40 text-sm leading-relaxed max-w-[260px]">
+            <p className="text-white text-sm leading-relaxed max-w-[260px]">
               Tu equipo de ventas con IA que trabaja 24/7 por ti.
             </p>
           </div>
@@ -63,7 +63,7 @@ export default function Footer() {
           {/* Link columns */}
           {linkColumns.map((col) => (
             <div key={col.title}>
-              <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/50 mb-3.5">
+              <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-white mb-3.5">
                 {col.title}
               </p>
               <ul className="space-y-2">
@@ -74,7 +74,7 @@ export default function Footer() {
                       <Link
                         href={link.href}
                         {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                        className="text-[13px] text-white/40 hover:text-[#5ACAF0] transition-colors duration-200"
+                        className="text-[13px] text-white hover:text-[#5ACAF0] transition-colors duration-200"
                       >
                         {link.label}
                       </Link>
@@ -88,10 +88,8 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-12 pt-6 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4 text-[12px] text-white/25 order-2 sm:order-1">
+          <div className="flex items-center gap-4 text-[12px] text-white order-2 sm:order-1">
             <span>&copy; {new Date().getFullYear()} VentIA</span>
-            <span className="hidden sm:inline">·</span>
-            <span>Hecho con cafe en Lima, Peru</span>
           </div>
 
           {/* Social icons */}
@@ -103,7 +101,7 @@ export default function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={s.label}
-                className="text-white/25 hover:text-[#5ACAF0] transition-colors duration-200 text-[15px]"
+                className="text-white hover:text-[#5ACAF0] transition-colors duration-200 text-[15px]"
               >
                 <s.icon />
               </Link>

@@ -7,6 +7,7 @@ import Contact from "@/components/landing/Contact"
 import Footer from "@/components/layout/Footer"
 import Clients from "@/components/landing/Clients"
 import Faq from "@/components/landing/Faq";
+import Integrations from "@/components/landing/Integrations";
 
 export default function LandingPage() {
   return (
@@ -14,6 +15,7 @@ export default function LandingPage() {
       <Hero />
       <Steps />
       <Solutions />
+      <Integrations />
       <Plans />
       <Clients />
       <Contact />
