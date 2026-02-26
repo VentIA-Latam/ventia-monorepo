@@ -24,6 +24,8 @@ interface ConversationListProps {
   onSelect: (id: number) => void;
   onConversationsChange: (conversations: Conversation[]) => void;
   onDeleteConversation?: (id: number) => void;
+  onLabelCreated?: (label: Label) => void;
+  onLabelDeleted?: (labelId: number) => void;
 }
 
 type SectionValue = "all" | "sale" | "unattended";
@@ -41,6 +43,8 @@ export function ConversationList({
   onSelect,
   onConversationsChange,
   onDeleteConversation,
+  onLabelCreated,
+  onLabelDeleted,
 }: ConversationListProps) {
   const { lastEvent } = useMessaging();
   const [sectionFilter, setSectionFilter] = useState<SectionValue>("all");
@@ -217,6 +221,8 @@ export function ConversationList({
         allLabels={allLabels}
         filters={activeFilters}
         onChange={handleFiltersChange}
+        onLabelCreated={onLabelCreated}
+        onLabelDeleted={onLabelDeleted}
       />
 
       {/* List */}
