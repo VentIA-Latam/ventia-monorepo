@@ -17,6 +17,7 @@ from app.models.webhook import WebhookEvent
 from app.repositories.order import order_repository
 from app.repositories.webhook import webhook_repository
 from app.schemas.order import OrderCreate, OrderUpdate
+from app.services.order import OrderService
 
 logger = logging.getLogger(__name__)
 
@@ -1290,6 +1291,45 @@ def process_shopify_order_updated(
     # Extract sales channel
     channel = _extract_channel(payload, "shopify")
 
+    # Extract and transform line items from Shopify format
+    line_items_raw = payload.get("line_items", [])
+    line_items = []
+    if line_items_raw:
+        for item in line_items_raw:
+            try:
+                transformed_item = {
+                    "sku": item.get("sku", item.get("variant_id", str(item.get("id", "")))),
+                    "product": item.get("title", item.get("name", "Unknown Product")),
+                    "unitPrice": float(item.get("price", 0.0)),
+                    "quantity": int(item.get("quantity", 1)),
+                }
+                transformed_item["subtotal"] = transformed_item["unitPrice"] * transformed_item["quantity"]
+                line_items.append(transformed_item)
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Failed to transform line item: {item}, error: {e}")
+                continue
+
+    # Extract shipping lines and add as line items
+    shipping_lines = payload.get("shipping_lines", [])
+    for shipping_line in shipping_lines:
+        try:
+            shipping_price = float(shipping_line.get("price", 0.0))
+            if shipping_price > 0:
+                line_items.append({
+                    "sku": "DELIVERY",
+                    "product": shipping_line.get("title", "Shipping"),
+                    "unitPrice": shipping_price,
+                    "quantity": 1,
+                    "subtotal": shipping_price,
+                })
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Failed to add shipping line item: {shipping_line}, error: {e}")
+
+    # Recalculate total from line items (more accurate than payload total_price for refunds)
+    if line_items:
+        order_service = OrderService()
+        line_items, total_price = order_service._calculate_line_items_and_total(line_items)
+
     # 5. Check idempotency
     needs_update = False
 
@@ -1306,6 +1346,8 @@ def process_shopify_order_updated(
     if not order.shopify_order_id:
         needs_update = True
     if order.channel != channel:
+        needs_update = True
+    if line_items and order.line_items != line_items:
         needs_update = True
 
     if not needs_update:
@@ -1337,6 +1379,10 @@ def process_shopify_order_updated(
 
         if payment_method:
             order.payment_method = payment_method
+
+        # Update line items and recalculated total
+        if line_items:
+            order.line_items = line_items
 
         # Update channel
         order.channel = channel
