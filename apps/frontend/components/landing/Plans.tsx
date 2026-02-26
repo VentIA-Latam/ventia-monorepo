@@ -3,68 +3,52 @@
 import { useState, useRef } from "react";
 import FadeUp from "@/components/ui/FadeUp";
 
-// Flechas SVG (Color blanco para resaltar en fondo oscuro)
 const ChevronLeft = ({ className }: { className?: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={2.5}
-    stroke="currentColor"
-    className={className}
-  >
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={className}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
   </svg>
 );
 
 const ChevronRight = ({ className }: { className?: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={2.5}
-    stroke="currentColor"
-    className={className}
-  >
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={className}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+  </svg>
+);
+
+const CheckIcon = ({ className }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={className}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
   </svg>
 );
 
 const plans = [
   {
-    name: "IA\nBÁSICO",
-    price: "$49.90",
-    subtitle: "DESDE",
-    priceDetails: "",
-    features: [
-      "IA conversacional 24/7",
-      "Atención desde redes sociales y WhatsApp",
-      "Validación automática de pagos",
-      "Gestión de inventario",
-    ],
+    name: "Start",
+    price: "99",
+    features: ["700 conversaciones / mes", "250 SKUs (Hasta 50 productos activos)"],
+    extra: null,
+    highlighted: false,
   },
   {
-    name: "IA +\nLOGÍSTICA",
-    price: "$69.90",
-    subtitle: "DESDE",
-    priceDetails: "+ un fee por cada entrega",
-    features: [
-      "Todo lo del plan IA Básico",
-      "Recogemos de tu punto de venta y entregamos al cliente.",
-    ],
+    name: "Pro",
+    price: "249",
+    features: ["2,000 conversaciones / mes", "500 SKUs (Hasta 100 productos activos)"],
+    extra: "Incluye configuración de recordatorios a tu agente",
+    highlighted: true,
   },
   {
-    name: "FULL\nOPERACIÓN",
-    price: "Variable",
-    subtitle: "",
-    priceDetails: "+ un fee por cada entrega",
-    features: [
-      "Todo lo del plan IA Básico",
-      "Almacenamiento de stock",
-      "Armado de pedidos.",
-      "Entrega al cliente.",
-      "Nos encargamos de tu contabilidad.",
-    ],
+    name: "Business",
+    price: "399",
+    features: ["3,500 conversaciones / mes", "1,250 SKUs (Hasta 250 productos activos)"],
+    extra: "Incluye todo lo anterior y opción de envío de campañas masivas",
+    highlighted: false,
+  },
+  {
+    name: "Enterprise",
+    price: "699",
+    features: ["5,000 conversaciones / mes", "2,500 SKUs (Hasta 500 productos activos)"],
+    extra: "Incluye todo lo anterior",
+    highlighted: false,
   },
 ];
 
@@ -91,170 +75,163 @@ export default function Plans() {
     }
   };
 
+  const renderCard = (plan: typeof plans[number]) => (
+    <div
+      className={`
+        relative rounded-2xl p-6 lg:p-7 flex flex-col h-full
+        transition-all duration-300
+        ${plan.highlighted
+          ? "bg-white border-2 border-[#5ACAF0] shadow-xl shadow-[#5ACAF0]/15 scale-[1.02]"
+          : "bg-white border border-transparent hover:shadow-lg"
+        }
+      `}
+    >
+      {/* Badge */}
+      {plan.highlighted && (
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#5ACAF0] text-white text-[10px] font-bold font-sans uppercase tracking-wider px-4 py-1 rounded-full shadow-sm shadow-[#5ACAF0]/30">
+          Más popular
+        </span>
+      )}
+
+      {/* Nombre */}
+      <h3 className={`text-xs font-bold uppercase tracking-widest font-sans mb-5 ${
+        plan.highlighted ? "text-[#5ACAF0]" : "text-[#182432]/40"
+      }`}>
+        {plan.name}
+      </h3>
+
+      {/* Precio */}
+      <div className="mb-6">
+        <div className="flex items-baseline gap-1">
+          <span className="text-xs font-medium font-sans text-[#182432]/35">USD</span>
+          <span className="text-4xl lg:text-5xl font-bold font-libre text-[#182432]">
+            {plan.price}
+          </span>
+        </div>
+        <p className="text-xs font-medium font-sans mt-1 text-[#182432]/35">/ mes + IGV</p>
+      </div>
+
+      {/* CTA */}
+      <a
+        href="https://calendly.com/tarek-ventia-latam/ventia"
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`
+          w-full inline-flex items-center justify-center rounded-full py-2.5
+          text-sm font-bold font-sans uppercase tracking-wide transition-colors duration-300 mb-6
+          bg-[#182432] text-white hover:bg-[#5ACAF0]
+        `}
+      >
+        Contáctanos
+      </a>
+
+      {/* Separador */}
+      <div className="h-px mb-5 bg-[#182432]/[0.08]" />
+
+      {/* Features con checks */}
+      <ul className="space-y-3 flex-1">
+        {plan.features.map((feature) => (
+          <li key={feature} className="flex items-start gap-2.5">
+            <CheckIcon className={`w-4 h-4 shrink-0 mt-0.5 ${
+              plan.highlighted ? "text-[#5ACAF0]" : "text-[#5ACAF0]/70"
+            }`} />
+            <span className="text-sm font-sans leading-snug text-[#182432]/60">
+              {feature}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      {/* Extra note */}
+      {plan.extra && (
+        <p className="text-[11px] text-[#182432]/40 font-sans italic mt-4 leading-relaxed text-center">
+          {plan.extra}
+        </p>
+      )}
+    </div>
+  );
+
   return (
     <section
       id="planes"
-      className="bg-[#182432] py-12 sm:py-16 md:py-20 lg:py-28 scroll-mt-24 md:scroll-mt-28"
+      className="bg-[#182432] py-16 md:py-24 lg:py-32 scroll-mt-24 md:scroll-mt-28"
     >
-      <div className="mx-auto max-w-350 px-4 sm:px-6 md:px-10 relative">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8 md:px-10 lg:px-16 xl:px-20">
 
-        <FadeUp delay={0}>
-          <h2 className="text-center text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-libre font-semibold mb-8 sm:mb-10 md:mb-14">
-            NUESTROS PLANES
-          </h2>
-        </FadeUp>
+        {/* Encabezado */}
+        <div className="text-center mb-10 md:mb-14 lg:mb-16">
+          <FadeUp delay={0}>
+            <p className="text-sm font-semibold tracking-widest uppercase text-[#5ACAF0] font-sans mb-3">
+              Pricing
+            </p>
+          </FadeUp>
+          <FadeUp delay={0.05}>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white font-libre leading-tight mb-4">
+              NUESTROS PLANES
+            </h2>
+          </FadeUp>
+          <FadeUp delay={0.1}>
+            <p className="text-base lg:text-lg text-white/50 font-sans max-w-md mx-auto">
+              Elige tu camino. Siempre puedes escalar después.
+            </p>
+          </FadeUp>
+        </div>
 
-        {/* WRAPPER DEL CARRUSEL */}
-        <div className="relative z-1 max-w-[340px] sm:max-w-[400px] mx-auto md:max-w-none">
+        {/* Desktop: Grid de cards */}
+        <div className="hidden md:grid md:grid-cols-4 gap-4 lg:gap-5">
+          {plans.map((plan, index) => (
+            <FadeUp key={plan.name} delay={0.05 * (index + 1)}>
+              {renderCard(plan)}
+            </FadeUp>
+          ))}
+        </div>
 
-          {/* FLECHA IZQUIERDA (Móvil) */}
+        {/* Mobile: Carousel */}
+        <div className="md:hidden relative max-w-[340px] sm:max-w-[400px] mx-auto">
           <button
             onClick={() => scrollByOne("left")}
-            className="
-              absolute -left-4 sm:-left-5 top-1/2 -translate-y-1/2 z-20
-              p-1.5 sm:p-2 text-white hover:text-gray-300 transition
-              md:hidden
-            "
+            className="absolute -left-4 sm:-left-5 top-1/2 -translate-y-1/2 z-20 p-1.5 text-white/60 hover:text-white transition"
             aria-label="Plan anterior"
           >
-            <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8" />
+            <ChevronLeft className="w-6 h-6 sm:w-7 sm:h-7" />
           </button>
 
-          {/* FLECHA DERECHA (Móvil) */}
           <button
             onClick={() => scrollByOne("right")}
-            className="
-              absolute -right-4 sm:-right-5 top-1/2 -translate-y-1/2 z-20
-              p-1.5 sm:p-2 text-white hover:text-gray-300 transition
-              md:hidden
-            "
+            className="absolute -right-4 sm:-right-5 top-1/2 -translate-y-1/2 z-20 p-1.5 text-white/60 hover:text-white transition"
             aria-label="Plan siguiente"
           >
-            <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
+            <ChevronRight className="w-6 h-6 sm:w-7 sm:h-7" />
           </button>
 
-          {/* CONTENEDOR SCROLLABLE */}
           <div
             ref={carouselRef}
             onScroll={handleScroll}
-            className="
-              /* MOBILE: Carrusel */
-              flex
-              overflow-x-auto
-              snap-x snap-mandatory
-              gap-0
-              pb-8
-              no-scrollbar
-
-              /* DESKTOP: Grid */
-              md:grid
-              md:grid-cols-3
-              md:gap-6 lg:gap-10 xl:gap-20
-              items-stretch
-              md:overflow-visible
-              md:pb-0
-            "
+            className="flex overflow-x-auto snap-x snap-mandatory gap-0 pb-6 no-scrollbar"
           >
-            {plans.map((plan, index) => (
-              <FadeUp
-                key={index}
-                delay={0.05 * (index + 1)}
-                className="
-                  min-w-full w-full
-                  snap-center shrink-0
-                  px-2 
-                  md:min-w-0 md:w-auto md:px-0
-                  h-full
-                "
-              >
-                <div
-                  className="
-                    bg-white rounded-[30px] sm:rounded-[40px]
-                    shadow-[0_40px_140px_rgba(0,0,0,0.40)]
-                    px-6 py-8 sm:px-8 sm:py-10 md:px-12 md:py-12
-                    flex flex-col items-center text-center
-                    h-full relative
-                  "
-                >
-                  {/* --- ENCABEZADO DEL PLAN --- */}
-                  <h3 className="text-lg sm:text-xl md:text-2xl tracking-widest text-black mb-3 sm:mb-4 uppercase font-sans font-bold whitespace-pre-line leading-tight">
-                    {plan.name}
-                  </h3>
-
-                  {/* Subtítulo (DESDE) */}
-                  <p
-                    className={`
-                      text-xs md:text-sm font-sans text-[#182432]/60 mb-1
-                      ${!plan.subtitle ? "invisible" : ""}
-                    `}
-                  >
-                    {plan.subtitle || "DESDE"}
-                  </p>
-
-                  {/* Precio y Detalle */}
-                  <div className="mb-4 sm:mb-5 md:mb-6 w-full">
-                    {/* CAMBIO AQUÍ: text-black para negro puro */}
-                    <p className="text-3xl sm:text-4xl md:text-5xl font-libre font-bold text-black">
-                      {plan.price}
-                    </p>
-
-                    <p
-                      className={`
-                        text-xs md:text-sm font-sans font-medium text-[#182432] mt-2
-                        ${!plan.priceDetails ? "invisible select-none" : ""}
-                      `}
-                    >
-                      {plan.priceDetails || "+ un fee por cada entrega"}
-                    </p>
-                  </div>
-
-                  {/* --- BOTÓN --- */}
-                  <a
-                    href="https://calendly.com/tarek-ventia-latam/ventia"
-                    //href="https://wa.me/51951752355?text=Hola!%20Quiero%20más%20información%20sobre%20los%20planes%20de%20VentIA."
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="
-                      inline-flex items-center justify-center
-                      rounded-full
-                      bg-[#5ACAF0]
-                      px-8 sm:px-10 py-2.5 sm:py-3
-                      text-xs sm:text-sm md:text-base font-sans font-bold text-white
-                      shadow-md
-                      border-2 border-[#5ACAF0]
-                      hover:bg-white hover:text-[#48C1EC] hover:border-[#48C1EC]
-                      transition
-                      uppercase tracking-wide
-                      mb-6 sm:mb-8
-                    "
-                  >
-                    CONTÁCTANOS
-                  </a>
-
-                  {/* --- CARACTERÍSTICAS --- */}
-                  <ul className="w-full text-left text-xs sm:text-sm md:text-base font-sans font-medium text-[#182432] space-y-2 sm:space-y-3 px-2">
-                    {plan.features.map((f) => (
-                      <li key={f} className="flex items-start gap-2 sm:gap-3">
-                        <span className="mt-1.5 sm:mt-2 h-1.5 w-1.5 min-w-1.5 rounded-full bg-[#182432]" />
-                        <span className="leading-snug">{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                </div>
-              </FadeUp>
+            {plans.map((plan) => (
+              <div key={plan.name} className="min-w-full w-full snap-center shrink-0 px-2">
+                {renderCard(plan)}
+              </div>
             ))}
           </div>
 
-          {/* PAGINACIÓN (DOTS) - Solo Móvil */}
-          <div className="flex justify-center gap-2 mt-2 md:hidden">
+          <div className="flex justify-center gap-2 mt-2">
             {plans.map((_, i) => (
-              <div
+              <button
                 key={i}
-                className={`
-                  h-2 w-2 rounded-full transition-colors duration-300
-                  ${i === activeIndex ? "bg-white" : "bg-white/30"}
-                `}
+                onClick={() => {
+                  if (carouselRef.current) {
+                    carouselRef.current.scrollTo({
+                      left: i * carouselRef.current.offsetWidth,
+                      behavior: "smooth",
+                    });
+                  }
+                }}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  i === activeIndex ? "w-5 bg-[#5ACAF0]" : "w-1.5 bg-white/25"
+                }`}
+                aria-label={`Plan ${plans[i].name}`}
               />
             ))}
           </div>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { HiChevronDown } from "react-icons/hi";
+import { AnimatePresence, motion } from "framer-motion";
+import FadeUp from "@/components/ui/FadeUp";
 
 const faqs = [
   {
@@ -86,10 +87,10 @@ const faqs = [
   },
 ];
 
-type FaqProps = {
+interface FaqProps {
   limit?: number | null;
   showMoreButton?: boolean;
-};
+}
 
 export default function Faq({ limit = null, showMoreButton = true }: FaqProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
@@ -103,83 +104,93 @@ export default function Faq({ limit = null, showMoreButton = true }: FaqProps) {
   return (
     <section
       id="faq"
-      className="bg-white py-16 md:py-20 scroll-mt-24 md:scroll-mt-28"
+      className="bg-[#fafafa] py-16 md:py-24 lg:py-32 scroll-mt-24 md:scroll-mt-28"
     >
-      <div className="mx-auto max-w-5xl px-4 md:px-6">
-        
-        {/* TÍTULO */}
-        <div className="text-center mb-10 md:mb-12">
-          <h2 className="text-3xl md:text-4xl font-libre font-semibold tracking-wide text-[#182432] mb-4">
-            PREGUNTAS FRECUENTES
-          </h2>
+      <div className="mx-auto max-w-3xl px-5 sm:px-8 md:px-10">
+
+        {/* Encabezado */}
+        <div className="text-center mb-10 md:mb-14 lg:mb-16">
+          <FadeUp delay={0}>
+            <p className="text-sm font-semibold tracking-widest uppercase text-[#5ACAF0] font-sans mb-3">
+              FAQ
+            </p>
+          </FadeUp>
+          <FadeUp delay={0.05}>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#182432] font-libre leading-tight mb-4">
+              PREGUNTAS FRECUENTES
+            </h2>
+          </FadeUp>
+          <FadeUp delay={0.1}>
+            <p className="text-base lg:text-lg text-[#182432]/50 font-sans max-w-md mx-auto">
+              Todo lo que necesitas saber antes de empezar.
+            </p>
+          </FadeUp>
         </div>
 
-        {/* LISTA FAQ */}
-        <div className="space-y-4">
+        {/* Accordion */}
+        <div className="divide-y divide-[#182432]/[0.08]">
           {listToShow.map((item, index) => {
             const isOpen = openIndex === index;
 
             return (
-              <div key={index} className="space-y-2">
-
-                {/* BOTÓN PREGUNTA */}
-                <button
-                  type="button"
-                  onClick={() => toggleIndex(index)}
-                  className="
-                    w-full flex items-center justify-between
-                    rounded-full bg-[#182432] text-white
-                    px-6 py-3 md:px-8 md:py-4
-                    text-sm md:text-base font-sans font-semibold
-                    shadow-md
-                  "
-                >
-                  <span className="pr-4">{item.question}</span>
-
-                  <span
-                    className={`flex items-center justify-center h-7 w-7 rounded-full bg-[#111827] transition-transform ${
-                      isOpen ? "rotate-180" : ""
-                    }`}
+              <FadeUp key={index} delay={0.03 * (index + 1)}>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => toggleIndex(index)}
+                    className="w-full flex items-center justify-between gap-4 py-5 md:py-6 text-left group"
                   >
-                    <HiChevronDown className="h-4 w-4" />
-                  </span>
-                </button>
+                    <span className={`text-sm md:text-base font-semibold font-sans transition-colors duration-200 ${
+                      isOpen ? "text-[#182432]" : "text-[#182432]/70 group-hover:text-[#182432]"
+                    }`}>
+                      {item.question}
+                    </span>
 
-                {/* RESPUESTA */}
-                {isOpen && (
-                  <div
-                    className="
-                      w-full rounded-3xl bg-white text-[#182432]
-                      px-6 md:px-8 py-3 md:py-4
-                      text-sm md:text-base font-sans leading-relaxed
-                      shadow-md
-                    "
-                  >
-                    {item.answer}
-                  </div>
-                )}
-              </div>
+                    <span className={`shrink-0 flex items-center justify-center w-7 h-7 rounded-full transition-all duration-300 ${
+                      isOpen ? "bg-[#5ACAF0] text-white rotate-45" : "bg-[#182432]/[0.06] text-[#182432]/40 group-hover:bg-[#182432]/[0.1]"
+                    }`}>
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <path d="M6 1v10M1 6h10" />
+                      </svg>
+                    </span>
+                  </button>
+
+                  <AnimatePresence>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: "easeOut" }}
+                        className="overflow-hidden"
+                      >
+                        <p className="text-sm md:text-base text-[#182432]/50 font-sans leading-relaxed pb-5 md:pb-6 pr-12">
+                          {item.answer}
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </FadeUp>
             );
           })}
         </div>
 
-        {/* BOTÓN "VER MÁS" */}
+        {/* Ver más */}
         {showMoreButton && (
-          <div className="flex justify-center mt-10 md:mt-12">
-            <a
-              href="/preguntas-frecuentes"
-              className="
-                inline-flex items-center justify-center
-                rounded-full bg-[#5ACAF0] text-white
-                px-16 md:px-20 py-3.5
-                text-xl md:text-2xl font-sans font-medium
-                shadow-md
-                hover:bg-[#212835] transition
-              "
-            >
-              VER MÁS
-            </a>
-          </div>
+          <FadeUp delay={0.2}>
+            <div className="flex justify-center mt-10 md:mt-14">
+              <a
+                href="/preguntas-frecuentes"
+                className="inline-flex items-center gap-2 text-sm font-semibold font-sans text-[#182432]/50 hover:text-[#5ACAF0] transition-colors duration-200"
+              >
+                Ver todas las preguntas
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M6 4l4 4-4 4" />
+                </svg>
+              </a>
+            </div>
+          </FadeUp>
         )}
       </div>
     </section>

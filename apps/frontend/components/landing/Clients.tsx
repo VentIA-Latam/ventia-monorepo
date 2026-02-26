@@ -1,15 +1,7 @@
 "use client";
 
-import * as React from "react";
 import Image from "next/image";
-import Autoplay from "embla-carousel-autoplay";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
+import FadeUp from "@/components/ui/FadeUp";
 
 const clients = [
   { name: "Nassau", image: "/images/logo-nassau.avif" },
@@ -23,79 +15,61 @@ const clients = [
 ];
 
 export default function Clients() {
-  const plugin = React.useRef(
-    Autoplay({ delay: 2200, stopOnInteraction: false, stopOnMouseEnter: true })
-  );
+  // Duplicate for seamless infinite loop
+  const marqueeItems = [...clients, ...clients];
 
   return (
     <section
       id="clientes"
-      className="bg-white py-18 md:py-20 scroll-mt-[109px]"
+      className="bg-white py-14 md:py-20 lg:py-24 scroll-mt-24 md:scroll-mt-28 overflow-hidden"
     >
-      {/* Título centrado con max-width */}
-      <div className="mx-auto max-w-7xl px-6 lg:px-10">
-        <div className="text-center mb-10 md:mb-12">
-          <h2 className="text-3xl md:text-4xl lg:text-[40px] font-libre font-bold tracking-wide text-[#182432] mb-4">
-            CLIENTES QUE CONFÍAN
-          </h2>
-          <p className="text-[20px] font-sans text-[#182432] font-semibold">
-            Marcas que ya automatizan sus ventas y/o logística con VentIA.
+      {/* Encabezado */}
+      <div className="mx-auto max-w-7xl px-5 sm:px-8 md:px-10 lg:px-16 xl:px-20">
+        <FadeUp delay={0}>
+          <p className="text-center text-sm font-semibold tracking-widest uppercase text-[#5ACAF0] font-sans mb-3">
+            Confían en nosotros
           </p>
-        </div>
+        </FadeUp>
+        <FadeUp delay={0.05}>
+          <h2 className="text-center text-3xl sm:text-4xl lg:text-5xl font-bold text-[#182432] font-libre leading-tight mb-4">
+            NUESTROS CLIENTES
+          </h2>
+        </FadeUp>
+        <FadeUp delay={0.1}>
+          <p className="text-center text-base lg:text-lg text-[#182432]/50 font-sans max-w-lg mx-auto">
+            Marcas que ya automatizan sus ventas y logística con VentIA.
+          </p>
+        </FadeUp>
       </div>
 
-      {/* Carrusel a todo ancho */}
-      <div className="w-full">
-        <div className="relative flex items-center justify-center gap-4 lg:gap-8 px-4 md:px-8 lg:px-12">
-          <Carousel
-            plugins={[plugin.current]}
-            className="w-[90%]"
-            opts={{
-              align: "start",
-              loop: true,
-            }}
-            onMouseEnter={() => plugin.current.stop()}
-            onMouseLeave={() => plugin.current.play()}
-          >
-            {/* Botón Anterior - Solo Desktop */}
-            <div className="hidden md:block absolute -left-12 lg:-left-16 top-1/2 -translate-y-1/2 z-10">
-              <CarouselPrevious />
-            </div>
+      {/* Marquee infinito */}
+      <FadeUp delay={0.15}>
+        <div className="relative mt-12 md:mt-16">
+          {/* Fade edges */}
+          <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-24 md:w-32 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-24 md:w-32 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
 
-            <CarouselContent className="-ml-0.5">
-              {clients.map((client, index) => (
-                <CarouselItem
-                  key={index}
-                  className="
-                    pl-0.5
-                    basis-1/3
-                    sm:basis-1/4
-                    md:basis-1/4
-                    lg:basis-1/6
-                  "
-                >
-                  <div className="h-14 sm:h-16 md:h-20 w-full flex items-center justify-center p-0.5">
-                    <div className="relative h-full w-full transition-transform duration-300 ease-out hover:scale-110">
-                      <Image
-                        src={client.image}
-                        alt={client.name}
-                        fill
-                        className="object-contain"
-                        sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 25vw, 20vw"
-                      />
-                    </div>
-                  </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-
-            {/* Botón Siguiente - Solo Desktop */}
-            <div className="hidden md:block absolute -right-12 lg:-right-16 top-1/2 -translate-y-1/2 z-10">
-              <CarouselNext />
-            </div>
-          </Carousel>
+          {/* Track */}
+          <div className="flex w-max animate-marquee hover:[animation-play-state:paused]">
+            {marqueeItems.map((client, i) => (
+              <div
+                key={`${client.name}-${i}`}
+                className="flex items-center justify-center px-8 sm:px-10 md:px-12 lg:px-14"
+              >
+                <div className="relative h-10 sm:h-12 md:h-14 w-24 sm:w-28 md:w-32 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all duration-500">
+                  <Image
+                    src={client.image}
+                    alt={client.name}
+                    fill
+                    className="object-contain"
+                    sizes="128px"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      </FadeUp>
     </section>
   );
 }

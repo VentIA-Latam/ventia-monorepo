@@ -16,8 +16,8 @@ export default function LandingPage() {
       <Solutions />
       <Plans />
       <Clients />
-      <Faq limit={6} showMoreButton={true} />
       <Contact />
+      <Faq limit={6} showMoreButton={true} />
       <Footer />
     </main>
   );

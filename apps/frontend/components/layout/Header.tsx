@@ -1,155 +1,137 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { HiMenu } from "react-icons/hi";
+import { motion, AnimatePresence } from "framer-motion";
+
+const navLinks = [
+  { href: "/#inicio", label: "Inicio" },
+  { href: "/#casos-exito", label: "Casos de Éxito" },
+  { href: "/#soluciones", label: "Soluciones" },
+  { href: "/#planes", label: "Planes" },
+  { href: "/#faq", label: "FAQ" },
+];
+
+const CALENDLY_URL = "https://calendly.com/tarek-ventia-latam/ventia";
 
 export default function Header() {
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
-  const toggleMenu = () => setOpen((prev) => !prev);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const closeMenu = () => setOpen(false);
 
-  const navLinks = [
-    { href: "/#inicio", label: "Inicio" },
-    { href: "/#casos-exito", label: "Casos de Éxito" },
-    { href: "/#soluciones", label: "Nuestras Soluciones" },
-    { href: "/#faq", label: "Preguntas Frecuentes" },
-  ];
-
   return (
-    <header className="fixed top-0 w-full bg-[#212835] text-white z-[9999] font-['Helvetica_Roman',Helvetica,Arial,Lucida,sans-serif] shadow-[0px_4px_12px_0px_rgb(33,40,53)]">
-      <div className="max-w-[90%] mx-auto relative">
-        <div className="h-[109px] flex items-center justify-between transition-all duration-[400ms] ease-in-out">
+    <header
+      className={`fixed top-0 left-0 right-0 z-[9999] bg-[#182432] transition-shadow duration-300 ${
+        scrolled ? "shadow-lg shadow-black/20" : ""
+      }`}
+    >
+      <div className="mx-auto max-w-7xl flex items-center justify-between h-18 md:h-22 px-5 sm:px-8">
+        {/* Logo */}
+        <Link href="/#inicio" onClick={closeMenu} className="shrink-0">
+          <Image
+            src="/images/logo-ventia-header.png"
+            alt="VentIA"
+            width={110}
+            height={28}
+            className="h-9 md:h-11 w-auto brightness-0 invert"
+            priority
+          />
+        </Link>
 
-          {/* LOGO */}
-          <div className="relative flex items-center">
+        {/* Desktop nav */}
+        <nav className="hidden lg:flex items-center gap-6">
+          {navLinks.map((link) => (
             <Link
-              href="/#inicio"
-              onClick={closeMenu}
-              className="bg-transparent border-0 p-0"
+              key={link.href}
+              href={link.href}
+              className="text-sm font-medium text-white/55 hover:text-white transition-colors duration-200"
             >
-              <Image
-                src="/images/logo-ventia-header.png"
-                alt="VentIA logo"
-                width={170}
-                height={35}
-                className="max-w-full h-auto transition-all duration-[400ms] ease-in-out inline-block"
-                priority
-              />
+              {link.label}
             </Link>
-          </div>
+          ))}
+        </nav>
 
-          {/* NAVEGACIÓN DESKTOP */}
-          <div className="hidden lg:flex items-center font-semibold">
-            <nav className="flex items-center">
-              <ul className="list-none m-0 p-0 bg-transparent flex items-center gap-[15px]">
-                {/* Enlaces de navegación */}
-                {navLinks.map((link) => (
-                  <li
-                    key={link.href}
-                    className="inline-flex items-center"
-                  >
-                    <Link
-                      href={link.href}
-                      className="text-white text-[14px] leading-[14px] bg-transparent relative transition-opacity duration-[400ms] ease-in-out border-0 hover:opacity-80"
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-
-                {/* Ver Planes */}
-                <li className="inline-flex items-center">
-                  <Link
-                    href="/#planes"
-                    className="text-white bg-transparent inline-flex relative transition-all duration-200 ease items-center justify-center w-[170px] h-11 font-bold text-[14px] leading-[14px] border border-white rounded-full hover:bg-white/60 hover:border-white/60 hover:text-[#182432]"
-                  >
-                    Ver Planes
-                  </Link>
-                </li>
-
-                {/* Agenda tu Demo */}
-                <li className="inline-flex items-center">
-                  <a
-                    href="https://calendly.com/tarek-ventia-latam/ventia"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[#1e2532] bg-white inline-flex relative transition-all duration-200 ease items-center justify-center w-[170px] h-11 font-bold text-[14px] leading-[14px] border border-white rounded-full hover:bg-white/10 hover:text-white/70"
-                  >
-                    Agenda tu Demo
-                  </a>
-                </li>
-
-                {/* Iniciar Sesión */}
-                <li className="inline-flex items-center">
-                  <Link
-                    href="/login"
-                    className="text-white text-[14px] leading-[14px] bg-transparent relative transition-opacity duration-[400ms] ease-in-out border-0 hover:opacity-80"
-                  >
-                    Iniciar sesión
-                  </Link>
-                </li>
-              </ul>
-            </nav>
-          </div>
-
-          {/* BOTÓN HAMBURGER MOBILE */}
-          <button
-            type="button"
-            onClick={toggleMenu}
-            className="lg:hidden inline-flex items-center justify-center h-10 w-10 rounded-md text-white hover:bg-white/10 transition"
-            aria-label="Abrir menú"
+        {/* Desktop CTAs */}
+        <div className="hidden lg:flex items-center gap-3">
+          <Link
+            href="/login"
+            className="text-sm font-medium text-white/55 hover:text-white transition-colors duration-200"
           >
-            <HiMenu className="h-7 w-7" />
-          </button>
+            Ingresar
+          </Link>
+          <a
+            href={CALENDLY_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-bold text-[#182432] bg-white px-5 py-2 rounded-full hover:bg-white/90 transition-colors duration-200"
+          >
+            Agenda Demo
+          </a>
         </div>
+
+        {/* Mobile hamburger */}
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className="lg:hidden p-1.5 text-white/70 hover:text-white transition-colors"
+          aria-label={open ? "Cerrar menú" : "Abrir menú"}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            {open ? <path d="M18 6L6 18M6 6l12 12" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+          </svg>
+        </button>
       </div>
 
-      {/* MENÚ MOBILE */}
-      {open && (
-        <div className="lg:hidden border-t-[3px] border-t-[#2ea3f2] bg-[#212835] shadow-[0_2px_5px_0_rgba(0,0,0,0.1)]">
-          <div className="p-[5%] flex flex-col">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
+      {/* Mobile menu */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="lg:hidden bg-[#182432] border-t border-white/[0.06] overflow-hidden"
+          >
+            <div className="px-5 py-4 flex flex-col gap-0.5">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={closeMenu}
+                  className="text-[14px] font-medium text-white/55 hover:text-white py-2.5 transition-colors"
+                >
+                  {link.label}
+                </Link>
+              ))}
+              <div className="h-px bg-white/[0.06] my-2" />
+              <a
+                href={CALENDLY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 onClick={closeMenu}
-                className="text-white bg-transparent transition-[opacity,background-color] duration-200 ease-in-out block border-b border-b-[rgba(0,0,0,0.03)] py-2.5 px-[5%]"
+                className="text-[14px] font-bold text-[#182432] bg-white py-2.5 rounded-full text-center mt-1"
               >
-                {link.label}
+                Agenda Demo
+              </a>
+              <Link
+                href="/login"
+                onClick={closeMenu}
+                className="text-[14px] font-medium text-white/40 hover:text-white py-2.5 text-center transition-colors"
+              >
+                Iniciar sesión
               </Link>
-            ))}
-
-            <Link
-              href="/#planes"
-              onClick={closeMenu}
-              className="text-white bg-transparent transition-[opacity,background-color] duration-200 ease-in-out block border-b border-b-[rgba(0,0,0,0.03)] py-2.5 px-[5%]"
-            >
-              Ver Planes
-            </Link>
-
-            <a
-              href="https://calendly.com/tarek-ventia-latam/ventia"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={closeMenu}
-              className="text-white bg-transparent transition-[opacity,background-color] duration-200 ease-in-out block border-b border-b-[rgba(0,0,0,0.03)] py-2.5 px-[5%]"
-            >
-              Agenda tu Demo
-            </a>
-
-            <Link
-              href="/login"
-              onClick={closeMenu}
-              className="text-white bg-transparent transition-[opacity,background-color] duration-200 ease-in-out block border-b border-b-[rgba(0,0,0,0.03)] py-2.5 px-[5%]"
-            >
-              Iniciar sesión
-            </Link>
-          </div>
-        </div>
-      )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }
