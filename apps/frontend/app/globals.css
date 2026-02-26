@@ -202,17 +202,24 @@ html {
   50% { box-shadow: 0 0 12px 4px oklch(0.58 0.19 260 / 0.1); }
 }
 
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
 .animate-fadeIn { animation: fadeIn 0.2s ease-out; }
 .animate-scaleIn { animation: scaleIn 0.2s ease-out; }
 .animate-slideInUp { animation: slideInUp 0.3s ease-out both; }
 .animate-pulseGlow { animation: pulseGlow 2s ease-in-out infinite; }
+.animate-marquee { animation: marquee 30s linear infinite; }
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .animate-fadeIn,
   .animate-scaleIn,
   .animate-slideInUp,
-  .animate-pulseGlow {
+  .animate-pulseGlow,
+  .animate-marquee {
     animation: none;
   }
 }

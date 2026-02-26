@@ -6,142 +6,215 @@ import FadeUp from "@/components/ui/FadeUp";
 import { AnimatePresence, motion } from "framer-motion";
 
 const steps = [
-  { id: 1, image: "/images/paso-1.jpg" },
-  { id: 2, image: "/images/paso-2.jpg" },
-  { id: 3, image: "/images/paso-3.jpg" },
-  { id: 4, image: "/images/paso-4.jpg" },
-  { id: 5, image: "/images/paso-5.jpg" },
-  { id: 6, image: "/images/paso-6.jpg" },
-  { id: 7, image: "/images/paso-7.jpg" },
-  { id: 8, image: "/images/paso-8.jpg" },
+  {
+    id: 1,
+    image: "/images/paso-1.jpg",
+    title: "Cliente escribe por WhatsApp",
+    description: "Tu cliente inicia una conversación y el agente IA lo atiende al instante.",
+  },
+  {
+    id: 2,
+    image: "/images/paso-2.jpg",
+    title: "Consulta stock en tiempo real",
+    description: "El agente se conecta a tu inventario y muestra productos disponibles.",
+  },
+  {
+    id: 3,
+    image: "/images/paso-3.jpg",
+    title: "Coordina entrega y horario",
+    description: "Se pacta la dirección, fecha y franja horaria de entrega.",
+  },
+  {
+    id: 4,
+    image: "/images/paso-4.jpg",
+    title: "Confirma datos y pedido",
+    description: "Se recopilan los datos del cliente y se genera el resumen del pedido.",
+  },
+  {
+    id: 5,
+    image: "/images/paso-5.jpg",
+    title: "Valida el pago",
+    description: "El cliente elige su método de pago y envía el comprobante.",
+  },
+  {
+    id: 6,
+    image: "/images/paso-6.jpg",
+    title: "Registra en tus sistemas",
+    description: "El pedido se crea en Shopify y se actualiza el stock automáticamente.",
+  },
+  {
+    id: 7,
+    image: "/images/paso-7.jpg",
+    title: "Nos integramos con tu operador logístico",
+    description: "Coordinamos el despacho directamente con tu operador logístico de confianza.",
+  },
+  {
+    id: 8,
+    image: "/images/paso-8.jpg",
+    title: "Entrega al cliente",
+    description: "Dejamos el pedido en la puerta del cliente el mismo día o al siguiente.",
+  },
 ];
 
 export default function Steps() {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const currentStep = steps[currentIndex];
-
-  const next = () => setCurrentIndex((p) => (p + 1) % steps.length);
-  const prev = () => setCurrentIndex((p) => (p === 0 ? steps.length - 1 : p - 1));
+  const [activeStep, setActiveStep] = useState(0);
 
   return (
     <section
-      id="casos-exito"
-      className="relative bg-white pt-8 sm:pt-12 md:pt-[54px] pb-8 sm:pb-12 md:pb-[54px] scroll-mt-24 sm:scroll-mt-28 md:scroll-mt-[109px]"
+      id="como-funciona"
+      className="relative bg-white py-16 md:py-24 lg:py-32 scroll-mt-24 md:scroll-mt-28"
     >
-      <div className="max-w-[90%] mx-auto relative flex flex-col md:flex-row pt-4 sm:pt-6 md:pt-[27px] pb-4 sm:pb-6 md:pb-[27px] px-4 sm:px-0">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8 md:px-10 lg:px-16 xl:px-20">
 
-        {/* IZQUIERDA - Contenedor de Texto */}
-        <div className="w-full md:w-[47.25%] relative z-[2] order-1 md:order-1 mb-8 md:mb-0 md:mt-[137.672px] md:mb-[137.672px] md:mr-[94.2969px] md:pl-[100px] text-center md:text-left">
-          <FadeUp delay={0}>
-            <div className="relative animate-[0.2s_linear] break-words mb-6 sm:mb-8 md:mb-[41.3125px]">
-              <div className="relative">
-                <p className="text-2xl sm:text-3xl md:text-[36px] leading-tight sm:leading-normal md:leading-[43.2px] text-black font-['Helvetica_Italic',Helvetica,Arial,Lucida,sans-serif] m-0 p-0">
-                  Casos de éxito
-                </p>
-              </div>
-            </div>
-          </FadeUp>
+        {/* Encabezado */}
+        <FadeUp delay={0}>
+          <p className="text-sm font-semibold tracking-widest uppercase text-[#5ACAF0] font-sans mb-3">
+            Así funciona
+          </p>
+        </FadeUp>
+        <FadeUp delay={0.05}>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#182432] font-libre leading-tight mb-4">
+            VENTIA PASO A PASO
+          </h2>
+        </FadeUp>
+        <FadeUp delay={0.1}>
+          <p className="text-base lg:text-lg text-[#182432]/60 font-sans max-w-xl mb-12 md:mb-16">
+            Este mismo proceso de venta puede ser implementado en tu empresa{" "}
+            <strong className="font-bold text-[#182432]">en 3 días.</strong>
+          </p>
+        </FadeUp>
 
-          <FadeUp delay={0.1}>
-            <div className="relative animate-[0.2s_linear] break-words mb-6 sm:mb-8 md:mb-[41.3125px]">
-              <div className="relative">
-                <p className="text-2xl sm:text-3xl md:text-[40px] leading-tight sm:leading-snug md:leading-[44px] font-semibold text-black font-['Libre_Franklin',Helvetica,Arial,Lucida,sans-serif] m-0 p-0">
-                  ASÍ FUNCIONA VENTIA
-                  <br />
-                  PASO A PASO
-                </p>
-              </div>
-            </div>
-          </FadeUp>
+        {/* Layout principal: Timeline + Imagen */}
+        <div className="flex flex-col lg:flex-row items-center lg:items-start lg:justify-center gap-8 lg:gap-14 xl:gap-20">
 
-          <FadeUp delay={0.2}>
-            <div className="relative animate-[0.2s_linear] break-words max-w-full md:max-w-[70%] mb-6 sm:mb-8 md:mb-[41.3125px] md:mr-[213.031px] mx-auto md:mx-0">
-              <div className="relative">
-                <p className="text-sm sm:text-base md:text-[20px] leading-relaxed sm:leading-normal md:leading-[24px] text-black font-['Helvetica_Roman',Helvetica,Arial,Lucida,sans-serif] m-0 p-0">
-                  Este mismo proceso de venta puede ser implementado en tu empresa{" "}
-                  <strong className="font-bold">
-                    en 3 días.
-                  </strong>
-                </p>
-              </div>
-            </div>
-          </FadeUp>
+          {/* Timeline (izquierda) */}
+          <div className="w-full lg:w-auto lg:max-w-[380px] xl:max-w-[420px]">
+            <div className="relative">
+              {/* Línea vertical */}
+              <div className="absolute left-[23px] top-2 bottom-2 w-px bg-[#182432]/10 z-0" />
 
-          <FadeUp delay={0.3}>
-            <div className="relative animate-[0.2s_linear] mb-6 sm:mb-8 md:mb-[41.3125px] flex justify-center md:block">
-              <a
-                href="https://calendly.com/tarek-ventia-latam/ventia"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block relative text-sm sm:text-base md:text-[20px] leading-tight sm:leading-normal md:leading-[34px] font-medium bg-[#48c1ec] text-white transition-all duration-300 border-2 border-white rounded-[36px] py-2.5 sm:py-3 md:py-3 pb-1.5 px-8 sm:px-12 md:px-20 hover:bg-[#212835]"
-              >
-                AGENDA TU DEMO
-              </a>
-            </div>
-          </FadeUp>
-        </div>
-
-        {/* DERECHA - Carrusel de Imágenes */}
-        <div className="w-full md:w-[47.25%] relative z-[2] order-2 md:order-2 mb-6 md:mb-0 md:mt-0">
-          <FadeUp delay={0.4}>
-            <div className="w-full flex flex-col items-center gap-4">
-
+              {/* Línea de progreso animada */}
               <motion.div
-                animate={{ y: [0, -12, 0] }}
-                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                className="relative w-full max-w-[320px] sm:max-w-[420px] md:max-w-[520px] h-[360px] sm:h-[440px] md:h-[600px]"
-              >
+                className="absolute left-[23px] top-2 w-px bg-[#5ACAF0] z-0"
+                animate={{
+                  height: `${((activeStep) / (steps.length - 1)) * 100}%`,
+                }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+              />
+
+              <div className="space-y-1">
+                {steps.map((step, index) => {
+                  const isActive = index === activeStep;
+                  const isPast = index < activeStep;
+
+                  return (
+                    <button
+                      key={step.id}
+                      onClick={() => setActiveStep(index)}
+                      className={`
+                        relative w-full text-left flex items-start gap-4 py-3 px-2 rounded-xl
+                        transition-all duration-300 cursor-pointer group
+                        ${isActive ? "bg-[#182432]/[0.04]" : "hover:bg-[#182432]/[0.02]"}
+                      `}
+                    >
+                      {/* Número / Indicador */}
+                      <div
+                        className={`
+                          relative z-10 shrink-0 flex items-center justify-center
+                          w-[30px] h-[30px] rounded-full text-xs font-bold font-sans
+                          transition-all duration-300 border-2
+                          ${isActive
+                            ? "bg-[#5ACAF0] border-[#5ACAF0] text-white scale-110"
+                            : isPast
+                              ? "bg-[#ddf3fb] border-[#5ACAF0]/40 text-[#5ACAF0]"
+                              : "bg-white border-[#182432]/15 text-[#182432]/40 group-hover:border-[#182432]/30"
+                          }
+                        `}
+                      >
+                        {index + 1}
+                      </div>
+
+                      {/* Texto */}
+                      <div className="flex-1 min-w-0 pt-0.5">
+                        <p
+                          className={`
+                            text-sm font-semibold font-sans leading-snug transition-colors duration-300
+                            ${isActive ? "text-[#182432]" : isPast ? "text-[#182432]/70" : "text-[#182432]/45 group-hover:text-[#182432]/60"}
+                          `}
+                        >
+                          {step.title}
+                        </p>
+
+                        {/* Descripción expandible */}
+                        <div className={`grid transition-all duration-300 ${isActive ? "grid-rows-[1fr] opacity-100 mt-1" : "grid-rows-[0fr] opacity-0"}`}>
+                          <p className="text-xs text-[#182432]/50 font-sans leading-relaxed overflow-hidden">
+                            {step.description}
+                          </p>
+                        </div>
+                      </div>
+
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Imagen (derecha) */}
+          <div className="w-full lg:w-auto">
+            <FadeUp delay={0.2}>
+              <div className="relative aspect-[4/5] w-[320px] sm:w-[360px] lg:w-[400px] mx-auto rounded-2xl overflow-hidden shadow-xl shadow-[#182432]/15 group">
                 <AnimatePresence mode="wait">
                   <motion.div
-                    key={currentStep.id}
-                    initial={{ opacity: 0, x: 60 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -60 }}
-                    transition={{ duration: 0.6, ease: "easeOut" }}
-                    className="relative w-full h-full rounded-b-sm overflow-hidden bg-[#0b2435]"
+                    key={steps[activeStep].id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                    className="absolute inset-0"
                   >
                     <Image
-                      src={currentStep.image}
-                      alt={`Paso ${currentStep.id}`}
+                      src={steps[activeStep].image}
+                      alt={`Paso ${steps[activeStep].id}: ${steps[activeStep].title}`}
                       fill
-                      className="object-contain object-center"
+                      className="object-cover object-top"
                     />
                   </motion.div>
                 </AnimatePresence>
 
-                <button
-                  onClick={prev}
-                  className="flex absolute -left-4 sm:-left-5 md:-left-6 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 rounded-full bg-white shadow-sm border border-[#E5EAF4] text-[#182432] items-center justify-center hover:bg-[#F3F7FF] transition text-xl sm:text-2xl"
-                >
-                  ‹
-                </button>
-
-                <button
-                  onClick={next}
-                  className="flex absolute -right-4 sm:-right-5 md:-right-6 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 rounded-full bg-white shadow-sm border border-[#E5EAF4] text-[#182432] items-center justify-center hover:bg-[#F3F7FF] transition text-xl sm:text-2xl"
-                >
-                  ›
-                </button>
-              </motion.div>
-
-              <div className="flex items-center justify-center gap-1.5 mt-3">
-                {steps.map((_, i) => (
+                {/* Flechas sobre la imagen */}
+                <div className="absolute inset-0 flex items-center justify-between px-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                   <button
-                    key={i}
-                    onClick={() => setCurrentIndex(i)}
-                    className={`rounded-full transition-all ${i === currentIndex
-                        ? "w-4 h-2 bg-[#2F7CF4]"
-                        : "w-2 h-2 bg-gray-300 hover:bg-gray-400"
-                      }`}
-                  />
-                ))}
+                    onClick={() => setActiveStep((p) => (p === 0 ? steps.length - 1 : p - 1))}
+                    className="flex items-center justify-center w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm text-[#182432]/70 hover:bg-white hover:text-[#5ACAF0] transition-all shadow-md cursor-pointer"
+                    aria-label="Paso anterior"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M15 6l-6 6 6 6" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setActiveStep((p) => (p + 1) % steps.length)}
+                    className="flex items-center justify-center w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm text-[#182432]/70 hover:bg-white hover:text-[#5ACAF0] transition-all shadow-md cursor-pointer"
+                    aria-label="Paso siguiente"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M9 6l6 6-6 6" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Indicador de paso */}
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-sm rounded-full px-3 py-1 shadow-md z-10">
+                  <span className="text-xs font-semibold text-[#182432]/70 font-sans tabular-nums">
+                    {activeStep + 1} / {steps.length}
+                  </span>
+                </div>
               </div>
+            </FadeUp>
+          </div>
 
-            </div>
-          </FadeUp>
         </div>
-
-        <span className="w-0 max-w-none static block"></span>
       </div>
     </section>
   );
