@@ -4,106 +4,108 @@ import Image from "next/image";
 import Link from "next/link";
 import { FaTiktok, FaInstagram, FaLinkedin } from "react-icons/fa";
 
+const linkColumns = [
+  {
+    title: "Producto",
+    links: [
+      { label: "Soluciones", href: "#soluciones" },
+      { label: "Planes", href: "#planes" },
+      { label: "Preguntas Frecuentes", href: "/preguntas-frecuentes" },
+    ],
+  },
+  {
+    title: "Contacto",
+    links: [
+      { label: "ventas@ventia-latam.com", href: "mailto:ventas@ventia-latam.com" },
+      { label: "+51 951 752 355", href: "tel:+51951752355" },
+      { label: "Agenda una demo", href: "https://calendly.com/tarek-ventia-latam/ventia", external: true },
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      { label: "Términos y Condiciones", href: "/terms-and-conditions" },
+      { label: "Política de Privacidad", href: "/privacy-policy" },
+      { label: "Libro de Reclamaciones", href: "https://docs.google.com/forms/d/e/1FAIpQLSfCUOtWIsBN84P8g2HFGWejHpPuhZbuGQOKitRpitTaXqxinQ/viewform?usp=send_form", external: true },
+    ],
+  },
+];
+
+const socials = [
+  { icon: FaTiktok, href: "https://www.tiktok.com/@ventia_latam?_t=ZS-90NWJHIQZAV&_r=1", label: "TikTok" },
+  { icon: FaInstagram, href: "https://www.instagram.com/ventia_latam/", label: "Instagram" },
+  { icon: FaLinkedin, href: "https://www.linkedin.com/company/ventia-latam", label: "LinkedIn" },
+];
+
 export default function Footer() {
   return (
-    <footer className="bg-[#182432] text-white py-12 md:py-24">
-      <div className="mx-auto w-full px-6 md:px-20 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
+    <footer className="bg-[#182432]">
+      {/* Línea sutil de separación */}
+      <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
-        {/* IZQUIERDA */}
-        <div className="flex flex-col items-center md:items-start text-center md:text-left">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8 pt-14 pb-8 md:pt-16 md:pb-10">
+        {/* Top: Logo + Link columns */}
+        <div className="grid grid-cols-2 md:grid-cols-[1.4fr_1fr_1fr_1fr] gap-10 md:gap-8">
+          {/* Brand */}
+          <div className="col-span-2 md:col-span-1">
+            <Image
+              src="/images/logo-ventia-header.png"
+              alt="VentIA"
+              width={130}
+              height={36}
+              className="h-11 w-auto mb-4"
+            />
+            <p className="text-white text-sm leading-relaxed max-w-[260px]">
+              Tu equipo de ventas con IA que trabaja 24/7 por ti.
+            </p>
+          </div>
 
-          <div className="flex items-center gap-3 mb-6 md:mb-8">
-            {/* LOGO VENTIA: Aumentado en móvil (h-16 w-56) */}
-            <div className="relative h-16 w-56 md:h-20 md:w-72">
-              <Image
-                src="/images/logo-ventia-header.png"
-                alt="VentIA logo"
-                fill
-                className="object-contain object-center md:object-left"
-              />
+          {/* Link columns */}
+          {linkColumns.map((col) => (
+            <div key={col.title}>
+              <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-white mb-3.5">
+                {col.title}
+              </p>
+              <ul className="space-y-2">
+                {col.links.map((link) => {
+                  const isExternal = "external" in link && link.external;
+                  return (
+                    <li key={link.label}>
+                      <Link
+                        href={link.href}
+                        {...(isExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                        className="text-[13px] text-white hover:text-[#5ACAF0] transition-colors duration-200"
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
-          </div>
-
-          {/* TEXTO: Más pequeño en móvil (text-xs/sm) y centrado */}
-          <p className="text-xs sm:text-sm md:text-lg leading-relaxed font-sans mb-8 md:mb-10 max-w-xs md:max-w-lg mx-auto md:mx-0">
-            VentIA no es un chatbot ni una empresa de envíos.<br className="hidden md:block" />
-            <span className="md:hidden"> </span>
-            Es tu nuevo equipo de ventas y logística trabajando <span className="font-semibold">24/7</span> por ti.
-          </p>
-
-          {/* REDES SOCIALES: Centradas en móvil */}
-          <div className="flex items-center gap-4 md:gap-5 justify-center md:justify-start w-full">
-            <Link
-              href="https://www.tiktok.com/@ventia_latam?_t=ZS-90NWJHIQZAV&_r=1"
-              target="_blank"
-              className="h-10 w-10 md:h-12 md:w-12 flex items-center justify-center bg-white text-[#182432] rounded-full text-xl md:text-2xl hover:scale-110 transition"
-            >
-              <FaTiktok />
-            </Link>
-
-            <Link
-              href="https://www.instagram.com/ventia_latam/"
-              target="_blank"
-              className="h-10 w-10 md:h-12 md:w-12 flex items-center justify-center bg-white text-[#182432] rounded-full text-xl md:text-2xl hover:scale-110 transition"
-            >
-              <FaInstagram />
-            </Link>
-
-            <Link
-              href="https://www.linkedin.com/company/ventia-latam"
-              target="_blank"
-              className="h-10 w-10 md:h-12 md:w-12 flex items-center justify-center bg-white text-[#182432] rounded-full text-xl md:text-2xl hover:scale-110 transition"
-            >
-              <FaLinkedin />
-            </Link>
-          </div>
+          ))}
         </div>
 
-        {/* DERECHA */}
-        <div className="flex flex-col items-center md:items-end text-center md:text-right gap-8 md:gap-5">
-
-          {/* LIBRO DE RECLAMACIONES */}
-          <Link
-            href="https://docs.google.com/forms/d/e/1FAIpQLSfCUOtWIsBN84P8g2HFGWejHpPuhZbuGQOKitRpitTaXqxinQ/viewform?usp=send_form"
-            target="_blank"
-          >
-            <div className="flex flex-col items-center md:items-end cursor-pointer hover:opacity-90 transition">
-              <p className="text-[10px] md:text-xs font-sans mb-1 uppercase tracking-widest md:hidden">
-                LIBRO DE RECLAMACIONES
-              </p>
-              <div className="relative h-10 w-16 md:h-20 md:w-32">
-                <Image
-                  src="/images/libro-reclamaciones.avif"
-                  alt="Libro de reclamaciones"
-                  fill
-                  className="object-contain"
-                />
-              </div>
-            </div>
-          </Link>
-
-          <div className="md:text-right text-center md:mt-2">
-            <h3 className="font-libre font-bold tracking-wide text-sm md:text-base mb-2 uppercase">
-              CONTACTO
-            </h3>
-            <p className="text-xs md:text-lg font-sans mb-1">ventas@ventia-latam.com</p>
-            <p className="text-xs md:text-lg font-sans">+51 951 752 355</p>
+        {/* Bottom bar */}
+        <div className="mt-12 pt-6 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4 text-[12px] text-white order-2 sm:order-1">
+            <span>&copy; {new Date().getFullYear()} VentIA</span>
           </div>
 
-          {/* LINKS LEGALES */}
-          <div className="md:text-right text-center flex flex-col gap-2">
-            <Link
-              href="/terms-and-conditions"
-              className="text-xs md:text-sm font-sans text-white/80 hover:text-white transition"
-            >
-              Términos y Condiciones
-            </Link>
-            <Link
-              href="/privacy-policy"
-              className="text-xs md:text-sm font-sans text-white/80 hover:text-white transition"
-            >
-              Política de Privacidad
-            </Link>
+          {/* Social icons */}
+          <div className="flex items-center gap-3 order-1 sm:order-2">
+            {socials.map((s) => (
+              <Link
+                key={s.label}
+                href={s.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={s.label}
+                className="text-white hover:text-[#5ACAF0] transition-colors duration-200 text-[15px]"
+              >
+                <s.icon />
+              </Link>
+            ))}
           </div>
         </div>
       </div>
