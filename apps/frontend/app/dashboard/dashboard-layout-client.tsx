@@ -83,7 +83,7 @@ export default function DashboardLayoutClient({
             </div>
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 sm:gap-6 px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 overflow-x-hidden">
+        <div className="flex flex-1 flex-col gap-4 sm:gap-6 px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 overflow-x-hidden min-h-0">
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}
@@ -91,7 +91,7 @@ export default function DashboardLayoutClient({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="flex flex-1 flex-col gap-4 sm:gap-6"
+              className="flex flex-1 flex-col gap-4 sm:gap-6 min-h-0"
             >
               {children}
             </motion.div>
