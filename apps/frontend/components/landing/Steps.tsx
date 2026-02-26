@@ -61,7 +61,7 @@ export default function Steps() {
 
   return (
     <section
-      id="casos-exito"
+      id="como-funciona"
       className="relative bg-white py-16 md:py-24 lg:py-32 scroll-mt-24 md:scroll-mt-28"
     >
       <div className="mx-auto max-w-7xl px-5 sm:px-8 md:px-10 lg:px-16 xl:px-20">

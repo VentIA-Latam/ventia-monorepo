@@ -11,7 +11,7 @@ export default function Hero() {
     >
       <div className="w-full max-w-[100%] mx-auto px-5 sm:px-8 md:px-10 lg:px-16 xl:px-20">
 
-        <div className="flex flex-col lg:flex-row items-center lg:items-start gap-10 md:gap-14 lg:gap-24 xl:gap-28 py-6 md:py-8 lg:py-12">
+        <div className="flex flex-col lg:flex-row items-center lg:items-start lg:justify-between gap-10 md:gap-14 py-6 md:py-8 lg:py-12">
 
           {/* Texto */}
           <div className="w-full lg:flex-1 lg:max-w-[45%] text-center lg:text-left order-1 lg:pt-12 xl:pt-32">
@@ -56,7 +56,7 @@ export default function Hero() {
           </div>
 
           {/* Mockup con sombra/glow */}
-          <div className="w-full lg:flex-1 lg:max-w-[50%] order-2">
+          <div className="w-full lg:flex-1 lg:max-w-[42%] order-2">
             <FadeUp delay={0.3}>
               <div className="relative">
                 <div className="absolute inset-0 bg-[#5ACAF0]/10 rounded-full blur-[80px] scale-90 pointer-events-none" />
