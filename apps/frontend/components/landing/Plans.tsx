@@ -207,7 +207,7 @@ export default function Plans() {
           <div
             ref={carouselRef}
             onScroll={handleScroll}
-            className="flex overflow-x-auto snap-x snap-mandatory gap-0 pb-6 no-scrollbar"
+            className="flex overflow-x-auto snap-x snap-mandatory gap-0 pt-4 pb-6 no-scrollbar"
           >
             {plans.map((plan) => (
               <div key={plan.name} className="min-w-full w-full snap-center shrink-0 px-2">
