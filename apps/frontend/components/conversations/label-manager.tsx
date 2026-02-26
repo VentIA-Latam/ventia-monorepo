@@ -105,14 +105,12 @@ export function LabelManager({
             style={{ borderColor: label.color, color: label.color }}
           >
             {label.title}
-            {!label.system && (
-              <button
-                onClick={() => handleRemove(label.id)}
-                className="hover:opacity-70 transition-opacity"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
+            <button
+              onClick={() => handleRemove(label.id)}
+              className="hover:opacity-70 transition-opacity"
+            >
+              <X className="h-3 w-3" />
+            </button>
           </Badge>
         ))}
 
