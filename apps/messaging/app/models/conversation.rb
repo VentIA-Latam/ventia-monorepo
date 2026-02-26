@@ -63,6 +63,7 @@ class Conversation < ApplicationRecord
   enum :status, { open: 0, resolved: 1, pending: 2, snoozed: 3 }
   enum :priority, { low: 0, medium: 1, high: 2, urgent: 3 }
   enum :temperature, { cold: 0, warm: 1, hot: 2 }, prefix: true
+  enum :stage, { pre_sale: 0, sale: 1 }
 
   # Scopes
   scope :unassigned, -> { where(assignee_id: nil) }
@@ -70,6 +71,8 @@ class Conversation < ApplicationRecord
   scope :recent, -> { order(last_activity_at: :desc) }
   scope :with_label, ->(title) { joins(:labels).where(labels: { title: title }).distinct }
   scope :in_date_range, ->(from, to) { where(last_activity_at: from..to) }
+  scope :by_stage, ->(stage) { where(stage: stage) }
+  scope :unattended, -> { where(first_reply_created_at: nil).or(where.not(waiting_since: nil)) }
 
   # Callbacks
   before_validation :ensure_uuid
@@ -132,13 +135,16 @@ class Conversation < ApplicationRecord
       id: id,
       uuid: uuid,
       status: status,
+      stage: stage,
       account_id: account_id,
       inbox_id: inbox_id,
       contact_id: contact_id,
       assignee_id: assignee_id,
       team_id: team_id,
       ai_agent_enabled: ai_agent_enabled,
-      additional_attributes: additional_attributes
+      additional_attributes: additional_attributes,
+      waiting_since: waiting_since&.to_i,
+      first_reply_created_at: first_reply_created_at&.to_i
     }
   end
 
@@ -151,6 +157,7 @@ class Conversation < ApplicationRecord
   def set_initial_status
     self.status ||= :open
     self.last_activity_at ||= Time.current
+    self.waiting_since ||= Time.current
   end
 
   def broadcast_created

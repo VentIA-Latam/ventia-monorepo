@@ -1,15 +1,21 @@
 class Api::V1::ConversationsController < Api::V1::BaseController
-  before_action :set_conversation, only: [:show, :update, :toggle_status, :update_last_seen, :destroy]
+  before_action :set_conversation, only: [:show, :update, :toggle_status, :update_stage, :escalate, :update_last_seen, :destroy]
 
   def index
     conversations = current_account.conversations
-                                   .includes(:contact, :inbox, :labels, messages: :attachments)
+                                   .includes(:contact, :inbox, :labels, :assignee, :team, messages: :attachments)
                                    .recent
                                    .page(params[:page] || 1)
                                    .per(params[:per_page] || 25)
 
     # Filter by status
     conversations = conversations.where(status: params[:status]) if params[:status]
+
+    # Filter by stage (pre_sale / sale)
+    conversations = conversations.by_stage(params[:stage]) if params[:stage].present?
+
+    # Filter by conversation type (unattended)
+    conversations = conversations.unattended if params[:conversation_type] == 'unattended'
 
     # Filter by inbox
     conversations = conversations.where(inbox_id: params[:inbox_id]) if params[:inbox_id]
@@ -41,6 +47,20 @@ class Api::V1::ConversationsController < Api::V1::BaseController
     }
   end
 
+  def counts
+    base = current_account.conversations
+    base = base.where(inbox_id: params[:inbox_id]) if params[:inbox_id]
+
+    render json: {
+      success: true,
+      data: {
+        all: base.count,
+        sale: base.by_stage(:sale).count,
+        unattended: base.unattended.count
+      }
+    }
+  end
+
   def show
     render_success(conversation_json(@conversation))
   end
@@ -67,6 +87,32 @@ class Api::V1::ConversationsController < Api::V1::BaseController
     )
   end
 
+  def update_stage
+    stage = params[:stage]
+    unless %w[pre_sale sale].include?(stage)
+      return render_error('Invalid stage. Must be pre_sale or sale', status: :unprocessable_entity)
+    end
+
+    @conversation.update!(stage: stage)
+    render_success(conversation_json(@conversation), message: "Stage updated to #{stage}")
+  end
+
+  def escalate
+    @conversation.update!(ai_agent_enabled: false)
+
+    label = Label.find_or_create_by!(account_id: current_account.id, title: 'soporte-humano') do |l|
+      l.color = '#EF4444'
+      l.system = true
+      l.show_on_sidebar = true
+    end
+
+    unless @conversation.labels.exists?(label.id)
+      @conversation.labels << label
+    end
+
+    render_success(conversation_json(@conversation.reload), message: 'Conversation escalated to human support')
+  end
+
   def update_last_seen
     @conversation.update_columns(agent_last_seen_at: Time.current)
 
@@ -90,7 +136,7 @@ class Api::V1::ConversationsController < Api::V1::BaseController
   end
 
   def conversation_params
-    params.require(:conversation).permit(:status, :priority, :temperature, :ai_agent_enabled, custom_attributes: {})
+    params.require(:conversation).permit(:status, :stage, :priority, :temperature, :ai_agent_enabled, custom_attributes: {})
   end
 
   def conversation_json(conversation)
@@ -100,24 +146,38 @@ class Api::V1::ConversationsController < Api::V1::BaseController
       id: conversation.id,
       uuid: conversation.uuid,
       status: conversation.status,
+      stage: conversation.stage,
       priority: conversation.priority,
       temperature: conversation.temperature,
       can_reply: conversation.can_reply?,
       last_activity_at: conversation.last_activity_at,
       agent_last_seen_at: conversation.agent_last_seen_at,
+      created_at: conversation.created_at,
       last_message_at: conversation.messages.maximum(:created_at),
       contact: {
         id: conversation.contact.id,
         name: conversation.contact.name,
-        phone_number: conversation.contact.phone_number
+        phone_number: conversation.contact.phone_number,
+        email: conversation.contact.email
       },
+      assignee: conversation.assignee ? {
+        id: conversation.assignee.id,
+        name: conversation.assignee.name,
+        email: conversation.assignee.email
+      } : nil,
+      team: conversation.team ? {
+        id: conversation.team.id,
+        name: conversation.team.name
+      } : nil,
       inbox_id: conversation.inbox_id,
       inbox: {
         id: conversation.inbox.id,
         name: conversation.inbox.name,
         channel_type: conversation.inbox.channel_type
       },
-      labels: conversation.labels.map { |l| { id: l.id, title: l.title, color: l.color } },
+      labels: conversation.labels.map { |l| { id: l.id, title: l.title, color: l.color, system: l.system } },
+      waiting_since: conversation.waiting_since&.to_i,
+      first_reply_created_at: conversation.first_reply_created_at&.to_i,
       ai_agent_enabled: conversation.ai_agent_enabled,
       messages_count: conversation.messages.count,
       unread_count: conversation.unread_messages.count,

@@ -4,13 +4,18 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Search, MessageSquare, Loader2 } from "lucide-react";
+import { Search, MessageSquare } from "lucide-react";
 import { ConversationItem } from "./conversation-item";
 import { ConversationFilters, type ActiveFilters } from "./conversation-filters";
 import { useMessaging } from "./messaging-provider";
-import { getConversations, deleteConversation, type ConversationFilters as ConversationFilterParams } from "@/lib/api-client/messaging";
+import {
+  getConversations,
+  getConversationCounts,
+  deleteConversation,
+  type ConversationFilters as ConversationFilterParams,
+} from "@/lib/api-client/messaging";
 import { cn } from "@/lib/utils";
-import type { Conversation, ConversationStatus, Label } from "@/lib/types/messaging";
+import type { Conversation, ConversationCounts, Label } from "@/lib/types/messaging";
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -21,13 +26,12 @@ interface ConversationListProps {
   onDeleteConversation?: (id: number) => void;
 }
 
-type FilterValue = "all" | ConversationStatus;
+type SectionValue = "all" | "sale" | "unattended";
 
-const FILTER_CHIPS: { value: FilterValue; label: string }[] = [
-  { value: "all", label: "Todos" },
-  { value: "open", label: "Abiertas" },
-  { value: "pending", label: "Pendientes" },
-  { value: "resolved", label: "Resueltas" },
+const SECTION_TABS: { value: SectionValue; label: string; countKey?: keyof ConversationCounts }[] = [
+  { value: "all", label: "Todas" },
+  { value: "sale", label: "Venta", countKey: "sale" },
+  { value: "unattended", label: "No Atendida", countKey: "unattended" },
 ];
 
 export function ConversationList({
@@ -39,19 +43,21 @@ export function ConversationList({
   onDeleteConversation,
 }: ConversationListProps) {
   const { lastEvent } = useMessaging();
-  const [statusFilter, setStatusFilter] = useState<FilterValue>("open");
+  const [sectionFilter, setSectionFilter] = useState<SectionValue>("all");
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
+  const [counts, setCounts] = useState<ConversationCounts | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
-  const statusFilterRef = useRef(statusFilter);
-  statusFilterRef.current = statusFilter;
+  const sectionFilterRef = useRef(sectionFilter);
+  sectionFilterRef.current = sectionFilter;
   const activeFiltersRef = useRef(activeFilters);
   activeFiltersRef.current = activeFilters;
 
   const buildParams = useCallback(
-    (status: FilterValue, filters: ActiveFilters): ConversationFilterParams => {
+    (section: SectionValue, filters: ActiveFilters): ConversationFilterParams => {
       const params: ConversationFilterParams = {};
-      if (status !== "all") params.status = status;
+      if (section === "sale") params.stage = "sale";
+      if (section === "unattended") params.conversation_type = "unattended";
       if (filters.label) params.label = filters.label;
       if (filters.temperature) params.temperature = filters.temperature;
       if (filters.dateRange) {
@@ -79,10 +85,20 @@ export function ConversationList({
     [onConversationsChange]
   );
 
-  const handleStatusChange = useCallback(
-    (filter: FilterValue) => {
-      setStatusFilter(filter);
-      fetchConversations(buildParams(filter, activeFiltersRef.current));
+  const fetchCounts = useCallback(async () => {
+    try {
+      const result = await getConversationCounts();
+      setCounts(result.data);
+    } catch (error) {
+      console.error("Error fetching counts:", error);
+    }
+  }, []);
+
+  const handleSectionChange = useCallback(
+    (section: SectionValue) => {
+      setSectionFilter(section);
+      setActiveFilters({});
+      fetchConversations(buildParams(section, {}));
     },
     [fetchConversations, buildParams]
   );
@@ -90,7 +106,7 @@ export function ConversationList({
   const handleFiltersChange = useCallback(
     (filters: ActiveFilters) => {
       setActiveFilters(filters);
-      fetchConversations(buildParams(statusFilterRef.current, filters));
+      fetchConversations(buildParams(sectionFilterRef.current, filters));
     },
     [fetchConversations, buildParams]
   );
@@ -108,7 +124,12 @@ export function ConversationList({
     [conversations, onConversationsChange, onDeleteConversation]
   );
 
-  // Refresh conversation list on real-time events
+  // Fetch counts on mount
+  useEffect(() => {
+    fetchCounts();
+  }, [fetchCounts]);
+
+  // Refresh conversation list and counts on real-time events
   useEffect(() => {
     if (!lastEvent) return;
     const { event } = lastEvent;
@@ -119,12 +140,13 @@ export function ConversationList({
       event === "conversation.status_changed" ||
       event === "conversation.read"
     ) {
-      const params = buildParams(statusFilterRef.current, activeFiltersRef.current);
+      const params = buildParams(sectionFilterRef.current, activeFiltersRef.current);
       getConversations(params)
         .then((data) => onConversationsChange(data.data ?? []))
         .catch((err) => console.error("Error refreshing conversations:", err));
+      fetchCounts();
     }
-  }, [lastEvent, onConversationsChange, buildParams]);
+  }, [lastEvent, onConversationsChange, buildParams, fetchCounts]);
 
   const filteredConversations = searchQuery
     ? conversations.filter((c) => {
@@ -157,22 +179,37 @@ export function ConversationList({
         </div>
       </div>
 
-      {/* Filter chips */}
+      {/* Section tabs */}
       <div className="px-3 pb-2 flex gap-1.5 overflow-x-auto no-scrollbar">
-        {FILTER_CHIPS.map((chip) => (
-          <button
-            key={chip.value}
-            onClick={() => handleStatusChange(chip.value)}
-            className={cn(
-              "shrink-0 rounded-full text-xs px-3 py-1.5 font-medium transition-colors",
-              statusFilter === chip.value
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted/60 text-muted-foreground hover:bg-muted"
-            )}
-          >
-            {chip.label}
-          </button>
-        ))}
+        {SECTION_TABS.map((tab) => {
+          const count = tab.countKey && counts ? counts[tab.countKey] : null;
+          return (
+            <button
+              key={tab.value}
+              onClick={() => handleSectionChange(tab.value)}
+              className={cn(
+                "shrink-0 rounded-full text-xs px-3 py-1.5 font-medium transition-colors flex items-center gap-1.5",
+                sectionFilter === tab.value
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted/60 text-muted-foreground hover:bg-muted"
+              )}
+            >
+              {tab.label}
+              {count !== null && count > 0 && (
+                <span
+                  className={cn(
+                    "inline-flex items-center justify-center rounded-full text-[10px] font-semibold min-w-[18px] h-[18px] px-1",
+                    sectionFilter === tab.value
+                      ? "bg-primary-foreground/20 text-primary-foreground"
+                      : "bg-primary/10 text-primary"
+                  )}
+                >
+                  {count > 99 ? "99+" : count}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Advanced filters */}
@@ -203,7 +240,11 @@ export function ConversationList({
             description={
               searchQuery
                 ? "No hay resultados para esta búsqueda."
-                : "No hay conversaciones en este estado."
+                : sectionFilter === "unattended"
+                  ? "Todas las conversaciones están atendidas."
+                  : sectionFilter === "sale"
+                    ? "No hay conversaciones de venta."
+                    : "No hay conversaciones."
             }
           />
         ) : (

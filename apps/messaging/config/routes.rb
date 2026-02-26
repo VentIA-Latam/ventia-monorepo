@@ -56,8 +56,13 @@ Rails.application.routes.draw do
 
       # Conversations (global)
       resources :conversations, only: [:index, :show, :update, :destroy] do
+        collection do
+          get :counts
+        end
         member do
           post :toggle_status
+          post :update_stage
+          post :escalate
           post :update_last_seen
           post :assign_agent
           post :assign_team

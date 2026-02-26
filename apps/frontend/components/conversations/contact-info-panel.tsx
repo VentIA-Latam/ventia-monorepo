@@ -38,10 +38,9 @@ function getInitials(name: string | null | undefined): string {
     .slice(0, 2);
 }
 
-const statusConfig: Record<string, { label: string; className: string }> = {
-  open: { label: "Abierta", className: "bg-success-bg text-success border-success/30" },
-  pending: { label: "Pendiente", className: "bg-warning-bg text-warning border-warning/30" },
-  resolved: { label: "Resuelta", className: "bg-muted/50 text-foreground border-border" },
+const stageConfig: Record<string, { label: string; className: string }> = {
+  pre_sale: { label: "Pre-venta", className: "bg-info-bg text-info border-info/30" },
+  sale: { label: "Venta", className: "bg-success-bg text-success border-success/30" },
 };
 
 export function ContactInfoPanel({
@@ -55,7 +54,7 @@ export function ContactInfoPanel({
   const { toast } = useToast();
   const [assigning, setAssigning] = useState(false);
   const contact = conversation.contact;
-  const config = statusConfig[conversation.status] ?? statusConfig.open;
+  const stageConf = stageConfig[conversation.stage] ?? stageConfig.pre_sale;
 
   const handleTeamAssign = useCallback(
     async (teamId: string) => {
@@ -107,8 +106,8 @@ export function ContactInfoPanel({
           <p className="font-medium">
             {contact?.name || "Sin nombre"}
           </p>
-          <Badge variant="outline" className={`mt-2 ${config.className}`}>
-            {config.label}
+          <Badge variant="outline" className={`mt-2 ${stageConf.className}`}>
+            {stageConf.label}
           </Badge>
         </div>
 

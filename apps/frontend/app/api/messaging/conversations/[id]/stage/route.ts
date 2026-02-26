@@ -3,38 +3,39 @@ import { getAccessToken } from "@/lib/auth0";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
-export async function GET(request: Request) {
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const accessToken = await getAccessToken();
     if (!accessToken) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const params = new URLSearchParams();
-    for (const key of ["status", "stage", "conversation_type", "page", "label", "temperature", "created_after", "created_before", "unread"]) {
-      const val = searchParams.get(key);
-      if (val) params.set(key, val);
-    }
+    const { id } = await params;
+    const body = await request.json();
 
     const response = await fetch(
-      `${API_URL}/messaging/conversations${params.toString() ? "?" + params.toString() : ""}`,
+      `${API_URL}/messaging/conversations/${id}/update_stage`,
       {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
+        body: JSON.stringify(body),
       }
     );
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: "Failed to fetch conversations" }));
+      const error = await response.json().catch(() => ({ detail: "Failed to update stage" }));
       return NextResponse.json({ error: error.detail }, { status: response.status });
     }
 
     return NextResponse.json(await response.json());
   } catch (error) {
-    console.error("Error fetching conversations:", error);
-    return NextResponse.json({ error: "Failed to fetch conversations" }, { status: 500 });
+    console.error("Error updating conversation stage:", error);
+    return NextResponse.json({ error: "Failed to update stage" }, { status: 500 });
   }
 }

@@ -37,11 +37,13 @@ export interface Label {
   id: number;
   title: string;
   color: string;
+  system?: boolean;
 }
 
 // --- Conversation ---
 
 export type ConversationStatus = "open" | "resolved" | "pending";
+export type ConversationStage = "pre_sale" | "sale";
 export type ConversationTemperature = "cold" | "warm" | "hot" | null;
 
 export interface LastMessageBrief {
@@ -60,6 +62,7 @@ export interface InboxBrief {
 export interface Conversation {
   id: number;
   status: ConversationStatus;
+  stage: ConversationStage;
   inbox_id: number | null;
   inbox: InboxBrief | null;
   contact: ContactBrief | null;
@@ -72,9 +75,17 @@ export interface Conversation {
   messages_count: number | null;
   unread_count: number | null;
   agent_last_seen_at: string | number | null;
+  waiting_since: number | null;
+  first_reply_created_at: number | null;
   last_message_at: string | number | null;
   last_message: LastMessageBrief | null;
   created_at: string | number | null;
+}
+
+export interface ConversationCounts {
+  all: number;
+  sale: number;
+  unattended: number;
 }
 
 export interface ConversationListResponse {

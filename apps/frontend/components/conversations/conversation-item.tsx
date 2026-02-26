@@ -190,15 +190,6 @@ export const ConversationItem = memo(function ConversationItem({
               {conversation.temperature === "cold" && <Snowflake className="h-3 w-3 text-blue-500" />}
               {conversation.temperature === "warm" && <Thermometer className="h-3 w-3 text-orange-500" />}
               {conversation.temperature === "hot" && <Flame className="h-3 w-3 text-red-500" />}
-              {/* Label dots */}
-              {conversation.labels?.slice(0, 3).map((label) => (
-                <span
-                  key={label.id}
-                  className="h-2 w-2 rounded-full shrink-0"
-                  style={{ backgroundColor: label.color }}
-                  title={label.title}
-                />
-              ))}
               {/* Unread badge */}
               {hasUnread && (
                 <span className="ml-0.5 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-semibold leading-none">
@@ -207,6 +198,33 @@ export const ConversationItem = memo(function ConversationItem({
               )}
             </div>
           </div>
+          {/* Label badges */}
+          {conversation.labels && conversation.labels.length > 0 && (
+            <div className="flex items-center gap-1 mt-1 overflow-hidden">
+              {conversation.labels.slice(0, 2).map((label) => (
+                <span
+                  key={label.id}
+                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium leading-none max-w-[120px] truncate"
+                  style={{
+                    backgroundColor: `${label.color}18`,
+                    color: label.color,
+                    border: `1px solid ${label.color}30`,
+                  }}
+                >
+                  <span
+                    className="h-1.5 w-1.5 rounded-sm shrink-0"
+                    style={{ backgroundColor: label.color }}
+                  />
+                  {label.title}
+                </span>
+              ))}
+              {conversation.labels.length > 2 && (
+                <span className="text-[10px] text-muted-foreground font-medium">
+                  +{conversation.labels.length - 2}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {onDelete && (

@@ -26,6 +26,8 @@ const PRESET_COLORS = [
   "#9C27B0", "#00BCD4", "#795548", "#607D8B",
 ];
 
+const RESERVED_LABEL_NAMES = ["soporte-humano", "en-revisión"];
+
 export function LabelManager({
   conversationId,
   labels,
@@ -70,8 +72,10 @@ export function LabelManager({
     [conversationId, labels, onChange]
   );
 
+  const isReservedName = RESERVED_LABEL_NAMES.includes(newTitle.trim().toLowerCase());
+
   const handleCreate = useCallback(async () => {
-    if (!newTitle.trim()) return;
+    if (!newTitle.trim() || isReservedName) return;
     setCreating(true);
     try {
       const result = await createLabel({ title: newTitle.trim(), color: newColor });
@@ -87,7 +91,7 @@ export function LabelManager({
     } finally {
       setCreating(false);
     }
-  }, [newTitle, newColor, conversationId, labels, onChange, onLabelsCreated]);
+  }, [newTitle, newColor, conversationId, labels, onChange, onLabelsCreated, isReservedName]);
 
   return (
     <div className="space-y-2">
@@ -101,12 +105,14 @@ export function LabelManager({
             style={{ borderColor: label.color, color: label.color }}
           >
             {label.title}
-            <button
-              onClick={() => handleRemove(label.id)}
-              className="hover:opacity-70 transition-opacity"
-            >
-              <X className="h-3 w-3" />
-            </button>
+            {!label.system && (
+              <button
+                onClick={() => handleRemove(label.id)}
+                className="hover:opacity-70 transition-opacity"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </Badge>
         ))}
 
@@ -169,11 +175,16 @@ export function LabelManager({
                   />
                 ))}
               </div>
+              {isReservedName && (
+                <p className="text-[11px] text-destructive">
+                  Nombre reservado para etiquetas del sistema.
+                </p>
+              )}
               <Button
                 size="sm"
                 className="w-full h-7 text-xs"
                 onClick={handleCreate}
-                disabled={!newTitle.trim() || creating}
+                disabled={!newTitle.trim() || creating || isReservedName}
               >
                 {creating ? "Creando..." : "Crear y asignar"}
               </Button>

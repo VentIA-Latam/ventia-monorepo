@@ -123,6 +123,8 @@ async def get_ws_token(
 )
 async def list_conversations(
     status: Optional[str] = Query(None, description="Filter by status: open, resolved, pending"),
+    stage: Optional[str] = Query(None, description="Filter by stage: pre_sale, sale"),
+    conversation_type: Optional[str] = Query(None, description="Filter by type: unattended"),
     page: Optional[int] = Query(None, description="Page number"),
     label: Optional[str] = Query(None, description="Filter by label title"),
     temperature: Optional[str] = Query(None, description="Filter by temperature: cold, warm, hot"),
@@ -135,6 +137,10 @@ async def list_conversations(
     params = {}
     if status:
         params["status"] = status
+    if stage:
+        params["stage"] = stage
+    if conversation_type:
+        params["conversation_type"] = conversation_type
     if page:
         params["page"] = page
     if label:
@@ -149,6 +155,24 @@ async def list_conversations(
         params["unread"] = unread
 
     result = await messaging_service.get_conversations(tenant_id, params or None)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.get(
+    "/conversations/counts",
+    summary="Get conversation counts by section",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def get_conversation_counts(
+    current_user: User = Depends(get_current_user),
+):
+    tenant_id = _get_tenant_id(current_user)
+
+    result = await messaging_service.get_conversation_counts(tenant_id)
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")
 
@@ -228,6 +252,50 @@ async def delete_conversation(
     tenant_id = _get_tenant_id(current_user)
 
     result = await messaging_service.delete_conversation(tenant_id, conversation_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/conversations/{conversation_id}/update_stage",
+    summary="Update conversation business stage",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def update_conversation_stage(
+    conversation_id: str,
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+):
+    tenant_id = _get_tenant_id(current_user)
+    stage = payload.get("stage")
+    if stage not in ("pre_sale", "sale"):
+        raise HTTPException(status_code=400, detail="stage must be 'pre_sale' or 'sale'")
+
+    result = await messaging_service.update_conversation_stage(
+        tenant_id, conversation_id, stage
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/conversations/{conversation_id}/escalate",
+    summary="Escalate conversation to human support",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def escalate_conversation(
+    conversation_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    tenant_id = _get_tenant_id(current_user)
+
+    result = await messaging_service.escalate_conversation(tenant_id, conversation_id)
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")
 

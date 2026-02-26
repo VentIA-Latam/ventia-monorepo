@@ -28,8 +28,12 @@ class Label < ApplicationRecord
   has_many :conversation_labels, dependent: :destroy
   has_many :conversations, through: :conversation_labels
 
+  SYSTEM_LABEL_NAMES = %w[soporte-humano en-revisión].freeze
+
   # Callbacks
   before_validation :normalize_title
+  before_destroy :prevent_system_label_deletion
+  before_update :prevent_system_label_modification
 
   # Scopes
   default_scope -> { order(:title) }
@@ -40,7 +44,8 @@ class Label < ApplicationRecord
       id: id,
       title: title,
       description: description,
-      color: color
+      color: color,
+      system: system
     }
   end
 
@@ -48,5 +53,19 @@ class Label < ApplicationRecord
 
   def normalize_title
     self.title = title.downcase.strip if title.present?
+  end
+
+  def prevent_system_label_deletion
+    if system?
+      errors.add(:base, 'System labels cannot be deleted')
+      throw(:abort)
+    end
+  end
+
+  def prevent_system_label_modification
+    if system? && (title_changed? || color_changed?)
+      errors.add(:base, 'System label title and color cannot be modified')
+      throw(:abort)
+    end
   end
 end

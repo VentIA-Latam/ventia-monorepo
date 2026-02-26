@@ -1,6 +1,7 @@
 import { apiGet, apiPost, apiPatch, apiDelete } from "./client";
 import type {
   ConversationListResponse,
+  ConversationCounts,
   Conversation,
   MessageListResponse,
   WebSocketToken,
@@ -19,6 +20,8 @@ import type {
 
 export interface ConversationFilters {
   status?: string;
+  stage?: string;
+  conversation_type?: string;
   page?: number;
   label?: string;
   temperature?: string;
@@ -44,6 +47,17 @@ export async function updateConversation(
 
 export async function deleteConversation(id: number | string): Promise<unknown> {
   return apiDelete(`/api/messaging/conversations/${id}`);
+}
+
+export async function getConversationCounts(): Promise<{ success: boolean; data: ConversationCounts }> {
+  return apiGet("/api/messaging/conversations/counts");
+}
+
+export async function updateConversationStage(
+  id: number | string,
+  stage: "pre_sale" | "sale"
+): Promise<unknown> {
+  return apiPost(`/api/messaging/conversations/${id}/stage`, { stage });
 }
 
 export async function markConversationRead(conversationId: number | string): Promise<unknown> {

@@ -57,6 +57,7 @@ class OrderBase(BaseModel):
     shipping_province: str | None = Field(None, description="Shipping province/state")
     shipping_country: str | None = Field(None, description="Country name")
     channel: str | None = Field(None, description="Sales channel: shopify, woocommerce, venta_whatsapp")
+    messaging_conversation_id: int | None = Field(None, description="Linked conversation ID in messaging service")
 
 
 class OrderCreate(OrderBase):
@@ -115,6 +116,7 @@ class OrderUpdate(BaseModel):
     payment_method: str | None = None
     notes: str | None = None
     status: str | None = None
+    messaging_conversation_id: int | None = None
     shipping_address: str | None = None
     shipping_city: str | None = None
     shipping_province: str | None = None
@@ -185,6 +187,7 @@ class OrderResponse(OrderBase):
     validado: bool
     validated_at: datetime | None
     channel: str | None = Field(None, description="Sales channel: shopify, woocommerce, venta_whatsapp")
+    messaging_conversation_id: int | None = Field(None, description="Linked conversation ID in messaging service")
     status: str
     created_at: datetime
     updated_at: datetime

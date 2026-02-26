@@ -152,6 +152,35 @@ class MessagingService:
             "DELETE", f"/api/v1/conversations/{conversation_id}", tenant_id
         )
 
+    async def get_conversation_counts(
+        self, tenant_id: int, params: Optional[dict] = None
+    ) -> Optional[dict]:
+        """Get conversation counts by section (all, sale, unattended)."""
+        return await self._request(
+            "GET", "/api/v1/conversations/counts", tenant_id, params=params
+        )
+
+    async def update_conversation_stage(
+        self, tenant_id: int, conversation_id: str, stage: str
+    ) -> Optional[dict]:
+        """Update the business stage of a conversation (pre_sale/sale)."""
+        return await self._request(
+            "POST",
+            f"/api/v1/conversations/{conversation_id}/update_stage",
+            tenant_id,
+            json_data={"stage": stage},
+        )
+
+    async def escalate_conversation(
+        self, tenant_id: int, conversation_id: str
+    ) -> Optional[dict]:
+        """Escalate conversation to human support (disable AI + add label)."""
+        return await self._request(
+            "POST",
+            f"/api/v1/conversations/{conversation_id}/escalate",
+            tenant_id,
+        )
+
     # --- Messages ---
 
     async def get_messages(

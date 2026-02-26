@@ -27,6 +27,7 @@ from app.schemas.invoice import InvoiceCreate, InvoiceResponse
 from app.services.order import order_service
 from app.services.invoice import invoice_service
 from app.services.ecommerce import ecommerce_service
+from app.services.messaging_service import messaging_service
 from app.repositories.order import order_repository
 from app.integrations.woocommerce_client import (
     WooCommerceAuthError,
@@ -454,6 +455,29 @@ async def validate_order(
             f"shopify_order_id={validated_order.shopify_order_id}, "
             f"woocommerce_order_id={validated_order.woocommerce_order_id}"
         )
+
+        # Auto-transition linked conversation to "sale" stage (post-sale)
+        if validated_order.messaging_conversation_id:
+            try:
+                stage_result = await messaging_service.update_conversation_stage(
+                    tenant_id=validated_order.tenant_id,
+                    conversation_id=str(validated_order.messaging_conversation_id),
+                    stage="sale",
+                )
+                if stage_result:
+                    logger.info(
+                        f"conversation_stage_updated: order_id={order_id}, "
+                        f"conversation_id={validated_order.messaging_conversation_id}, stage=sale"
+                    )
+                else:
+                    logger.warning(
+                        f"conversation_stage_update_failed: order_id={order_id}, "
+                        f"conversation_id={validated_order.messaging_conversation_id}"
+                    )
+            except Exception as stage_err:
+                logger.warning(
+                    f"conversation_stage_update_error: order_id={order_id}, error={stage_err}"
+                )
 
         return validated_order
 
