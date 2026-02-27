@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, memo } from "react";
 // useLayoutEffect: scroll before paint | ResizeObserver: re-scroll when content grows (images load)
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,8 @@ function mapWebSocketSender(raw: unknown): ContactBrief | AgentBrief | null {
   } as ContactBrief | AgentBrief;
 }
 
+const MESSAGE_ITEM_STYLE = { overflowAnchor: "none" as const, contentVisibility: "auto" as const, containIntrinsicSize: "auto 60px" };
+
 interface MessageViewProps {
   conversation: Conversation | null;
   onBack?: () => void;
@@ -57,7 +59,7 @@ interface MessageViewProps {
   onConversationUpdate?: (updated: Conversation) => void;
 }
 
-export function MessageView({ conversation, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
+export const MessageView = memo(function MessageView({ conversation, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
   const lastEvent = useMessagingEvent();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -451,7 +453,7 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
             </div>
           ) : (
             messages.map((msg) => (
-              <div key={msg.id} style={{ overflowAnchor: "none", contentVisibility: "auto", containIntrinsicSize: "auto 60px" }}>
+              <div key={msg.id} style={MESSAGE_ITEM_STYLE}>
                 <MessageBubble message={msg} />
               </div>
             ))
@@ -501,4 +503,4 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
       )}
     </div>
   );
-}
+})

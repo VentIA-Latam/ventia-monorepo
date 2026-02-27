@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ const stageConfig: Record<string, { label: string; className: string }> = {
   sale: { label: "Venta", className: "bg-success-bg text-success border-success/30" },
 };
 
-export function ContactInfoPanel({
+export const ContactInfoPanel = memo(function ContactInfoPanel({
   conversation,
   allLabels,
   onClose,
@@ -145,4 +146,4 @@ export function ContactInfoPanel({
       </div>
     </div>
   );
-}
+})

@@ -102,6 +102,13 @@ const conversationSections = [
   { label: "No atendidas", section: "unattended", countKey: "unattended" as const, badgeClass: "bg-muted text-muted-foreground" },
 ]
 
+const REFETCH_EVENTS = new Set([
+  "message.created",
+  "conversation.created",
+  "conversation.updated",
+  "conversation.status_changed",
+])
+
 // Memoized sub-component: isolates count-fetching state from sidebar re-renders
 const ConversationsNav = memo(function ConversationsNav({ pathname }: { pathname: string }) {
   const searchParams = useSearchParams()
@@ -114,12 +121,10 @@ const ConversationsNav = memo(function ConversationsNav({ pathname }: { pathname
 
   const fetchCounts = useCallback(async () => {
     try {
-      console.log("[COUNTS] fetchCounts called")
       const result = await getConversationCounts()
-      console.log("[COUNTS] result:", JSON.stringify(result.data))
       setConvCounts(result.data)
-    } catch (err) {
-      console.error("[COUNTS] fetchCounts error:", err)
+    } catch {
+      // silently fail
     }
   }, [])
 
@@ -134,15 +139,7 @@ const ConversationsNav = memo(function ConversationsNav({ pathname }: { pathname
   // right after message.created. Unmount cleanup is handled separately below.
   useEffect(() => {
     if (!lastEvent) return
-    const { event } = lastEvent
-    console.log("[COUNTS] WS event received:", event)
-    if (
-      event === "message.created" ||
-      event === "conversation.created" ||
-      event === "conversation.updated" ||
-      event === "conversation.status_changed"
-    ) {
-      console.log("[COUNTS] Scheduling fetchCounts in 800ms")
+    if (REFETCH_EVENTS.has(lastEvent.event)) {
       if (refetchTimer.current) clearTimeout(refetchTimer.current)
       refetchTimer.current = setTimeout(fetchCounts, 800)
     }
