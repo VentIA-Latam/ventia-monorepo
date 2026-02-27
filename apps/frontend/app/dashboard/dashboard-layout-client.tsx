@@ -3,6 +3,7 @@
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/dashboard/app-sidebar"
 import { Separator } from "@/components/ui/separator"
+import { MessagingProvider } from "@/components/conversations/messaging-provider"
 import { usePathname } from "next/navigation"
 import { ChevronRight, Home } from "lucide-react"
 import Link from "next/link"
@@ -51,6 +52,7 @@ export default function DashboardLayoutClient({
   const { title, breadcrumb } = getPageMeta(pathname);
 
   return (
+    <MessagingProvider>
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
@@ -99,5 +101,6 @@ export default function DashboardLayoutClient({
         </div>
       </SidebarInset>
     </SidebarProvider>
+    </MessagingProvider>
   );
 }

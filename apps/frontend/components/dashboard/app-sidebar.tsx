@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useState, useEffect, useCallback, memo } from "react"
+import { useState, useEffect, useCallback, useRef, memo } from "react"
 import {
   Settings,
   HelpCircle,
@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 import { usePathname, useSearchParams } from "next/navigation"
 import { getConversationCounts } from "@/lib/api-client/messaging"
+import { useMessagingEvent } from "@/components/conversations/messaging-provider"
 import type { ConversationCounts } from "@/lib/types/messaging"
 import Image from "next/image"
 import Link from "next/link"
@@ -104,7 +105,9 @@ const conversationSections = [
 // Memoized sub-component: isolates count-fetching state from sidebar re-renders
 const ConversationsNav = memo(function ConversationsNav({ pathname }: { pathname: string }) {
   const searchParams = useSearchParams()
+  const lastEvent = useMessagingEvent()
   const [convCounts, setConvCounts] = useState<ConversationCounts | null>(null)
+  const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isConversationsPage = pathname.startsWith("/dashboard/conversations")
   const activeSection = searchParams.get("section")
@@ -118,9 +121,28 @@ const ConversationsNav = memo(function ConversationsNav({ pathname }: { pathname
     }
   }, [])
 
+  // Fetch on navigation to conversations page
   useEffect(() => {
     if (isConversationsPage) fetchCounts()
   }, [isConversationsPage, fetchCounts])
+
+  // Refetch counts (debounced) when relevant WS events arrive
+  useEffect(() => {
+    if (!lastEvent) return
+    const { event } = lastEvent
+    if (
+      event === "message.created" ||
+      event === "conversation.created" ||
+      event === "conversation.updated" ||
+      event === "conversation.status_changed"
+    ) {
+      if (refetchTimer.current) clearTimeout(refetchTimer.current)
+      refetchTimer.current = setTimeout(fetchCounts, 800)
+    }
+    return () => {
+      if (refetchTimer.current) clearTimeout(refetchTimer.current)
+    }
+  }, [lastEvent, fetchCounts])
 
   return (
     <Collapsible asChild open={isConversationsPage} className="group/collapsible">

@@ -11,7 +11,6 @@ import {
 import { ConversationList } from "@/components/conversations/conversation-list";
 import { MessageView } from "@/components/conversations/message-view";
 import { ContactInfoPanel } from "@/components/conversations/contact-info-panel";
-import { MessagingProvider } from "@/components/conversations/messaging-provider";
 import type { Conversation, Label } from "@/lib/types/messaging";
 
 interface ConversationsClientProps {
@@ -99,7 +98,6 @@ export function ConversationsClient({
   // Mobile layout: stack navigation
   if (isMobile) {
     return (
-      <MessagingProvider>
       <div className="h-full">
         {selectedId === null ? (
           <div className="h-full overflow-hidden">
@@ -145,13 +143,11 @@ export function ConversationsClient({
           </SheetContent>
         </Sheet>
       </div>
-      </MessagingProvider>
     );
   }
 
   // Desktop layout: 3 panels
   return (
-    <MessagingProvider>
     <div className="flex h-full overflow-hidden border-t border-border/30">
       {/* Conversation list */}
       <div className="w-[400px] border-r shrink-0 min-h-0">
@@ -187,6 +183,5 @@ export function ConversationsClient({
         </div>
       )}
     </div>
-    </MessagingProvider>
   );
 }
