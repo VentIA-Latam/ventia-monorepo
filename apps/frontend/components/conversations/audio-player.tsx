@@ -28,7 +28,8 @@ export const AudioPlayer = memo(function AudioPlayer({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [totalDuration, setTotalDuration] = useState(0);
-  const [speedIndex, setSpeedIndex] = useState(0);
+  const speedIndexRef = useRef(0);
+  const speedBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -102,14 +103,15 @@ export const AudioPlayer = memo(function AudioPlayer({
   }, []);
 
   const handleSpeed = useCallback(() => {
-    const nextIndex = (speedIndex + 1) % SPEEDS.length;
-    setSpeedIndex(nextIndex);
-    // Set rate directly on media element to avoid WaveSurfer waveform redraw
+    const nextIndex = (speedIndexRef.current + 1) % SPEEDS.length;
+    speedIndexRef.current = nextIndex;
+    // Update button text directly to avoid React re-render → ResizeObserver → waveform redraw
+    if (speedBtnRef.current) speedBtnRef.current.textContent = `${SPEEDS[nextIndex]}x`;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const surfer = wavesurferRef.current as any;
     const media = surfer?.getMediaElement?.();
     if (media) media.playbackRate = SPEEDS[nextIndex];
-  }, [speedIndex]);
+  }, []);
 
   return (
     <div
@@ -156,6 +158,7 @@ export const AudioPlayer = memo(function AudioPlayer({
 
       {/* Speed */}
       <button
+        ref={speedBtnRef}
         type="button"
         className={cn(
           "text-[10px] font-bold shrink-0 rounded px-1 py-0.5 transition-colors",
@@ -166,7 +169,7 @@ export const AudioPlayer = memo(function AudioPlayer({
         onClick={handleSpeed}
         disabled={!isReady}
       >
-        {SPEEDS[speedIndex]}x
+        1x
       </button>
     </div>
   );
