@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Mp3Encoder } from "lamejs";
+// lamejs uses CommonJS internals (MPEGMode) that break with static ESM imports in Turbopack
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let lamejsModule: any = null;
 
 export type RecorderStatus = "idle" | "recording" | "recorded";
 
@@ -29,6 +31,11 @@ function formatFloat32ToInt16(float32: Float32Array): Int16Array {
 }
 
 async function convertToMp3(blob: Blob): Promise<Blob> {
+  if (!lamejsModule) {
+    lamejsModule = await import("lamejs");
+  }
+  const { Mp3Encoder } = lamejsModule;
+
   const arrayBuffer = await blob.arrayBuffer();
   const audioContext = new AudioContext();
 
