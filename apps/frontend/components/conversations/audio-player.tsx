@@ -104,9 +104,11 @@ export const AudioPlayer = memo(function AudioPlayer({
   const handleSpeed = useCallback(() => {
     const nextIndex = (speedIndex + 1) % SPEEDS.length;
     setSpeedIndex(nextIndex);
+    // Set rate directly on media element to avoid WaveSurfer waveform redraw
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const surfer = wavesurferRef.current as any;
-    if (surfer) surfer.setPlaybackRate(SPEEDS[nextIndex]);
+    const media = surfer?.getMediaElement?.();
+    if (media) media.playbackRate = SPEEDS[nextIndex];
   }, [speedIndex]);
 
   return (
