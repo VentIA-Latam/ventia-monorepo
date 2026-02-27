@@ -116,9 +116,15 @@ const ConversationsNav = memo(function ConversationsNav({ pathname }: { pathname
   const lastEvent = useMessagingEvent()
   const [convCounts, setConvCounts] = useState<ConversationCounts | null>(null)
   const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [isOpen, setIsOpen] = useState(false)
 
   const isConversationsPage = pathname.startsWith("/dashboard/conversations")
   const activeSection = searchParams.get("section")
+
+  // Auto-open when navigating to conversations, auto-close when leaving
+  useEffect(() => {
+    setIsOpen(isConversationsPage)
+  }, [isConversationsPage])
 
   const fetchCounts = useCallback(async () => {
     try {
@@ -154,7 +160,7 @@ const ConversationsNav = memo(function ConversationsNav({ pathname }: { pathname
   }, [])
 
   return (
-    <Collapsible asChild open={isConversationsPage} className="group/collapsible">
+    <Collapsible asChild open={isOpen} onOpenChange={setIsOpen} className="group/collapsible">
       <SidebarMenuItem className="mb-1">
         <CollapsibleTrigger asChild>
           <SidebarMenuButton
