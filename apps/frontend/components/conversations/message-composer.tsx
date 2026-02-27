@@ -3,7 +3,12 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Send, Smile, Plus, Mic, X, FileText, Image as ImageIcon } from "lucide-react";
-import { AudioRecorder } from "./audio-recorder";
+import dynamic from "next/dynamic";
+
+const AudioRecorder = dynamic(
+  () => import("./audio-recorder").then((mod) => ({ default: mod.AudioRecorder })),
+  { ssr: false }
+);
 
 function WhatsAppTemplateIcon({ className }: { className?: string }) {
   return (
@@ -12,7 +17,6 @@ function WhatsAppTemplateIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-import dynamic from "next/dynamic";
 
 const EmojiPicker = dynamic(() => import("emoji-picker-react"), { ssr: false });
 

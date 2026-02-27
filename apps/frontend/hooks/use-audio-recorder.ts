@@ -31,33 +31,30 @@ function formatFloat32ToInt16(float32: Float32Array): Int16Array {
 async function convertToMp3(blob: Blob): Promise<Blob> {
   const arrayBuffer = await blob.arrayBuffer();
   const audioContext = new AudioContext();
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-  const channels = audioBuffer.numberOfChannels;
-  const sampleRate = audioBuffer.sampleRate;
-  const encoder = new Mp3Encoder(channels, sampleRate, 128);
+  try {
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    const sampleRate = audioBuffer.sampleRate;
+    // Force mono encoding for lamejs compatibility
+    const encoder = new Mp3Encoder(1, sampleRate, 128);
+    const left = formatFloat32ToInt16(audioBuffer.getChannelData(0));
 
-  const left = formatFloat32ToInt16(audioBuffer.getChannelData(0));
-  const right =
-    channels > 1
-      ? formatFloat32ToInt16(audioBuffer.getChannelData(1))
-      : undefined;
+    const mp3Chunks: BlobPart[] = [];
+    const chunkSize = 1152;
 
-  const mp3Chunks: BlobPart[] = [];
-  const chunkSize = 1152;
+    for (let i = 0; i < left.length; i += chunkSize) {
+      const leftChunk = left.subarray(i, i + chunkSize);
+      const encoded = encoder.encodeBuffer(leftChunk);
+      if (encoded.length > 0) mp3Chunks.push(new Uint8Array(encoded) as BlobPart);
+    }
 
-  for (let i = 0; i < left.length; i += chunkSize) {
-    const leftChunk = left.subarray(i, i + chunkSize);
-    const rightChunk = right?.subarray(i, i + chunkSize);
-    const encoded = encoder.encodeBuffer(leftChunk, rightChunk);
-    if (encoded.length > 0) mp3Chunks.push(new Uint8Array(encoded) as BlobPart);
+    const final = encoder.flush();
+    if (final.length > 0) mp3Chunks.push(new Uint8Array(final) as BlobPart);
+
+    return new Blob(mp3Chunks, { type: "audio/mpeg" });
+  } finally {
+    await audioContext.close();
   }
-
-  const final = encoder.flush();
-  if (final.length > 0) mp3Chunks.push(new Uint8Array(final) as BlobPart);
-
-  await audioContext.close();
-  return new Blob(mp3Chunks, { type: "audio/mpeg" });
 }
 
 export function useAudioRecorder(): UseAudioRecorderReturn {
@@ -72,13 +69,28 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const mountedRef = useRef(true);
+  const audioUrlRef = useRef<string | null>(null);
+  const statusRef = useRef<RecorderStatus>("idle");
 
-  const cleanup = useCallback(() => {
+  // Sync refs with state
+  useEffect(() => {
+    audioUrlRef.current = audioUrl;
+  }, [audioUrl]);
+
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+
+  const destroyResources = useCallback(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    if (audioUrl) URL.revokeObjectURL(audioUrl);
+
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ws = wavesurferRef.current as any;
@@ -92,26 +104,33 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
-  }, [audioUrl]);
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      cleanup();
+      destroyResources();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [destroyResources]);
 
   const startRecording = useCallback(async () => {
-    if (!navigator.mediaDevices) {
+    // Guard against double calls
+    if (statusRef.current !== "idle") return;
+
+    if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error("El navegador no soporta grabación de audio");
     }
+
+    // Destroy any existing instance first
+    destroyResources();
 
     // Dynamic import to avoid SSR issues
     const WaveSurfer = (await import("wavesurfer.js")).default;
     const RecordPlugin = (await import("wavesurfer.js/dist/plugins/record.esm.js")).default;
+
+    if (!mountedRef.current) return;
 
     const container = recordWaveformRef.current;
     if (!container) return;
@@ -174,18 +193,19 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       setDuration(elapsed);
 
       if (elapsed >= MAX_DURATION_SECONDS) {
+        // Clear timer BEFORE stopping to avoid race
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const rp = recordPluginRef.current as any;
         if (rp?.isRecording?.()) {
           rp.stopRecording();
         }
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
-        }
       }
     }, 1000);
-  }, []);
+  }, [destroyResources]);
 
   const stopRecording = useCallback(() => {
     if (timerRef.current) {
@@ -214,31 +234,13 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       record.stopRecording();
     }
 
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-
-    if (audioUrl) URL.revokeObjectURL(audioUrl);
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ws = wavesurferRef.current as any;
-    if (ws) {
-      try { ws.destroy(); } catch { /* ignore */ }
-      wavesurferRef.current = null;
-    }
-    recordPluginRef.current = null;
-
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
+    destroyResources();
 
     setStatus("idle");
     setDuration(0);
     setAudioBlob(null);
     setAudioUrl(null);
-  }, [audioUrl]);
+  }, [destroyResources]);
 
   const getAudioFile = useCallback((): File | null => {
     if (!audioBlob) return null;

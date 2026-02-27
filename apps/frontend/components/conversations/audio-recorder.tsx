@@ -34,7 +34,7 @@ export function AudioRecorder({ onSend, onCancel }: AudioRecorderProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const startedRef = useRef(false);
 
-  // Auto-start recording on mount
+  // Auto-start recording on mount (only once)
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
@@ -43,9 +43,16 @@ export function AudioRecorder({ onSend, onCancel }: AudioRecorderProps) {
       console.error("Failed to start recording:", err);
       onCancel();
     });
-  }, [startRecording, onCancel]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleDiscard = useCallback(() => {
+    // Stop preview playback before discarding
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    setIsPlaying(false);
     discardRecording();
     onCancel();
   }, [discardRecording, onCancel]);
@@ -164,7 +171,7 @@ export function AudioRecorder({ onSend, onCancel }: AudioRecorderProps) {
             <div
               className="h-1 bg-primary rounded-full transition-all"
               style={{
-                width: duration > 0 ? `${(previewTime / duration) * 100}%` : "0%",
+                width: duration > 0 ? `${Math.min((previewTime / duration) * 100, 100)}%` : "0%",
               }}
             />
           </div>

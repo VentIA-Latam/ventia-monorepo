@@ -8,7 +8,15 @@ import { LocationBubble } from "./location-bubble";
 import { ContactBubble } from "./contact-bubble";
 import type { Message, AttachmentBrief } from "@/lib/types/messaging";
 import { formatTime } from "@/lib/utils/messaging";
-import { AudioPlayer } from "./audio-player";
+import dynamic from "next/dynamic";
+
+const AudioPlayer = dynamic(
+  () => import("./audio-player").then((mod) => ({ default: mod.AudioPlayer })),
+  {
+    ssr: false,
+    loading: () => <div className="h-8 w-[220px] bg-muted/30 rounded animate-pulse" />,
+  }
+);
 
 function getAttUrl(att: AttachmentBrief): string {
   return att.file_url || att.data_url || "";

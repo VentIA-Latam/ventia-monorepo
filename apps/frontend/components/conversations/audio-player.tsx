@@ -34,10 +34,13 @@ export const AudioPlayer = memo(function AudioPlayer({
     const container = containerRef.current;
     if (!container) return;
 
+    let isMounted = true;
     let ws: unknown = null;
 
     (async () => {
       const WaveSurfer = (await import("wavesurfer.js")).default;
+
+      if (!isMounted) return;
 
       ws = WaveSurfer.create({
         container,
@@ -62,23 +65,27 @@ export const AudioPlayer = memo(function AudioPlayer({
       const surfer = ws as any;
 
       surfer.on("ready", () => {
+        if (!isMounted) return;
         setTotalDuration(surfer.getDuration());
         setIsReady(true);
       });
 
       surfer.on("timeupdate", (time: number) => {
+        if (!isMounted) return;
         setCurrentTime(time);
       });
 
-      surfer.on("play", () => setIsPlaying(true));
-      surfer.on("pause", () => setIsPlaying(false));
+      surfer.on("play", () => isMounted && setIsPlaying(true));
+      surfer.on("pause", () => isMounted && setIsPlaying(false));
       surfer.on("finish", () => {
+        if (!isMounted) return;
         setIsPlaying(false);
         setCurrentTime(0);
       });
     })();
 
     return () => {
+      isMounted = false;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const surfer = ws as any;
       if (surfer) {
