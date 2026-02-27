@@ -124,7 +124,7 @@ export const AudioPlayer = memo(function AudioPlayer({
         className={cn(
           "shrink-0 h-8 w-8 rounded-full",
           isOutgoing
-            ? "text-white/90 hover:bg-white/10"
+            ? "text-marino hover:bg-marino/10"
             : "text-foreground hover:bg-muted/60"
         )}
         onClick={handlePlayPause}
@@ -144,7 +144,7 @@ export const AudioPlayer = memo(function AudioPlayer({
       <span
         className={cn(
           "text-[11px] font-mono shrink-0 min-w-[3ch]",
-          isOutgoing ? "text-white/70" : "text-muted-foreground"
+          isOutgoing ? "text-marino/70" : "text-muted-foreground"
         )}
       >
         {isPlaying || currentTime > 0
@@ -158,7 +158,7 @@ export const AudioPlayer = memo(function AudioPlayer({
         className={cn(
           "text-[10px] font-bold shrink-0 rounded px-1 py-0.5 transition-colors",
           isOutgoing
-            ? "text-white/70 hover:bg-white/10"
+            ? "text-marino/70 hover:bg-marino/10"
             : "text-muted-foreground hover:bg-muted/60"
         )}
         onClick={handleSpeed}
