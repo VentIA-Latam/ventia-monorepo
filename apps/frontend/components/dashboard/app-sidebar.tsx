@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
   Settings,
   HelpCircle,
@@ -19,7 +20,9 @@ import {
   Receipt,
   MessageSquare,
 } from "lucide-react"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
+import { getConversationCounts } from "@/lib/api-client/messaging"
+import type { ConversationCounts } from "@/lib/types/messaging"
 import Image from "next/image"
 import Link from "next/link"
 import { useAuth } from "@/hooks/use-auth"
@@ -35,6 +38,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -73,11 +79,6 @@ const dataPlatform = [
     icon: Receipt,
   },
   {
-    title: "Conversaciones",
-    url: "/dashboard/conversations",
-    icon: MessageSquare,
-  },
-  {
     title: "WhatsApp",
     url: "/dashboard/whatsapp-connect",
     icon: MessageSquare,
@@ -94,9 +95,33 @@ const dataPlatform = [
   },
 ]
 
+const conversationSections = [
+  { label: "Todas", section: null, countKey: "all" as const, badgeClass: "bg-volt text-white" },
+  { label: "Ventas", section: "sale", countKey: "sale" as const, badgeClass: "bg-success text-white" },
+  { label: "No atendidas", section: "unattended", countKey: "unattended" as const, badgeClass: "bg-muted text-muted-foreground" },
+]
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { user, isUserLoading, isSuperAdmin } = useAuth()
+  const [convCounts, setConvCounts] = useState<ConversationCounts | null>(null)
+
+  const isConversationsPage = pathname.startsWith("/dashboard/conversations")
+  const activeSection = searchParams.get("section")
+
+  const fetchCounts = useCallback(async () => {
+    try {
+      const result = await getConversationCounts()
+      setConvCounts(result.data)
+    } catch {
+      // silently fail
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isConversationsPage) fetchCounts()
+  }, [isConversationsPage, fetchCounts])
 
   const isActive = (url: string) => {
     if (url === "/dashboard") return pathname === "/dashboard";
@@ -174,6 +199,56 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+
+              {/* Conversaciones — collapsible con sub-items */}
+              <Collapsible asChild open={isConversationsPage} className="group/collapsible">
+                <SidebarMenuItem className="mb-1">
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isConversationsPage}
+                      tooltip="Conversaciones"
+                      className={`
+                          w-full justify-between h-10 px-3 rounded-lg transition-all duration-200
+                          ${isConversationsPage
+                            ? "bg-gradient-to-r from-volt/10 to-aqua/5 border-l-2 border-l-volt shadow-sm"
+                            : "hover:bg-muted/60"
+                          }
+                      `}
+                    >
+                      <Link href="/dashboard/conversations" className="flex items-center w-full">
+                        <MessageSquare className="w-5 h-5 mr-3 shrink-0" />
+                        <span className="flex-1 truncate">Conversaciones</span>
+                        <ChevronRight className="ml-auto w-4 h-4 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                      </Link>
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      {conversationSections.map((sub) => {
+                        const isSubActive = isConversationsPage && activeSection === sub.section
+                        const count = convCounts ? convCounts[sub.countKey] : 0
+                        return (
+                          <SidebarMenuSubItem key={sub.label}>
+                            <SidebarMenuSubButton
+                              asChild
+                              isActive={isSubActive}
+                              className="justify-between"
+                            >
+                              <Link href={sub.section ? `/dashboard/conversations?section=${sub.section}` : "/dashboard/conversations"}>
+                                <span>{sub.label}</span>
+                                <span className={`inline-flex items-center justify-center rounded-full text-[10px] font-bold min-w-[20px] h-5 px-1.5 ${sub.badgeClass}`}>
+                                  {count}
+                                </span>
+                              </Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        )
+                      })}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

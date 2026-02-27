@@ -18,12 +18,14 @@ interface ConversationsClientProps {
   initialConversations: unknown[];
   initialInboxes: unknown[];
   initialLabels: unknown[];
+  initialSection?: string;
 }
 
 export function ConversationsClient({
   initialConversations,
   initialInboxes,
   initialLabels,
+  initialSection = "all",
 }: ConversationsClientProps) {
   const isMobile = useIsMobile();
   const [conversations, setConversations] = useState<Conversation[]>(
@@ -102,6 +104,7 @@ export function ConversationsClient({
               conversations={conversations}
               selectedId={selectedId}
               allLabels={allLabels}
+              section={initialSection}
               onSelect={handleSelect}
               onConversationsChange={handleConversationsChange}
               onDeleteConversation={handleDeleteConversation}
@@ -153,6 +156,7 @@ export function ConversationsClient({
           conversations={conversations}
           selectedId={selectedId}
           allLabels={allLabels}
+          section={initialSection}
           onSelect={handleSelect}
           onConversationsChange={handleConversationsChange}
           onLabelCreated={handleLabelCreated}

@@ -10,17 +10,16 @@ import { ConversationFilters, type ActiveFilters } from "./conversation-filters"
 import { useMessaging } from "./messaging-provider";
 import {
   getConversations,
-  getConversationCounts,
   deleteConversation,
   type ConversationFilters as ConversationFilterParams,
 } from "@/lib/api-client/messaging";
-import { cn } from "@/lib/utils";
-import type { Conversation, ConversationCounts, Label } from "@/lib/types/messaging";
+import type { Conversation, Label } from "@/lib/types/messaging";
 
 interface ConversationListProps {
   conversations: Conversation[];
   selectedId: number | null;
   allLabels: Label[];
+  section?: string;
   onSelect: (id: number) => void;
   onConversationsChange: (conversations: Conversation[]) => void;
   onDeleteConversation?: (id: number) => void;
@@ -30,16 +29,11 @@ interface ConversationListProps {
 
 type SectionValue = "all" | "sale" | "unattended";
 
-const SECTION_TABS: { value: SectionValue; label: string; countKey?: keyof ConversationCounts }[] = [
-  { value: "all", label: "Todas" },
-  { value: "sale", label: "Venta", countKey: "sale" },
-  { value: "unattended", label: "No Atendida", countKey: "unattended" },
-];
-
 export function ConversationList({
   conversations,
   selectedId,
   allLabels,
+  section = "all",
   onSelect,
   onConversationsChange,
   onDeleteConversation,
@@ -47,9 +41,8 @@ export function ConversationList({
   onLabelDeleted,
 }: ConversationListProps) {
   const { lastEvent } = useMessaging();
-  const [sectionFilter, setSectionFilter] = useState<SectionValue>("all");
+  const sectionFilter = (section === "sale" || section === "unattended" ? section : "all") as SectionValue;
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
-  const [counts, setCounts] = useState<ConversationCounts | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const sectionFilterRef = useRef(sectionFilter);
@@ -89,24 +82,6 @@ export function ConversationList({
     [onConversationsChange]
   );
 
-  const fetchCounts = useCallback(async () => {
-    try {
-      const result = await getConversationCounts();
-      setCounts(result.data);
-    } catch (error) {
-      console.error("Error fetching counts:", error);
-    }
-  }, []);
-
-  const handleSectionChange = useCallback(
-    (section: SectionValue) => {
-      setSectionFilter(section);
-      setActiveFilters({});
-      fetchConversations(buildParams(section, {}));
-    },
-    [fetchConversations, buildParams]
-  );
-
   const handleFiltersChange = useCallback(
     (filters: ActiveFilters) => {
       setActiveFilters(filters);
@@ -128,12 +103,7 @@ export function ConversationList({
     [conversations, onConversationsChange, onDeleteConversation]
   );
 
-  // Fetch counts on mount
-  useEffect(() => {
-    fetchCounts();
-  }, [fetchCounts]);
-
-  // Refresh conversation list and counts on real-time events
+  // Refresh conversation list on real-time events
   useEffect(() => {
     if (!lastEvent) return;
     const { event } = lastEvent;
@@ -148,9 +118,8 @@ export function ConversationList({
       getConversations(params)
         .then((data) => onConversationsChange(data.data ?? []))
         .catch((err) => console.error("Error refreshing conversations:", err));
-      fetchCounts();
     }
-  }, [lastEvent, onConversationsChange, buildParams, fetchCounts]);
+  }, [lastEvent, onConversationsChange, buildParams]);
 
   const filteredConversations = searchQuery
     ? conversations.filter((c) => {
@@ -183,40 +152,7 @@ export function ConversationList({
         </div>
       </div>
 
-      {/* Section tabs */}
-      <div className="px-3 pb-2 flex gap-1.5 overflow-x-auto no-scrollbar">
-        {SECTION_TABS.map((tab) => {
-          const count = tab.countKey && counts ? counts[tab.countKey] : null;
-          return (
-            <button
-              key={tab.value}
-              onClick={() => handleSectionChange(tab.value)}
-              className={cn(
-                "shrink-0 rounded-full text-xs px-3 py-1.5 font-medium transition-colors flex items-center gap-1.5",
-                sectionFilter === tab.value
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted/60 text-muted-foreground hover:bg-muted"
-              )}
-            >
-              {tab.label}
-              {count !== null && count > 0 && (
-                <span
-                  className={cn(
-                    "inline-flex items-center justify-center rounded-full text-[10px] font-semibold min-w-[18px] h-[18px] px-1",
-                    sectionFilter === tab.value
-                      ? "bg-primary-foreground/20 text-primary-foreground"
-                      : "bg-primary/10 text-primary"
-                  )}
-                >
-                  {count > 99 ? "99+" : count}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Advanced filters */}
+      {/* Filters */}
       <ConversationFilters
         allLabels={allLabels}
         filters={activeFilters}

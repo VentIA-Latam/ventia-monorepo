@@ -29,7 +29,7 @@ async function fetchWithAuth<T>(
 
 export async function fetchConversations(
   accessToken: string,
-  params?: { status?: string; page?: number }
+  params?: Record<string, string | number>
 ) {
   return fetchWithAuth<{ success: boolean; data: unknown[]; meta: unknown }>(
     "/conversations",
