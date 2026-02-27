@@ -119,19 +119,23 @@ export function AudioRecorder({ onSend, onCancel }: AudioRecorderProps) {
       </Button>
 
       {status === "recording" && (
+        <span className="relative flex h-3 w-3 shrink-0">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
+        </span>
+      )}
+
+      {/* Waveform container - always in DOM so WaveSurfer can mount before status changes */}
+      <div
+        ref={recordWaveformRef}
+        className={cn(
+          "flex-1 min-w-0 h-8 rounded",
+          status !== "recording" && "hidden"
+        )}
+      />
+
+      {status === "recording" && (
         <>
-          {/* Pulsing red dot */}
-          <span className="relative flex h-3 w-3 shrink-0">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
-          </span>
-
-          {/* Live waveform */}
-          <div
-            ref={recordWaveformRef}
-            className="flex-1 min-w-0 h-8 rounded"
-          />
-
           {/* Timer */}
           <span className="text-sm font-mono text-muted-foreground shrink-0 min-w-[3ch]">
             {formatTime(duration)}
