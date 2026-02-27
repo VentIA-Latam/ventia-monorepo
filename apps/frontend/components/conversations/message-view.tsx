@@ -119,33 +119,27 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
   // Append new messages from WebSocket events
   useEffect(() => {
     if (!lastEvent || !conversation) return;
-    console.log("[msg-view WS] event:", lastEvent.event, "| data keys:", Object.keys(lastEvent.data), "| conv:", conversation.id);
     if (lastEvent.event !== "message.created") return;
 
     const msgData = lastEvent.data;
-    console.log("[msg-view WS] conversation_id:", msgData.conversation_id, "(type:", typeof msgData.conversation_id, ") vs selected:", conversation.id, "(type:", typeof conversation.id, ")");
     if (String(msgData.conversation_id) !== String(conversation.id)) return;
 
     const msgId = String(msgData.id);
+
+    // Dedup BEFORE entering setMessages so React StrictMode / double-invocations
+    // of the updater don't discard the first append on the second run.
+    if (messageIdsRef.current.has(msgId)) return;
+    messageIdsRef.current.add(msgId);
+
     const msgType = (msgData.message_type as string) ?? "incoming";
-    console.log("[msg-view WS] msgId:", msgId, "| msgType:", msgType, "(type:", typeof msgData.message_type, ") | inSet:", messageIdsRef.current.has(msgId), "| setSize:", messageIdsRef.current.size);
+    const rawCreatedAt = msgData.created_at ?? new Date().toISOString();
+    const createdAt = typeof rawCreatedAt === "number" || typeof rawCreatedAt === "string"
+      ? rawCreatedAt
+      : new Date().toISOString();
+    const wsAttachments = mapWebSocketAttachments(msgData.attachments);
+    const wsSender = mapWebSocketSender(msgData.sender);
 
     setMessages((prev) => {
-      if (messageIdsRef.current.has(msgId)) {
-        console.log("[msg-view WS] DEDUP: skipping msgId", msgId);
-        return prev;
-      }
-
-      const rawCreatedAt = msgData.created_at ?? new Date().toISOString();
-      const createdAt = typeof rawCreatedAt === "number" || typeof rawCreatedAt === "string"
-        ? rawCreatedAt
-        : new Date().toISOString();
-
-      const wsAttachments = mapWebSocketAttachments(msgData.attachments);
-      const wsSender = mapWebSocketSender(msgData.sender);
-
-      messageIdsRef.current.add(msgId);
-
       if (msgType === "outgoing") {
         const lastTempIdx = prev.findLastIndex((m) => String(m.id).startsWith("temp-"));
         if (lastTempIdx >= 0) {
@@ -163,16 +157,14 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         }
       }
 
-      const newMsg: Message = {
+      return [...prev, {
         id: msgId,
         content: (msgData.content as string) ?? "",
         message_type: msgType as MessageType,
         sender: wsSender,
         attachments: wsAttachments,
         created_at: createdAt,
-      };
-      console.log("[msg-view WS] APPENDING msg", msgId, "content:", newMsg.content?.slice(0, 50), "| prev count:", prev.length);
-      return [...prev, newMsg];
+      }];
     });
 
     scrollBehaviorRef.current = "smooth";

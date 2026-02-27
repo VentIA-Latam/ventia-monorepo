@@ -73,7 +73,6 @@ export function MessagingProvider({ children }: MessagingProviderProps) {
   }, []);
 
   const handleEvent = useCallback((event: ActionCableEvent) => {
-    console.log("[ws-provider] event:", event.event, "| data.id:", event.data?.id, "| data.conversation_id:", event.data?.conversation_id);
     setLastEvent(event);
   }, []);
 
