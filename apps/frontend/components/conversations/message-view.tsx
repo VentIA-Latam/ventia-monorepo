@@ -119,16 +119,22 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
   // Append new messages from WebSocket events
   useEffect(() => {
     if (!lastEvent || !conversation) return;
+    console.log("[msg-view WS] event:", lastEvent.event, "| data keys:", Object.keys(lastEvent.data), "| conv:", conversation.id);
     if (lastEvent.event !== "message.created") return;
 
     const msgData = lastEvent.data;
+    console.log("[msg-view WS] conversation_id:", msgData.conversation_id, "(type:", typeof msgData.conversation_id, ") vs selected:", conversation.id, "(type:", typeof conversation.id, ")");
     if (String(msgData.conversation_id) !== String(conversation.id)) return;
 
     const msgId = String(msgData.id);
     const msgType = (msgData.message_type as string) ?? "incoming";
+    console.log("[msg-view WS] msgId:", msgId, "| msgType:", msgType, "(type:", typeof msgData.message_type, ") | inSet:", messageIdsRef.current.has(msgId), "| setSize:", messageIdsRef.current.size);
 
     setMessages((prev) => {
-      if (messageIdsRef.current.has(msgId)) return prev;
+      if (messageIdsRef.current.has(msgId)) {
+        console.log("[msg-view WS] DEDUP: skipping msgId", msgId);
+        return prev;
+      }
 
       const rawCreatedAt = msgData.created_at ?? new Date().toISOString();
       const createdAt = typeof rawCreatedAt === "number" || typeof rawCreatedAt === "string"
@@ -165,6 +171,7 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         attachments: wsAttachments,
         created_at: createdAt,
       };
+      console.log("[msg-view WS] APPENDING msg", msgId, "content:", newMsg.content?.slice(0, 50), "| prev count:", prev.length);
       return [...prev, newMsg];
     });
 
