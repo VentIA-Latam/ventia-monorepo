@@ -15,6 +15,7 @@ import { getWsToken, syncUser } from "@/lib/api-client/messaging";
 // won't re-render when connectionStatus changes, and vice versa.
 const MessagingStatusContext = createContext<ConnectionStatus>("disconnected");
 const MessagingEventContext = createContext<ActionCableEvent | null>(null);
+const MessagingEmitContext = createContext<(event: ActionCableEvent) => void>(() => {});
 
 /** Subscribe to both status and events (backward compat) */
 export function useMessaging() {
@@ -32,6 +33,11 @@ export function useMessagingEvent() {
 /** Subscribe to connection status only */
 export function useMessagingStatus() {
   return useContext(MessagingStatusContext);
+}
+
+/** Emit a synthetic event (e.g. after local-only operations like delete) */
+export function useMessagingEmit() {
+  return useContext(MessagingEmitContext);
 }
 
 const WS_URL = process.env.NEXT_PUBLIC_MESSAGING_WS_URL || "ws://localhost:3001/cable";
@@ -72,7 +78,7 @@ export function MessagingProvider({ children }: MessagingProviderProps) {
     return () => { cancelled = true; };
   }, []);
 
-  const handleEvent = useCallback((event: ActionCableEvent) => {
+  const emitEvent = useCallback((event: ActionCableEvent) => {
     setLastEvent(event);
   }, []);
 
@@ -80,14 +86,16 @@ export function MessagingProvider({ children }: MessagingProviderProps) {
     url: WS_URL,
     pubsubToken: token?.pubsub_token ?? "",
     accountId: token?.account_id ?? "",
-    onEvent: handleEvent,
+    onEvent: emitEvent,
     enabled: !!token,
   });
 
   return (
     <MessagingStatusContext.Provider value={status}>
       <MessagingEventContext.Provider value={lastEvent}>
-        {children}
+        <MessagingEmitContext.Provider value={emitEvent}>
+          {children}
+        </MessagingEmitContext.Provider>
       </MessagingEventContext.Provider>
     </MessagingStatusContext.Provider>
   );

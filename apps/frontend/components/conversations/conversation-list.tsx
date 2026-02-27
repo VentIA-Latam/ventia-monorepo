@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Search, MessageSquare } from "lucide-react";
 import { ConversationItem } from "./conversation-item";
 import { ConversationFilters, type ActiveFilters } from "./conversation-filters";
-import { useMessagingEvent } from "./messaging-provider";
+import { useMessagingEvent, useMessagingEmit } from "./messaging-provider";
 import {
   getConversations,
   deleteConversation,
@@ -41,6 +41,7 @@ export function ConversationList({
   onLabelDeleted,
 }: ConversationListProps) {
   const lastEvent = useMessagingEvent();
+  const emitEvent = useMessagingEmit();
   const sectionFilter = (section === "sale" || section === "unattended" ? section : "all") as SectionValue;
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const [searchQuery, setSearchQuery] = useState("");
@@ -98,11 +99,12 @@ export function ConversationList({
         await deleteConversation(id);
         onConversationsChange(conversationsRef.current.filter((c) => c.id !== id));
         onDeleteConversation?.(id);
+        emitEvent({ event: "conversation.deleted", data: { id } });
       } catch (error) {
         console.error("Error deleting conversation:", error);
       }
     },
-    [onConversationsChange, onDeleteConversation]
+    [onConversationsChange, onDeleteConversation, emitEvent]
   );
 
   // Debounced full refetch (fallback for events we can't handle locally)

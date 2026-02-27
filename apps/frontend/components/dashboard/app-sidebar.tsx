@@ -107,6 +107,7 @@ const REFETCH_EVENTS = new Set([
   "conversation.created",
   "conversation.updated",
   "conversation.status_changed",
+  "conversation.deleted",
 ])
 
 // Memoized sub-component: isolates count-fetching state from sidebar re-renders
