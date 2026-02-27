@@ -45,11 +45,11 @@ export const AudioPlayer = memo(function AudioPlayer({
       ws = WaveSurfer.create({
         container,
         waveColor: isOutgoing
-          ? "rgba(255,255,255,0.35)"
-          : "rgba(0,0,0,0.15)",
+          ? "oklch(0.55 0.08 230 / 0.4)"
+          : "oklch(0.55 0.03 250 / 0.25)",
         progressColor: isOutgoing
-          ? "rgba(255,255,255,0.8)"
-          : "hsl(var(--primary))",
+          ? "oklch(0.33 0.10 255)"
+          : "oklch(0.58 0.19 260)",
         height: 32,
         barWidth: 2,
         barGap: 1,
