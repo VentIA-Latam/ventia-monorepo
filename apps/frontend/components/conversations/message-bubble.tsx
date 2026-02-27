@@ -8,6 +8,7 @@ import { LocationBubble } from "./location-bubble";
 import { ContactBubble } from "./contact-bubble";
 import type { Message, AttachmentBrief } from "@/lib/types/messaging";
 import { formatTime } from "@/lib/utils/messaging";
+import { AudioPlayer } from "./audio-player";
 
 function getAttUrl(att: AttachmentBrief): string {
   return att.file_url || att.data_url || "";
@@ -151,11 +152,10 @@ export const MessageBubble = memo(function MessageBubble({
 
               if (att.file_type === "audio") {
                 return (
-                  <audio
+                  <AudioPlayer
                     key={att.id}
-                    controls
                     src={getAttUrl(att)}
-                    className="max-w-full"
+                    isOutgoing={isOutgoing}
                   />
                 );
               }

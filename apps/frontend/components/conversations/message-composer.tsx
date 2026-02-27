@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Send, Smile, Plus, Mic, X, FileText, Image as ImageIcon } from "lucide-react";
+import { AudioRecorder } from "./audio-recorder";
 
 function WhatsAppTemplateIcon({ className }: { className?: string }) {
   return (
@@ -34,6 +35,7 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates }: MessageCo
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [fileSizeError, setFileSizeError] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -171,72 +173,82 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates }: MessageCo
         onChange={handleFileSelect}
       />
 
-      <div className="flex items-end gap-2">
-        {/* Emoji button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="shrink-0 h-10 w-10 rounded-full text-muted-foreground hover:text-foreground"
-          onClick={() => setShowEmoji((prev) => !prev)}
-          type="button"
-        >
-          <Smile className="h-5 w-5" />
-        </Button>
+      {isRecording ? (
+        <AudioRecorder
+          onSend={(file) => {
+            onSend("", file);
+            setIsRecording(false);
+          }}
+          onCancel={() => setIsRecording(false)}
+        />
+      ) : (
+        <div className="flex items-end gap-2">
+          {/* Emoji button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 h-10 w-10 rounded-full text-muted-foreground hover:text-foreground"
+            onClick={() => setShowEmoji((prev) => !prev)}
+            type="button"
+          >
+            <Smile className="h-5 w-5" />
+          </Button>
 
-        {/* Attach button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="shrink-0 h-10 w-10 rounded-full text-muted-foreground hover:text-foreground"
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <Plus className="h-5 w-5" />
-        </Button>
-
-        {/* Template button */}
-        {onOpenTemplates && (
+          {/* Attach button */}
           <Button
             variant="ghost"
             size="icon"
             className="shrink-0 h-10 w-10 rounded-full text-muted-foreground hover:text-foreground"
             type="button"
-            onClick={onOpenTemplates}
-            title="Plantillas de WhatsApp"
+            onClick={() => fileInputRef.current?.click()}
           >
-            <WhatsAppTemplateIcon className="h-5 w-5" />
+            <Plus className="h-5 w-5" />
           </Button>
-        )}
 
-        {/* Text input — WhatsApp style rounded */}
-        <textarea
-          ref={textareaRef}
-          value={content}
-          onChange={(e) => {
-            setContent(e.target.value);
-            adjustHeight();
-          }}
-          onKeyDown={handleKeyDown}
-          placeholder="Escribe un mensaje"
-          disabled={disabled}
-          rows={1}
-          className="flex-1 resize-none rounded-lg bg-card px-4 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-primary/20 disabled:opacity-50"
-        />
-
-        {/* Send or Mic button — circular WhatsApp style */}
-        <Button
-          size="icon"
-          className="shrink-0 h-10 w-10 rounded-full"
-          onClick={hasContent ? handleSend : undefined}
-          disabled={disabled || (hasContent && !content.trim() && !selectedFile)}
-        >
-          {hasContent ? (
-            <Send className="h-4 w-4" />
-          ) : (
-            <Mic className="h-5 w-5" />
+          {/* Template button */}
+          {onOpenTemplates && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0 h-10 w-10 rounded-full text-muted-foreground hover:text-foreground"
+              type="button"
+              onClick={onOpenTemplates}
+              title="Plantillas de WhatsApp"
+            >
+              <WhatsAppTemplateIcon className="h-5 w-5" />
+            </Button>
           )}
-        </Button>
-      </div>
+
+          {/* Text input — WhatsApp style rounded */}
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={(e) => {
+              setContent(e.target.value);
+              adjustHeight();
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder="Escribe un mensaje"
+            disabled={disabled}
+            rows={1}
+            className="flex-1 resize-none rounded-lg bg-card px-4 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-primary/20 disabled:opacity-50"
+          />
+
+          {/* Send or Mic button — circular WhatsApp style */}
+          <Button
+            size="icon"
+            className="shrink-0 h-10 w-10 rounded-full"
+            onClick={hasContent ? handleSend : () => setIsRecording(true)}
+            disabled={disabled}
+          >
+            {hasContent ? (
+              <Send className="h-4 w-4" />
+            ) : (
+              <Mic className="h-5 w-5" />
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
