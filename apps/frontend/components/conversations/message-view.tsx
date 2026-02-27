@@ -287,7 +287,9 @@ export const MessageView = memo(function MessageView({ conversation, onBack, onO
       const tempAttachments: AttachmentBrief[] = [];
       let previewUrl: string | null = null;
       if (file) {
-        previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : null;
+        previewUrl = (file.type.startsWith("image/") || file.type.startsWith("audio/"))
+          ? URL.createObjectURL(file)
+          : null;
         let fileType: string = "file";
         if (file.type.startsWith("image/")) fileType = "image";
         else if (file.type.startsWith("audio/")) fileType = "audio";
