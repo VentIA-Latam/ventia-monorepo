@@ -8,10 +8,8 @@ import type {
   Inbox,
   Label,
   CannedResponse,
-  Team,
   SendMessagePayload,
   SendTemplatePayload,
-  AssignConversationPayload,
   WhatsAppConnectParams,
   WhatsAppConnectResponse,
   ManualWhatsAppConnectParams,
@@ -99,16 +97,6 @@ export async function sendMessage(
   return apiPost(`/api/messaging/conversations/${conversationId}/messages`, payload);
 }
 
-export async function assignConversation(
-  conversationId: number | string,
-  payload: AssignConversationPayload
-): Promise<unknown> {
-  return apiPost(`/api/messaging/conversations/${conversationId}/assign`, payload);
-}
-
-export async function unassignConversation(conversationId: number | string): Promise<unknown> {
-  return apiPost(`/api/messaging/conversations/${conversationId}/unassign`);
-}
 
 export async function getWsToken(): Promise<WebSocketToken> {
   return apiGet("/api/messaging/ws-token");
@@ -122,9 +110,6 @@ export async function getCannedResponses(): Promise<CannedResponse[]> {
   return apiGet("/api/messaging/canned-responses");
 }
 
-export async function getTeams(): Promise<Team[]> {
-  return apiGet("/api/messaging/teams");
-}
 
 // --- Labels ---
 

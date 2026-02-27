@@ -12,7 +12,7 @@ import { ConversationList } from "@/components/conversations/conversation-list";
 import { MessageView } from "@/components/conversations/message-view";
 import { ContactInfoPanel } from "@/components/conversations/contact-info-panel";
 import { MessagingProvider } from "@/components/conversations/messaging-provider";
-import type { Conversation, Inbox, Team, Label } from "@/lib/types/messaging";
+import type { Conversation, Label } from "@/lib/types/messaging";
 
 interface ConversationsClientProps {
   initialConversations: unknown[];
@@ -31,7 +31,6 @@ export function ConversationsClient({
   );
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showInfo, setShowInfo] = useState(false);
-  const [teams] = useState<Team[]>([]);
   const [allLabels, setAllLabels] = useState<Label[]>(initialLabels as Label[]);
 
   const handleLabelCreated = useCallback((label: Label) => {
@@ -130,7 +129,7 @@ export function ConversationsClient({
             {selectedConversation && (
               <ContactInfoPanel
                 conversation={selectedConversation}
-                teams={teams}
+
                 allLabels={allLabels}
                 onClose={handleCloseInfo}
                 onConversationUpdate={handleConversationUpdate}
@@ -173,7 +172,6 @@ export function ConversationsClient({
         <div className="w-80 border-l shrink-0">
           <ContactInfoPanel
             conversation={selectedConversation}
-            teams={teams}
             allLabels={allLabels}
             onClose={handleCloseInfo}
             onConversationUpdate={handleConversationUpdate}
