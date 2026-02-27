@@ -149,7 +149,7 @@ export function ConversationsClient({
     <MessagingProvider>
     <div className="flex h-full overflow-hidden border-t border-border/30">
       {/* Conversation list */}
-      <div className="w-[400px] border-r shrink-0">
+      <div className="w-[400px] border-r shrink-0 min-h-0">
         <ConversationList
           conversations={conversations}
           selectedId={selectedId}
