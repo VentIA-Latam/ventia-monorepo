@@ -81,11 +81,14 @@ export function ConversationsClient({
   }, []);
 
   const handleDeleteConversation = useCallback((id: number) => {
-    if (selectedId === id) {
-      setSelectedId(null);
-      setShowInfo(false);
-    }
-  }, [selectedId]);
+    setSelectedId((prev) => {
+      if (prev === id) {
+        setShowInfo(false);
+        return null;
+      }
+      return prev;
+    });
+  }, []);
 
   const handleConversationUpdate = useCallback((updated: Conversation) => {
     setConversations((prev) =>

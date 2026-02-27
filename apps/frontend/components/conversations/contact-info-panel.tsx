@@ -8,6 +8,7 @@ import { Phone, Mail, X } from "lucide-react";
 import { TemperatureSelector } from "./temperature-selector";
 import { LabelManager } from "./label-manager";
 import type { Conversation, Label, ConversationTemperature } from "@/lib/types/messaging";
+import { getInitials } from "@/lib/utils/messaging";
 
 interface ContactInfoPanelProps {
   conversation: Conversation;
@@ -15,16 +16,6 @@ interface ContactInfoPanelProps {
   onClose?: () => void;
   onConversationUpdate?: (updated: Conversation) => void;
   onLabelCreated?: (label: Label) => void;
-}
-
-function getInitials(name: string | null | undefined): string {
-  if (!name) return "?";
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
 }
 
 const stageConfig: Record<string, { label: string; className: string }> = {

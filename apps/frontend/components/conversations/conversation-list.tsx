@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Search, MessageSquare } from "lucide-react";
 import { ConversationItem } from "./conversation-item";
 import { ConversationFilters, type ActiveFilters } from "./conversation-filters";
-import { useMessaging } from "./messaging-provider";
+import { useMessagingEvent } from "./messaging-provider";
 import {
   getConversations,
   deleteConversation,
@@ -40,7 +40,7 @@ export function ConversationList({
   onLabelCreated,
   onLabelDeleted,
 }: ConversationListProps) {
-  const { lastEvent } = useMessaging();
+  const lastEvent = useMessagingEvent();
   const sectionFilter = (section === "sale" || section === "unattended" ? section : "all") as SectionValue;
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const [searchQuery, setSearchQuery] = useState("");
@@ -49,6 +49,8 @@ export function ConversationList({
   sectionFilterRef.current = sectionFilter;
   const activeFiltersRef = useRef(activeFilters);
   activeFiltersRef.current = activeFilters;
+  const conversationsRef = useRef(conversations);
+  conversationsRef.current = conversations;
 
   const buildParams = useCallback(
     (section: SectionValue, filters: ActiveFilters): ConversationFilterParams => {
@@ -94,32 +96,79 @@ export function ConversationList({
     async (id: number) => {
       try {
         await deleteConversation(id);
-        onConversationsChange(conversations.filter((c) => c.id !== id));
+        onConversationsChange(conversationsRef.current.filter((c) => c.id !== id));
         onDeleteConversation?.(id);
       } catch (error) {
         console.error("Error deleting conversation:", error);
       }
     },
-    [conversations, onConversationsChange, onDeleteConversation]
+    [onConversationsChange, onDeleteConversation]
   );
 
-  // Refresh conversation list on real-time events
-  useEffect(() => {
-    if (!lastEvent) return;
-    const { event } = lastEvent;
-    if (
-      event === "message.created" ||
-      event === "conversation.created" ||
-      event === "conversation.updated" ||
-      event === "conversation.status_changed" ||
-      event === "conversation.read"
-    ) {
+  // Debounced full refetch (fallback for events we can't handle locally)
+  const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedRefetch = useCallback(() => {
+    if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
+    refetchTimerRef.current = setTimeout(() => {
       const params = buildParams(sectionFilterRef.current, activeFiltersRef.current);
       getConversations(params)
         .then((data) => onConversationsChange(data.data ?? []))
         .catch((err) => console.error("Error refreshing conversations:", err));
+    }, 500);
+  }, [buildParams, onConversationsChange]);
+
+  // Update conversation list locally on real-time events (avoid full refetch)
+  useEffect(() => {
+    if (!lastEvent) return;
+    const { event, data } = lastEvent;
+    const current = conversationsRef.current;
+
+    if (event === "message.created") {
+      const convId = Number(data.conversation_id);
+      const content = (data.content as string) ?? null;
+      const msgType = (data.message_type as string) ?? "incoming";
+      const createdAt = data.created_at ?? new Date().toISOString();
+      const attachments = Array.isArray(data.attachments) && data.attachments.length > 0
+        ? data.attachments[0] : null;
+
+      onConversationsChange(
+        current.map((c) => c.id === convId ? {
+          ...c,
+          last_message: {
+            content,
+            message_type: msgType as Conversation["last_message"] extends { message_type: infer T } ? T : string,
+            attachment_type: attachments ? (attachments as Record<string, unknown>).file_type as string ?? null : null,
+            created_at: createdAt as string | number,
+          } as Conversation["last_message"],
+          last_message_at: createdAt as string | number,
+          unread_count: msgType === "incoming" ? (c.unread_count ?? 0) + 1 : c.unread_count,
+        } : c).sort((a, b) => {
+          const aTime = a.last_message_at ? new Date(typeof a.last_message_at === "number" ? a.last_message_at * 1000 : a.last_message_at).getTime() : 0;
+          const bTime = b.last_message_at ? new Date(typeof b.last_message_at === "number" ? b.last_message_at * 1000 : b.last_message_at).getTime() : 0;
+          return bTime - aTime;
+        })
+      );
+      // If conversation not in list, do a debounced full refetch
+      if (!current.some((c) => c.id === convId)) {
+        debouncedRefetch();
+      }
+    } else if (event === "conversation.read") {
+      const convId = Number(data.id ?? data.conversation_id);
+      onConversationsChange(
+        current.map((c) => c.id === convId ? { ...c, unread_count: 0 } : c)
+      );
+    } else if (
+      event === "conversation.created" ||
+      event === "conversation.updated" ||
+      event === "conversation.status_changed"
+    ) {
+      debouncedRefetch();
     }
-  }, [lastEvent, onConversationsChange, buildParams]);
+
+    return () => {
+      if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
+    };
+  }, [lastEvent, onConversationsChange, debouncedRefetch]);
 
   const filteredConversations = searchQuery
     ? conversations.filter((c) => {
@@ -191,13 +240,14 @@ export function ConversationList({
           />
         ) : (
           filteredConversations.map((conversation) => (
-            <ConversationItem
-              key={conversation.id}
-              conversation={conversation}
-              isSelected={selectedId === conversation.id}
-              onClick={() => onSelect(conversation.id)}
-              onDelete={handleDelete}
-            />
+            <div key={conversation.id} style={{ contentVisibility: "auto", containIntrinsicSize: "auto 72px" }}>
+              <ConversationItem
+                conversation={conversation}
+                isSelected={selectedId === conversation.id}
+                onClick={() => onSelect(conversation.id)}
+                onDelete={handleDelete}
+              />
+            </div>
           ))
         )}
       </div>

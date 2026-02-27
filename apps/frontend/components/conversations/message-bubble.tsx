@@ -7,6 +7,7 @@ import { FileDown, CheckCheck, X, Download } from "lucide-react";
 import { LocationBubble } from "./location-bubble";
 import { ContactBubble } from "./contact-bubble";
 import type { Message, AttachmentBrief } from "@/lib/types/messaging";
+import { formatTime } from "@/lib/utils/messaging";
 
 function getAttUrl(att: AttachmentBrief): string {
   return att.file_url || att.data_url || "";
@@ -76,28 +77,6 @@ function ImageLightbox({
 
 interface MessageBubbleProps {
   message: Message;
-}
-
-function parseTimestamp(value: string | number | null): Date | null {
-  if (value == null || value === "") return null;
-  const num = typeof value === "number" ? value : Number(value);
-  if (!Number.isNaN(num) && num > 1_000_000_000 && num < 10_000_000_000) {
-    return new Date(num * 1000);
-  }
-  if (!Number.isNaN(num) && num > 1_000_000_000_000) {
-    return new Date(num);
-  }
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function formatTime(dateStr: string | number | null): string {
-  const date = parseTimestamp(dateStr);
-  if (!date) return "";
-  return date.toLocaleTimeString("es-PE", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 export const MessageBubble = memo(function MessageBubble({

@@ -28,53 +28,13 @@ import {
   Paperclip,
 } from "lucide-react";
 import type { Conversation } from "@/lib/types/messaging";
+import { getInitials, getWhatsAppTime } from "@/lib/utils/messaging";
 
 interface ConversationItemProps {
   conversation: Conversation;
   isSelected: boolean;
   onClick: () => void;
   onDelete?: (id: number) => void;
-}
-
-function getInitials(name: string | null | undefined): string {
-  if (!name) return "?";
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
-
-function parseTimestamp(value: string | number | null): Date | null {
-  if (value == null || value === "") return null;
-  const num = typeof value === "number" ? value : Number(value);
-  if (!Number.isNaN(num) && num > 1_000_000_000 && num < 10_000_000_000) {
-    return new Date(num * 1000);
-  }
-  if (!Number.isNaN(num) && num > 1_000_000_000_000) {
-    return new Date(num);
-  }
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function getWhatsAppTime(dateStr: string | number | null): string {
-  const date = parseTimestamp(dateStr);
-  if (!date) return "";
-
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today.getTime() - 86400000);
-  const msgDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-  if (msgDay.getTime() === today.getTime()) {
-    return date.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
-  }
-  if (msgDay.getTime() === yesterday.getTime()) {
-    return "Ayer";
-  }
-  return date.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 const ATTACHMENT_ICONS: Record<string, { icon: typeof Image; label: string }> = {

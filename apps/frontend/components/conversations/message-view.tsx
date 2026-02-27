@@ -18,9 +18,10 @@ import { ArrowLeft, MessageSquare, Loader2, Bot, AlertTriangle, MoreVertical, Us
 import { MessageBubble } from "./message-bubble";
 import { MessageComposer } from "./message-composer";
 import { TemplatePicker } from "./template-picker";
-import { useMessaging } from "./messaging-provider";
+import { useMessagingEvent } from "./messaging-provider";
 import { getMessages, sendMessage, updateConversation, markConversationRead } from "@/lib/api-client/messaging";
 import type { Conversation, Message, MessageType, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
+import { getInitials } from "@/lib/utils/messaging";
 
 function mapWebSocketAttachments(raw: unknown): AttachmentBrief[] {
   if (!Array.isArray(raw)) return [];
@@ -56,18 +57,8 @@ interface MessageViewProps {
   onConversationUpdate?: (updated: Conversation) => void;
 }
 
-function getInitials(name: string | null | undefined): string {
-  if (!name) return "?";
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
-
 export function MessageView({ conversation, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
-  const { lastEvent } = useMessaging();
+  const lastEvent = useMessagingEvent();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -84,6 +75,8 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
   const isLoadingPreviousRef = useRef(false);
   // Track if we should stay pinned to the bottom
   const isPinnedToBottomRef = useRef(true);
+  // O(1) dedup for incoming WS messages
+  const messageIdsRef = useRef(new Set<string>());
 
   // Load messages when conversation changes
   useEffect(() => {
@@ -96,12 +89,15 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
     setLoading(true);
     setPage(1);
     setHasMore(true);
+    messageIdsRef.current = new Set<string>();
 
     getMessages(conversation.id)
       .then((data) => {
         if (!cancelled) {
+          const msgs = data.data ?? [];
+          messageIdsRef.current = new Set(msgs.map((m) => String(m.id)));
           scrollBehaviorRef.current = "instant";
-          setMessages(data.data ?? []);
+          setMessages(msgs);
           setLoading(false);
         }
       })
@@ -132,7 +128,7 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
     const msgType = (msgData.message_type as string) ?? "incoming";
 
     setMessages((prev) => {
-      if (prev.some((m) => String(m.id) === msgId)) return prev;
+      if (messageIdsRef.current.has(msgId)) return prev;
 
       const rawCreatedAt = msgData.created_at ?? new Date().toISOString();
       const createdAt = typeof rawCreatedAt === "number" || typeof rawCreatedAt === "string"
@@ -141,6 +137,8 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
 
       const wsAttachments = mapWebSocketAttachments(msgData.attachments);
       const wsSender = mapWebSocketSender(msgData.sender);
+
+      messageIdsRef.current.add(msgId);
 
       if (msgType === "outgoing") {
         const lastTempIdx = prev.findLastIndex((m) => String(m.id).startsWith("temp-"));
@@ -152,7 +150,6 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
             content: (msgData.content as string) ?? "",
             message_type: msgType as MessageType,
             sender: wsSender,
-            // Keep temp preview attachments if WS broadcast arrived before attachment was created
             attachments: wsAttachments.length > 0 ? wsAttachments : tempMsg.attachments,
             created_at: createdAt,
           };
@@ -239,6 +236,7 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
       if (olderMessages.length === 0) {
         setHasMore(false);
       } else {
+        olderMessages.forEach((m) => messageIdsRef.current.add(String(m.id)));
         setMessages((prev) => [...olderMessages, ...prev]);
         setPage(nextPage);
 
@@ -286,8 +284,9 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
 
       // Build temp attachment preview for optimistic UI
       const tempAttachments: AttachmentBrief[] = [];
+      let previewUrl: string | null = null;
       if (file) {
-        const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : null;
+        previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : null;
         let fileType: string = "file";
         if (file.type.startsWith("image/")) fileType = "image";
         else if (file.type.startsWith("audio/")) fileType = "audio";
@@ -312,12 +311,14 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
       };
 
       scrollBehaviorRef.current = "smooth";
+      messageIdsRef.current.add(String(tempMessage.id));
       setMessages((prev) => [...prev, tempMessage]);
 
       try {
         const result = await sendMessage(conversation.id, { content }, file);
         if (result && typeof result === "object" && "id" in result) {
           const realId = String((result as Message).id);
+          messageIdsRef.current.add(realId);
           setMessages((prev) =>
             prev.map((m) =>
               m.id === tempMessage.id || String(m.id) === realId ? (result as Message) : m
@@ -326,6 +327,8 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
         }
       } catch (err) {
         console.error("Error sending message:", err);
+      } finally {
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
       }
     },
     [conversation?.id]
@@ -449,7 +452,7 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
             </div>
           ) : (
             messages.map((msg) => (
-              <div key={msg.id} style={{ overflowAnchor: "none" }}>
+              <div key={msg.id} style={{ overflowAnchor: "none", contentVisibility: "auto", containIntrinsicSize: "auto 60px" }}>
                 <MessageBubble message={msg} />
               </div>
             ))
@@ -489,8 +492,10 @@ export function MessageView({ conversation, onBack, onOpenInfo, onConversationUp
           onSent={() => {
             // Refresh messages after sending template
             getMessages(conversation.id).then((data) => {
+              const msgs = data.data ?? [];
+              messageIdsRef.current = new Set(msgs.map((m) => String(m.id)));
               scrollBehaviorRef.current = "smooth";
-              setMessages(data.data ?? []);
+              setMessages(msgs);
             }).catch((err) => console.error("Error refreshing messages:", err));
           }}
         />

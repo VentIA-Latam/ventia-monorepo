@@ -6,23 +6,32 @@ import {
   useState,
   useEffect,
   useCallback,
-  useRef,
 } from "react";
 import { useActionCable, type ConnectionStatus, type ActionCableEvent } from "@/hooks/use-action-cable";
 import { getWsToken, syncUser } from "@/lib/api-client/messaging";
 
-interface MessagingContextValue {
-  connectionStatus: ConnectionStatus;
-  lastEvent: ActionCableEvent | null;
+// Split into two contexts so components can subscribe to only what they need.
+// Components that only care about events (conversation-list, message-view)
+// won't re-render when connectionStatus changes, and vice versa.
+const MessagingStatusContext = createContext<ConnectionStatus>("disconnected");
+const MessagingEventContext = createContext<ActionCableEvent | null>(null);
+
+/** Subscribe to both status and events (backward compat) */
+export function useMessaging() {
+  return {
+    connectionStatus: useContext(MessagingStatusContext),
+    lastEvent: useContext(MessagingEventContext),
+  };
 }
 
-const MessagingContext = createContext<MessagingContextValue>({
-  connectionStatus: "disconnected",
-  lastEvent: null,
-});
+/** Subscribe to events only — avoids re-render on status changes */
+export function useMessagingEvent() {
+  return useContext(MessagingEventContext);
+}
 
-export function useMessaging() {
-  return useContext(MessagingContext);
+/** Subscribe to connection status only */
+export function useMessagingStatus() {
+  return useContext(MessagingStatusContext);
 }
 
 const WS_URL = process.env.NEXT_PUBLIC_MESSAGING_WS_URL || "ws://localhost:3001/cable";
@@ -76,8 +85,10 @@ export function MessagingProvider({ children }: MessagingProviderProps) {
   });
 
   return (
-    <MessagingContext.Provider value={{ connectionStatus: status, lastEvent }}>
-      {children}
-    </MessagingContext.Provider>
+    <MessagingStatusContext.Provider value={status}>
+      <MessagingEventContext.Provider value={lastEvent}>
+        {children}
+      </MessagingEventContext.Provider>
+    </MessagingStatusContext.Provider>
   );
 }

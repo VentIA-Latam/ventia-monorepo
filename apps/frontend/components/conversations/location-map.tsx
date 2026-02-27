@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -13,14 +14,18 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
+const TILE_URL = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+
 interface LocationMapProps {
   lat: number;
   lng: number;
 }
 
 export function LocationMap({ lat, lng }: LocationMapProps) {
-  const mapProps = {
-    center: [lat, lng] as [number, number],
+  const center = useMemo(() => [lat, lng] as [number, number], [lat, lng]);
+
+  const mapProps = useMemo(() => ({
+    center,
     zoom: 15,
     style: { height: "100%", width: "100%" },
     zoomControl: false,
@@ -29,20 +34,12 @@ export function LocationMap({ lat, lng }: LocationMapProps) {
     doubleClickZoom: false,
     touchZoom: false,
     attributionControl: false,
-  } as any;
-
-  const tileProps = {
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-  } as any;
-
-  const markerProps = {
-    position: [lat, lng] as [number, number],
-  } as any;
+  } as any), [center]);
 
   return (
     <MapContainer {...mapProps}>
-      <TileLayer {...tileProps} />
-      <Marker {...markerProps} />
+      <TileLayer url={TILE_URL} />
+      <Marker position={center} />
     </MapContainer>
   );
 }

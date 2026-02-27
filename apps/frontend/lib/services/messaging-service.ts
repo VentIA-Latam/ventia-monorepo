@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 async function fetchWithAuth<T>(
@@ -38,10 +40,10 @@ export async function fetchConversations(
   );
 }
 
-export async function fetchInboxes(accessToken: string) {
+export const fetchInboxes = cache(async (accessToken: string) => {
   return fetchWithAuth<unknown[]>("/inboxes", accessToken);
-}
+});
 
-export async function fetchLabels(accessToken: string) {
+export const fetchLabels = cache(async (accessToken: string) => {
   return fetchWithAuth<{ success: boolean; data: unknown[] }>("/labels", accessToken);
-}
+});
