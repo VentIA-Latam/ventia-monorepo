@@ -127,6 +127,9 @@ const ConversationsNav = memo(function ConversationsNav({ pathname }: { pathname
   }, [isConversationsPage, fetchCounts])
 
   // Refetch counts (debounced) when relevant WS events arrive
+  // NOTE: No cleanup here — cleanup on every re-run would cancel the 800ms
+  // debounce timer when non-matching events (e.g. conversation.read) arrive
+  // right after message.created. Unmount cleanup is handled separately below.
   useEffect(() => {
     if (!lastEvent) return
     const { event } = lastEvent
@@ -139,10 +142,14 @@ const ConversationsNav = memo(function ConversationsNav({ pathname }: { pathname
       if (refetchTimer.current) clearTimeout(refetchTimer.current)
       refetchTimer.current = setTimeout(fetchCounts, 800)
     }
+  }, [lastEvent, fetchCounts])
+
+  // Cleanup timer on unmount only
+  useEffect(() => {
     return () => {
       if (refetchTimer.current) clearTimeout(refetchTimer.current)
     }
-  }, [lastEvent, fetchCounts])
+  }, [])
 
   return (
     <Collapsible asChild open={isConversationsPage} className="group/collapsible">
