@@ -114,10 +114,12 @@ const ConversationsNav = memo(function ConversationsNav({ pathname }: { pathname
 
   const fetchCounts = useCallback(async () => {
     try {
+      console.log("[COUNTS] fetchCounts called")
       const result = await getConversationCounts()
+      console.log("[COUNTS] result:", JSON.stringify(result.data))
       setConvCounts(result.data)
-    } catch {
-      // silently fail
+    } catch (err) {
+      console.error("[COUNTS] fetchCounts error:", err)
     }
   }, [])
 
@@ -133,12 +135,14 @@ const ConversationsNav = memo(function ConversationsNav({ pathname }: { pathname
   useEffect(() => {
     if (!lastEvent) return
     const { event } = lastEvent
+    console.log("[COUNTS] WS event received:", event)
     if (
       event === "message.created" ||
       event === "conversation.created" ||
       event === "conversation.updated" ||
       event === "conversation.status_changed"
     ) {
+      console.log("[COUNTS] Scheduling fetchCounts in 800ms")
       if (refetchTimer.current) clearTimeout(refetchTimer.current)
       refetchTimer.current = setTimeout(fetchCounts, 800)
     }
