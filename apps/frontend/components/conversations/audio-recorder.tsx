@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useCallback, useRef, useState } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Trash2, Square, Play, Pause, Send } from "lucide-react";
+import { Trash2, Square, Send } from "lucide-react";
 import { useAudioRecorder } from "@/hooks/use-audio-recorder";
+import { AudioPlayer } from "./audio-player";
 import { cn } from "@/lib/utils";
 
 interface AudioRecorderProps {
@@ -29,9 +30,6 @@ export function AudioRecorder({ onSend, onCancel }: AudioRecorderProps) {
     recordWaveformRef,
   } = useAudioRecorder();
 
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [previewTime, setPreviewTime] = useState(0);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const startedRef = useRef(false);
 
   // Auto-start recording on mount (only once)
@@ -47,12 +45,6 @@ export function AudioRecorder({ onSend, onCancel }: AudioRecorderProps) {
   }, []);
 
   const handleDiscard = useCallback(() => {
-    // Stop preview playback before discarding
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-    setIsPlaying(false);
     discardRecording();
     onCancel();
   }, [discardRecording, onCancel]);
@@ -68,44 +60,8 @@ export function AudioRecorder({ onSend, onCancel }: AudioRecorderProps) {
     }
   }, [getAudioFile, onSend]);
 
-  const handlePlayPause = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    setIsPlaying((prev) => {
-      if (prev) audio.pause();
-      else audio.play();
-      return !prev;
-    });
-  }, []);
-
-  // Preview audio timeupdate
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !audioUrl) return;
-
-    audio.src = audioUrl;
-
-    const onTimeUpdate = () => setPreviewTime(Math.floor(audio.currentTime));
-    const onEnded = () => {
-      setIsPlaying(false);
-      setPreviewTime(0);
-    };
-
-    audio.addEventListener("timeupdate", onTimeUpdate);
-    audio.addEventListener("ended", onEnded);
-
-    return () => {
-      audio.removeEventListener("timeupdate", onTimeUpdate);
-      audio.removeEventListener("ended", onEnded);
-    };
-  }, [audioUrl]);
-
   return (
     <div className="flex items-center gap-2 w-full">
-      {/* Hidden audio element for preview playback */}
-      <audio ref={audioRef} className="hidden" />
-
       {/* Discard button */}
       <Button
         type="button"
@@ -152,37 +108,10 @@ export function AudioRecorder({ onSend, onCancel }: AudioRecorderProps) {
         </>
       )}
 
-      {status === "recorded" && (
+      {status === "recorded" && audioUrl && (
         <>
-          {/* Play/pause preview */}
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            className="shrink-0 h-10 w-10 rounded-full"
-            onClick={handlePlayPause}
-          >
-            {isPlaying ? (
-              <Pause className="h-4 w-4" />
-            ) : (
-              <Play className="h-4 w-4" />
-            )}
-          </Button>
-
-          {/* Waveform placeholder bar */}
-          <div className="flex-1 min-w-0 h-8 bg-muted/30 rounded flex items-center px-2">
-            <div
-              className="h-1 bg-primary rounded-full transition-all"
-              style={{
-                width: duration > 0 ? `${Math.min((previewTime / duration) * 100, 100)}%` : "0%",
-              }}
-            />
-          </div>
-
-          {/* Duration */}
-          <span className="text-sm font-mono text-muted-foreground shrink-0 min-w-[3ch]">
-            {formatTime(duration)}
-          </span>
+          {/* Waveform preview with AudioPlayer */}
+          <AudioPlayer src={audioUrl} isOutgoing={false} />
 
           {/* Send button */}
           <Button
