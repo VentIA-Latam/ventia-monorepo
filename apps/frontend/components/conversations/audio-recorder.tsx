@@ -72,13 +72,12 @@ export function AudioRecorder({ onSend, onCancel }: AudioRecorderProps) {
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (isPlaying) {
-      audio.pause();
-    } else {
-      audio.play();
-    }
-    setIsPlaying(!isPlaying);
-  }, [isPlaying]);
+    setIsPlaying((prev) => {
+      if (prev) audio.pause();
+      else audio.play();
+      return !prev;
+    });
+  }, []);
 
   // Preview audio timeupdate
   useEffect(() => {

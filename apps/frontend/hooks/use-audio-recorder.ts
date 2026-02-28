@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Mp3Encoder } from "@breezystack/lamejs";
+// Mp3Encoder loaded dynamically in convertToMp3() to reduce initial bundle
 
 export type RecorderStatus = "idle" | "recording" | "recorded";
 
@@ -29,6 +29,7 @@ function formatFloat32ToInt16(float32: Float32Array): Int16Array {
 }
 
 async function convertToMp3(blob: Blob): Promise<Blob> {
+  const { Mp3Encoder } = await import("@breezystack/lamejs");
   const arrayBuffer = await blob.arrayBuffer();
   const audioContext = new AudioContext();
 
