@@ -228,13 +228,8 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   }, []);
 
   const discardRecording = useCallback(() => {
-    // Stop if still recording
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const record = recordPluginRef.current as any;
-    if (record?.isRecording?.()) {
-      record.stopRecording();
-    }
-
+    // Skip record.stopRecording() — it fires record-end (triggering mp3 conversion)
+    // and closes WaveSurfer's AudioContext. destroyResources() handles cleanup via ws.destroy().
     destroyResources();
 
     setStatus("idle");
