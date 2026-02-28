@@ -148,7 +148,7 @@ export function ConversationsClient({
 
   // Desktop layout: 3 panels
   return (
-    <div className="flex h-full overflow-hidden border-t border-border/30">
+    <div className="flex h-full w-full overflow-hidden border-t border-border/30">
       {/* Conversation list */}
       <div className="w-[400px] border-r shrink-0 min-h-0">
         <ConversationList
