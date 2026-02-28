@@ -479,6 +479,32 @@ async def validate_order(
                     f"conversation_stage_update_error: order_id={order_id}, error={stage_err}"
                 )
 
+            # Auto-remove "en-revisión" label after payment validation
+            try:
+                labels_result = await messaging_service.get_conversation_labels(
+                    tenant_id=validated_order.tenant_id,
+                    conversation_id=str(validated_order.messaging_conversation_id),
+                )
+                if labels_result:
+                    labels = labels_result.get("data", labels_result)
+                    if isinstance(labels, list):
+                        for label in labels:
+                            if label.get("title") == "en-revisión":
+                                await messaging_service.remove_conversation_label(
+                                    tenant_id=validated_order.tenant_id,
+                                    conversation_id=str(validated_order.messaging_conversation_id),
+                                    label_id=str(label["id"]),
+                                )
+                                logger.info(
+                                    f"label_removed: order_id={order_id}, label=en-revisión, "
+                                    f"conversation_id={validated_order.messaging_conversation_id}"
+                                )
+                                break
+            except Exception as label_err:
+                logger.warning(
+                    f"label_removal_error: order_id={order_id}, error={label_err}"
+                )
+
         return validated_order
 
     except ValueError as e:

@@ -571,7 +571,7 @@ async def list_canned_responses(
     responses={503: {"model": MessagingError}},
 )
 async def list_labels(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):
     tenant_id = _get_tenant_id(current_user)
 
@@ -590,7 +590,7 @@ async def list_labels(
 )
 async def create_label(
     payload: dict,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
     tenant_id = _get_tenant_id(current_user)
 
@@ -609,7 +609,7 @@ async def create_label(
 )
 async def delete_label(
     label_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission_dual("DELETE", "/messaging/*")),
 ):
     tenant_id = _get_tenant_id(current_user)
 
@@ -628,7 +628,7 @@ async def delete_label(
 )
 async def list_conversation_labels(
     conversation_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):
     tenant_id = _get_tenant_id(current_user)
 
@@ -648,7 +648,7 @@ async def list_conversation_labels(
 async def add_conversation_label(
     conversation_id: str,
     payload: dict,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
     tenant_id = _get_tenant_id(current_user)
 
@@ -674,7 +674,7 @@ async def add_conversation_label(
 async def remove_conversation_label(
     conversation_id: str,
     label_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission_dual("DELETE", "/messaging/*")),
 ):
     tenant_id = _get_tenant_id(current_user)
 
