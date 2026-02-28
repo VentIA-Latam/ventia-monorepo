@@ -105,12 +105,17 @@ export const AudioPlayer = memo(function AudioPlayer({
   const handleSpeed = useCallback(() => {
     const nextIndex = (speedIndexRef.current + 1) % SPEEDS.length;
     speedIndexRef.current = nextIndex;
-    // Update button text directly to avoid React re-render → ResizeObserver → waveform redraw
     if (speedBtnRef.current) speedBtnRef.current.textContent = `${SPEEDS[nextIndex]}x`;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const surfer = wavesurferRef.current as any;
     const media = surfer?.getMediaElement?.();
-    if (media) media.playbackRate = SPEEDS[nextIndex];
+    if (media) {
+      // Block WaveSurfer's ratechange listener to prevent waveform redraw
+      const block = (e: Event) => e.stopImmediatePropagation();
+      media.addEventListener("ratechange", block, true);
+      media.playbackRate = SPEEDS[nextIndex];
+      requestAnimationFrame(() => media.removeEventListener("ratechange", block, true));
+    }
   }, []);
 
   return (
@@ -161,7 +166,7 @@ export const AudioPlayer = memo(function AudioPlayer({
         ref={speedBtnRef}
         type="button"
         className={cn(
-          "text-[10px] font-bold shrink-0 rounded px-1 py-0.5 transition-colors",
+          "text-[10px] font-bold shrink-0 rounded py-0.5 transition-colors w-[30px] text-center",
           isOutgoing
             ? "text-marino/70 hover:bg-marino/10"
             : "text-muted-foreground hover:bg-muted/60"
