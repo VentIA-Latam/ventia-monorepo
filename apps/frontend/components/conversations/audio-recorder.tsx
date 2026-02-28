@@ -102,7 +102,7 @@ export function AudioRecorder({ onSend, onCancel }: AudioRecorderProps) {
   }, [audioUrl]);
 
   return (
-    <div className="flex items-center gap-2 w-full px-2 py-2">
+    <div className="flex items-center gap-2 w-full">
       {/* Hidden audio element for preview playback */}
       <audio ref={audioRef} className="hidden" />
 
@@ -111,7 +111,7 @@ export function AudioRecorder({ onSend, onCancel }: AudioRecorderProps) {
         type="button"
         size="icon"
         variant="ghost"
-        className="shrink-0 h-9 w-9 rounded-full text-danger hover:bg-danger/10"
+        className="shrink-0 h-10 w-10 rounded-full text-danger hover:bg-danger/10"
         onClick={handleDiscard}
       >
         <Trash2 className="h-4 w-4" />
@@ -159,7 +159,7 @@ export function AudioRecorder({ onSend, onCancel }: AudioRecorderProps) {
             type="button"
             size="icon"
             variant="ghost"
-            className="shrink-0 h-9 w-9 rounded-full"
+            className="shrink-0 h-10 w-10 rounded-full"
             onClick={handlePlayPause}
           >
             {isPlaying ? (

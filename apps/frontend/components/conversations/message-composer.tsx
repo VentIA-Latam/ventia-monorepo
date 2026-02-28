@@ -5,10 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Send, Smile, Plus, Mic, X, FileText, Image as ImageIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 
-const AudioRecorder = dynamic(
-  () => import("./audio-recorder").then((mod) => ({ default: mod.AudioRecorder })),
-  { ssr: false }
-);
+const importAudioRecorder = () => import("./audio-recorder").then((mod) => ({ default: mod.AudioRecorder }));
+const AudioRecorder = dynamic(importAudioRecorder, {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center gap-2 w-full animate-pulse">
+      <div className="h-10 w-10 rounded-full bg-muted/50" />
+      <div className="flex-1 h-8 rounded bg-muted/50" />
+      <div className="h-10 w-10 rounded-full bg-muted/50" />
+    </div>
+  ),
+});
 
 function WhatsAppTemplateIcon({ className }: { className?: string }) {
   return (
@@ -242,6 +249,7 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates }: MessageCo
           <Button
             size="icon"
             className="shrink-0 h-10 w-10 rounded-full"
+            onMouseEnter={hasContent ? undefined : () => importAudioRecorder()}
             onClick={hasContent ? handleSend : () => setIsRecording(true)}
             disabled={disabled}
           >
