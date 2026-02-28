@@ -35,16 +35,15 @@ class Api::V1::MessagesController < Api::V1::BaseController
     uploaded_file = params.dig(:message, :file)
     if uploaded_file.present?
       message.skip_send_reply = true
+      message.attachments.new(
+        account: current_account,
+        file_type: determine_file_type(uploaded_file.content_type),
+        file: uploaded_file
+      )
     end
 
     if message.save
       if uploaded_file.present?
-        file_type = determine_file_type(uploaded_file.content_type)
-        message.attachments.create!(
-          account: current_account,
-          file_type: file_type,
-          file: uploaded_file
-        )
         SendReplyJob.set(wait: 2.seconds).perform_later(message.id)
       end
 

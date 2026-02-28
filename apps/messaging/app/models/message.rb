@@ -51,7 +51,7 @@ class Message < ApplicationRecord
   belongs_to :conversation
   belongs_to :sender, polymorphic: true, optional: true
 
-  has_many :attachments, dependent: :destroy
+  has_many :attachments, dependent: :destroy, autosave: true
 
   # Enums (hash syntax like Chatwoot to avoid method conflicts)
   enum message_type: { incoming: 0, outgoing: 1, activity: 2, template: 3 }
