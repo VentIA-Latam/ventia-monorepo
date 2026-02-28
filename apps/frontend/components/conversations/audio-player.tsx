@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 interface AudioPlayerProps {
   src: string;
   isOutgoing: boolean;
+  className?: string;
 }
 
 const SPEEDS = [1, 1.5, 2] as const;
@@ -21,6 +22,7 @@ function formatTime(seconds: number): string {
 export const AudioPlayer = memo(function AudioPlayer({
   src,
   isOutgoing,
+  className,
 }: AudioPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<unknown>(null);
@@ -122,6 +124,7 @@ export const AudioPlayer = memo(function AudioPlayer({
     <div
       className={cn(
         "flex items-center gap-2 rounded-lg px-2 py-1.5 min-w-[220px] max-w-[300px]",
+        className,
         !isReady && "opacity-50"
       )}
     >

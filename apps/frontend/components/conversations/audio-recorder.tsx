@@ -111,7 +111,7 @@ export function AudioRecorder({ onSend, onCancel }: AudioRecorderProps) {
       {status === "recorded" && audioUrl && (
         <>
           {/* Waveform preview with AudioPlayer */}
-          <AudioPlayer src={audioUrl} isOutgoing={false} />
+          <AudioPlayer src={audioUrl} isOutgoing={false} className="flex-1 max-w-none" />
 
           {/* Send button */}
           <Button
