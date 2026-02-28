@@ -55,7 +55,7 @@ export default function DashboardLayoutClient({
     <MessagingProvider>
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="min-w-0">
         <header className="flex h-14 sm:h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 border-b bg-gradient-to-r from-cielo/10 to-transparent">
           <div className="flex items-center gap-2 px-3 sm:px-4 w-full">
             <SidebarTrigger className="-ml-1" />
@@ -85,7 +85,7 @@ export default function DashboardLayoutClient({
             </div>
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 sm:gap-6 px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 overflow-x-hidden min-h-0">
+        <div className="flex flex-1 flex-col gap-4 sm:gap-6 px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 overflow-x-hidden min-h-0 min-w-0">
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}
