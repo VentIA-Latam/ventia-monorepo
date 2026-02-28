@@ -150,7 +150,7 @@ export function ConversationsClient({
   return (
     <div className="flex h-full w-full overflow-hidden border-t border-border/30">
       {/* Conversation list */}
-      <div className="w-[400px] border-r shrink-0 min-h-0">
+      <div className={`border-r min-h-0 ${showInfo ? "w-[300px] shrink-0" : "w-[400px] shrink-0"}`}>
         <ConversationList
           conversations={conversations}
           selectedId={selectedId}

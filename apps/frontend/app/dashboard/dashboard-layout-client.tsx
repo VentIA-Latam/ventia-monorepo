@@ -93,7 +93,7 @@ export default function DashboardLayoutClient({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="flex flex-1 flex-col gap-4 sm:gap-6 min-h-0"
+              className="flex flex-1 flex-col gap-4 sm:gap-6 min-h-0 min-w-0"
             >
               {children}
             </motion.div>
