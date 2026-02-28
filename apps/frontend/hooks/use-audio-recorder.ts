@@ -93,17 +93,27 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       audioUrlRef.current = null;
     }
 
+    // Stop mic stream first
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+
+    // Stop mic BEFORE ws.destroy() to prevent double AudioContext.close()
+    // RecordPlugin.destroy() calls super.destroy() (fires once listener → close)
+    // then stopMic() (calls onDestroy → close again). Pre-calling stopMic() avoids this.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const record = recordPluginRef.current as any;
+    if (record) {
+      try { record.stopMic(); } catch { /* ignore */ }
+    }
+    recordPluginRef.current = null;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ws = wavesurferRef.current as any;
     if (ws) {
       try { ws.destroy(); } catch { /* ignore */ }
       wavesurferRef.current = null;
-    }
-    recordPluginRef.current = null;
-
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
     }
   }, []);
 
