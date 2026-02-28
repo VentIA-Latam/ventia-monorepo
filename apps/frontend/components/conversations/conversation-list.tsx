@@ -159,6 +159,12 @@ export function ConversationList({
       onConversationsChange(
         current.map((c) => c.id === convId ? { ...c, unread_count: 0 } : c)
       );
+    } else if (event === "conversation.labels_updated") {
+      const convId = Number(data.conversation_id);
+      const labels = Array.isArray(data.labels) ? data.labels : [];
+      onConversationsChange(
+        current.map((c) => c.id === convId ? { ...c, labels } : c)
+      );
     } else if (
       event === "conversation.created" ||
       event === "conversation.updated" ||

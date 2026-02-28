@@ -60,6 +60,16 @@ class ActionCableListener < BaseListener
     broadcast_to_account(conversation.account, 'conversation.team_changed', conversation.webhook_data)
   end
 
+  # Label events
+  def conversation_labels_updated(event)
+    conversation = event[:data][:conversation]
+    labels = event[:data][:labels]
+    broadcast_to_account(conversation.account, 'conversation.labels_updated', {
+      conversation_id: conversation.id,
+      labels: labels
+    })
+  end
+
   private
 
   def broadcast_to_user(user, event_name, data)
