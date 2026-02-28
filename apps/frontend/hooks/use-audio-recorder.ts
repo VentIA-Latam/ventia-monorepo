@@ -54,7 +54,7 @@ async function convertToMp3(blob: Blob): Promise<Blob> {
 
     return new Blob(mp3Chunks, { type: "audio/mpeg" });
   } finally {
-    await audioContext.close();
+    if (audioContext.state !== "closed") await audioContext.close();
   }
 }
 
