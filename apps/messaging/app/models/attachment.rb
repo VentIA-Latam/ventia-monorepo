@@ -50,7 +50,7 @@ class Attachment < ApplicationRecord
     return '' unless file.attached?
     return '' if new_record? || !file.blob&.persisted?
 
-    Rails.application.routes.url_helpers.rails_blob_url(file, only_path: true)
+    Rails.application.routes.url_helpers.rails_blob_url(file, **Rails.application.routes.default_url_options)
   end
 
   # Direct URL for external services (WhatsApp, etc.) that can't follow redirects.
