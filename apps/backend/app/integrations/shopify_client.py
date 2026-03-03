@@ -128,16 +128,25 @@ class ShopifyClient:
         # Map VentIA line items to Shopify format
         shopify_line_items = []
         for item in line_items:
-            shopify_line_items.append({
-                "title": item.get("product", "Product"),
-                "quantity": item.get("quantity", 1),
-                "priceSet": {
-                    "shopMoney": {
-                        "amount": str(item.get("unitPrice", 0)),
-                        "currencyCode": currency,
-                    }
-                },
-            })
+            variant_id = item.get("variantId")
+            if variant_id:
+                # Product exists in Shopify — use variantId (price/title from product)
+                shopify_line_items.append({
+                    "variantId": variant_id,
+                    "quantity": item.get("quantity", 1),
+                })
+            else:
+                # Custom line item — use title + priceSet
+                shopify_line_items.append({
+                    "title": item.get("product", "Product"),
+                    "quantity": item.get("quantity", 1),
+                    "priceSet": {
+                        "shopMoney": {
+                            "amount": str(item.get("unitPrice", 0)),
+                            "currencyCode": currency,
+                        }
+                    },
+                })
 
         order_input: dict[str, Any] = {
             "lineItems": shopify_line_items,
@@ -175,7 +184,7 @@ class ShopifyClient:
         variables: dict[str, Any] = {
             "order": order_input,
             "options": {
-                "inventoryBehavior": "DECREMENT_OBEYING_POLICY",
+                "inventoryBehaviour": "DECREMENT_OBEYING_POLICY",
             },
         }
 

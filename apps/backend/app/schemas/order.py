@@ -22,6 +22,7 @@ class LineItemBase(BaseModel):
     unitPrice: float = Field(..., gt=0, description="Unit price (must be > 0)")
     quantity: int = Field(..., gt=0, description="Quantity (must be > 0)")
     subtotal: float | None = Field(None, description="Subtotal (calculated if not provided)")
+    variantId: str | None = Field(None, description="Shopify ProductVariant GID (e.g. gid://shopify/ProductVariant/123)")
 
 
 class OrderBase(BaseModel):
