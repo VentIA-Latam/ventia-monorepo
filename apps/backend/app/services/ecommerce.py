@@ -87,25 +87,26 @@ class EcommerceService:
 
         # 3. Sync to e-commerce platform if configured
         shopify_order_id = None
+        new_woocommerce_order_id = None
 
         if settings.has_ecommerce and sync_enabled:
-            # Verify platform matches order source
-            if platform == "shopify" and order.source_platform != "shopify":
-                raise ValueError(
-                    f"Tenant is configured for Shopify but order {order.id} "
-                    f"has no shopify_draft_order_id"
-                )
-            if platform == "woocommerce" and order.source_platform != "woocommerce":
-                raise ValueError(
-                    f"Tenant is configured for WooCommerce but order {order.id} "
-                    f"has no woocommerce_order_id"
-                )
-
-            # Sync based on platform
             if platform == "shopify":
-                shopify_order_id = await self._sync_shopify(db, order, settings.ecommerce.shopify)
+                if order.source_platform == "shopify":
+                    # Existing flow: complete draft order
+                    shopify_order_id = await self._sync_shopify(db, order, settings.ecommerce.shopify)
+                else:
+                    # New flow: create paid order directly in Shopify
+                    result = await self._create_shopify_order(db, order, settings.ecommerce.shopify)
+                    shopify_order_id = result.get("order_id")
+
             elif platform == "woocommerce":
-                await self._sync_woocommerce(order, settings.ecommerce.woocommerce)
+                if order.source_platform == "woocommerce":
+                    # Existing flow: mark existing order as paid
+                    await self._sync_woocommerce(order, settings.ecommerce.woocommerce)
+                else:
+                    # New flow: create order + mark as paid in WooCommerce
+                    result = await self._create_and_pay_woocommerce(order, settings.ecommerce.woocommerce)
+                    new_woocommerce_order_id = result.get("woocommerce_order_id")
 
         # 4. Update order locally via repository
         update_data: dict = {
@@ -116,6 +117,8 @@ class EcommerceService:
 
         if shopify_order_id:
             update_data["shopify_order_id"] = shopify_order_id
+        if new_woocommerce_order_id:
+            update_data["woocommerce_order_id"] = new_woocommerce_order_id
 
         if payment_method:
             update_data["payment_method"] = payment_method
@@ -226,6 +229,164 @@ class EcommerceService:
             logger.error(f"WooCommerce API error: {e}")
             raise
 
+
+    async def _create_shopify_order(
+        self,
+        db: Session,
+        order: Order,
+        credentials: ShopifyCredentials,
+    ) -> dict:
+        """
+        Create a paid order directly in Shopify using orderCreate mutation.
+
+        Used for native VentIA orders (no existing draft in Shopify).
+
+        Args:
+            db: Database session
+            order: VentIA order with line_items
+            credentials: Shopify API credentials
+
+        Returns:
+            dict with order_id, order_name, financial_status
+
+        Raises:
+            ValueError: If Shopify API call fails
+        """
+        from app.integrations.shopify_token_manager import shopify_token_manager
+
+        try:
+            access_token = await shopify_token_manager.get_valid_access_token(
+                db=db, tenant=order.tenant,
+            )
+        except ValueError as e:
+            raise ValueError(f"Failed to get Shopify access token: {str(e)}") from e
+
+        client = ShopifyClient(
+            store_url=credentials.store_url,
+            access_token=access_token,
+            api_version=credentials.api_version,
+        )
+
+        line_items = order.line_items or []
+        currency = order.currency or "PEN"
+
+        # Build shipping address if available
+        shipping_address = None
+        if order.shipping_address or order.shipping_city:
+            shipping_address = {
+                "address1": order.shipping_address,
+                "city": order.shipping_city,
+                "province": order.shipping_province,
+                "country": order.shipping_country,
+            }
+
+        logger.info(f"Creating paid Shopify order for VentIA order {order.id}")
+
+        try:
+            result = await client.create_paid_order(
+                line_items=line_items,
+                customer_email=order.customer_email,
+                customer_name=order.customer_name,
+                currency=currency,
+                shipping_address=shipping_address,
+                note=order.notes,
+            )
+            logger.info(
+                f"Shopify order created: order_id={result.get('order_id')}, "
+                f"name={result.get('order_name')}"
+            )
+            return result
+
+        except Exception as e:
+            logger.error(f"Failed to create Shopify order: {e}")
+            raise ValueError(f"Failed to create order in Shopify: {str(e)}") from e
+
+    async def _create_and_pay_woocommerce(
+        self,
+        order: Order,
+        credentials: WooCommerceCredentials,
+    ) -> dict:
+        """
+        Create a new order in WooCommerce and mark it as paid.
+
+        Used for native VentIA orders (no existing order in WooCommerce).
+
+        Args:
+            order: VentIA order with line_items
+            credentials: WooCommerce API credentials
+
+        Returns:
+            dict with woocommerce_order_id
+
+        Raises:
+            WooCommerceError: For API errors
+        """
+        if not credentials.consumer_key or not credentials.consumer_secret:
+            raise ValueError("WooCommerce credentials not configured")
+
+        client = WooCommerceClient(
+            store_url=credentials.store_url,
+            consumer_key=credentials.consumer_key,
+            consumer_secret=credentials.consumer_secret,
+        )
+
+        # Map VentIA line items to WooCommerce format
+        woo_line_items = []
+        for item in (order.line_items or []):
+            woo_line_items.append({
+                "name": item.get("product", "Product"),
+                "sku": item.get("sku", ""),
+                "quantity": item.get("quantity", 1),
+                "price": str(item.get("unitPrice", 0)),
+            })
+
+        # Build customer name
+        first_name = ""
+        last_name = ""
+        if order.customer_name:
+            names = order.customer_name.split(" ", 1)
+            first_name = names[0]
+            last_name = names[1] if len(names) > 1 else ""
+
+        order_data = {
+            "line_items": woo_line_items,
+            "billing": {
+                "email": order.customer_email,
+                "first_name": first_name,
+                "last_name": last_name,
+            },
+            "set_paid": True,
+        }
+
+        # Add shipping address if available
+        if order.shipping_address or order.shipping_city:
+            order_data["shipping"] = {
+                "address_1": order.shipping_address or "",
+                "city": order.shipping_city or "",
+                "state": order.shipping_province or "",
+                "country": order.shipping_country or "",
+                "first_name": first_name,
+                "last_name": last_name,
+            }
+
+        logger.info(f"Creating WooCommerce order for VentIA order {order.id}")
+
+        try:
+            result = await client.create_order(order_data)
+            woo_order_id = result.get("id")
+            logger.info(
+                f"WooCommerce order created: id={woo_order_id}, "
+                f"status={result.get('status')}"
+            )
+            return {"woocommerce_order_id": woo_order_id}
+
+        except WooCommerceAuthError:
+            logger.error("WooCommerce auth failed while creating order")
+            raise
+
+        except WooCommerceError as e:
+            logger.error(f"WooCommerce API error while creating order: {e}")
+            raise
 
     async def cancel_order(
         self,

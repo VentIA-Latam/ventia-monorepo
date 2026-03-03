@@ -64,35 +64,30 @@ class OrderCreate(OrderBase):
     """
     Schema for creating a new Order.
 
-    Used by n8n when inserting orders from e-commerce platforms.
+    Used by n8n when inserting orders from e-commerce platforms or as native VentIA orders.
     The tenant_id is automatically set from the authenticated user's tenant (in API endpoints).
     For internal use (webhooks), tenant_id can be provided explicitly.
 
     Validation:
-    - At least one of shopify_draft_order_id or woocommerce_order_id must be provided
-    - Cannot provide both simultaneously (mutually exclusive)
+    - Both platform IDs can be None (native VentIA order, synced on validation)
+    - At most one platform ID can be provided (mutually exclusive)
     """
 
     tenant_id: int | None = Field(
         None, description="Tenant ID (optional - for internal use only, ignored in public endpoints)"
     )
     shopify_draft_order_id: str | None = Field(
-        None, description="Shopify draft order ID (required if not WooCommerce)"
+        None, description="Shopify draft order ID (optional - if absent, created on validation)"
     )
     woocommerce_order_id: int | None = Field(
-        None, description="WooCommerce order ID (required if not Shopify)"
+        None, description="WooCommerce order ID (optional - if absent, created on validation)"
     )
 
     @model_validator(mode="after")
     def validate_platform_id(self) -> "OrderCreate":
-        """Ensure exactly one platform ID is provided."""
+        """Ensure at most one platform ID is provided."""
         has_shopify = self.shopify_draft_order_id is not None
         has_woocommerce = self.woocommerce_order_id is not None
-
-        if not has_shopify and not has_woocommerce:
-            raise ValueError(
-                "Either shopify_draft_order_id or woocommerce_order_id must be provided"
-            )
 
         if has_shopify and has_woocommerce:
             raise ValueError(

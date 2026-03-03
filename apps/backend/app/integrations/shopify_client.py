@@ -81,6 +81,128 @@ class ShopifyClient:
 
             return data
 
+    async def create_paid_order(
+        self,
+        line_items: list[dict[str, Any]],
+        customer_email: str,
+        currency: str = "PEN",
+        customer_name: str | None = None,
+        shipping_address: dict[str, str] | None = None,
+        note: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Create a paid order directly using Shopify orderCreate mutation.
+
+        Args:
+            line_items: List of VentIA line items [{"product": "...", "unitPrice": 50.0, "quantity": 2}]
+            customer_email: Customer email address
+            currency: Currency code (default: PEN)
+            customer_name: Optional customer name
+            shipping_address: Optional address dict with address1, city, province, country
+            note: Optional order note
+
+        Returns:
+            dict: Created order info with order_id, order_name, financial_status
+
+        Raises:
+            ValueError: If mutation fails or returns user errors
+        """
+        mutation = """
+        mutation orderCreate($order: OrderCreateOrderInput!, $options: OrderCreateOptionsInput) {
+            orderCreate(order: $order, options: $options) {
+                order {
+                    id
+                    name
+                    createdAt
+                    displayFinancialStatus
+                    displayFulfillmentStatus
+                }
+                userErrors {
+                    field
+                    message
+                }
+            }
+        }
+        """
+
+        # Map VentIA line items to Shopify format
+        shopify_line_items = []
+        for item in line_items:
+            shopify_line_items.append({
+                "title": item.get("product", "Product"),
+                "quantity": item.get("quantity", 1),
+                "priceSet": {
+                    "shopMoney": {
+                        "amount": str(item.get("unitPrice", 0)),
+                        "currencyCode": currency,
+                    }
+                },
+            })
+
+        order_input: dict[str, Any] = {
+            "lineItems": shopify_line_items,
+            "email": customer_email,
+            "financialStatus": "PAID",
+            "currency": currency,
+        }
+
+        if note:
+            order_input["note"] = note
+
+        if shipping_address:
+            addr: dict[str, Any] = {}
+            if shipping_address.get("address1"):
+                addr["address1"] = shipping_address["address1"]
+            if shipping_address.get("city"):
+                addr["city"] = shipping_address["city"]
+            if shipping_address.get("province"):
+                addr["province"] = shipping_address["province"]
+            if shipping_address.get("country"):
+                addr["countryCode"] = shipping_address["country"]
+            if addr:
+                order_input["shippingAddress"] = addr
+
+        if customer_name:
+            names = customer_name.split(" ", 1)
+            order_input["customer"] = {
+                "toUpsert": {
+                    "email": customer_email,
+                    "firstName": names[0],
+                    "lastName": names[1] if len(names) > 1 else "",
+                }
+            }
+
+        variables: dict[str, Any] = {
+            "order": order_input,
+            "options": {
+                "inventoryBehavior": "DECREMENT_OBEYING_POLICY",
+            },
+        }
+
+        data = await self._execute_query(mutation, variables)
+
+        result = data.get("data", {}).get("orderCreate", {})
+
+        user_errors = result.get("userErrors", [])
+        if user_errors:
+            error_messages = [
+                f"{err.get('field', 'unknown')}: {err.get('message', 'unknown error')}"
+                for err in user_errors
+            ]
+            raise ValueError(f"Shopify orderCreate errors: {'; '.join(error_messages)}")
+
+        order = result.get("order")
+        if not order:
+            raise ValueError("orderCreate succeeded but no order data returned")
+
+        return {
+            "order_id": order.get("id"),
+            "order_name": order.get("name"),
+            "created_at": order.get("createdAt"),
+            "financial_status": order.get("displayFinancialStatus"),
+            "fulfillment_status": order.get("displayFulfillmentStatus"),
+        }
+
     async def complete_draft_order(self, draft_order_id: str) -> dict[str, Any]:
         """
         Complete a draft order using Shopify GraphQL mutation.

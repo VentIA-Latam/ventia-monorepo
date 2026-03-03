@@ -415,27 +415,11 @@ async def validate_order(
     )
 
     # === COHERENCE CHECKS ===
-    # If sync is enabled, verify order has the required platform ID
-    if sync_enabled and settings.has_ecommerce:
-        if platform == "shopify" and not order.shopify_draft_order_id:
-            logger.warning(
-                f"Coherence check failed: order_id={order_id}, platform=shopify but no shopify_draft_order_id"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Sync enabled for Shopify but order has no shopify_draft_order_id. "
-                       "Cannot sync order that was not created from Shopify.",
-            )
-        
-        if platform == "woocommerce" and not order.woocommerce_order_id:
-            logger.warning(
-                f"Coherence check failed: order_id={order_id}, platform=woocommerce but no woocommerce_order_id"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Sync enabled for WooCommerce but order has no woocommerce_order_id. "
-                       "Cannot sync order that was not created from WooCommerce.",
-            )
+    # If sync is enabled but no e-commerce platform configured, warn
+    if sync_enabled and not settings.has_ecommerce:
+        logger.warning(
+            f"sync_enabled but no ecommerce configured: order_id={order_id}, tenant_id={tenant.id}"
+        )
 
     try:
         # Extract payment method and notes from validate_data
