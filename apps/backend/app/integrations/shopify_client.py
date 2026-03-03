@@ -177,7 +177,7 @@ class ShopifyClient:
                 "toUpsert": {
                     "email": customer_email,
                     "firstName": names[0],
-                    "lastName": names[1] if len(names) > 1 else "",
+                    "lastName": names[1] if len(names) > 1 else ".",
                 }
             }
 
