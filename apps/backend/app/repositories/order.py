@@ -2,6 +2,8 @@
 Order repository.
 """
 
+from datetime import datetime
+
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.invoice import Invoice
@@ -23,6 +25,8 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         validado: bool | None = None,
         sort_by: str = "created_at",
         sort_order: str = "desc",
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
     ) -> list[Order]:
         """
         Get all orders for a specific tenant.
@@ -35,6 +39,8 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
             validado: Filter by validation status (None = all orders)
             sort_by: Field to sort by (default: created_at)
             sort_order: Sort order 'asc' or 'desc' (default: desc)
+            start_date: Filter orders created after this UTC datetime
+            end_date: Filter orders created before this UTC datetime
 
         Returns:
             List of orders
@@ -44,6 +50,12 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         # Apply validation filter if specified
         if validado is not None:
             query = query.filter(Order.validado == validado)
+
+        # Apply date range filter
+        if start_date is not None:
+            query = query.filter(Order.created_at >= start_date)
+        if end_date is not None:
+            query = query.filter(Order.created_at <= end_date)
 
         # Apply sorting
         sort_column = getattr(Order, sort_by, Order.created_at)
@@ -64,6 +76,8 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         validado: bool | None = None,
         sort_by: str = "created_at",
         sort_order: str = "desc",
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
     ) -> list[Order]:
         """
         Get all orders from all tenants (for SUPERADMIN).
@@ -76,6 +90,8 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
             validado: Optional filter by validation status
             sort_by: Field to sort by (default: created_at)
             sort_order: Sort order 'asc' or 'desc' (default: desc)
+            start_date: Filter orders created after this UTC datetime
+            end_date: Filter orders created before this UTC datetime
 
         Returns:
             List of orders
@@ -89,6 +105,12 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         # Apply validation filter if specified
         if validado is not None:
             query = query.filter(Order.validado == validado)
+
+        # Apply date range filter
+        if start_date is not None:
+            query = query.filter(Order.created_at >= start_date)
+        if end_date is not None:
+            query = query.filter(Order.created_at <= end_date)
 
         # Apply sorting
         sort_column = getattr(Order, sort_by, Order.created_at)
@@ -105,6 +127,8 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         *,
         tenant_id: int | None = None,
         validado: bool | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
     ) -> int:
         """
         Count all orders from all tenants.
@@ -113,6 +137,8 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
             db: Database session
             tenant_id: Optional filter by tenant ID
             validado: Optional filter by validation status
+            start_date: Filter orders created after this UTC datetime
+            end_date: Filter orders created before this UTC datetime
 
         Returns:
             Total count of orders
@@ -124,6 +150,11 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
 
         if validado is not None:
             query = query.filter(Order.validado == validado)
+
+        if start_date is not None:
+            query = query.filter(Order.created_at >= start_date)
+        if end_date is not None:
+            query = query.filter(Order.created_at <= end_date)
 
         return query.count()
 
@@ -303,6 +334,8 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         tenant_id: int,
         *,
         validado: bool | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
     ) -> int:
         """
         Count orders for a tenant.
@@ -311,6 +344,8 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
             db: Database session
             tenant_id: Tenant ID
             validado: Filter by validation status
+            start_date: Filter orders created after this UTC datetime
+            end_date: Filter orders created before this UTC datetime
 
         Returns:
             Count of orders
@@ -319,6 +354,11 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
 
         if validado is not None:
             query = query.filter(Order.validado == validado)
+
+        if start_date is not None:
+            query = query.filter(Order.created_at >= start_date)
+        if end_date is not None:
+            query = query.filter(Order.created_at <= end_date)
 
         return query.count()
 

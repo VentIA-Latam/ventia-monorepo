@@ -10,9 +10,10 @@ See: apps/backend/app/api/v1/endpoints/orders.py
 
 import asyncio
 import logging
+from datetime import date
 
 from email_validator import EmailNotValidError, validate_email
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -21,22 +22,291 @@ from app.api.deps import (
     require_permission_dual,
 )
 from app.core.permissions import Role
+from app.core.timezone import get_date_range_utc
 from app.integrations.efact_client import efact_client
+from app.models.tenant import Tenant
 from app.models.user import User
 from app.repositories.invoice import invoice_repository
 from app.repositories.tenant import tenant_repository
 from app.schemas.invoice import (
+    BulkDownloadRequest,
     InvoiceListResponse,
     InvoiceResponse,
     InvoiceSendEmailRequest,
     InvoiceSendEmailResponse,
 )
 from app.services.email_service import EmailError, email_service
+from app.services.export_service import export_service
 from app.services.invoice import invoice_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# IMPORTANT: Static path endpoints (/export, /bulk-download) MUST be defined
+# BEFORE dynamic path endpoints (/{invoice_id}/*) to avoid FastAPI route shadowing.
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+@router.get("/export", tags=["invoices"])
+async def export_invoices(
+    format: str = Query("csv", pattern="^(csv|excel)$", description="Export format"),
+    start_date: date | None = Query(None, description="Start date (YYYY-MM-DD, tenant timezone)"),
+    end_date: date | None = Query(None, description="End date (YYYY-MM-DD, tenant timezone)"),
+    tenant_id: int | None = Query(None, description="Tenant ID (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/invoices")),
+    db: Session = Depends(get_database),
+) -> Response:
+    """
+    Export invoices as CSV or Excel file.
+
+    Exports all invoices matching the filters. Dates are converted from
+    tenant timezone to UTC for querying. Max 10,000 records.
+
+    **Authentication:** Accepts JWT token OR API key (X-API-Key header).
+    """
+    try:
+        # Determine effective tenant_id
+        if current_user.role == Role.SUPERADMIN:
+            effective_tenant_id = tenant_id
+        else:
+            effective_tenant_id = current_user.tenant_id
+
+        # Get tenant timezone
+        tz_tenant_id = effective_tenant_id or current_user.tenant_id
+        tenant = db.query(Tenant.timezone).filter(Tenant.id == tz_tenant_id).first()
+        tz_name = tenant[0] if tenant and tenant[0] else "America/Lima"
+
+        # Convert dates to UTC
+        start_utc = end_utc = None
+        if start_date and end_date:
+            start_utc, end_utc = get_date_range_utc(start_date, end_date, tz_name)
+
+        if effective_tenant_id is not None:
+            invoices = invoice_repository.get_by_tenant(
+                db, effective_tenant_id, skip=0, limit=10000,
+                start_date=start_utc, end_date=end_utc,
+            )
+        else:
+            invoices = invoice_repository.get_all(
+                db, skip=0, limit=10000,
+                start_date=start_utc, end_date=end_utc,
+            )
+
+        if format == "excel":
+            output = export_service.export_invoices_excel(invoices, tz_name)
+            media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            filename = "comprobantes.xlsx"
+        else:
+            output = export_service.export_invoices_csv(invoices, tz_name)
+            media_type = "text/csv"
+            filename = "comprobantes.csv"
+
+        logger.info(
+            f"Exported {len(invoices)} invoices as {format} by user {current_user.id}"
+        )
+
+        return Response(
+            content=output.read(),
+            media_type=media_type,
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+
+    except Exception as e:
+        logger.error(f"Error exporting invoices: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to export invoices: {str(e)}",
+        )
+
+
+@router.post("/bulk-download", tags=["invoices"])
+async def bulk_download_invoices(
+    request_data: BulkDownloadRequest,
+    current_user: User = Depends(require_permission_dual("POST", "/invoices/bulk-download")),
+    db: Session = Depends(get_database),
+) -> Response:
+    """
+    Download multiple invoice files (PDF, XML, or CDR) as a ZIP archive.
+
+    The user selects which file type they want. Only invoices with
+    efact_status='success' can be downloaded.
+
+    **Authentication:** Accepts JWT token OR API key (X-API-Key header).
+
+    Args:
+        request_data: Invoice IDs and file type to download
+        current_user: Current authenticated user
+        db: Database session
+
+    Returns:
+        Response: ZIP file containing the requested files
+    """
+    import io
+    import json
+    import zipfile
+
+    from app.integrations.efact_client import EFactClient
+
+    try:
+        # Validate all invoices exist and belong to tenant
+        invoices = []
+        for inv_id in request_data.invoice_ids:
+            invoice = invoice_repository.get(db, inv_id)
+            if not invoice:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Invoice {inv_id} not found",
+                )
+            if current_user.role != Role.SUPERADMIN and invoice.tenant_id != current_user.tenant_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Access denied to invoice {inv_id}",
+                )
+            if invoice.efact_status != "success":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invoice {inv_id} is not validated (status: {invoice.efact_status})",
+                )
+            invoices.append(invoice)
+
+        # Create ZIP in memory
+        zip_buffer = io.BytesIO()
+        efact = EFactClient()
+
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+            for invoice in invoices:
+                full_number = f"{invoice.serie}-{invoice.correlativo:08d}"
+
+                if request_data.file_type == "pdf":
+                    content = efact.download_pdf(invoice.efact_ticket)
+                    zf.writestr(f"{full_number}.pdf", content)
+
+                elif request_data.file_type == "xml":
+                    content = efact.download_xml(invoice.efact_ticket)
+                    zf.writestr(f"{full_number}.xml", content)
+
+                elif request_data.file_type == "cdr":
+                    if invoice.efact_response:
+                        cdr_json = json.dumps(invoice.efact_response, indent=2, ensure_ascii=False)
+                        zf.writestr(f"{full_number}-CDR.json", cdr_json)
+
+        zip_buffer.seek(0)
+        filename = f"comprobantes-{request_data.file_type}.zip"
+
+        logger.info(
+            f"Bulk download: {len(invoices)} {request_data.file_type} files "
+            f"by user {current_user.id}"
+        )
+
+        return Response(
+            content=zip_buffer.read(),
+            media_type="application/zip",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        logger.error(f"Error in bulk download: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create bulk download: {str(e)}",
+        )
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Dynamic path endpoints (/{invoice_id}/*) below this line
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+@router.get(
+    "/{invoice_id}/cdr",
+    tags=["invoices"],
+)
+async def download_invoice_cdr(
+    invoice_id: int,
+    current_user: User = Depends(require_permission_dual("GET", "/invoices/*")),
+    db: Session = Depends(get_database),
+) -> Response:
+    """
+    Download the CDR (Constancia de Recepción) of an invoice.
+
+    The CDR is SUNAT's response stored in invoice.efact_response after
+    successful processing. Returned as a JSON file.
+
+    **Permissions:**
+    - All authenticated users can download CDRs of their tenant's invoices
+    - SUPERADMIN can download CDRs of any tenant's invoices
+
+    Args:
+        invoice_id: Invoice ID to download CDR for
+        current_user: Current authenticated user
+        db: Database session
+
+    Returns:
+        Response: JSON file with CDR data
+    """
+    import json
+
+    try:
+        invoice = invoice_repository.get(db, invoice_id)
+
+        if not invoice:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Invoice {invoice_id} not found",
+            )
+
+        if current_user.role != Role.SUPERADMIN and invoice.tenant_id != current_user.tenant_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied to this invoice",
+            )
+
+        if invoice.efact_status != "success":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"CDR not available. Invoice status is '{invoice.efact_status}', must be 'success'.",
+            )
+
+        if not invoice.efact_response:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="CDR not available. Invoice has no eFact response stored.",
+            )
+
+        cdr_json = json.dumps(invoice.efact_response, indent=2, ensure_ascii=False)
+        filename = f"{invoice.serie}-{invoice.correlativo:08d}-CDR.json"
+
+        logger.info(
+            f"CDR downloaded for invoice {invoice_id} by user {current_user.id}. "
+            f"Filename: {filename}"
+        )
+
+        return Response(
+            content=cdr_json.encode("utf-8"),
+            media_type="application/json",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            },
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        logger.error(
+            f"Unexpected error downloading CDR for invoice {invoice_id}: {str(e)}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to download CDR: {str(e)}",
+        )
 
 
 @router.get(
