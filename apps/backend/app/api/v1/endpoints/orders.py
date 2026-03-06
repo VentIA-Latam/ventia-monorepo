@@ -3,8 +3,10 @@ Order management endpoints.
 """
 
 import logging
+from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import (
@@ -14,6 +16,8 @@ from app.api.deps import (
     require_permission_dual,
 )
 from app.core.permissions import Role
+from app.core.timezone import get_date_range_utc
+from app.models.tenant import Tenant
 from app.models.user import User
 from app.schemas.order import (
     OrderCancel,
@@ -26,6 +30,7 @@ from app.schemas.order import (
 from app.schemas.invoice import InvoiceCreate, InvoiceResponse
 from app.services.order import order_service
 from app.services.invoice import invoice_service
+from app.services.export_service import export_service
 from app.services.ecommerce import ecommerce_service
 from app.repositories.order import order_repository
 from app.integrations.woocommerce_client import (
@@ -85,6 +90,72 @@ async def get_recent_orders(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve recent orders: {str(e)}",
+        )
+
+
+@router.get("/export", tags=["orders"])
+async def export_orders(
+    format: str = Query("csv", pattern="^(csv|excel)$", description="Export format"),
+    start_date: date | None = Query(None, description="Start date (YYYY-MM-DD, tenant timezone)"),
+    end_date: date | None = Query(None, description="End date (YYYY-MM-DD, tenant timezone)"),
+    validado: bool | None = Query(None, description="Filter by payment validation status"),
+    current_user: User = Depends(require_permission_dual("GET", "/orders")),
+    db: Session = Depends(get_database),
+) -> Response:
+    """
+    Export orders as CSV or Excel file.
+
+    Exports all orders matching the filters. Dates are converted from
+    tenant timezone to UTC for querying. Max 10,000 records.
+
+    **Authentication:** Accepts JWT token OR API key (X-API-Key header).
+    """
+    try:
+        # Get tenant timezone
+        tenant = db.query(Tenant.timezone).filter(Tenant.id == current_user.tenant_id).first()
+        tz_name = tenant[0] if tenant and tenant[0] else "America/Lima"
+
+        # Convert dates to UTC
+        start_utc = end_utc = None
+        if start_date and end_date:
+            start_utc, end_utc = get_date_range_utc(start_date, end_date, tz_name)
+
+        # SUPERADMIN: all orders; others: tenant-scoped
+        if current_user.role == Role.SUPERADMIN:
+            orders = order_repository.get_all(
+                db, skip=0, limit=10000, validado=validado,
+                start_date=start_utc, end_date=end_utc,
+            )
+        else:
+            orders = order_repository.get_by_tenant(
+                db, current_user.tenant_id, skip=0, limit=10000,
+                validado=validado, start_date=start_utc, end_date=end_utc,
+            )
+
+        if format == "excel":
+            output = export_service.export_orders_excel(orders, tz_name)
+            media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            filename = "pedidos.xlsx"
+        else:
+            output = export_service.export_orders_csv(orders, tz_name)
+            media_type = "text/csv"
+            filename = "pedidos.csv"
+
+        logger.info(
+            f"Exported {len(orders)} orders as {format} by user {current_user.id}"
+        )
+
+        return Response(
+            content=output.read(),
+            media_type=media_type,
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+
+    except Exception as e:
+        logger.error(f"Error exporting orders: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to export orders: {str(e)}",
         )
 
 

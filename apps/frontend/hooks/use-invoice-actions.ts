@@ -9,12 +9,14 @@ interface UseInvoiceActionsReturn {
   invoice: Invoice;
   isDownloadingPDF: boolean;
   isDownloadingXML: boolean;
+  isDownloadingCDR: boolean;
   isCheckingStatus: boolean;
   emailDialogOpen: boolean;
   sendingEmail: boolean;
   setEmailDialogOpen: (open: boolean) => void;
   handleDownloadPDF: () => Promise<void>;
   handleDownloadXML: () => Promise<void>;
+  handleDownloadCDR: () => Promise<void>;
   handleCheckStatus: () => Promise<void>;
   handleOpenEmailDialog: () => void;
   handleConfirmSendEmail: (email: string, includeXml: boolean) => Promise<void>;
@@ -26,6 +28,7 @@ export function useInvoiceActions(initialInvoice: Invoice): UseInvoiceActionsRet
   const [invoice, setInvoice] = useState(initialInvoice);
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
   const [isDownloadingXML, setIsDownloadingXML] = useState(false);
+  const [isDownloadingCDR, setIsDownloadingCDR] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
@@ -140,6 +143,36 @@ export function useInvoiceActions(initialInvoice: Invoice): UseInvoiceActionsRet
     }
   };
 
+  const handleDownloadCDR = async () => {
+    try {
+      setIsDownloadingCDR(true);
+
+      const response = await fetch(`/api/invoices/cdr/${invoice.id}`, {
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Error al descargar CDR");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${invoice.full_number}-CDR.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error("Error downloading CDR:", err);
+      alert(err instanceof Error ? err.message : "Error al descargar el CDR");
+    } finally {
+      setIsDownloadingCDR(false);
+    }
+  };
+
   const handleOpenEmailDialog = () => {
     if (invoice.efact_status !== "success") {
       toast({
@@ -201,12 +234,14 @@ export function useInvoiceActions(initialInvoice: Invoice): UseInvoiceActionsRet
     invoice,
     isDownloadingPDF,
     isDownloadingXML,
+    isDownloadingCDR,
     isCheckingStatus,
     emailDialogOpen,
     sendingEmail,
     setEmailDialogOpen,
     handleDownloadPDF,
     handleDownloadXML,
+    handleDownloadCDR,
     handleCheckStatus,
     handleOpenEmailDialog,
     handleConfirmSendEmail,
