@@ -7,7 +7,7 @@
  * desde componentes cliente. Todas las funciones llaman a /api/* routes.
  */
 
-import { apiGet, apiPost, apiPatch } from './client';
+import { apiGet, apiPost, apiPatch, apiDownload } from './client';
 import type { Order, OrderListResponse } from '@/lib/types/order';
 
 export interface FetchOrdersParams {
@@ -80,4 +80,24 @@ export async function cancelOrder(
   data: CancelOrderRequest
 ): Promise<Order> {
   return apiPost<Order>(`/api/orders/${orderId}/cancel`, data);
+}
+
+/**
+ * Exportar orders como CSV o Excel
+ * GET /api/orders/export
+ */
+export async function exportOrders(params: {
+  format: "csv" | "excel";
+  start_date?: string;
+  end_date?: string;
+  validado?: boolean;
+}): Promise<void> {
+  const query = new URLSearchParams();
+  query.set("format", params.format);
+  if (params.start_date) query.set("start_date", params.start_date);
+  if (params.end_date) query.set("end_date", params.end_date);
+  if (params.validado !== undefined) query.set("validado", String(params.validado));
+
+  const ext = params.format === "excel" ? "xlsx" : "csv";
+  return apiDownload(`/api/orders/export?${query.toString()}`, `pedidos.${ext}`);
 }
