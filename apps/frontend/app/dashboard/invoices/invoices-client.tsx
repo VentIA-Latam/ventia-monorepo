@@ -1,13 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { format } from "date-fns";
-import type { DateRange } from "react-day-picker";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -31,35 +28,26 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { formatDate } from "@/lib/utils";
 import { Invoice, INVOICE_TYPE_NAMES, INVOICE_STATUS_NAMES, INVOICE_STATUS_COLORS } from "@/lib/types/invoice";
 import {
   FileText,
   Search,
+  Filter,
   Download,
   Eye,
   MoreVertical,
   FileDown,
-  FileSpreadsheet,
   CheckCircle,
   XCircle,
   Clock,
   AlertCircle,
   Mail,
   Loader2,
-  Archive,
-  X,
 } from "lucide-react";
 import Link from "next/link";
 import { SendEmailDialog } from "@/components/invoices/send-email-dialog";
-import {
-  downloadInvoicePdf,
-  downloadInvoiceXml,
-  downloadInvoiceCdr,
-  exportInvoices,
-  bulkDownloadInvoices,
-} from "@/lib/api-client/invoices";
+import { downloadInvoicePdf, downloadInvoiceXml } from "@/lib/api-client/invoices";
 import { useToast } from "@/hooks/use-toast";
 
 interface InvoicesClientViewProps {
@@ -67,79 +55,33 @@ interface InvoicesClientViewProps {
 }
 
 /**
- * Client Component - Interactividad, filtros, selección múltiple y descargas
+ * Client Component - Interactividad y filtros
  */
 export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps) {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [sendingEmailId, setSendingEmailId] = useState<number | null>(null);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [isExporting, setIsExporting] = useState(false);
-  const [isBulkDownloading, setIsBulkDownloading] = useState(false);
 
   // Filtrar facturas según los criterios
-  const filteredInvoices = useMemo(() => {
-    return initialInvoices.filter((invoice) => {
-      const matchesSearch =
-        searchTerm === "" ||
-        invoice.full_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (invoice.cliente_razon_social?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-        (invoice.cliente_numero_documento?.toLowerCase() || "").includes(searchTerm.toLowerCase());
+  const filteredInvoices = initialInvoices.filter((invoice) => {
+    const matchesSearch =
+      searchTerm === "" ||
+      invoice.full_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (invoice.cliente_razon_social?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (invoice.cliente_numero_documento?.toLowerCase() || "").includes(searchTerm.toLowerCase());
 
-      const matchesType =
-        filterType === "all" || invoice.invoice_type === filterType;
+    const matchesType =
+      filterType === "all" || invoice.invoice_type === filterType;
 
-      const matchesStatus =
-        filterStatus === "all" || invoice.efact_status === filterStatus;
+    const matchesStatus =
+      filterStatus === "all" || invoice.efact_status === filterStatus;
 
-      let matchesDate = true;
-      if (dateRange?.from) {
-        const invoiceDate = new Date(invoice.created_at + "Z");
-        if (invoiceDate < dateRange.from) matchesDate = false;
-        if (dateRange.to) {
-          const endOfDay = new Date(dateRange.to);
-          endOfDay.setHours(23, 59, 59, 999);
-          if (invoiceDate > endOfDay) matchesDate = false;
-        }
-      }
-
-      return matchesSearch && matchesType && matchesStatus && matchesDate;
-    });
-  }, [initialInvoices, searchTerm, filterType, filterStatus, dateRange]);
-
-  // Only success invoices can be selected for bulk download
-  const selectableInvoices = filteredInvoices.filter(
-    (inv) => inv.efact_status === "success"
-  );
-
-  const allSelectableSelected =
-    selectableInvoices.length > 0 &&
-    selectableInvoices.every((inv) => selectedIds.has(inv.id));
-
-  const toggleSelection = (id: number) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
-
-  const handleSelectAll = () => {
-    if (allSelectableSelected) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(selectableInvoices.map((inv) => inv.id)));
-    }
-  };
+    return matchesSearch && matchesType && matchesStatus;
+  });
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -159,71 +101,39 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
   const handleDownloadPDF = async (invoiceId: number, fullNumber: string) => {
     try {
       await downloadInvoicePdf(invoiceId, `${fullNumber}.pdf`);
-      toast({ title: "PDF descargado", description: "El archivo se ha descargado correctamente" });
+      toast({
+        title: "PDF descargado",
+        description: "El archivo se ha descargado correctamente",
+      });
     } catch (error) {
       console.error("Error downloading PDF:", error);
-      toast({ title: "Error", description: "Error al descargar el PDF", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Error al descargar el PDF",
+        variant: "destructive",
+      });
     }
   };
 
   const handleDownloadXML = async (invoiceId: number, fullNumber: string) => {
     try {
       await downloadInvoiceXml(invoiceId, `${fullNumber}.xml`);
-      toast({ title: "XML descargado", description: "El archivo se ha descargado correctamente" });
+      toast({
+        title: "XML descargado",
+        description: "El archivo se ha descargado correctamente",
+      });
     } catch (error) {
       console.error("Error downloading XML:", error);
-      toast({ title: "Error", description: "Error al descargar el XML", variant: "destructive" });
-    }
-  };
-
-  const handleDownloadCDR = async (invoiceId: number, fullNumber: string) => {
-    try {
-      await downloadInvoiceCdr(invoiceId, `${fullNumber}-CDR.json`);
-      toast({ title: "CDR descargado", description: "El archivo se ha descargado correctamente" });
-    } catch (error) {
-      console.error("Error downloading CDR:", error);
-      toast({ title: "Error", description: "Error al descargar el CDR", variant: "destructive" });
-    }
-  };
-
-  const handleBulkDownload = async (fileType: "pdf" | "xml" | "cdr") => {
-    if (selectedIds.size === 0) return;
-    try {
-      setIsBulkDownloading(true);
-      await bulkDownloadInvoices(Array.from(selectedIds), fileType);
-      toast({
-        title: "Descarga completada",
-        description: `Se descargaron ${selectedIds.size} archivos ${fileType.toUpperCase()}`,
-      });
-    } catch (error) {
-      console.error("Error in bulk download:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Error en descarga masiva",
+        description: "Error al descargar el XML",
         variant: "destructive",
       });
-    } finally {
-      setIsBulkDownloading(false);
-    }
-  };
-
-  const handleExport = async (fmt: "csv" | "excel") => {
-    try {
-      setIsExporting(true);
-      await exportInvoices({
-        format: fmt,
-        start_date: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
-        end_date: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
-      });
-    } catch (error) {
-      console.error("Error exporting invoices:", error);
-      toast({ title: "Error", description: "Error al exportar comprobantes", variant: "destructive" });
-    } finally {
-      setIsExporting(false);
     }
   };
 
   const handleOpenEmailDialog = (invoice: Invoice) => {
+    // Validar que tenga email
     if (!invoice.cliente_email) {
       toast({
         title: "Email no disponible",
@@ -232,6 +142,8 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
       });
       return;
     }
+
+    // Validar estado
     if (invoice.efact_status !== "success") {
       toast({
         title: "Factura no válida",
@@ -240,6 +152,8 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
       });
       return;
     }
+
+    // Abrir dialog de confirmación
     setSelectedInvoice(invoice);
     setEmailDialogOpen(true);
   };
@@ -252,17 +166,30 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
 
       const response = await fetch(`/api/invoices/send-email/${selectedInvoice.id}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipient_email: email, include_xml: includeXml }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          recipient_email: email,
+          include_xml: includeXml,
+        }),
       });
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: "Error al enviar el email" }));
+        const error = await response.json().catch(() => ({
+          detail: "Error al enviar el email",
+        }));
         throw new Error(error.detail || "Error al enviar el email");
       }
 
       const result = await response.json();
-      toast({ title: "Email enviado", description: `Comprobante enviado a ${result.sent_to}` });
+
+      toast({
+        title: "Email enviado",
+        description: `Comprobante enviado a ${result.sent_to}`,
+      });
+
+      // Cerrar dialog al éxito
       setEmailDialogOpen(false);
     } catch (error) {
       toast({
@@ -288,44 +215,22 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
             Gestiona facturas, boletas y comprobantes electrónicos
           </p>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-2" disabled={isExporting}>
-              {isExporting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4" />
-              )}
-              Exportar
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleExport("csv")}>
-              <FileText className="w-4 h-4 mr-2" />
-              Descargar CSV
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleExport("excel")}>
-              <FileSpreadsheet className="w-4 h-4 mr-2" />
-              Descargar Excel
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por serie, cliente, RUC/DNI..."
                 value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setSelectedIds(new Set()); }}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9"
               />
             </div>
-            <Select value={filterType} onValueChange={(v) => { setFilterType(v); setSelectedIds(new Set()); }}>
+            <Select value={filterType} onValueChange={setFilterType}>
               <SelectTrigger>
                 <SelectValue placeholder="Tipo de comprobante" />
               </SelectTrigger>
@@ -337,7 +242,7 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
                 <SelectItem value="08">Nota de Débito</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setSelectedIds(new Set()); }}>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger>
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
@@ -349,59 +254,9 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
                 <SelectItem value="error">Error</SelectItem>
               </SelectContent>
             </Select>
-            <DateRangePicker
-              dateRange={dateRange}
-              onDateRangeChange={(r) => { setDateRange(r); setSelectedIds(new Set()); }}
-              placeholder="Rango de fechas"
-            />
           </div>
         </CardContent>
       </Card>
-
-      {/* Bulk Actions Bar */}
-      {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 p-3 bg-muted/50 border rounded-lg">
-          <span className="text-sm font-medium">
-            {selectedIds.size} comprobante{selectedIds.size > 1 ? "s" : ""} seleccionado{selectedIds.size > 1 ? "s" : ""}
-          </span>
-          <div className="flex items-center gap-2 ml-auto">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handleBulkDownload("pdf")}
-              disabled={isBulkDownloading}
-            >
-              {isBulkDownloading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <FileDown className="h-4 w-4 mr-1" />}
-              PDF
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handleBulkDownload("xml")}
-              disabled={isBulkDownloading}
-            >
-              {isBulkDownloading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
-              XML
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handleBulkDownload("cdr")}
-              disabled={isBulkDownloading}
-            >
-              {isBulkDownloading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Archive className="h-4 w-4 mr-1" />}
-              CDR
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setSelectedIds(new Set())}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Results Summary */}
       <div className="flex items-center justify-between">
@@ -424,12 +279,6 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[40px]">
-                    <Checkbox
-                      checked={allSelectableSelected && selectableInvoices.length > 0}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
                   <TableHead>Serie - Número</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Cliente</TableHead>
@@ -443,20 +292,13 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
               <TableBody>
                 {filteredInvoices.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       No se encontraron comprobantes
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredInvoices.map((invoice) => (
                     <TableRow key={invoice.id}>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selectedIds.has(invoice.id)}
-                          onCheckedChange={() => toggleSelection(invoice.id)}
-                          disabled={invoice.efact_status !== "success"}
-                        />
-                      </TableCell>
                       <TableCell className="font-mono font-medium">
                         {invoice.full_number}
                       </TableCell>
@@ -527,12 +369,6 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
                                   <Download className="h-4 w-4 mr-2" />
                                   Descargar XML
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDownloadCDR(invoice.id, invoice.full_number)}
-                                >
-                                  <Archive className="h-4 w-4 mr-2" />
-                                  Descargar CDR
-                                </DropdownMenuItem>
                               </>
                             )}
                           </DropdownMenuContent>
@@ -558,3 +394,4 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
     </div>
   );
 }
+

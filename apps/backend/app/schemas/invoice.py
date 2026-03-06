@@ -310,24 +310,3 @@ class InvoiceSendEmailResponse(BaseModel):
     email_id: str | None = Field(None, description="Resend email ID for tracking")
     sent_to: str = Field(..., description="Email address where invoice was sent")
     message: str
-
-
-# ============================================================================
-# BULK DOWNLOAD SCHEMAS
-# ============================================================================
-
-
-class BulkDownloadRequest(BaseModel):
-    """Schema for bulk downloading invoice files as ZIP."""
-
-    invoice_ids: list[int] = Field(
-        ...,
-        min_length=1,
-        max_length=50,
-        description="List of invoice IDs to download (max 50)",
-    )
-    file_type: str = Field(
-        ...,
-        pattern=r"^(pdf|xml|cdr)$",
-        description="File type to download: pdf, xml, or cdr",
-    )
