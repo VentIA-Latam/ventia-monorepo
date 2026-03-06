@@ -2,7 +2,6 @@
 Invoice repository.
 """
 
-from datetime import datetime
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -44,8 +43,6 @@ class InvoiceRepository(CRUDBase[Invoice, InvoiceCreate, InvoiceUpdate]):
         *,
         skip: int = 0,
         limit: int = 100,
-        start_date: datetime | None = None,
-        end_date: datetime | None = None,
     ) -> list[Invoice]:
         """
         Get all invoices for a specific tenant with pagination.
@@ -55,21 +52,13 @@ class InvoiceRepository(CRUDBase[Invoice, InvoiceCreate, InvoiceUpdate]):
             tenant_id: Tenant ID
             skip: Number of records to skip
             limit: Maximum number of records to return
-            start_date: Filter invoices created after this UTC datetime
-            end_date: Filter invoices created before this UTC datetime
 
         Returns:
             List of invoices ordered by created_at DESC
         """
-        query = db.query(Invoice).filter(Invoice.tenant_id == tenant_id)
-
-        if start_date is not None:
-            query = query.filter(Invoice.created_at >= start_date)
-        if end_date is not None:
-            query = query.filter(Invoice.created_at <= end_date)
-
         return (
-            query
+            db.query(Invoice)
+            .filter(Invoice.tenant_id == tenant_id)
             .order_by(Invoice.created_at.desc())
             .offset(skip)
             .limit(limit)
@@ -82,9 +71,6 @@ class InvoiceRepository(CRUDBase[Invoice, InvoiceCreate, InvoiceUpdate]):
         *,
         skip: int = 0,
         limit: int = 100,
-        tenant_id: int | None = None,
-        start_date: datetime | None = None,
-        end_date: datetime | None = None,
     ) -> list[Invoice]:
         """
         Get all invoices from all tenants with pagination (for SUPERADMIN).
@@ -93,24 +79,12 @@ class InvoiceRepository(CRUDBase[Invoice, InvoiceCreate, InvoiceUpdate]):
             db: Database session
             skip: Number of records to skip
             limit: Maximum number of records to return
-            tenant_id: Optional filter by tenant ID
-            start_date: Filter invoices created after this UTC datetime
-            end_date: Filter invoices created before this UTC datetime
 
         Returns:
             List of invoices ordered by created_at DESC
         """
-        query = db.query(Invoice)
-
-        if tenant_id is not None:
-            query = query.filter(Invoice.tenant_id == tenant_id)
-        if start_date is not None:
-            query = query.filter(Invoice.created_at >= start_date)
-        if end_date is not None:
-            query = query.filter(Invoice.created_at <= end_date)
-
         return (
-            query
+            db.query(Invoice)
             .order_by(Invoice.created_at.desc())
             .offset(skip)
             .limit(limit)
@@ -121,9 +95,6 @@ class InvoiceRepository(CRUDBase[Invoice, InvoiceCreate, InvoiceUpdate]):
         self,
         db: Session,
         tenant_id: int,
-        *,
-        start_date: datetime | None = None,
-        end_date: datetime | None = None,
     ) -> int:
         """
         Count total number of invoices for a tenant.
@@ -131,51 +102,26 @@ class InvoiceRepository(CRUDBase[Invoice, InvoiceCreate, InvoiceUpdate]):
         Args:
             db: Database session
             tenant_id: Tenant ID
-            start_date: Filter invoices created after this UTC datetime
-            end_date: Filter invoices created before this UTC datetime
 
         Returns:
             Total count of invoices
         """
-        query = db.query(Invoice).filter(Invoice.tenant_id == tenant_id)
-
-        if start_date is not None:
-            query = query.filter(Invoice.created_at >= start_date)
-        if end_date is not None:
-            query = query.filter(Invoice.created_at <= end_date)
-
-        return query.count()
+        return db.query(Invoice).filter(Invoice.tenant_id == tenant_id).count()
 
     def count_all(
         self,
         db: Session,
-        *,
-        tenant_id: int | None = None,
-        start_date: datetime | None = None,
-        end_date: datetime | None = None,
     ) -> int:
         """
         Count total number of invoices from all tenants (for SUPERADMIN).
 
         Args:
             db: Database session
-            tenant_id: Optional filter by tenant ID
-            start_date: Filter invoices created after this UTC datetime
-            end_date: Filter invoices created before this UTC datetime
 
         Returns:
             Total count of invoices
         """
-        query = db.query(Invoice)
-
-        if tenant_id is not None:
-            query = query.filter(Invoice.tenant_id == tenant_id)
-        if start_date is not None:
-            query = query.filter(Invoice.created_at >= start_date)
-        if end_date is not None:
-            query = query.filter(Invoice.created_at <= end_date)
-
-        return query.count()
+        return db.query(Invoice).count()
 
     def get_by_ticket(
         self,

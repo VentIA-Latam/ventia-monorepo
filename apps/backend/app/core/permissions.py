@@ -60,7 +60,6 @@ PERMISSIONS: Dict[Tuple[str, str], List[Role]] = {
 
     # INVOICES ENDPOINTS (new unified paths)
     ("POST", "/invoices"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
-    ("POST", "/invoices/bulk-download"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
     ("POST", "/invoices/*"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
     ("GET", "/invoices"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
     ("GET", "/invoices/*"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],

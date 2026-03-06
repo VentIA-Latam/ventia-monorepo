@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { format } from "date-fns";
-import type { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,22 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { OrdersTable } from "@/components/dashboard/orders/orders-table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Order } from "@/lib/services/order-service";
-import { exportOrders } from "@/lib/api-client/orders";
 import {
   Download,
-  FileSpreadsheet,
-  FileText,
-  Loader2,
   Plus,
   Search,
   ChevronLeft,
@@ -38,6 +25,7 @@ export interface OrderFilters {
   search: string;
   paymentStatus: string;
   channel: string;
+  dateRange: string;
 }
 
 interface OrdersClientViewProps {
@@ -56,8 +44,6 @@ interface OrdersClientViewProps {
  */
 export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
   const [orders, setOrders] = useState<Order[]>(initialOrders);
-  const [isExporting, setIsExporting] = useState(false);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   // rerender-functional-setstate + rerender-move-effect-to-event: optimistic update in event handler
   const handleOrderCancelled = useCallback((orderId: number) => {
@@ -70,27 +56,11 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
     search: "",
     paymentStatus: "all",
     channel: "all",
+    dateRange: "30",
   });
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-
-  const handleExport = async (fmt: "csv" | "excel") => {
-    try {
-      setIsExporting(true);
-      await exportOrders({
-        format: fmt,
-        start_date: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
-        end_date: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
-        validado: filters.paymentStatus === "Pagado" ? true :
-                  filters.paymentStatus === "Pendiente" ? false : undefined,
-      });
-    } catch (error) {
-      console.error("Error exporting orders:", error);
-    } finally {
-      setIsExporting(false);
-    }
-  };
 
   // Filter orders based on current filters
   const filteredOrders = orders.filter((order) => {
@@ -109,18 +79,7 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
       filters.channel === "all" ||
       order.channel === filters.channel;
 
-    let matchesDate = true;
-    if (dateRange?.from) {
-      const orderDate = new Date(order.created_at + "Z");
-      if (orderDate < dateRange.from) matchesDate = false;
-      if (dateRange.to) {
-        const endOfDay = new Date(dateRange.to);
-        endOfDay.setHours(23, 59, 59, 999);
-        if (orderDate > endOfDay) matchesDate = false;
-      }
-    }
-
-    return matchesSearch && matchesPaymentStatus && matchesChannel && matchesDate;
+    return matchesSearch && matchesPaymentStatus && matchesChannel;
   });
 
   // Pagination
@@ -141,28 +100,10 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
             </p>
           </div>
           <div className="flex gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2" disabled={isExporting}>
-                  {isExporting ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Download className="w-4 h-4" />
-                  )}
-                  Exportar
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport("csv")}>
-                  <FileText className="w-4 h-4 mr-2" />
-                  Descargar CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport("excel")}>
-                  <FileSpreadsheet className="w-4 h-4 mr-2" />
-                  Descargar Excel
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button variant="outline" className="gap-2" disabled>
+              <Download className="w-4 h-4" />
+              Exportar
+            </Button>
             <Button className="gap-2" disabled>
               <Plus className="w-4 h-4" />
               Nuevo Pedido
@@ -212,15 +153,6 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
             <SelectItem value="woocommerce">WooCommerce</SelectItem>
           </SelectContent>
         </Select>
-
-        <DateRangePicker
-          dateRange={dateRange}
-          onDateRangeChange={(range) => {
-            setDateRange(range);
-            setCurrentPage(1);
-          }}
-          placeholder="Rango de fechas"
-        />
       </div>
 
       {/* Table or Empty State */}
@@ -233,7 +165,7 @@ export function OrdersClientView({ initialOrders }: OrdersClientViewProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => { setFilters({ search: "", paymentStatus: "all", channel: "all" }); setDateRange(undefined); }}
+              onClick={() => setFilters({ search: "", paymentStatus: "all", channel: "all", dateRange: "30" })}
             >
               Limpiar filtros
             </Button>
