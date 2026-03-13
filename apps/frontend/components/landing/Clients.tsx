@@ -4,6 +4,10 @@ import Image from "next/image";
 import FadeUp from "@/components/ui/FadeUp";
 
 const clients = [
+  { name: "Specialized", image: "/images/logo-specialized.avif" },
+  { name: "Ecru", image: "/images/logo-ecru.avif" },
+  { name: "IveinProtein", image: "/images/logo-iveinprotein.avif" },
+  { name: "Ana María", image: "/images/logo-anamaria.avif" },
   { name: "Nassau", image: "/images/logo-nassau.avif" },
   { name: "Not Pepper", image: "/images/logo-not-pepper.avif" },
   { name: "Cromo", image: "/images/logo-cromo.avif" },
@@ -12,6 +16,9 @@ const clients = [
   { name: "Go Active", image: "/images/logo-go-active.avif" },
   { name: "AquaFlask", image: "/images/logo-aquaflask.avif" },
   { name: "Nola", image: "/images/logo-nola.avif" },
+  { name: "Nuve", image: "/images/logo-nuve.avif" },
+  { name: "GlobalTPA", image: "/images/logo-globaltpa.avif" },
+  { name: "La Detoxería", image: "/images/logo-ladetoxeria.avif" },
 ];
 
 export default function Clients() {
@@ -56,7 +63,7 @@ export default function Clients() {
                 key={`${client.name}-${i}`}
                 className="flex items-center justify-center px-8 sm:px-10 md:px-12 lg:px-14"
               >
-                <div className="relative h-10 sm:h-12 md:h-14 w-24 sm:w-28 md:w-32">
+                <div className="relative h-12 sm:h-14 md:h-18 w-28 sm:w-34 md:w-40">
                   <Image
                     src={client.image}
                     alt={client.name}
