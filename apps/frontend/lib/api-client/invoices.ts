@@ -76,6 +76,67 @@ export async function downloadInvoiceXml(
 }
 
 /**
+ * Descargar CDR de invoice
+ * GET /api/invoices/cdr/:id
+ */
+export async function downloadInvoiceCdr(
+  invoiceId: number,
+  filename?: string
+): Promise<void> {
+  const defaultFilename = `invoice-${invoiceId}-CDR.json`;
+  return apiDownload(`/api/invoices/cdr/${invoiceId}`, filename || defaultFilename);
+}
+
+/**
+ * Exportar invoices como CSV o Excel
+ * GET /api/invoices/export
+ */
+export async function exportInvoices(params: {
+  format: "csv" | "excel";
+  start_date?: string;
+  end_date?: string;
+}): Promise<void> {
+  const query = new URLSearchParams();
+  query.set("format", params.format);
+  if (params.start_date) query.set("start_date", params.start_date);
+  if (params.end_date) query.set("end_date", params.end_date);
+
+  const ext = params.format === "excel" ? "xlsx" : "csv";
+  return apiDownload(`/api/invoices/export?${query.toString()}`, `comprobantes.${ext}`);
+}
+
+/**
+ * Descarga masiva de archivos de invoices como ZIP
+ * POST /api/invoices/bulk-download
+ */
+export async function bulkDownloadInvoices(
+  invoiceIds: number[],
+  fileType: "pdf" | "xml" | "cdr"
+): Promise<void> {
+  const response = await fetch("/api/invoices/bulk-download", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ invoice_ids: invoiceIds, file_type: fileType }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "Error en descarga masiva" }));
+    throw new Error(error.detail || "Error en descarga masiva");
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `comprobantes-${fileType}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+}
+
+/**
  * Obtener lista de invoice series
  * GET /api/invoice-series
  */
