@@ -25,7 +25,7 @@ const plans = [
   {
     name: "Start",
     price: "99",
-    features: ["700 conversaciones / mes", "250 SKUs (Hasta 50 productos activos)"],
+    features: ["300 conversaciones / mes", "50 SKUs (Hasta 10 productos activos)"],
     extra: null,
     highlighted: false,
   },
