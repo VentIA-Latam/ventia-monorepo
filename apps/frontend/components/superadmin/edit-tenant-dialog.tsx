@@ -52,6 +52,8 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
     emisor_provincia: "",
     emisor_distrito: "",
     emisor_direccion: "",
+    // n8n Integration
+    n8n_reminder_workflow_id: "",
     // Shopify fields
     shopify_store_url: "",
     shopify_client_id: "",
@@ -84,6 +86,7 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
 
       setFormData({
         name: tenant.name,
+        n8n_reminder_workflow_id: tenant.n8n_reminder_workflow_id || "",
         efact_ruc: tenant.efact_ruc || "",
         emisor_nombre_comercial: tenant.emisor_nombre_comercial || "",
         emisor_ubigeo: tenant.emisor_ubigeo || "",
@@ -123,6 +126,7 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
       const updateData: any = {
         name: formData.name,
         is_active: formData.is_active,
+        n8n_reminder_workflow_id: formData.n8n_reminder_workflow_id || null,
         efact_ruc: formData.efact_ruc || undefined,
         emisor_nombre_comercial: formData.emisor_nombre_comercial || undefined,
         emisor_ubigeo: formData.emisor_ubigeo || undefined,
@@ -263,6 +267,23 @@ export function EditTenantDialog({ tenant, open, onOpenChange, onSuccess }: Edit
               <Input value={tenant.slug} disabled className="bg-muted" />
               <p className="text-xs text-muted-foreground">
                 El slug no puede modificarse después de la creación
+              </p>
+            </div>
+
+            {/* n8n Reminder Workflow */}
+            <div className="grid gap-2">
+              <Label htmlFor="edit-n8n_reminder_workflow_id">
+                n8n Workflow ID (Recordatorios)
+              </Label>
+              <Input
+                id="edit-n8n_reminder_workflow_id"
+                placeholder="ej: xiypbvTpPjwfyUgu"
+                value={formData.n8n_reminder_workflow_id}
+                onChange={(e) => setFormData({ ...formData, n8n_reminder_workflow_id: e.target.value })}
+                maxLength={50}
+              />
+              <p className="text-xs text-muted-foreground">
+                ID del workflow de recordatorios por temperatura en n8n (se encuentra en la URL del workflow)
               </p>
             </div>
 

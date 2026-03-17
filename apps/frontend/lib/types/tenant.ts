@@ -45,6 +45,7 @@ export interface Tenant {
   emisor_provincia: string | null;
   emisor_distrito: string | null;
   emisor_direccion: string | null;
+  n8n_reminder_workflow_id: string | null;
   is_platform: boolean;
   is_active: boolean;
   created_at: string;
@@ -123,6 +124,9 @@ export interface TenantUpdate {
   emisor_provincia?: string;
   emisor_distrito?: string;
   emisor_direccion?: string;
+
+  // n8n Integration
+  n8n_reminder_workflow_id?: string | null;
 }
 
 export interface TenantFilters {

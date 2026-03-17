@@ -68,6 +68,10 @@ class Settings(BaseSettings):
     CHATWOOT_PLATFORM_API_TOKEN: str = ""  # Platform App token for SSO
     CHATWOOT_BASE_URL: str = "http://localhost:3001"  # Chatwoot base URL
 
+    # n8n Integration (for temperature reminders)
+    N8N_BASE_URL: str = ""       # https://n8n.ventia-latam.com
+    N8N_API_KEY: str = ""         # API key for n8n REST API
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: str | List[str]) -> List[str]:

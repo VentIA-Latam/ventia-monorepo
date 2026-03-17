@@ -307,6 +307,13 @@ class TenantUpdate(BaseModel):
         description="Dirección fiscal del emisor"
     )
 
+    # === n8n INTEGRATION ===
+    n8n_reminder_workflow_id: str | None = Field(
+        None,
+        max_length=50,
+        description="n8n workflow ID for temperature reminders",
+    )
+
     @field_validator("ecommerce_store_url", mode="before")
     @classmethod
     def validate_store_url(cls, v: str | None) -> str | None:
@@ -365,6 +372,7 @@ class TenantResponse(BaseModel):
     emisor_provincia: str | None
     emisor_distrito: str | None
     emisor_direccion: str | None
+    n8n_reminder_workflow_id: str | None = None
     is_platform: bool
     is_active: bool
     created_at: datetime
@@ -435,6 +443,7 @@ class TenantResponse(BaseModel):
             emisor_provincia=tenant.emisor_provincia,
             emisor_distrito=tenant.emisor_distrito,
             emisor_direccion=tenant.emisor_direccion,
+            n8n_reminder_workflow_id=tenant.n8n_reminder_workflow_id,
             is_platform=tenant.is_platform,
             is_active=tenant.is_active,
             created_at=tenant.created_at,
