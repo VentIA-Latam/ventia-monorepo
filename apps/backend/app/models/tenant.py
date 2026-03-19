@@ -115,6 +115,13 @@ class Tenant(Base, TimestampMixin):
         comment="Direccion completa del domicilio fiscal",
     )
 
+    # n8n Integration
+    n8n_reminder_workflow_id = Column(
+        String(50),
+        nullable=True,
+        comment="n8n workflow ID for temperature reminders",
+    )
+
     # Relationships
     users = relationship("User", back_populates="tenant", cascade="all, delete-orphan")
     orders = relationship("Order", back_populates="tenant", cascade="all, delete-orphan")

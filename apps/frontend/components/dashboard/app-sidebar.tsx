@@ -18,6 +18,7 @@ import {
   Key,
   Receipt,
   MessageSquare,
+  Clock,
 } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Image from "next/image"
@@ -87,11 +88,17 @@ const dataPlatform = [
     url: "/dashboard/agent-customization",
     icon: Bot,
   },
+  {
+    title: "Recordatorios",
+    url: "/dashboard/reminders",
+    icon: Clock,
+    adminOnly: true,
+  },
 ]
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
-  const { user, isUserLoading, isSuperAdmin } = useAuth()
+  const { user, isUserLoading, isSuperAdmin, isAdmin } = useAuth()
 
   const isActive = (url: string) => {
     if (url === "/dashboard") return pathname === "/dashboard";
@@ -148,7 +155,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {dataPlatform.map((item) => (
+              {dataPlatform.filter((item) => !item.adminOnly || isSuperAdmin || isAdmin).map((item) => (
                 <SidebarMenuItem key={item.title} className="mb-1">
                   <SidebarMenuButton
                     asChild
