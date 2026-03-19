@@ -3,7 +3,6 @@ Application settings and configuration.
 
 Loaded from environment variables via Pydantic Settings.
 """
-# ci: trigger deploy test
 
 from typing import List
 
