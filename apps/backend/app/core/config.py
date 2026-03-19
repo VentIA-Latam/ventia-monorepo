@@ -1,6 +1,7 @@
 """
 Application settings and configuration.
 """
+# ci: trigger deploy test
 
 from typing import List
 
