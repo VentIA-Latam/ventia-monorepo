@@ -65,6 +65,10 @@ PERMISSIONS: Dict[Tuple[str, str], List[Role]] = {
     ("GET", "/invoices"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
     ("GET", "/invoices/*"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
 
+    # REMINDERS ENDPOINTS (only ADMIN and SUPERADMIN)
+    ("GET", "/reminders/messages"): [Role.SUPERADMIN, Role.ADMIN],
+    ("PUT", "/reminders/messages"): [Role.SUPERADMIN, Role.ADMIN],
+
     # INVOICE SERIES ENDPOINTS
     ("GET", "/invoice-series"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
     ("GET", "/invoice-series/*"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
