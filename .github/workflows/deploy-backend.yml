@@ -1,0 +1,68 @@
+# Deploy Backend - Build, push to Docker Hub, deploy to GCP VM
+#
+# Trigger 1: Push a main con cambios en backend → deploy automático como :latest
+# Trigger 2: Push de tag v* (ej: v1.2.0) → deploy con versión :1.2.0 + :latest
+#
+# Secrets requeridos en GitHub (Settings > Secrets > Actions):
+#   SSH_PRIVATE_KEY    - Private key para conectar a la VM
+#   SSH_HOST           - IP externa de la VM en GCP
+#   SSH_USER           - Usuario SSH (renzo_ventia)
+#   DOCKERHUB_USERNAME - Usuario de Docker Hub
+#   DOCKERHUB_TOKEN    - Access token de Docker Hub
+
+name: Deploy Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/backend/**'
+      - 'docker/backend.Dockerfile'
+  create:
+    tags:
+      - 'v*'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag' || (github.ref == 'refs/heads/main' && github.event_name == 'push')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine Docker tags
+        id: tags
+        run: |
+          REPO="${{ secrets.DOCKERHUB_USERNAME }}/ventia-backend"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            echo "TAGS=${REPO}:${VERSION},${REPO}:latest" >> $GITHUB_OUTPUT
+          else
+            echo "TAGS=${REPO}:latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/backend.Dockerfile
+          push: true
+          tags: ${{ steps.tags.outputs.TAGS }}
+
+      - name: Deploy to VM
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/ventia-docker
+            docker compose --env-file .env.prod pull ventia-backend
+            docker compose --env-file .env.prod up -d ventia-backend
+            docker images ${{ secrets.DOCKERHUB_USERNAME }}/ventia-backend --filter "before=${{ secrets.DOCKERHUB_USERNAME }}/ventia-backend:latest" -q | xargs -r docker rmi
