@@ -1,0 +1,57 @@
+# Deploy Backend - Build, push to Docker Hub, deploy to GCP VM
+#
+# Se activa cuando se pushea un tag de version (v1.2.0, v1.2.1, etc.)
+# Solo builda si hubo cambios en apps/backend/
+#
+# Secrets requeridos en GitHub (Settings > Secrets > Actions):
+#   SSH_PRIVATE_KEY   - Private key para conectar a la VM
+#   SSH_HOST          - IP externa de la VM en GCP
+#   SSH_USER          - Usuario SSH (renzo_ventia)
+#   DOCKERHUB_USERNAME - Usuario de Docker Hub
+#   DOCKERHUB_TOKEN    - Access token de Docker Hub
+
+name: Deploy Backend
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/backend.Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/ventia-backend:${{ steps.version.outputs.VERSION }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/ventia-backend:latest
+
+      - name: Deploy to VM
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/ventia-docker
+            docker compose pull ventia-backend
+            docker compose up -d ventia-backend
+            docker image prune -f
