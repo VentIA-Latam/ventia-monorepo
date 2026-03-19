@@ -69,5 +69,5 @@ jobs:
             echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             cd /opt/ventia-docker
             docker-compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod pull ventia-backend
-            docker-compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d --force-recreate ventia-backend
+            docker-compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d --no-deps --force-recreate ventia-backend
             docker images ${{ secrets.DOCKERHUB_USERNAME }}/ventia-backend --filter "before=${{ secrets.DOCKERHUB_USERNAME }}/ventia-backend:latest" -q | xargs -r docker rmi
