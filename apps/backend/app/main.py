@@ -1,5 +1,5 @@
 """
-FastAPI application entry point.
+VentIA Backend - FastAPI application entry point.
 """
 
 import logging
