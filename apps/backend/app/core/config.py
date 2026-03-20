@@ -1,7 +1,5 @@
 """
 Application settings and configuration.
-
-Loaded from environment variables via Pydantic Settings.
 """
 
 from typing import List
