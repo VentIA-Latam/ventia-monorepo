@@ -38,6 +38,7 @@ class User < ApplicationRecord
   has_many :notification_settings, dependent: :destroy
 
   has_many :messages, as: :sender, dependent: :nullify
+  has_many :push_subscription_tokens, dependent: :destroy
 
   # Callbacks
   before_create :ensure_pubsub_token

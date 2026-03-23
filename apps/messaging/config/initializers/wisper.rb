@@ -23,5 +23,8 @@ Rails.application.config.after_initialize do
   # Participation - auto-creates participants when assignee changes
   Wisper.subscribe(ParticipationListener.instance)
 
-  Rails.logger.info "[Wisper] Event listeners registered successfully (6 listeners)"
+  # FCM Push Notifications - sends push to offline agents
+  Wisper.subscribe(FcmListener.instance)
+
+  Rails.logger.info "[Wisper] Event listeners registered successfully (7 listeners)"
 end

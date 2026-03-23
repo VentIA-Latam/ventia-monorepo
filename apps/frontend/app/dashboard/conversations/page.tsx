@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function ConversationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ section?: string }>;
+  searchParams: Promise<{ section?: string; id?: string }>;
 }) {
   const params = await searchParams;
   let initialConversations: unknown[] = [];
@@ -41,6 +41,7 @@ export default async function ConversationsPage({
       initialInboxes={initialInboxes}
       initialLabels={initialLabels}
       initialSection={params.section ?? "all"}
+      initialConversationId={params.id ? Number(params.id) : undefined}
     />
   );
 }

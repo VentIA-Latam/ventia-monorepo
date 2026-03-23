@@ -448,6 +448,28 @@ class MessagingService:
             "DELETE", f"/api/v1/webhooks/{webhook_id}", tenant_id,
         )
 
+    # --- Push Subscription Tokens ---
+
+    async def register_push_token(
+        self, tenant_id: int, user_id: str, payload: dict
+    ) -> Optional[dict]:
+        """Register an FCM push subscription token."""
+        return await self._request(
+            "POST", "/api/v1/push_subscription_tokens", tenant_id,
+            user_id=user_id,
+            json_data={"push_subscription_token": payload},
+        )
+
+    async def delete_push_token(
+        self, tenant_id: int, user_id: str, token: str
+    ) -> Optional[dict]:
+        """Remove an FCM push subscription token."""
+        return await self._request(
+            "DELETE", "/api/v1/push_subscription_tokens", tenant_id,
+            user_id=user_id,
+            json_data={"token": token},
+        )
+
 
 # Global service instance
 messaging_service = MessagingService()

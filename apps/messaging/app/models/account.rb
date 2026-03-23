@@ -36,6 +36,7 @@ class Account < ApplicationRecord
   has_many :automation_rules, dependent: :destroy
   has_many :agent_bots, dependent: :destroy
   has_many :webhooks, dependent: :destroy
+  has_many :push_subscription_tokens, dependent: :destroy
   has_many :whatsapp_channels, dependent: :destroy, class_name: 'Channel::Whatsapp'
   has_many :account_users, dependent: :destroy
   has_many :users, through: :account_users

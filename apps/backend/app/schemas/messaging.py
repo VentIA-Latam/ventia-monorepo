@@ -164,6 +164,14 @@ class ManualWhatsAppRequest(BaseModel):
     business_account_id: str
 
 
+# --- Push tokens ---
+
+class PushTokenRequest(BaseModel):
+    token: str
+    platform: str = "web"
+    device_info: Optional[dict] = None
+
+
 # --- Error models ---
 
 class MessagingError(BaseModel):

@@ -26,6 +26,9 @@ gem 'down', '~> 5.4'
 gem 'aasm', '~> 5.5'
 gem 'wisper', '2.0.0'
 
+# Push notifications (FCM)
+gem 'fcm', '~> 2.0'
+
 # Notification settings bitmask (alternative to FlagShihTzu - using custom implementation)
 # Bitmask flags are implemented manually in NotificationSetting model
 

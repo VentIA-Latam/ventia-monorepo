@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Sheet,
@@ -18,6 +18,7 @@ interface ConversationsClientProps {
   initialInboxes: unknown[];
   initialLabels: unknown[];
   initialSection?: string;
+  initialConversationId?: number;
 }
 
 export function ConversationsClient({
@@ -25,12 +26,13 @@ export function ConversationsClient({
   initialInboxes,
   initialLabels,
   initialSection = "all",
+  initialConversationId,
 }: ConversationsClientProps) {
   const isMobile = useIsMobile();
   const [conversations, setConversations] = useState<Conversation[]>(
     initialConversations as Conversation[]
   );
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(initialConversationId ?? null);
   const [showInfo, setShowInfo] = useState(false);
   const [allLabels, setAllLabels] = useState<Label[]>(initialLabels as Label[]);
 

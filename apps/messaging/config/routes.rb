@@ -125,6 +125,10 @@ Rails.application.routes.draw do
       # Webhooks
       resources :webhooks, only: [:index, :show, :create, :update, :destroy]
 
+      # Push Subscription Tokens (FCM)
+      post 'push_subscription_tokens', to: 'push_subscription_tokens#create'
+      delete 'push_subscription_tokens', to: 'push_subscription_tokens#destroy'
+
       # Canned Responses
       resources :canned_responses
 

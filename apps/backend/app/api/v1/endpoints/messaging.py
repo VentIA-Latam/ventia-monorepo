@@ -13,6 +13,7 @@ from app.schemas.messaging import (
     AssignConversationRequest,
     ManualWhatsAppRequest,
     MessagingError,
+    PushTokenRequest,
     SendMessageRequest,
     SendTemplateMessageRequest,
     UserSyncRequest,
@@ -820,4 +821,47 @@ async def manual_connect_whatsapp(
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")
 
+    return result
+
+
+# --- Push Subscription Tokens ---
+
+
+@router.post(
+    "/push-tokens",
+    summary="Register FCM push token",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def register_push_token(
+    payload: PushTokenRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Register an FCM push subscription token for the current user."""
+    tenant_id = _get_tenant_id(current_user)
+    result = await messaging_service.register_push_token(
+        tenant_id, str(current_user.id), payload.model_dump(exclude_none=True)
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.delete(
+    "/push-tokens",
+    summary="Remove FCM push token",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def delete_push_token(
+    payload: PushTokenRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Remove an FCM push subscription token."""
+    tenant_id = _get_tenant_id(current_user)
+    result = await messaging_service.delete_push_token(
+        tenant_id, str(current_user.id), payload.token
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
     return result

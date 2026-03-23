@@ -8,6 +8,12 @@ import { usePathname } from "next/navigation"
 import { ChevronRight, Home } from "lucide-react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
+import dynamic from "next/dynamic"
+
+const NotificationSetup = dynamic(
+  () => import("@/components/notifications/notification-setup"),
+  { ssr: false }
+)
 
 const PAGE_META: Record<string, { title: string; breadcrumb: string[] }> = {
   '/assistant': { title: 'Configuración de tu vendedor', breadcrumb: ['Asistente'] },
@@ -86,6 +92,7 @@ export default function DashboardLayoutClient({
           </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 sm:gap-6 px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 overflow-x-hidden min-h-0 min-w-0">
+          <NotificationSetup />
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}
