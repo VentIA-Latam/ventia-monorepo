@@ -15,11 +15,11 @@ export default function NotificationSetup() {
   const [showBanner, setShowBanner] = useState(false);
   const [registered, setRegistered] = useState(false);
 
-  const registerToken = useCallback(async () => {
+  const registerToken = useCallback(async (): Promise<boolean> => {
     try {
       const { requestNotificationPermission } = await import("@/lib/firebase-client");
       const token = await requestNotificationPermission();
-      if (!token) return;
+      if (!token) return false;
 
       await fetch("/api/messaging/push-tokens", {
         method: "POST",
@@ -30,8 +30,10 @@ export default function NotificationSetup() {
 
       setRegistered(true);
       setShowBanner(false);
+      return true;
     } catch (err) {
       console.error("Failed to register push token:", err);
+      return false;
     }
   }, []);
 
@@ -53,18 +55,15 @@ export default function NotificationSetup() {
     if (permissionState === "unsupported") return;
 
     if (permissionState === "granted" && !registered) {
-      registerToken();
-      setupForegroundListener();
+      registerToken().then((ok) => { if (ok) setupForegroundListener(); });
     } else if (permissionState === "default") {
       setShowBanner(true);
     }
   }, [permissionState, registered, registerToken, setupForegroundListener]);
 
   const handleEnable = async () => {
-    await registerToken();
-    if (registered) {
-      setupForegroundListener();
-    }
+    const ok = await registerToken();
+    if (ok) setupForegroundListener();
   };
 
   if (!showBanner || permissionState === "unsupported" || permissionState === "denied") {
