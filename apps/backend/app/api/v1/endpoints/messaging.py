@@ -13,6 +13,7 @@ from app.schemas.messaging import (
     AssignConversationRequest,
     ManualWhatsAppRequest,
     MessagingError,
+    NotificationSettingsPayload,
     PushTokenRequest,
     SendMessageRequest,
     SendTemplateMessageRequest,
@@ -861,6 +862,48 @@ async def delete_push_token(
     tenant_id = _get_tenant_id(current_user)
     result = await messaging_service.delete_push_token(
         tenant_id, str(current_user.id), payload.token
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+# --- Notification Settings ---
+
+
+@router.get(
+    "/notification-settings",
+    summary="Get notification settings",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def get_notification_settings(
+    current_user: User = Depends(get_current_user),
+):
+    """Get push notification preferences for the current user."""
+    tenant_id = _get_tenant_id(current_user)
+    result = await messaging_service.get_notification_settings(
+        tenant_id, str(current_user.id)
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.put(
+    "/notification-settings",
+    summary="Update notification settings",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def update_notification_settings(
+    payload: NotificationSettingsPayload,
+    current_user: User = Depends(get_current_user),
+):
+    """Update push notification preferences for the current user."""
+    tenant_id = _get_tenant_id(current_user)
+    result = await messaging_service.update_notification_settings(
+        tenant_id, str(current_user.id), payload.model_dump(exclude_none=True)
     )
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")

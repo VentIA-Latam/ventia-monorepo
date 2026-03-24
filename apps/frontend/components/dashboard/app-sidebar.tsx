@@ -27,6 +27,12 @@ import type { ConversationCounts } from "@/lib/types/messaging"
 import Image from "next/image"
 import Link from "next/link"
 import { useAuth } from "@/hooks/use-auth"
+import dynamic from "next/dynamic"
+
+const NotificationSettingsDialog = dynamic(
+  () => import("@/components/notifications/notification-settings-dialog").then(m => ({ default: m.NotificationSettingsDialog })),
+  { ssr: false }
+)
 
 import {
   Sidebar,
@@ -214,6 +220,7 @@ const ConversationsNav = memo(function ConversationsNav({ pathname }: { pathname
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { user, isUserLoading, isSuperAdmin } = useAuth()
+  const [notifDialogOpen, setNotifDialogOpen] = useState(false)
 
   const isActive = (url: string) => {
     if (url === "/dashboard") return pathname === "/dashboard";
@@ -397,6 +404,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator className="bg-sidebar-border" />
                 <DropdownMenuItem
+                  onClick={() => setNotifDialogOpen(true)}
+                  className="cursor-pointer"
+                >
+                  <Bell className="mr-2 h-4 w-4" />
+                  Notificaciones
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-sidebar-border" />
+                <DropdownMenuItem
                   onClick={handleLogout}
                   className="text-danger focus:text-danger focus:bg-danger-bg cursor-pointer"
                 >
@@ -405,6 +420,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            {notifDialogOpen ? (
+              <NotificationSettingsDialog
+                open={notifDialogOpen}
+                onOpenChange={setNotifDialogOpen}
+              />
+            ) : null}
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

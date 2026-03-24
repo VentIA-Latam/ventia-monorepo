@@ -4,15 +4,12 @@ class FcmListener < BaseListener
     return unless message.incoming?
 
     conversation = message.conversation
-
-    if conversation.ai_agent_enabled?
-      return unless account.notify_ai_messages?
-    end
+    flag = conversation.ai_agent_enabled? ? :message_ai_on : :message_ai_off
 
     contact_name = conversation.contact&.name || 'Cliente'
     body = "#{contact_name}: #{message.content&.truncate(100)}"
 
-    send_push_to_offline_agents(account, conversation, 'Nuevo mensaje', body)
+    send_push_to_offline_agents(account, conversation, 'Nuevo mensaje', body, flag_name: flag)
   rescue StandardError => e
     Rails.logger.error "[FcmListener] Error in message_created: #{e.message}"
   end
@@ -29,7 +26,8 @@ class FcmListener < BaseListener
       send_push_to_offline_agents(
         account, conversation,
         'Conversación requiere soporte humano',
-        "#{contact_name} necesita atención humana"
+        "#{contact_name} necesita atención humana",
+        flag_name: :human_support
       )
     end
 
@@ -38,7 +36,8 @@ class FcmListener < BaseListener
       send_push_to_offline_agents(
         account, conversation,
         'Pago pendiente de validar',
-        "#{contact_name} envió un comprobante de pago"
+        "#{contact_name} envió un comprobante de pago",
+        flag_name: :payment_review
       )
     end
   rescue StandardError => e
@@ -47,16 +46,27 @@ class FcmListener < BaseListener
 
   private
 
-  def send_push_to_offline_agents(account, conversation, title, body)
-    # Both arrays must be strings for correct set subtraction
+  def send_push_to_offline_agents(account, conversation, title, body, flag_name:)
     all_agent_ids = account.account_users.pluck(:user_id).map(&:to_s)
     online_ids = OnlineStatusTracker.get_available_user_ids(account.id).map(&:to_s)
     offline_ids = all_agent_ids - online_ids
 
     return if offline_ids.blank?
 
+    # Filter by per-user notification preferences (batch query to avoid N+1)
+    settings = NotificationSetting
+                 .where(account_id: account.id, user_id: offline_ids)
+                 .index_by { |s| s.user_id.to_s }
+
+    eligible_ids = offline_ids.select do |uid|
+      setting = settings[uid]
+      setting.nil? || setting.push_enabled?(flag_name)
+    end
+
+    return if eligible_ids.blank?
+
     tokens = PushSubscriptionToken
-               .where(account_id: account.id, user_id: offline_ids)
+               .where(account_id: account.id, user_id: eligible_ids)
                .pluck(:token)
 
     return if tokens.blank?

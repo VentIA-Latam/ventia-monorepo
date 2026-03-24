@@ -17,18 +17,20 @@ class NotificationSetting < ApplicationRecord
 
   validates :user_id, uniqueness: { scope: :account_id }
 
-  # Bitmask flags for email notifications
-  # Bit 1: conversation_creation
-  # Bit 2: conversation_assignment
-  # Bit 4: assigned_conversation_new_message
-  # Bit 8: participating_conversation_new_message
+  # Bitmask flags for push notifications
+  # Bit 1: human_support — conversación derivada a soporte humano
+  # Bit 2: payment_review — pago pendiente de validar
+  # Bit 4: message_ai_off — mensaje nuevo con IA desactivada
+  # Bit 8: message_ai_on — mensaje nuevo con IA activada
 
   FLAGS = {
-    conversation_creation: 1,
-    conversation_assignment: 2,
-    assigned_conversation_new_message: 4,
-    participating_conversation_new_message: 8
+    human_support: 1,
+    payment_review: 2,
+    message_ai_off: 4,
+    message_ai_on: 8
   }.freeze
+
+  DEFAULT_PUSH_FLAGS = FLAGS[:human_support] | FLAGS[:payment_review] | FLAGS[:message_ai_off] # 7
 
   def email_enabled?(flag_name)
     flag_value = FLAGS[flag_name.to_sym]
@@ -72,13 +74,15 @@ class NotificationSetting < ApplicationRecord
     update!(push_flags: push_flags & ~flag_value)
   end
 
+  def push_flags_hash
+    FLAGS.transform_values { |bit| (push_flags & bit) != 0 }
+  end
+
   # Set defaults for new account users
   def self.create_default_for(user:, account:)
-    setting = find_or_initialize_by(user: user, account: account)
-    # Default: email + push for conversation_assignment
-    setting.email_flags = FLAGS[:conversation_assignment]
-    setting.push_flags = FLAGS[:conversation_assignment]
-    setting.save!
-    setting
+    find_or_create_by!(user: user, account: account) do |s|
+      s.email_flags = 0
+      s.push_flags = DEFAULT_PUSH_FLAGS
+    end
   end
 end

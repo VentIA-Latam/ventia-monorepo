@@ -172,6 +172,15 @@ class PushTokenRequest(BaseModel):
     device_info: Optional[dict] = None
 
 
+# --- Notification settings ---
+
+class NotificationSettingsPayload(BaseModel):
+    human_support: Optional[bool] = None
+    payment_review: Optional[bool] = None
+    message_ai_off: Optional[bool] = None
+    message_ai_on: Optional[bool] = None
+
+
 # --- Error models ---
 
 class MessagingError(BaseModel):

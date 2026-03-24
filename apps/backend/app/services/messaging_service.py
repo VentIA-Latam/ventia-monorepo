@@ -470,6 +470,26 @@ class MessagingService:
             json_data={"token": token},
         )
 
+    # --- Notification Settings ---
+
+    async def get_notification_settings(
+        self, tenant_id: int, user_id: str
+    ) -> Optional[dict]:
+        """Get notification settings for the current user."""
+        return await self._request(
+            "GET", "/api/v1/notification_settings", tenant_id, user_id=user_id,
+        )
+
+    async def update_notification_settings(
+        self, tenant_id: int, user_id: str, payload: dict
+    ) -> Optional[dict]:
+        """Update notification settings for the current user."""
+        return await self._request(
+            "PUT", "/api/v1/notification_settings", tenant_id,
+            user_id=user_id,
+            json_data={"notification_settings": payload},
+        )
+
 
 # Global service instance
 messaging_service = MessagingService()

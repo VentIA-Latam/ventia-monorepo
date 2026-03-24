@@ -129,6 +129,9 @@ Rails.application.routes.draw do
       post 'push_subscription_tokens', to: 'push_subscription_tokens#create'
       delete 'push_subscription_tokens', to: 'push_subscription_tokens#destroy'
 
+      # Notification Settings (per-user push preferences)
+      resource :notification_settings, only: [:show, :update]
+
       # Canned Responses
       resources :canned_responses
 
