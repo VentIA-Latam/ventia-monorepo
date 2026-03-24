@@ -72,7 +72,10 @@ class N8NClient:
                         "name": workflow["name"],
                         "nodes": workflow["nodes"],
                         "connections": workflow["connections"],
-                        "settings": workflow.get("settings", {}),
+                        "settings": {
+                            k: v for k, v in workflow.get("settings", {}).items()
+                            if k in ("executionOrder", "saveManualExecutions", "callerPolicy", "errorWorkflow", "timezone")
+                        },
                     },
                 )
             except httpx.ConnectError as e:
