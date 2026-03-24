@@ -16,17 +16,7 @@ class Notifications::SendFcmJob < ApplicationJob
   def send_to_token(token, title, body, data)
     message = {
       'token' => token,
-      'notification' => { 'title' => title, 'body' => body },
-      'data' => data,
-      'webpush' => {
-        'notification' => {
-          'icon' => '/images/logo-icon.png',
-          'tag' => "ventia-#{data['conversation_id'] || 'general'}"
-        },
-        'fcm_options' => {
-          'link' => data['click_action'] || '/dashboard/conversations'
-        }
-      }
+      'data' => data.merge('title' => title, 'body' => body)
     }
 
     response = FCM_CLIENT.send_v1(message)
