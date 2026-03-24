@@ -54,6 +54,8 @@ export async function requestNotificationPermission(): Promise<string | null> {
     return token;
   } catch (err) {
     console.error("Error getting FCM token:", err);
+    // TODO: remove debug alert
+    if (typeof window !== "undefined") alert("FCM error: " + (err instanceof Error ? err.message : String(err)));
     return null;
   }
 }
