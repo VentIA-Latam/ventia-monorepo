@@ -21,7 +21,8 @@ const messaging = firebase.messaging();
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const link = event.notification.data?.fcmOptions?.link || "/dashboard/conversations";
+  const data = event.notification.data || {};
+  const link = data.click_action || data.fcmOptions?.link || "/dashboard/conversations";
 
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
