@@ -16,19 +16,10 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-messaging.onBackgroundMessage((payload) => {
-  const title = payload.notification?.title || payload.data?.title || "VentIA";
-  const body = payload.notification?.body || payload.data?.body || "Tienes una nueva notificación";
-  const data = payload.data || {};
-
-  self.registration.showNotification(title, {
-    body: body,
-    icon: "/images/logo-icon.png",
-    badge: "/images/logo-icon.png",
-    data: data,
-    tag: "ventia-" + (data.conversation_id || "general"),
-    vibrate: [200, 100, 200],
-  });
+// webpush.notification in the FCM payload handles displaying the notification.
+// onBackgroundMessage is only needed if we want to customize beyond what the payload provides.
+messaging.onBackgroundMessage(() => {
+  // No-op: notification is shown automatically by webpush.notification payload
 });
 
 self.addEventListener("notificationclick", (event) => {
