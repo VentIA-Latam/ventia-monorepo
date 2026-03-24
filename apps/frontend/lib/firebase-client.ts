@@ -34,7 +34,10 @@ export async function requestNotificationPermission(): Promise<string | null> {
     await navigator.serviceWorker.ready;
 
     const messaging = await getFirebaseMessaging();
-    const { getToken } = await import("firebase/messaging");
+    const { getToken, deleteToken } = await import("firebase/messaging");
+
+    // Force fresh token to avoid stale UNREGISTERED tokens
+    try { await deleteToken(messaging); } catch { /* ignore if no existing token */ }
 
     const token = await getToken(messaging, {
       vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
