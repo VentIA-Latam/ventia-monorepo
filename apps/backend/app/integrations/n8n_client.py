@@ -72,7 +72,6 @@ class N8NClient:
                         "name": workflow["name"],
                         "nodes": workflow["nodes"],
                         "connections": workflow["connections"],
-                        "settings": workflow.get("settings", {}),
                     },
                 )
             except httpx.ConnectError as e:
