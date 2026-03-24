@@ -1,17 +1,14 @@
-import { NextResponse } from "next/server";
-
-export async function GET() {
-  const sw = `
+/* eslint-disable no-undef */
 importScripts("https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js");
 
 firebase.initializeApp({
-  apiKey: "${process.env.NEXT_PUBLIC_FIREBASE_API_KEY || ""}",
-  authDomain: "${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || ""}",
-  projectId: "${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || ""}",
-  storageBucket: "${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || ""}",
-  messagingSenderId: "${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || ""}",
-  appId: "${process.env.NEXT_PUBLIC_FIREBASE_APP_ID || ""}",
+  apiKey: "AIzaSyCeT7BBrfRklxgq_6yVLjePdblrQ1aUkMw",
+  authDomain: "ventia-app-web.firebaseapp.com",
+  projectId: "ventia-app-web",
+  storageBucket: "ventia-app-web.firebasestorage.app",
+  messagingSenderId: "388851694307",
+  appId: "1:388851694307:web:adf982ea887f4d4bcae3d6",
 });
 
 const messaging = firebase.messaging();
@@ -45,13 +42,3 @@ self.addEventListener("notificationclick", (event) => {
     })
   );
 });
-`;
-
-  return new NextResponse(sw.trim(), {
-    headers: {
-      "Content-Type": "application/javascript",
-      "Service-Worker-Allowed": "/",
-      "Cache-Control": "no-cache",
-    },
-  });
-}
