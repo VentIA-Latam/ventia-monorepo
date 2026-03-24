@@ -20,6 +20,7 @@ class Notifications::SendFcmJob < ApplicationJob
     }
 
     response = FCM_CLIENT.send_v1(message)
+    Rails.logger.info "[FCM] Response for #{token[0..10]}...: #{response.inspect}"
     handle_response(response, token)
   rescue StandardError => e
     Rails.logger.error "[FCM] Error sending to token #{token[0..10]}...: #{e.message}"
