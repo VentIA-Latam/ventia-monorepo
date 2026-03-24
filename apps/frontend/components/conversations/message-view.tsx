@@ -21,7 +21,7 @@ import { TemplatePicker } from "./template-picker";
 import { useMessagingEvent } from "./messaging-provider";
 import { getMessages, sendMessage, updateConversation, markConversationRead } from "@/lib/api-client/messaging";
 import type { Conversation, Message, MessageType, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
-import { getInitials } from "@/lib/utils/messaging";
+import { getInitials, getDateSeparatorLabel, parseTimestamp } from "@/lib/utils/messaging";
 
 function mapWebSocketAttachments(raw: unknown): AttachmentBrief[] {
   if (!Array.isArray(raw)) return [];
@@ -454,11 +454,31 @@ export const MessageView = memo(function MessageView({ conversation, onBack, onO
               <p className="text-sm text-muted-foreground">No hay mensajes aún</p>
             </div>
           ) : (
-            messages.map((msg) => (
-              <div key={msg.id} style={MESSAGE_ITEM_STYLE}>
-                <MessageBubble message={msg} />
-              </div>
-            ))
+            messages.map((msg, i) => {
+              const msgDate = parseTimestamp(msg.created_at);
+              const prevDate = i > 0 ? parseTimestamp(messages[i - 1].created_at) : null;
+              const showSeparator = msgDate && (
+                !prevDate ||
+                msgDate.getFullYear() !== prevDate.getFullYear() ||
+                msgDate.getMonth() !== prevDate.getMonth() ||
+                msgDate.getDate() !== prevDate.getDate()
+              );
+
+              return (
+                <div key={msg.id}>
+                  {showSeparator ? (
+                    <div className="flex justify-center my-3">
+                      <span className="text-xs text-muted-foreground bg-background/90 border rounded-lg px-3 py-1 shadow-sm">
+                        {getDateSeparatorLabel(msg.created_at)}
+                      </span>
+                    </div>
+                  ) : null}
+                  <div style={MESSAGE_ITEM_STYLE}>
+                    <MessageBubble message={msg} />
+                  </div>
+                </div>
+              );
+            })
           )}
 
           {/* Scroll anchor — only element with overflow-anchor: auto */}

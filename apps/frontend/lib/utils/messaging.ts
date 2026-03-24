@@ -35,6 +35,24 @@ export function formatTime(dateStr: string | number | null): string {
   });
 }
 
+const DAY_NAMES = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+
+export function getDateSeparatorLabel(dateStr: string | number | null): string {
+  const date = parseTimestamp(dateStr);
+  if (!date) return "";
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const msgDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.floor((today.getTime() - msgDay.getTime()) / 86400000);
+
+  if (diffDays === 0) return "Hoy";
+  if (diffDays === 1) return "Ayer";
+  if (diffDays < 7) return DAY_NAMES[msgDay.getDay()];
+
+  return date.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
 export function getWhatsAppTime(dateStr: string | number | null): string {
   const date = parseTimestamp(dateStr);
   if (!date) return "";
