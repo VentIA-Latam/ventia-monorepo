@@ -33,6 +33,7 @@ export default function NotificationSetup() {
       return true;
     } catch (err) {
       console.error("Failed to register push token:", err);
+      toast({ title: "Error push", description: String(err), variant: "destructive" });
       return false;
     }
   }, []);
