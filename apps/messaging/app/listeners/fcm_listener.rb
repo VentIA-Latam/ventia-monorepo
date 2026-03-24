@@ -61,6 +61,8 @@ class FcmListener < BaseListener
 
     return if tokens.blank?
 
+    frontend_url = ENV.fetch('FRONTEND_URL', 'https://app.ventia-latam.com')
+
     Notifications::SendFcmJob.perform_later(
       tokens: tokens,
       title: title,
@@ -68,7 +70,7 @@ class FcmListener < BaseListener
       data: {
         conversation_id: conversation.id.to_s,
         account_id: account.id.to_s,
-        click_action: "/dashboard/conversations?id=#{conversation.id}"
+        click_action: "#{frontend_url}/dashboard/conversations?id=#{conversation.id}"
       }
     )
   rescue StandardError => e
