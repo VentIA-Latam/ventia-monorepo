@@ -10,7 +10,6 @@ class CreatePushSubscriptionTokens < ActiveRecord::Migration[7.2]
     end
 
     add_index :push_subscription_tokens, [:user_id, :token], unique: true
-    add_index :push_subscription_tokens, :account_id
 
     add_column :accounts, :notify_ai_messages, :boolean, default: false, null: false
   end
