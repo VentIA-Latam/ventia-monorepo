@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function NotificationSetup() {
   const { toast } = useToast();
-  const [permissionState] = useState<NotificationPermission | "unsupported">(() =>
+  const [permissionState, setPermissionState] = useState<NotificationPermission | "unsupported">(() =>
     typeof window !== "undefined" && "Notification" in window
       ? Notification.permission
       : "unsupported"
@@ -30,6 +30,7 @@ export default function NotificationSetup() {
 
       setRegistered(true);
       setShowBanner(false);
+      setPermissionState("granted");
       return true;
     } catch (err) {
       console.error("Failed to register push token:", err);
