@@ -113,6 +113,20 @@ class Api::V1::ConversationsController < Api::V1::BaseController
     render_success(conversation_json(@conversation.reload), message: 'Conversation escalated to human support')
   end
 
+  def mark_payment_review
+    label = Label.find_or_create_by!(account_id: current_account.id, title: 'en-revisión') do |l|
+      l.color = '#F59E0B'
+      l.system = true
+      l.show_on_sidebar = true
+    end
+
+    unless @conversation.labels.exists?(label.id)
+      @conversation.labels << label
+    end
+
+    render_success(conversation_json(@conversation.reload), message: 'Conversation marked for payment review')
+  end
+
   def update_last_seen
     @conversation.update_columns(agent_last_seen_at: Time.current)
 

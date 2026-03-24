@@ -293,11 +293,31 @@ async def update_conversation_stage(
 )
 async def escalate_conversation(
     conversation_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
     tenant_id = _get_tenant_id(current_user)
 
     result = await messaging_service.escalate_conversation(tenant_id, conversation_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/conversations/{conversation_id}/mark-payment-review",
+    summary="Mark conversation for payment review",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def mark_payment_review(
+    conversation_id: str,
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    """Add 'en-revisión' label to a conversation."""
+    tenant_id = _get_tenant_id(current_user)
+
+    result = await messaging_service.mark_payment_review(tenant_id, conversation_id)
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")
 

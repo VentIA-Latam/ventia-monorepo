@@ -181,6 +181,16 @@ class MessagingService:
             tenant_id,
         )
 
+    async def mark_payment_review(
+        self, tenant_id: int, conversation_id: str
+    ) -> Optional[dict]:
+        """Mark conversation for payment review (add en-revisión label)."""
+        return await self._request(
+            "POST",
+            f"/api/v1/conversations/{conversation_id}/mark_payment_review",
+            tenant_id,
+        )
+
     # --- Messages ---
 
     async def get_messages(

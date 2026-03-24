@@ -63,6 +63,7 @@ Rails.application.routes.draw do
           post :toggle_status
           post :update_stage
           post :escalate
+          post :mark_payment_review
           post :update_last_seen
           post :assign_agent
           post :assign_team
