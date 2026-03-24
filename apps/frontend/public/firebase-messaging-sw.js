@@ -1,30 +1,22 @@
 /* eslint-disable no-undef */
-importScripts("https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js");
-importScripts("https://www.gstatic.com/firebasejs/11.6.0/firebase-messaging-compat.js");
 
-const params = new URL(location).searchParams;
-
-firebase.initializeApp({
-  apiKey: params.get("apiKey"),
-  authDomain: params.get("authDomain"),
-  projectId: params.get("projectId"),
-  storageBucket: params.get("storageBucket"),
-  messagingSenderId: params.get("messagingSenderId"),
-  appId: params.get("appId"),
-});
-
-const messaging = firebase.messaging();
-
-// Handle push manually to have full control over notification display and click
+// Handle push notifications manually for full control
 self.addEventListener("push", (event) => {
   if (!event.data) return;
 
-  const payload = event.data.json();
-  const notification = payload.notification || {};
-  const data = payload.data || {};
+  let data = {};
+  let title = "VentIA";
+  let body = "Tienes una nueva notificación";
 
-  const title = notification.title || data.title || "VentIA";
-  const body = notification.body || data.body || "Tienes una nueva notificación";
+  try {
+    const payload = event.data.json();
+    data = payload.data || {};
+    title = payload.notification?.title || data.title || title;
+    body = payload.notification?.body || data.body || body;
+  } catch (e) {
+    // If not JSON, use text
+    body = event.data.text();
+  }
 
   event.waitUntil(
     self.registration.showNotification(title, {

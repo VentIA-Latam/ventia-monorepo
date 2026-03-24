@@ -30,17 +30,7 @@ export async function requestNotificationPermission(): Promise<string | null> {
     const permission = await Notification.requestPermission();
     if (permission !== "granted") return null;
 
-    const swParams = new URLSearchParams({
-      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
-      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "",
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "",
-      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
-      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
-      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
-    });
-    const sw = await navigator.serviceWorker.register(
-      `/firebase-messaging-sw.js?${swParams.toString()}`
-    );
+    const sw = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
     await navigator.serviceWorker.ready;
 
     const messaging = await getFirebaseMessaging();
