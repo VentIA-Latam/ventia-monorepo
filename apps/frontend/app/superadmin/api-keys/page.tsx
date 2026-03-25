@@ -36,14 +36,14 @@ import { RevokeAPIKeyDialog } from "@/components/superadmin/revoke-api-key-dialo
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
+import { useTenant } from "@/lib/context/tenant-context";
 
 export default function SuperAdminAPIKeysPage() {
+  const { selectedTenantId, tenants } = useTenant();
   const [apiKeys, setApiKeys] = useState<APIKey[]>([]);
-  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [tenantFilter, setTenantFilter] = useState<string>("all");
 
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -52,12 +52,7 @@ export default function SuperAdminAPIKeysPage() {
 
   useEffect(() => {
     fetchAPIKeys();
-    fetchTenants();
-  }, []);
-
-  useEffect(() => {
-    fetchAPIKeys();
-  }, [statusFilter, tenantFilter]);
+  }, [statusFilter, selectedTenantId]);
 
   const fetchAPIKeys = async () => {
     try {
@@ -67,8 +62,8 @@ export default function SuperAdminAPIKeysPage() {
       if (statusFilter !== "all") {
         url += `&is_active=${statusFilter === "active"}`;
       }
-      if (tenantFilter !== "all") {
-        url += `&tenant_id=${tenantFilter}`;
+      if (selectedTenantId) {
+        url += `&tenant_id=${selectedTenantId}`;
       }
 
       const response = await fetch(url);
@@ -80,24 +75,6 @@ export default function SuperAdminAPIKeysPage() {
       console.error("Error fetching API keys:", error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchTenants = async () => {
-    console.log('fetchTenants called');
-    try {
-      const response = await fetch("/api/superadmin/tenants?limit=100");
-      console.log('Tenants response:', response);
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Tenants fetched:', data);
-        console.log('Tenants items:', data.items);
-        setTenants(data.items || []);
-      } else {
-        console.error('Failed to fetch tenants:', response.status);
-      }
-    } catch (error) {
-      console.error("Error fetching tenants:", error);
     }
   };
 

@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Users, Plus, Eye, Power, MoreHorizontal, Edit, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getUsers } from "@/lib/api-client";
+import { useTenant } from "@/lib/context/tenant-context";
 import {
   Card,
   CardContent,
@@ -33,7 +34,13 @@ import { ToggleUserStatusDialog } from "@/components/superadmin/toggle-user-stat
 
 export function UsersClient({ initialUsers, tenants }: { initialUsers: User[], tenants: Tenant[] }) {
   const router = useRouter();
+  const { selectedTenantId } = useTenant();
   const [users, setUsers] = useState<User[]>(initialUsers);
+
+  const filteredUsers = useMemo(
+    () => selectedTenantId ? users.filter((u) => u.tenant_id === selectedTenantId) : users,
+    [users, selectedTenantId]
+  );
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [toggleStatusDialogOpen, setToggleStatusDialogOpen] = useState(false);
@@ -109,7 +116,7 @@ export function UsersClient({ initialUsers, tenants }: { initialUsers: User[], t
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((user) => (
+                  {filteredUsers.map((user) => (
                     <TableRow key={user.id} className="hover:bg-cielo/30 cursor-pointer transition-colors border-b border-border last:border-0">
                       <TableCell className="font-medium text-xs md:text-sm text-foreground">{user.name}</TableCell>
                       <TableCell className="text-xs md:text-sm text-muted-foreground">{user.email}</TableCell>

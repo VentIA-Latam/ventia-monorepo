@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useTenant } from "@/lib/context/tenant-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +19,6 @@ import {
   InvoiceSerie,
   INVOICE_TYPE_LABELS,
 } from "@/lib/types/invoice";
-import { Tenant } from "@/lib/types/tenant";
 import { CreateSerieDialog } from "@/components/superadmin/create-serie-dialog";
 import { EditSerieDialog } from "@/components/superadmin/edit-serie-dialog";
 
@@ -27,28 +27,17 @@ interface InvoiceSeriesClientViewProps {
 }
 
 export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientViewProps) {
+  const { selectedTenantId, tenants } = useTenant();
   const [series, setSeries] = useState<InvoiceSerie[]>(initialSeries);
-  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedSerie, setSelectedSerie] = useState<InvoiceSerie | null>(null);
 
-  useEffect(() => {
-    fetchTenants();
-  }, []);
-
-  const fetchTenants = async () => {
-    try {
-      const response = await fetch("/api/superadmin/tenants?limit=100");
-      if (response.ok) {
-        const data = await response.json();
-        setTenants(data.items || []);
-      }
-    } catch (error) {
-      console.error("Error fetching tenants:", error);
-    }
-  };
+  const filteredSeries = useMemo(
+    () => selectedTenantId ? series.filter((s) => s.tenant_id === selectedTenantId) : series,
+    [series, selectedTenantId]
+  );
 
   const getTenantName = (tenantId: number): string => {
     const tenant = tenants.find((t) => t.id === tenantId);
@@ -156,7 +145,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {series.length === 0 ? (
+          {filteredSeries.length === 0 ? (
             <div className="text-center py-12">
               <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground mb-4">No hay series configuradas</p>
@@ -180,7 +169,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {series.map((serie) => (
+                  {filteredSeries.map((serie) => (
                     <TableRow key={serie.id}>
                       <TableCell className="font-medium text-sm">
                         {getTenantName(serie.tenant_id)}
