@@ -52,15 +52,18 @@ export function WhatsAppConnectClient({ initialChannels }: WhatsAppConnectClient
   }, []);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
+    <div className="space-y-6">
       {channels.length > 0 ? (
         /* Vista 2: Canales conectados */
         <>
-          <div className="flex items-start justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Canales de WhatsApp</h1>
+              <h1 className="text-2xl font-bold text-foreground font-heading flex items-center gap-2">
+                <Smartphone className="h-6 w-6" />
+                Canales de WhatsApp
+              </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Gestiona tus numeros conectados
+                Gestiona tus numeros de WhatsApp conectados
               </p>
             </div>
             <Button onClick={() => setDialogOpen(true)} className="bg-volt hover:bg-volt/90 text-white">
@@ -68,7 +71,7 @@ export function WhatsAppConnectClient({ initialChannels }: WhatsAppConnectClient
               Conectar numero
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {channels.map((channel) => (
               <ChannelCard key={channel.id} channel={channel} />
             ))}
@@ -76,7 +79,7 @@ export function WhatsAppConnectClient({ initialChannels }: WhatsAppConnectClient
         </>
       ) : (
         /* Vista 1: Sin canales — split card + ilustracion */
-        <>
+        <div className="mx-auto max-w-4xl">
           <Card className="overflow-hidden">
             <div className="flex flex-col md:flex-row">
               {/* Left: info */}
@@ -166,7 +169,7 @@ export function WhatsAppConnectClient({ initialChannels }: WhatsAppConnectClient
               </div>
             </div>
           </Card>
-        </>
+        </div>
       )}
 
       {/* Dialog — loaded dynamically */}
