@@ -2,13 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Zap,
   Settings,
   Loader2,
-  MessageSquare,
   AlertCircle,
   ArrowLeft,
 } from "lucide-react";
+import { FaWhatsapp, FaMeta } from "react-icons/fa6";
 import {
   Dialog,
   DialogContent,
@@ -239,16 +238,20 @@ function MetaConnectFlow({
 
   return (
     <div className="flex flex-col items-center gap-6 py-4">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-cielo">
-        <MessageSquare className="h-8 w-8 text-volt" />
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#25D366]">
+        <FaWhatsapp className="h-9 w-9 text-white" />
       </div>
-      <div className="text-center space-y-2">
-        <p className="text-sm text-muted-foreground">
-          Se abrira una ventana de Meta para autorizar la conexion de tu WhatsApp Business.
+      <div className="text-center space-y-1">
+        <p className="text-sm font-medium text-foreground">
+          Conecta tu WhatsApp Business con Meta
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Se abrira el asistente de Meta para vincular tu numero de WhatsApp Business.
+          El proceso toma menos de 2 minutos.
         </p>
       </div>
-      <Button size="lg" onClick={handleConnect} disabled={isLoading} className="bg-volt hover:bg-volt/90 text-white">
-        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageSquare className="mr-2 h-4 w-4" />}
+      <Button size="lg" onClick={handleConnect} disabled={isLoading} className="bg-[#1877F2] hover:bg-[#1664D9] text-white gap-2">
+        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FaMeta className="h-4 w-4" />}
         {statusText}
       </Button>
     </div>
@@ -311,26 +314,29 @@ export function ConnectDialog({ open, onOpenChange, onSuccess }: ConnectDialogPr
           <div className="space-y-3">
             <button
               onClick={() => setView("meta")}
-              className="flex w-full items-center gap-4 rounded-xl border-2 border-volt bg-volt/5 p-4 text-left transition-colors hover:bg-volt/10"
+              className="flex w-full items-center gap-4 rounded-xl border-2 border-[#1877F2] bg-[#1877F2]/5 p-4 text-left transition-colors hover:bg-[#1877F2]/10"
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-cielo">
-                <Zap className="h-5 w-5 text-volt" />
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#1877F2]">
+                <FaMeta className="h-5 w-5 text-white" />
               </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">Conectar con Meta (Recomendado)</p>
-                <p className="text-xs text-muted-foreground">Proceso guiado. Conecta en minutos con tu cuenta de Meta Business.</p>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-foreground">Conectar con Meta</p>
+                  <span className="rounded-full bg-[#25D366]/10 px-2 py-0.5 text-[10px] font-semibold text-[#25D366]">Recomendado</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">Proceso guiado. Conecta en minutos con tu cuenta de Meta Business.</p>
               </div>
             </button>
             <button
               onClick={() => setView("manual")}
               className="flex w-full items-center gap-4 rounded-xl border border-border p-4 text-left transition-colors hover:bg-muted/50"
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-muted/50">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-muted/50">
                 <Settings className="h-5 w-5 text-muted-foreground" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-foreground">Conexion manual</p>
-                <p className="text-xs text-muted-foreground">Ingresa manualmente tus credenciales de WhatsApp Cloud API.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Ingresa manualmente tus credenciales de WhatsApp Cloud API.</p>
               </div>
             </button>
           </div>
