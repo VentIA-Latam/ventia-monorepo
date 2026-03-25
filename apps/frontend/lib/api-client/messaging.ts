@@ -14,6 +14,7 @@ import type {
   WhatsAppConnectResponse,
   ManualWhatsAppConnectParams,
   WhatsAppTemplate,
+  WhatsAppChannel,
 } from "@/lib/types/messaging";
 
 export interface ConversationFilters {
@@ -149,8 +150,12 @@ export async function connectWhatsApp(
 
 export async function connectWhatsAppManually(
   params: ManualWhatsAppConnectParams
-): Promise<unknown> {
+): Promise<WhatsAppConnectResponse> {
   return apiPost("/api/messaging/whatsapp/manual-connect", params);
+}
+
+export async function getWhatsAppStatus(): Promise<{ success: boolean; data: WhatsAppChannel[] }> {
+  return apiGet("/api/messaging/whatsapp/status");
 }
 
 // --- WhatsApp Templates ---

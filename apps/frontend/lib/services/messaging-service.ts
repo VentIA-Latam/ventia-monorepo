@@ -47,3 +47,10 @@ export const fetchInboxes = cache(async (accessToken: string) => {
 export const fetchLabels = cache(async (accessToken: string) => {
   return fetchWithAuth<{ success: boolean; data: unknown[] }>("/labels", accessToken);
 });
+
+export const fetchWhatsAppStatus = cache(async (accessToken: string) => {
+  return fetchWithAuth<{ success: boolean; data: import("@/lib/types/messaging").WhatsAppChannel[] }>(
+    "/whatsapp/status",
+    accessToken
+  );
+});

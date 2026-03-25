@@ -223,3 +223,14 @@ export interface ManualWhatsAppConnectParams {
   phone_number_id: string;
   business_account_id: string;
 }
+
+export interface WhatsAppChannel {
+  id: number;
+  phone_number: string;
+  provider: string;
+  inbox_id: number;
+  inbox_name: string;
+  templates_count: number;
+  last_template_sync: string | null;
+  reauthorization_required: boolean;
+}
