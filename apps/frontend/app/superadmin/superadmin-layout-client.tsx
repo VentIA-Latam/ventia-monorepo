@@ -4,11 +4,15 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { SuperAdminSidebar } from "@/components/superadmin/superadmin-sidebar"
 import { Separator } from "@/components/ui/separator"
 import { usePathname } from "next/navigation"
+import { TenantProvider } from "@/lib/context/tenant-context"
+import type { TenantOption } from "@/components/superadmin/tenant-selector"
 
 export default function SuperAdminLayoutClient({
   children,
+  tenants,
 }: {
   children: React.ReactNode;
+  tenants: TenantOption[];
 }) {
   const pathname = usePathname();
 
@@ -28,6 +32,7 @@ export default function SuperAdminLayoutClient({
   };
 
   return (
+    <TenantProvider tenants={tenants}>
     <SidebarProvider>
       <SuperAdminSidebar />
       <SidebarInset>
@@ -48,6 +53,7 @@ export default function SuperAdminLayoutClient({
         </div>
       </SidebarInset>
     </SidebarProvider>
+    </TenantProvider>
   );
 }
 

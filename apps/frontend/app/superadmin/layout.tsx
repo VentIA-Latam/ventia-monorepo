@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAccessToken } from "@/lib/auth0";
 import { getCurrentUser } from "@/lib/services/user-service";
+import { fetchTenants } from "@/lib/services/superadmin-service";
 import SuperAdminLayoutClient from "./superadmin-layout-client";
 
 export default async function SuperAdminLayout({
@@ -11,7 +12,12 @@ export default async function SuperAdminLayout({
   const token = await getAccessToken();
   if (!token) redirect("/auth/login");
 
-  const user = await getCurrentUser(token);
+  // Parallel fetch: user + tenants (async-parallel)
+  const [user, tenantsResult] = await Promise.all([
+    getCurrentUser(token),
+    fetchTenants({ limit: 200 }).catch(() => ({ items: [] })),
+  ]);
+
   const role = user.role?.toUpperCase();
 
   // Only SUPERADMIN can access this panel
@@ -19,6 +25,14 @@ export default async function SuperAdminLayout({
     redirect("/dashboard");
   }
 
-  return <SuperAdminLayoutClient>{children}</SuperAdminLayoutClient>;
+  const tenants = (tenantsResult?.items ?? [])
+    .filter((t: { is_platform?: boolean }) => !t.is_platform)
+    .map((t: { id: number; name: string }) => ({ id: t.id, name: t.name }));
+
+  return (
+    <SuperAdminLayoutClient tenants={tenants}>
+      {children}
+    </SuperAdminLayoutClient>
+  );
 }
 

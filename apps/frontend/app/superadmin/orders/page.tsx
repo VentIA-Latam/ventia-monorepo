@@ -1,25 +1,14 @@
-import { fetchTenants, fetchOrdersFull } from "@/lib/services/superadmin-service";
+import { fetchOrdersFull } from "@/lib/services/superadmin-service";
 import { SuperAdminOrdersClient } from "./superadmin-orders-client";
 
 export const dynamic = "force-dynamic";
 
 export default async function SuperAdminOrdersPage() {
   try {
-    // async-parallel: fetch tenants and orders in parallel
-    const [tenantsData, ordersData] = await Promise.all([
-      fetchTenants({ limit: 100 }),
-      fetchOrdersFull({ limit: 100 }),
-    ]);
-
-    // server-serialization: only pass {id, name} to client
-    const tenantOptions = tenantsData.items.filter((t) => !t.is_platform).map((t) => ({
-      id: t.id,
-      name: t.name,
-    }));
+    const ordersData = await fetchOrdersFull({ limit: 100 });
 
     return (
       <SuperAdminOrdersClient
-        tenants={tenantOptions}
         initialOrders={ordersData.items}
       />
     );

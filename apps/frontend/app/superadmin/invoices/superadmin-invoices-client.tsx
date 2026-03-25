@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -27,8 +27,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TenantSelector, type TenantOption } from "@/components/superadmin/tenant-selector";
 import { getInvoicesByTenant } from "@/lib/api-client/superadmin";
+import { useTenant } from "@/lib/context/tenant-context";
 import { formatDate } from "@/lib/utils";
 import type { Invoice } from "@/lib/types/invoice";
 import { INVOICE_TYPE_NAMES, INVOICE_STATUS_NAMES, INVOICE_STATUS_COLORS } from "@/lib/types/invoice";
@@ -51,17 +51,15 @@ import {
 import Link from "next/link";
 
 interface SuperAdminInvoicesClientProps {
-  tenants: TenantOption[];
   initialInvoices: Invoice[];
 }
 
 export function SuperAdminInvoicesClient({
-  tenants,
   initialInvoices,
 }: SuperAdminInvoicesClientProps) {
   const { toast } = useToast();
+  const { selectedTenantId, tenants } = useTenant();
   const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
-  const [selectedTenant, setSelectedTenant] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
@@ -69,19 +67,16 @@ export function SuperAdminInvoicesClient({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const handleTenantChange = useCallback(async (tenantId: number | null) => {
-    setSelectedTenant(tenantId);
+  useEffect(() => {
+    let cancelled = false;
     setCurrentPage(1);
     setLoading(true);
-    try {
-      const data = await getInvoicesByTenant(tenantId ?? undefined, 100);
-      setInvoices(data.items);
-    } catch (error) {
-      console.error("Error fetching invoices:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    getInvoicesByTenant(selectedTenantId ?? undefined, 100)
+      .then((data) => { if (!cancelled) setInvoices(data.items); })
+      .catch((err) => console.error("Error fetching invoices:", err))
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedTenantId]);
 
   const filteredInvoices = invoices.filter((invoice) => {
     const matchesSearch =
@@ -138,13 +133,6 @@ export function SuperAdminInvoicesClient({
 
   return (
     <div className="space-y-6">
-      {/* Tenant Selector */}
-      <TenantSelector
-        tenants={tenants}
-        value={selectedTenant}
-        onChange={handleTenantChange}
-      />
-
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1 relative">
@@ -190,8 +178,8 @@ export function SuperAdminInvoicesClient({
       {/* Results count */}
       <p className="text-sm text-muted-foreground">
         Mostrando <span className="font-semibold">{filteredInvoices.length}</span> comprobantes
-        {selectedTenant && tenantMap.get(selectedTenant) && (
-          <> de <span className="font-semibold">{tenantMap.get(selectedTenant)}</span></>
+        {selectedTenantId && tenantMap.get(selectedTenantId) && (
+          <> de <span className="font-semibold">{tenantMap.get(selectedTenantId)}</span></>
         )}
       </p>
 
@@ -210,7 +198,7 @@ export function SuperAdminInvoicesClient({
                 <TableHead>Tipo</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Documento</TableHead>
-                {!selectedTenant && <TableHead>Empresa</TableHead>}
+                {!selectedTenantId && <TableHead>Empresa</TableHead>}
                 <TableHead className="text-right">Monto</TableHead>
                 <TableHead>Fecha</TableHead>
                 <TableHead>Estado</TableHead>
@@ -220,7 +208,7 @@ export function SuperAdminInvoicesClient({
             <TableBody>
               {currentInvoices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={selectedTenant ? 8 : 9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={selectedTenantId ? 8 : 9} className="text-center py-8 text-muted-foreground">
                     No se encontraron comprobantes
                   </TableCell>
                 </TableRow>
@@ -241,7 +229,7 @@ export function SuperAdminInvoicesClient({
                     <TableCell>
                       {invoice.cliente_numero_documento || <span className="text-muted-foreground">-</span>}
                     </TableCell>
-                    {!selectedTenant && (
+                    {!selectedTenantId && (
                       <TableCell className="text-sm text-muted-foreground">
                         {tenantMap.get(invoice.tenant_id) || `Tenant ${invoice.tenant_id}`}
                       </TableCell>

@@ -21,6 +21,14 @@ import { usePathname, useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { useAuth } from "@/hooks/use-auth"
+import { useTenant } from "@/lib/context/tenant-context"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 import {
   Sidebar,
@@ -99,6 +107,7 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
   const pathname = usePathname()
   const router = useRouter()
   const { user, isLoading } = useAuth()
+  const { selectedTenantId, setSelectedTenantId, tenants } = useTenant()
 
   const isActive = (url: string) => {
     if (url === "/superadmin") return pathname === "/superadmin";
@@ -157,6 +166,30 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
       </SidebarHeader>
 
       <SidebarContent className="px-3 py-2 font-sans">
+        {/* --- SELECTOR GLOBAL DE TENANT --- */}
+        <div className="px-2 pb-3 mb-1 border-b border-sidebar-border group-data-[collapsible=icon]:hidden">
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1.5">
+            <Building2 className="h-3 w-3" />
+            Empresa
+          </label>
+          <Select
+            value={selectedTenantId?.toString() ?? "all"}
+            onValueChange={(v) => setSelectedTenantId(v === "all" ? null : parseInt(v))}
+          >
+            <SelectTrigger className="w-full h-9 text-sm bg-muted/30 border-border/50 hover:bg-muted/50 transition-colors">
+              <SelectValue placeholder="Seleccionar empresa" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas las empresas</SelectItem>
+              {tenants.map((t) => (
+                <SelectItem key={t.id} value={t.id.toString()}>
+                  {t.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* --- GRUPO SUPER ADMIN --- */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-2 px-2">

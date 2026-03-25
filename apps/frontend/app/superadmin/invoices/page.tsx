@@ -1,25 +1,14 @@
-import { fetchTenants, fetchInvoicesFull } from "@/lib/services/superadmin-service";
+import { fetchInvoicesFull } from "@/lib/services/superadmin-service";
 import { SuperAdminInvoicesClient } from "./superadmin-invoices-client";
 
 export const dynamic = "force-dynamic";
 
 export default async function SuperAdminInvoicesPage() {
   try {
-    // async-parallel: fetch tenants and invoices in parallel
-    const [tenantsData, invoicesData] = await Promise.all([
-      fetchTenants({ limit: 100 }),
-      fetchInvoicesFull({ limit: 100 }),
-    ]);
-
-    // server-serialization: only pass {id, name} to client
-    const tenantOptions = tenantsData.items.filter((t) => !t.is_platform).map((t) => ({
-      id: t.id,
-      name: t.name,
-    }));
+    const invoicesData = await fetchInvoicesFull({ limit: 100 });
 
     return (
       <SuperAdminInvoicesClient
-        tenants={tenantOptions}
         initialInvoices={invoicesData.items}
       />
     );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,8 +12,8 @@ import {
 } from "@/components/ui/select";
 import { OrdersTable } from "@/components/dashboard/orders/orders-table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { TenantSelector, type TenantOption } from "@/components/superadmin/tenant-selector";
 import { getOrdersByTenant } from "@/lib/api-client/superadmin";
+import { useTenant } from "@/lib/context/tenant-context";
 import type { Order } from "@/lib/services/order-service";
 import {
   Search,
@@ -23,16 +23,14 @@ import {
 } from "lucide-react";
 
 interface SuperAdminOrdersClientProps {
-  tenants: TenantOption[];
   initialOrders: Order[];
 }
 
 export function SuperAdminOrdersClient({
-  tenants,
   initialOrders,
 }: SuperAdminOrdersClientProps) {
+  const { selectedTenantId, tenants } = useTenant();
   const [orders, setOrders] = useState<Order[]>(initialOrders);
-  const [selectedTenant, setSelectedTenant] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("all");
@@ -40,20 +38,17 @@ export function SuperAdminOrdersClient({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // rerender-functional-setstate: stable callback
-  const handleTenantChange = useCallback(async (tenantId: number | null) => {
-    setSelectedTenant(tenantId);
+  // Refetch when global tenant changes (rerender-dependencies: primitive number)
+  useEffect(() => {
+    let cancelled = false;
     setCurrentPage(1);
     setLoading(true);
-    try {
-      const data = await getOrdersByTenant(tenantId ?? undefined, 100);
-      setOrders(data.items);
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    getOrdersByTenant(selectedTenantId ?? undefined, 100)
+      .then((data) => { if (!cancelled) setOrders(data.items); })
+      .catch((err) => console.error("Error fetching orders:", err))
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedTenantId]);
 
   // Filter orders client-side
   const filteredOrders = orders.filter((order) => {
@@ -83,13 +78,6 @@ export function SuperAdminOrdersClient({
 
   return (
     <div className="space-y-6">
-      {/* Tenant Selector */}
-      <TenantSelector
-        tenants={tenants}
-        value={selectedTenant}
-        onChange={handleTenantChange}
-      />
-
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1 relative">
@@ -141,8 +129,8 @@ export function SuperAdminOrdersClient({
           icon={<Search className="h-6 w-6" />}
           title="No se encontraron pedidos"
           description={
-            selectedTenant
-              ? `No hay pedidos para ${tenantMap.get(selectedTenant) || "este tenant"}.`
+            selectedTenantId
+              ? `No hay pedidos para ${tenantMap.get(selectedTenantId) || "este tenant"}.`
               : "No hay pedidos que coincidan con los filtros."
           }
           action={
