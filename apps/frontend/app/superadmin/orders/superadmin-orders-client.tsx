@@ -118,6 +118,14 @@ export function SuperAdminOrdersClient({
         </Select>
       </div>
 
+      {/* Results count */}
+      <p className="text-sm text-muted-foreground">
+        Mostrando <span className="font-semibold">{filteredOrders.length}</span> pedidos
+        {selectedTenantId && tenantMap.get(selectedTenantId) ? (
+          <> de <span className="font-semibold">{tenantMap.get(selectedTenantId)}</span></>
+        ) : null}
+      </p>
+
       {/* Table */}
       {loading ? (
         <div className="flex items-center justify-center py-12">

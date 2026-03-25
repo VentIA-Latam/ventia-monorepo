@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Key, Plus, Search, MoreHorizontal, Trash2, CheckCircle, XCircle } from "lucide-react";
+import { Key, Plus, Search, MoreHorizontal, Trash2, CheckCircle, XCircle, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+// Card imports removed — using flat layout pattern
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -33,8 +33,7 @@ import { APIKey } from "@/lib/types/api-key";
 import { Tenant } from "@/lib/types/tenant";
 import { CreateAPIKeyDialog } from "@/components/superadmin/create-api-key-dialog";
 import { RevokeAPIKeyDialog } from "@/components/superadmin/revoke-api-key-dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info } from "lucide-react";
+// Alert imports removed — no info alerts in standard pattern
 import { formatDateTime } from "@/lib/utils";
 import { useTenant } from "@/lib/context/tenant-context";
 
@@ -126,98 +125,69 @@ export default function SuperAdminAPIKeysPage() {
     }
   };
 
+  const itemsPerPage = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.ceil(filteredAPIKeys.length / itemsPerPage);
+  const currentKeys = filteredAPIKeys.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
-    <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground font-heading flex items-center gap-2">
-            <Key className="h-6 w-6 md:h-8 md:w-8" />
-            API Keys
-          </h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">
-            Gestiona las claves de API para integraciones externas (n8n, webhooks, etc.)
-          </p>
+    <div className="space-y-6">
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input placeholder="Buscar por nombre o prefijo..." value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }} className="pl-10" />
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto text-sm md:text-base">
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
+          <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Estado" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los estados</SelectItem>
+            <SelectItem value="active">Activos</SelectItem>
+            <SelectItem value="inactive">Inactivos</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button onClick={() => setCreateDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Crear API Key
         </Button>
       </div>
 
-      <Alert className="bg-volt/10 border-volt/30">
-        <Info className="h-4 w-4 text-volt shrink-0" />
-        <AlertDescription className="text-xs md:text-sm text-volt">
-          <b>Documentación para n8n:</b> Las API Keys permiten autenticación en workflows.
-          Usa el header <code className="bg-volt/10 px-1 rounded text-[10px] md:text-xs">X-API-Key: tu_clave</code> en tus requests HTTP.
-        </AlertDescription>
-      </Alert>
+      {/* Results count */}
+      <p className="text-sm text-muted-foreground">
+        Mostrando <span className="font-semibold">{filteredAPIKeys.length}</span> API keys
+        {selectedTenantId && tenants.find(t => t.id === selectedTenantId) ? (
+          <> de <span className="font-semibold">{tenants.find(t => t.id === selectedTenantId)?.name}</span></>
+        ) : null}
+      </p>
 
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle className="text-base md:text-lg">Lista de API Keys</CardTitle>
-              <CardDescription className="text-xs md:text-sm">
-                {filteredAPIKeys.length} clave{filteredAPIKeys.length !== 1 ? 's' : ''} encontrada{filteredAPIKeys.length !== 1 ? 's' : ''}
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 items-stretch sm:items-center">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Buscar por nombre o prefijo..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 text-sm md:text-base"
-              />
-            </div>
-
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-45 text-sm md:text-base">
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los estados</SelectItem>
-                <SelectItem value="active">Activos</SelectItem>
-                <SelectItem value="inactive">Inactivos</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Table */}
-          <div className="border rounded-lg bg-card shadow-sm overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50 border-b border-border">
-                  <TableHead>NOMBRE</TableHead>
-                  <TableHead>PREFIJO</TableHead>
-                  <TableHead>ROL</TableHead>
-                  <TableHead>TENANT</TableHead>
-                  <TableHead>ÚLTIMO USO</TableHead>
-                  <TableHead>ESTADO</TableHead>
-                  <TableHead>EXPIRA</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-xs md:text-sm text-muted-foreground">
-                      Cargando API Keys...
-                    </TableCell>
-                  </TableRow>
-                ) : filteredAPIKeys.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-xs md:text-sm text-muted-foreground">
-                      No se encontraron API Keys
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredAPIKeys.map((apiKey) => (
+      {/* Table */}
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-muted-foreground">Cargando API Keys...</span>
+        </div>
+      ) : currentKeys.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12">
+          <Key className="h-10 w-10 text-muted-foreground mb-3" />
+          <p className="text-sm text-muted-foreground">No se encontraron API Keys</p>
+        </div>
+      ) : (
+        <div className="rounded-md border overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Prefijo</TableHead>
+                <TableHead>Rol</TableHead>
+                {!selectedTenantId ? <TableHead>Empresa</TableHead> : null}
+                <TableHead>Ultimo uso</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead>Expira</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {currentKeys.map((apiKey) => (
                     <TableRow key={apiKey.id} className="hover:bg-cielo/30 transition-colors border-b border-border last:border-0">
                       <TableCell className="font-medium text-xs md:text-sm text-foreground">{apiKey.name}</TableCell>
                       <TableCell>
@@ -285,8 +255,22 @@ export default function SuperAdminAPIKeysPage() {
               </TableBody>
             </Table>
           </div>
-        </CardContent>
-      </Card>
+        )}
+
+      {/* Pagination */}
+      {totalPages > 1 ? (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">Página {currentPage} de {totalPages}</p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {/* Dialogs */}
       <CreateAPIKeyDialog

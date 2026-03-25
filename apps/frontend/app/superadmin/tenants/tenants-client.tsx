@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, Plus, Search, MoreHorizontal, Eye, Edit, Power, Store, ShoppingBag, CheckCircle, XCircle } from 'lucide-react';
+import { Building2, Plus, Search, MoreHorizontal, Eye, Edit, Power, Store, ShoppingBag, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getTenants } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -133,76 +133,49 @@ export function TenantsClient({ initialTenants }: { initialTenants: Tenant[] }) 
     setToggleStatusDialogOpen(true);
   };
 
+  const itemsPerPage = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.ceil(filteredTenants.length / itemsPerPage);
+  const currentTenants = filteredTenants.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
-    <div className="space-y-4 md:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground font-heading">Gestión de Empresas</h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1 md:mt-2">
-            Administra todas las empresas de la plataforma
-          </p>
+    <div className="space-y-6">
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Buscar por nombre o slug..." value={filters.search} onChange={(e) => { setFilters({ ...filters, search: e.target.value }); setCurrentPage(1); }} className="pl-10" />
         </div>
-        <Button
-          className="bg-primary hover:bg-primary/90 w-full sm:w-auto text-sm md:text-base"
-          onClick={() => setCreateDialogOpen(true)}
-        >
+        <Select value={filters.status} onValueChange={(v) => { setFilters({ ...filters, status: v }); setCurrentPage(1); }}>
+          <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Estado" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los estados</SelectItem>
+            <SelectItem value="active">Activos</SelectItem>
+            <SelectItem value="inactive">Inactivos</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filters.isPlatform} onValueChange={(v) => { setFilters({ ...filters, isPlatform: v }); setCurrentPage(1); }}>
+          <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Tipo" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los tipos</SelectItem>
+            <SelectItem value="platform">Plataforma</SelectItem>
+            <SelectItem value="regular">Regular</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button onClick={() => setCreateDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Nueva Empresa
         </Button>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base md:text-lg">Filtros</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nombre o slug..."
-                value={filters.search}
-                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                className="pl-10 text-sm md:text-base"
-              />
-            </div>
-            <Select
-              value={filters.status}
-              onValueChange={(value) => setFilters({ ...filters, status: value })}
-            >
-              <SelectTrigger className="text-sm md:text-base">
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los estados</SelectItem>
-                <SelectItem value="active">Activos</SelectItem>
-                <SelectItem value="inactive">Inactivos</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={filters.isPlatform}
-              onValueChange={(value) => setFilters({ ...filters, isPlatform: value })}
-            >
-              <SelectTrigger className="text-sm md:text-base">
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los tipos</SelectItem>
-                <SelectItem value="platform">Plataforma</SelectItem>
-                <SelectItem value="regular">Regular</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Results count */}
+      <p className="text-sm text-muted-foreground">
+        Mostrando <span className="font-semibold">{filteredTenants.length}</span> de {tenants.length} empresas
+      </p>
 
-      {/* Empresas Table */}
-      <Card>
-        <CardContent className="p-0">
-          {filteredTenants.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
+      {/* Table */}
+      {currentTenants.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12">
               <Building2 className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-3 md:mb-4" />
               <p className="text-sm md:text-base text-muted-foreground">No se encontraron empresas</p>
             </div>
@@ -220,7 +193,7 @@ export function TenantsClient({ initialTenants }: { initialTenants: Tenant[] }) 
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTenants.map((tenant) => (
+                  {currentTenants.map((tenant) => (
                     <TableRow key={tenant.id} className="hover:bg-cielo/30 transition-colors border-b border-border last:border-0">
                       <TableCell className="font-medium text-xs md:text-sm text-foreground">{tenant.name}</TableCell>
                       <TableCell>
@@ -348,13 +321,21 @@ export function TenantsClient({ initialTenants }: { initialTenants: Tenant[] }) 
               </Table>
             </div>
           )}
-        </CardContent>
-      </Card>
 
-      {/* Stats */}
-      <div className="text-xs md:text-sm text-muted-foreground">
-        Mostrando {filteredTenants.length} de {tenants.length} tenants
-      </div>
+      {/* Pagination */}
+      {totalPages > 1 ? (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">Página {currentPage} de {totalPages}</p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {/* Dialogs */}
       <CreateTenantDialog

@@ -3,7 +3,14 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTenant } from "@/lib/context/tenant-context";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -13,8 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Settings, Plus, Edit2, Trash2, AlertCircle, CheckCircle, XCircle } from "lucide-react";
+// Alert removed — standard pattern
+import { Settings, Plus, Edit2, Trash2, CheckCircle, XCircle, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   InvoiceSerie,
   INVOICE_TYPE_LABELS,
@@ -34,10 +41,24 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedSerie, setSelectedSerie] = useState<InvoiceSerie | null>(null);
 
-  const filteredSeries = useMemo(
-    () => selectedTenantId ? series.filter((s) => s.tenant_id === selectedTenantId) : series,
-    [series, selectedTenantId]
-  );
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  const filteredSeries = useMemo(() => series.filter((s) => {
+    if (selectedTenantId && s.tenant_id !== selectedTenantId) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      if (!s.serie?.toLowerCase().includes(q) && !s.description?.toLowerCase().includes(q)) return false;
+    }
+    if (statusFilter === "active" && !s.is_active) return false;
+    if (statusFilter === "inactive" && s.is_active) return false;
+    return true;
+  }), [series, selectedTenantId, search, statusFilter]);
+
+  const totalPages = Math.ceil(filteredSeries.length / itemsPerPage);
+  const currentSeries = filteredSeries.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const getTenantName = (tenantId: number): string => {
     const tenant = tenants.find((t) => t.id === tenantId);
@@ -103,77 +124,58 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground font-heading flex items-center gap-2">
-            <Settings className="h-6 w-6" />
-            Series de Facturación
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Configura las series de numeración para tus comprobantes electrónicos
-          </p>
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Buscar por serie o descripcion..." value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} className="pl-10" />
         </div>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
+          <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Estado" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="active">Activas</SelectItem>
+            <SelectItem value="inactive">Inactivas</SelectItem>
+          </SelectContent>
+        </Select>
         <Button onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Nueva Serie
         </Button>
       </div>
 
-      {/* Info Alert */}
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          Las series de facturación son códigos de 4 caracteres que identifican cada tipo de comprobante. Ejemplos: F001 para facturas, B001 para boletas. El correlativo se incrementa automáticamente.
-        </AlertDescription>
-      </Alert>
+      {/* Results count */}
+      <p className="text-sm text-muted-foreground">
+        Mostrando <span className="font-semibold">{filteredSeries.length}</span> series
+      </p>
 
-      {/* Error Alert */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      {/* Error */}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
 
-      {/* Series List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Series Configuradas</CardTitle>
-          <CardDescription>
-            Administra las series de numeración para cada tipo de comprobante
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {filteredSeries.length === 0 ? (
-            <div className="text-center py-12">
-              <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground mb-4">No hay series configuradas</p>
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Crear Primera Serie
-              </Button>
-            </div>
-          ) : (
-            <div className="rounded-md border overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tenant</TableHead>
-                    <TableHead>Serie</TableHead>
-                    <TableHead>Tipo de Comprobante</TableHead>
-                    <TableHead>Descripción</TableHead>
-                    <TableHead className="text-right">{"Último Correlativo"}</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredSeries.map((serie) => (
+      {/* Table */}
+      {currentSeries.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12">
+          <Settings className="h-10 w-10 text-muted-foreground mb-3" />
+          <p className="text-sm text-muted-foreground">No hay series configuradas</p>
+        </div>
+      ) : (
+        <div className="rounded-md border overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {!selectedTenantId ? <TableHead>Empresa</TableHead> : null}
+                <TableHead>Serie</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Descripcion</TableHead>
+                <TableHead className="text-right">Ultimo Correlativo</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {currentSeries.map((serie) => (
                     <TableRow key={serie.id}>
-                      <TableCell className="font-medium text-sm">
-                        {getTenantName(serie.tenant_id)}
-                      </TableCell>
+                      {!selectedTenantId ? <TableCell>{getTenantName(serie.tenant_id)}</TableCell> : null}
                       <TableCell className="font-mono font-bold">{serie.serie}</TableCell>
                       <TableCell>{INVOICE_TYPE_LABELS[serie.invoice_type] || serie.invoice_type}</TableCell>
                       <TableCell className="max-w-[200px] truncate">
@@ -222,8 +224,21 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
               </Table>
             </div>
           )}
-        </CardContent>
-      </Card>
+
+      {/* Pagination */}
+      {totalPages > 1 ? (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">Página {currentPage} de {totalPages}</p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {/* Create Dialog */}
       <CreateSerieDialog
