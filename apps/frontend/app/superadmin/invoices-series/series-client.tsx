@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useTenant } from "@/lib/context/tenant-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

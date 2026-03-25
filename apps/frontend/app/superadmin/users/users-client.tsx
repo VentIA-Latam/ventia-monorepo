@@ -38,7 +38,7 @@ import { ToggleUserStatusDialog } from "@/components/superadmin/toggle-user-stat
 
 export function UsersClient({ initialUsers, tenants }: { initialUsers: User[], tenants: Tenant[] }) {
   const router = useRouter();
-  const { selectedTenantId, tenants } = useTenant();
+  const { selectedTenantId } = useTenant();
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");

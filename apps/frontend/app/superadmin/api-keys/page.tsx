@@ -200,7 +200,7 @@ export default function SuperAdminAPIKeysPage() {
                           {apiKey.role}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-xs md:text-sm text-foreground font-medium">{getTenantName(apiKey.tenant_id)}</TableCell>
+                      {!selectedTenantId ? <TableCell className="text-sm text-foreground font-medium">{getTenantName(apiKey.tenant_id)}</TableCell> : null}
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           {getLastUsedBadge(apiKey.last_used_at)}

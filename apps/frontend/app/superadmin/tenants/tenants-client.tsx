@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Building2, Plus, Search, MoreHorizontal, Eye, Edit, Power, Store, ShoppingBag, CheckCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getTenants } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// Card imports removed — flat layout pattern
 import { Input } from "@/components/ui/input";
 import {
   Table,
