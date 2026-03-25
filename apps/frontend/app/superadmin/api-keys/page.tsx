@@ -250,8 +250,7 @@ export default function SuperAdminAPIKeysPage() {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
+                  ))}
               </TableBody>
             </Table>
           </div>
