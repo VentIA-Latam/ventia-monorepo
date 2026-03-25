@@ -15,7 +15,7 @@ export default async function SuperAdminLayout({
   // Parallel fetch: user + tenants (async-parallel)
   const [user, tenantsResult] = await Promise.all([
     getCurrentUser(token),
-    fetchTenants({ limit: 200 }).catch((err) => { console.error("fetchTenants error:", err); return { items: [] }; }),
+    fetchTenants({ limit: 100 }).catch(() => ({ items: [] })),
   ]);
 
   const role = user.role?.toUpperCase();
