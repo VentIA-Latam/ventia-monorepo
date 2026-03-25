@@ -122,7 +122,7 @@ export function UsersClient({ initialUsers, tenants }: { initialUsers: User[], t
             <SelectItem value="inactive">Inactivos</SelectItem>
           </SelectContent>
         </Select>
-        <Button className="bg-success hover:bg-success/90" onClick={() => setCreateDialogOpen(true)}>
+        <Button onClick={() => setCreateDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Nuevo Usuario
         </Button>
