@@ -119,6 +119,7 @@ export async function toggleTenantStatus(
 export async function getUsers(params?: {
   skip?: number;
   limit?: number;
+  tenant_id?: number;
 }): Promise<{ items: User[]; total: number }> {
   return apiGet('/api/superadmin/users', params as Record<string, number>);
 }

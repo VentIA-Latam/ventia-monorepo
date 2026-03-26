@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useTenant } from "@/lib/context/tenant-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 // Alert removed — standard pattern
-import { Settings, Plus, Edit2, Trash2, CheckCircle, XCircle, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Settings, Plus, Edit2, Trash2, CheckCircle, XCircle, Search, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import {
   InvoiceSerie,
   INVOICE_TYPE_LABELS,
@@ -41,13 +41,28 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedSerie, setSelectedSerie] = useState<InvoiceSerie | null>(null);
 
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // Refetch when global tenant changes
+  useEffect(() => {
+    let cancelled = false;
+    setCurrentPage(1);
+    setLoading(true);
+    const url = selectedTenantId ? `/api/invoice-series?tenant_id=${selectedTenantId}` : "/api/invoice-series";
+    fetch(url)
+      .then((r) => r.ok ? r.json() : Promise.reject("Error al cargar series"))
+      .then((data) => { if (!cancelled) { setSeries(data); setError(null); } })
+      .catch((err) => { if (!cancelled) setError(String(err)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedTenantId]);
+
+  // Client-side filtering for search/status
   const filteredSeries = useMemo(() => series.filter((s) => {
-    if (selectedTenantId && s.tenant_id !== selectedTenantId) return false;
     if (search) {
       const q = search.toLowerCase();
       if (!s.serie?.toLowerCase().includes(q) && !s.description?.toLowerCase().includes(q)) return false;
@@ -55,7 +70,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
     if (statusFilter === "active" && !s.is_active) return false;
     if (statusFilter === "inactive" && s.is_active) return false;
     return true;
-  }), [series, selectedTenantId, search, statusFilter]);
+  }), [series, search, statusFilter]);
 
   const totalPages = Math.ceil(filteredSeries.length / itemsPerPage);
   const currentSeries = filteredSeries.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -67,7 +82,8 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
 
   const loadSeries = async () => {
     try {
-      const response = await fetch("/api/invoice-series");
+      const url = selectedTenantId ? `/api/invoice-series?tenant_id=${selectedTenantId}` : "/api/invoice-series";
+      const response = await fetch(url);
       if (!response.ok) throw new Error("Error al cargar series");
       const data = await response.json();
       setSeries(data);
@@ -153,7 +169,12 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
       {error ? <p className="text-sm text-danger">{error}</p> : null}
 
       {/* Table */}
-      {currentSeries.length === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-muted-foreground">Cargando series...</span>
+        </div>
+      ) : currentSeries.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12">
           <Settings className="h-10 w-10 text-muted-foreground mb-3" />
           <p className="text-sm text-muted-foreground">No hay series configuradas</p>

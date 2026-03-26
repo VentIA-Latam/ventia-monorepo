@@ -49,33 +49,31 @@ export default function SuperAdminAPIKeysPage() {
   const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
   const [selectedApiKey, setSelectedApiKey] = useState<APIKey | null>(null);
 
-  useEffect(() => {
-    fetchAPIKeys();
-  }, [statusFilter, selectedTenantId]);
-
-  const fetchAPIKeys = async () => {
+  const fetchAPIKeys = async (cancelled?: { current: boolean }) => {
     try {
       setLoading(true);
       let url = `/api/superadmin/api-keys?limit=100`;
-
-      if (statusFilter !== "all") {
-        url += `&is_active=${statusFilter === "active"}`;
-      }
-      if (selectedTenantId) {
-        url += `&tenant_id=${selectedTenantId}`;
-      }
+      if (statusFilter !== "all") url += `&is_active=${statusFilter === "active"}`;
+      if (selectedTenantId) url += `&tenant_id=${selectedTenantId}`;
 
       const response = await fetch(url);
-      if (response.ok) {
+      if (response.ok && !cancelled?.current) {
         const data = await response.json();
         setApiKeys(data.items || []);
       }
     } catch (error) {
       console.error("Error fetching API keys:", error);
     } finally {
-      setLoading(false);
+      if (!cancelled?.current) setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const cancelled = { current: false };
+    setCurrentPage(1);
+    fetchAPIKeys(cancelled);
+    return () => { cancelled.current = true; };
+  }, [statusFilter, selectedTenantId]);
 
   const handleRevoke = (apiKey: APIKey) => {
     setSelectedApiKey(apiKey);

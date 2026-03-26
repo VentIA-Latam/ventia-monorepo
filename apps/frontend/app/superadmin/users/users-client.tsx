@@ -1,7 +1,7 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Users, Plus, Eye, Power, MoreHorizontal, Edit, CheckCircle, XCircle, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users, Plus, Eye, Power, MoreHorizontal, Edit, CheckCircle, XCircle, Search, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -40,14 +40,29 @@ export function UsersClient({ initialUsers, tenants }: { initialUsers: User[], t
   const router = useRouter();
   const { selectedTenantId } = useTenant();
   const [users, setUsers] = useState<User[]>(initialUsers);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // Refetch when global tenant changes (server-side filtering)
+  useEffect(() => {
+    let cancelled = false;
+    setCurrentPage(1);
+    setLoading(true);
+    const params: { limit: number; tenant_id?: number } = { limit: 100 };
+    if (selectedTenantId) params.tenant_id = selectedTenantId;
+    getUsers(params)
+      .then((data) => { if (!cancelled) setUsers(data.items || []); })
+      .catch((err) => console.error("Error fetching users:", err))
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedTenantId]);
+
+  // Client-side filtering for search/role/status (on already tenant-filtered data)
   const filteredUsers = useMemo(() => users.filter((u) => {
-    if (selectedTenantId && u.tenant_id !== selectedTenantId) return false;
     if (search) {
       const s = search.toLowerCase();
       if (!u.name?.toLowerCase().includes(s) && !u.email?.toLowerCase().includes(s)) return false;
@@ -56,7 +71,7 @@ export function UsersClient({ initialUsers, tenants }: { initialUsers: User[], t
     if (statusFilter === "active" && !u.is_active) return false;
     if (statusFilter === "inactive" && u.is_active) return false;
     return true;
-  }), [users, selectedTenantId, search, roleFilter, statusFilter]);
+  }), [users, search, roleFilter, statusFilter]);
 
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
   const currentUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -69,7 +84,9 @@ export function UsersClient({ initialUsers, tenants }: { initialUsers: User[], t
 
   const refreshUsers = async () => {
     try {
-      const data = await getUsers({ limit: 100 });
+      const params: { limit: number; tenant_id?: number } = { limit: 100 };
+      if (selectedTenantId) params.tenant_id = selectedTenantId;
+      const data = await getUsers(params);
       setUsers(data.items || []);
     } catch {
       // handle error
@@ -134,7 +151,12 @@ export function UsersClient({ initialUsers, tenants }: { initialUsers: User[], t
       </p>
 
       {/* Table */}
-      {currentUsers.length === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-muted-foreground">Cargando usuarios...</span>
+        </div>
+      ) : currentUsers.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12">
           <Users className="h-10 w-10 text-muted-foreground mb-3" />
           <p className="text-sm text-muted-foreground">No se encontraron usuarios</p>
