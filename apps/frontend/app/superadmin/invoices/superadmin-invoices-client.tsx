@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useServerTable } from "@/lib/hooks/use-server-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -59,33 +60,68 @@ export function SuperAdminInvoicesClient({
   initialInvoices,
   initialTotal,
 }: SuperAdminInvoicesClientProps) {
+  const ITEMS_PER_PAGE = 10;
   const { toast } = useToast();
   const { selectedTenantId, tenants } = useTenant();
-  const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
-  const [total, setTotal] = useState(initialTotal);
-  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
-  const fetchInvoices = async (page: number, tenantId?: number | null) => {
-    setLoading(true);
-    try {
-      const skip = (page - 1) * itemsPerPage;
-      const params: { skip: number; limit: number; tenant_id?: number } = { skip, limit: itemsPerPage };
-      if (tenantId) params.tenant_id = tenantId;
-      const data = await getInvoicesByTenant(params);
-      setInvoices(data.items);
-      setTotal(data.total ?? 0);
-    } catch (err) { console.error("Error fetching invoices:", err); }
-    finally { setLoading(false); }
+  const fetchInvoicesFromApi = useCallback(async (params: Record<string, string>, signal: AbortSignal) => {
+    const res = await fetch(`/api/invoices?${new URLSearchParams(params)}`, { signal });
+    if (!res.ok) throw new Error("Failed to fetch invoices");
+    return res.json();
+  }, []);
+
+  const { items: filteredInvoices, total, loading, isStale, fetchData, debouncedFetch } = useServerTable<Invoice>({
+    initialItems: initialInvoices,
+    initialTotal,
+    fetchFn: fetchInvoicesFromApi,
+  });
+
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+
+  const buildParams = useCallback(
+    (overrides: Record<string, string> = {}) => {
+      const p: Record<string, string> = {
+        skip: String((currentPage - 1) * ITEMS_PER_PAGE),
+        limit: String(ITEMS_PER_PAGE),
+        ...overrides,
+      };
+      if (selectedTenantId) p.tenant_id = String(selectedTenantId);
+      const s = overrides.search ?? search;
+      const t = overrides.invoice_type ?? (filterType !== "all" ? filterType : "");
+      const st = overrides.efact_status ?? (filterStatus !== "all" ? filterStatus : "");
+      if (s) p.search = s;
+      if (t) p.invoice_type = t;
+      if (st) p.efact_status = st;
+      return p;
+    },
+    [currentPage, search, filterType, filterStatus, selectedTenantId]
+  );
+
+  const handleSearch = (value: string) => {
+    setSearch(value);
+    setCurrentPage(1);
+    debouncedFetch(buildParams({ search: value, skip: "0" }));
+  };
+
+  const handleFilterType = (value: string) => {
+    setFilterType(value);
+    setCurrentPage(1);
+    fetchData(buildParams({ invoice_type: value !== "all" ? value : "", skip: "0" }));
+  };
+
+  const handleFilterStatus = (value: string) => {
+    setFilterStatus(value);
+    setCurrentPage(1);
+    fetchData(buildParams({ efact_status: value !== "all" ? value : "", skip: "0" }));
   };
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
-    fetchInvoices(newPage, selectedTenantId);
+    fetchData(buildParams({ skip: String((newPage - 1) * ITEMS_PER_PAGE) }));
   };
 
   const prevTenantId = useRef(selectedTenantId);
@@ -93,24 +129,8 @@ export function SuperAdminInvoicesClient({
     if (prevTenantId.current === selectedTenantId) return;
     prevTenantId.current = selectedTenantId;
     setCurrentPage(1);
-    fetchInvoices(1, selectedTenantId);
+    fetchData({ skip: "0", limit: String(ITEMS_PER_PAGE), ...(selectedTenantId ? { tenant_id: String(selectedTenantId) } : {}) });
   }, [selectedTenantId]);
-
-  // Client-side filters on current page
-  const filteredInvoices = useMemo(() => invoices.filter((invoice) => {
-    if (search) {
-      const s = search.toLowerCase();
-      if (!(invoice.full_number?.toLowerCase().includes(s) ||
-            invoice.cliente_razon_social?.toLowerCase().includes(s) ||
-            invoice.cliente_numero_documento?.toLowerCase().includes(s))) return false;
-    }
-    if (filterType !== "all" && invoice.invoice_type !== filterType) return false;
-    if (filterStatus !== "all" && invoice.efact_status !== filterStatus) return false;
-    return true;
-  }), [invoices, search, filterType, filterStatus]);
-
-  const totalPages = Math.ceil(total / itemsPerPage);
-  const currentInvoices = filteredInvoices;
 
   const tenantMap = new Map(tenants.map((t) => [t.id, t.name]));
 
@@ -155,14 +175,13 @@ export function SuperAdminInvoicesClient({
             placeholder="Buscar por serie, cliente, RUC/DNI..."
             value={search}
             onChange={(e) => {
-              setSearch(e.target.value);
-              setCurrentPage(1);
+              handleSearch(e.target.value);
             }}
             className="pl-10"
           />
         </div>
 
-        <Select value={filterType} onValueChange={(v) => { setFilterType(v); setCurrentPage(1); }}>
+        <Select value={filterType} onValueChange={handleFilterType}>
           <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Tipo" />
           </SelectTrigger>
@@ -175,7 +194,7 @@ export function SuperAdminInvoicesClient({
           </SelectContent>
         </Select>
 
-        <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setCurrentPage(1); }}>
+        <Select value={filterStatus} onValueChange={handleFilterStatus}>
           <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Estado" />
           </SelectTrigger>
@@ -220,14 +239,14 @@ export function SuperAdminInvoicesClient({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {currentInvoices.length === 0 ? (
+              {filteredInvoices.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={selectedTenantId ? 8 : 9} className="text-center py-8 text-muted-foreground">
                     No se encontraron comprobantes
                   </TableCell>
                 </TableRow>
               ) : (
-                currentInvoices.map((invoice) => (
+                filteredInvoices.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-mono font-medium">
                       {invoice.full_number}
