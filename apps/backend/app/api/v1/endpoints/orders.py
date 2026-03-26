@@ -4,7 +4,7 @@ Order management endpoints.
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import (
@@ -136,7 +136,7 @@ async def list_orders(
     validado: bool | None = None,
     tenant_id: int | None = None,
     search: str | None = None,
-    status: str | None = None,
+    order_status: str | None = Query(None, alias="status"),
     channel: str | None = None,
     sort_by: str = "created_at",
     sort_order: str = "desc",
@@ -191,7 +191,7 @@ async def list_orders(
                 tenant_id=tenant_id,
                 validado=validado,
                 search=search,
-                status=status,
+                status=order_status,
                 channel=channel,
                 sort_by=sort_by,
                 sort_order=sort_order,
@@ -205,7 +205,7 @@ async def list_orders(
                 limit=limit,
                 validado=validado,
                 search=search,
-                status=status,
+                status=order_status,
                 channel=channel,
                 sort_by=sort_by,
                 sort_order=sort_order,
