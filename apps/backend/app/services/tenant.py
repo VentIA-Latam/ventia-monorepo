@@ -5,7 +5,7 @@ Tenant service - business logic for tenant management.
 import logging
 import secrets
 
-from sqlalchemy import func, or_
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -61,22 +61,9 @@ class TenantService:
         is_platform: bool | None = None,
     ) -> tuple[list[Tenant], int]:
         """Get all tenants with optional filters and pagination."""
-        query = db.query(Tenant)
-
-        if search:
-            pattern = f"%{search}%"
-            query = query.filter(or_(
-                Tenant.name.ilike(pattern),
-                Tenant.slug.ilike(pattern),
-            ))
-        if is_active is not None:
-            query = query.filter(Tenant.is_active == is_active)
-        if is_platform is not None:
-            query = query.filter(Tenant.is_platform == is_platform)
-
-        total = query.count()
-        tenants = query.order_by(Tenant.created_at.desc()).offset(skip).limit(limit).all()
-
+        filter_kwargs = dict(search=search, is_active=is_active, is_platform=is_platform)
+        tenants = tenant_repository.get_all(db, skip=skip, limit=limit, **filter_kwargs)
+        total = tenant_repository.count_all(db, **filter_kwargs)
         return tenants, total
 
     async def create_tenant(self, db: Session, tenant_in: TenantCreate) -> Tenant:
