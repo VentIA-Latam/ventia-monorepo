@@ -48,34 +48,36 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const isInitialMount = useRef(true);
-
-  // Server-side pagination + tenant filter
-  useEffect(() => {
-    if (isInitialMount.current) { isInitialMount.current = false; return () => { isInitialMount.current = true; }; }
-    let cancelled = false;
+  const fetchSeriesData = async (page: number, tenantId?: number | null) => {
     setLoading(true);
-    const skip = (currentPage - 1) * itemsPerPage;
-    let url = `/api/invoice-series?skip=${skip}&limit=${itemsPerPage}`;
-    if (selectedTenantId) url += `&tenant_id=${selectedTenantId}`;
-    fetch(url)
-      .then((r) => r.ok ? r.json() : Promise.reject("Error al cargar series"))
-      .then((data) => {
-        if (!cancelled) {
-          const items = Array.isArray(data) ? data : (data.items || []);
-          const t = Array.isArray(data) ? items.length : (data.total ?? 0);
-          setSeries(items);
-          setTotal(t);
-          setError(null);
-        }
-      })
-      .catch((err) => { if (!cancelled) setError(String(err)); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [currentPage, selectedTenantId]);
+    try {
+      const skip = (page - 1) * itemsPerPage;
+      let url = `/api/invoice-series?skip=${skip}&limit=${itemsPerPage}`;
+      if (tenantId) url += `&tenant_id=${tenantId}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Error al cargar series");
+      const data = await response.json();
+      const items = Array.isArray(data) ? data : (data.items || []);
+      const t = Array.isArray(data) ? items.length : (data.total ?? 0);
+      setSeries(items);
+      setTotal(t);
+      setError(null);
+    } catch (err) { setError(err instanceof Error ? err.message : String(err)); }
+    finally { setLoading(false); }
+  };
 
-  // Reset page on tenant change
-  useEffect(() => { setCurrentPage(1); }, [selectedTenantId]);
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    fetchSeriesData(newPage, selectedTenantId);
+  };
+
+  const prevTenantId = useRef(selectedTenantId);
+  useEffect(() => {
+    if (prevTenantId.current === selectedTenantId) return;
+    prevTenantId.current = selectedTenantId;
+    setCurrentPage(1);
+    fetchSeriesData(1, selectedTenantId);
+  }, [selectedTenantId]);
 
   // Client-side filtering for search/status
   const filteredSeries = useMemo(() => series.filter((s) => {
@@ -96,24 +98,7 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
     return tenant ? tenant.name : `Tenant #${tenantId}`;
   };
 
-  const loadSeries = async () => {
-    try {
-      const skip = (currentPage - 1) * itemsPerPage;
-      let url = `/api/invoice-series?skip=${skip}&limit=${itemsPerPage}`;
-      if (selectedTenantId) url += `&tenant_id=${selectedTenantId}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Error al cargar series");
-      const data = await response.json();
-      const items = Array.isArray(data) ? data : (data.items || []);
-      const t = Array.isArray(data) ? items.length : (data.total ?? 0);
-      setSeries(items);
-      setTotal(t);
-      setError(null);
-    } catch (err) {
-      console.error("Error loading series:", err);
-      setError(err instanceof Error ? err.message : "Error al cargar las series");
-    }
-  };
+  const loadSeries = () => fetchSeriesData(currentPage, selectedTenantId);
 
   const handleDelete = async (serieId: number) => {
     if (!confirm("¿Estás seguro de eliminar esta serie? Esta acción no se puede deshacer.")) {
@@ -272,10 +257,10 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">Página {currentPage} de {totalPages}</p>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}>
+            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => handlePageChange(Math.max(1, currentPage - 1))}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}>
+            <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>

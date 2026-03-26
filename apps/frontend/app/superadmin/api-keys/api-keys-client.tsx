@@ -42,44 +42,40 @@ export function ApiKeysClient({ initialApiKeys, initialTotal }: ApiKeysClientPro
   const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
   const [selectedApiKey, setSelectedApiKey] = useState<APIKey | null>(null);
 
-  const isInitialMount = useRef(true);
-
-  // Server-side pagination + tenant filter
-  useEffect(() => {
-    if (isInitialMount.current) { isInitialMount.current = false; return () => { isInitialMount.current = true; }; }
-    let cancelled = false;
+  const fetchApiKeysData = async (page: number, tenantId?: number | null, status?: string) => {
     setLoading(true);
-    const skip = (currentPage - 1) * itemsPerPage;
-    let url = `/api/superadmin/api-keys?skip=${skip}&limit=${itemsPerPage}`;
-    if (statusFilter !== "all") url += `&is_active=${statusFilter === "active"}`;
-    if (selectedTenantId) url += `&tenant_id=${selectedTenantId}`;
-
-    fetch(url)
-      .then((r) => r.ok ? r.json() : Promise.reject("Error fetching API keys"))
-      .then((data) => {
-        if (!cancelled) {
-          setApiKeys(data.items || []);
-          setTotal(data.total ?? 0);
-        }
-      })
-      .catch((err) => console.error("Error fetching API keys:", err))
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [currentPage, selectedTenantId, statusFilter]);
-
-  // Reset page on tenant/status change
-  useEffect(() => { setCurrentPage(1); }, [selectedTenantId, statusFilter]);
-
-  const refreshApiKeys = () => {
-    const skip = (currentPage - 1) * itemsPerPage;
-    let url = `/api/superadmin/api-keys?skip=${skip}&limit=${itemsPerPage}`;
-    if (statusFilter !== "all") url += `&is_active=${statusFilter === "active"}`;
-    if (selectedTenantId) url += `&tenant_id=${selectedTenantId}`;
-    fetch(url)
-      .then((r) => r.ok ? r.json() : Promise.reject("Error"))
-      .then((data) => { setApiKeys(data.items || []); setTotal(data.total ?? 0); })
-      .catch((err) => console.error(err));
+    try {
+      const skip = (page - 1) * itemsPerPage;
+      let url = `/api/superadmin/api-keys?skip=${skip}&limit=${itemsPerPage}`;
+      if (status && status !== "all") url += `&is_active=${status === "active"}`;
+      if (tenantId) url += `&tenant_id=${tenantId}`;
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        setApiKeys(data.items || []);
+        setTotal(data.total ?? 0);
+      }
+    } catch (err) { console.error("Error fetching API keys:", err); }
+    finally { setLoading(false); }
   };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    fetchApiKeysData(newPage, selectedTenantId, statusFilter);
+  };
+
+  const refreshApiKeys = () => fetchApiKeysData(currentPage, selectedTenantId, statusFilter);
+
+  // Tenant or status change — from context/select, not pagination click
+  const prevTenantId = useRef(selectedTenantId);
+  const prevStatusFilter = useRef(statusFilter);
+  useEffect(() => {
+    if (prevTenantId.current === selectedTenantId && prevStatusFilter.current === statusFilter) return;
+    prevTenantId.current = selectedTenantId;
+    prevStatusFilter.current = statusFilter;
+    setCurrentPage(1);
+    fetchApiKeysData(1, selectedTenantId, statusFilter);
+  }, [selectedTenantId, statusFilter]);
 
   const handleRevoke = (apiKey: APIKey) => {
     setSelectedApiKey(apiKey);
@@ -232,10 +228,10 @@ export function ApiKeysClient({ initialApiKeys, initialTotal }: ApiKeysClientPro
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">Página {currentPage} de {totalPages} ({total} resultados)</p>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}>
+            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => handlePageChange(Math.max(1, currentPage - 1))}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}>
+            <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>

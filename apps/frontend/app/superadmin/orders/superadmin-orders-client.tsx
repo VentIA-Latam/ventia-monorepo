@@ -41,26 +41,34 @@ export function SuperAdminOrdersClient({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Skip initial mount fetch — server already provided data
-  const isInitialMount = useRef(true);
-
-  // Refetch on page change or tenant change (server-side pagination)
-  useEffect(() => {
-    if (isInitialMount.current) { isInitialMount.current = false; return () => { isInitialMount.current = true; }; }
-    let cancelled = false;
+  // Fetch function — called by event handlers and tenant change effect
+  const fetchOrders = async (page: number, tenantId?: number | null) => {
     setLoading(true);
-    const skip = (currentPage - 1) * itemsPerPage;
-    const params: { skip: number; limit: number; tenant_id?: number } = { skip, limit: itemsPerPage };
-    if (selectedTenantId) params.tenant_id = selectedTenantId;
-    getOrdersByTenant(params)
-      .then((data) => { if (!cancelled) { setOrders(data.items); setTotal(data.total ?? 0); } })
-      .catch((err) => console.error("Error fetching orders:", err))
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [currentPage, selectedTenantId]);
+    try {
+      const skip = (page - 1) * itemsPerPage;
+      const params: { skip: number; limit: number; tenant_id?: number } = { skip, limit: itemsPerPage };
+      if (tenantId) params.tenant_id = tenantId;
+      const data = await getOrdersByTenant(params);
+      setOrders(data.items);
+      setTotal(data.total ?? 0);
+    } catch (err) { console.error("Error fetching orders:", err); }
+    finally { setLoading(false); }
+  };
 
-  // Reset page when tenant changes
-  useEffect(() => { setCurrentPage(1); }, [selectedTenantId]);
+  // Pagination — event handler (rerender-move-effect-to-event)
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    fetchOrders(newPage, selectedTenantId);
+  };
+
+  // Tenant change — only useEffect (comes from context, not a click)
+  const prevTenantId = useRef(selectedTenantId);
+  useEffect(() => {
+    if (prevTenantId.current === selectedTenantId) return; // Skip mount — SSR data is fresh
+    prevTenantId.current = selectedTenantId;
+    setCurrentPage(1);
+    fetchOrders(1, selectedTenantId);
+  }, [selectedTenantId]);
 
   // Client-side filters on current page items
   const filteredOrders = useMemo(() => orders.filter((order) => {
@@ -175,7 +183,7 @@ export function SuperAdminOrdersClient({
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
             >
               <ChevronLeft className="w-4 h-4" />
@@ -197,7 +205,7 @@ export function SuperAdminOrdersClient({
                   key={pageNum}
                   variant={currentPage === pageNum ? "default" : "outline"}
                   size="icon"
-                  onClick={() => setCurrentPage(pageNum)}
+                  onClick={() => handlePageChange(pageNum)}
                 >
                   {pageNum}
                 </Button>
@@ -207,7 +215,7 @@ export function SuperAdminOrdersClient({
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
             >
               <ChevronRight className="w-4 h-4" />

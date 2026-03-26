@@ -70,25 +70,31 @@ export function SuperAdminInvoicesClient({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const isInitialMount = useRef(true);
-
-  // Server-side pagination + tenant filter
-  useEffect(() => {
-    if (isInitialMount.current) { isInitialMount.current = false; return () => { isInitialMount.current = true; }; }
-    let cancelled = false;
+  const fetchInvoices = async (page: number, tenantId?: number | null) => {
     setLoading(true);
-    const skip = (currentPage - 1) * itemsPerPage;
-    const params: { skip: number; limit: number; tenant_id?: number } = { skip, limit: itemsPerPage };
-    if (selectedTenantId) params.tenant_id = selectedTenantId;
-    getInvoicesByTenant(params)
-      .then((data) => { if (!cancelled) { setInvoices(data.items); setTotal(data.total ?? 0); } })
-      .catch((err) => console.error("Error fetching invoices:", err))
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [currentPage, selectedTenantId]);
+    try {
+      const skip = (page - 1) * itemsPerPage;
+      const params: { skip: number; limit: number; tenant_id?: number } = { skip, limit: itemsPerPage };
+      if (tenantId) params.tenant_id = tenantId;
+      const data = await getInvoicesByTenant(params);
+      setInvoices(data.items);
+      setTotal(data.total ?? 0);
+    } catch (err) { console.error("Error fetching invoices:", err); }
+    finally { setLoading(false); }
+  };
 
-  // Reset page on tenant change
-  useEffect(() => { setCurrentPage(1); }, [selectedTenantId]);
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    fetchInvoices(newPage, selectedTenantId);
+  };
+
+  const prevTenantId = useRef(selectedTenantId);
+  useEffect(() => {
+    if (prevTenantId.current === selectedTenantId) return;
+    prevTenantId.current = selectedTenantId;
+    setCurrentPage(1);
+    fetchInvoices(1, selectedTenantId);
+  }, [selectedTenantId]);
 
   // Client-side filters on current page
   const filteredInvoices = useMemo(() => invoices.filter((invoice) => {
@@ -206,7 +212,7 @@ export function SuperAdminInvoicesClient({
                 <TableHead>Tipo</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Documento</TableHead>
-                {!selectedTenantId && <TableHead>Empresa</TableHead>}
+                {selectedTenantId === null ? <TableHead>Empresa</TableHead> : null}
                 <TableHead className="text-right">Monto</TableHead>
                 <TableHead>Fecha</TableHead>
                 <TableHead>Estado</TableHead>
@@ -237,11 +243,11 @@ export function SuperAdminInvoicesClient({
                     <TableCell>
                       {invoice.cliente_numero_documento || <span className="text-muted-foreground">-</span>}
                     </TableCell>
-                    {!selectedTenantId && (
+                    {selectedTenantId === null ? (
                       <TableCell className="text-sm text-muted-foreground">
                         {tenantMap.get(invoice.tenant_id) || `Tenant ${invoice.tenant_id}`}
                       </TableCell>
-                    )}
+                    ) : null}
                     <TableCell className="text-right font-medium">
                       {invoice.currency} {invoice.total.toFixed(2)}
                     </TableCell>
@@ -312,7 +318,7 @@ export function SuperAdminInvoicesClient({
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
             >
               <ChevronLeft className="w-4 h-4" />
@@ -334,7 +340,7 @@ export function SuperAdminInvoicesClient({
                   key={pageNum}
                   variant={currentPage === pageNum ? "default" : "outline"}
                   size="icon"
-                  onClick={() => setCurrentPage(pageNum)}
+                  onClick={() => handlePageChange(pageNum)}
                 >
                   {pageNum}
                 </Button>
@@ -344,7 +350,7 @@ export function SuperAdminInvoicesClient({
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
             >
               <ChevronRight className="w-4 h-4" />
