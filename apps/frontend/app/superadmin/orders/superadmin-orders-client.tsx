@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useServerTable } from "@/lib/hooks/use-server-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -31,61 +32,77 @@ export function SuperAdminOrdersClient({
   initialOrders,
   initialTotal,
 }: SuperAdminOrdersClientProps) {
+  const ITEMS_PER_PAGE = 10;
   const { selectedTenantId, tenants } = useTenant();
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
-  const [total, setTotal] = useState(initialTotal);
-  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("all");
   const [channel, setChannel] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
-  // Fetch function — called by event handlers and tenant change effect
-  const fetchOrders = async (page: number, tenantId?: number | null) => {
-    setLoading(true);
-    try {
-      const skip = (page - 1) * itemsPerPage;
-      const params: { skip: number; limit: number; tenant_id?: number } = { skip, limit: itemsPerPage };
-      if (tenantId) params.tenant_id = tenantId;
-      const data = await getOrdersByTenant(params);
-      setOrders(data.items);
-      setTotal(data.total ?? 0);
-    } catch (err) { console.error("Error fetching orders:", err); }
-    finally { setLoading(false); }
+  const fetchOrdersFromApi = useCallback(async (params: Record<string, string>, signal: AbortSignal) => {
+    const res = await fetch(`/api/orders?${new URLSearchParams(params)}`, { signal });
+    if (!res.ok) throw new Error("Failed to fetch orders");
+    return res.json();
+  }, []);
+
+  const { items: filteredOrders, total, loading, isStale, fetchData, debouncedFetch } = useServerTable<Order>({
+    initialItems: initialOrders,
+    initialTotal,
+    fetchFn: fetchOrdersFromApi,
+  });
+
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+
+  const buildParams = useCallback(
+    (overrides: Record<string, string> = {}) => {
+      const p: Record<string, string> = {
+        skip: String((currentPage - 1) * ITEMS_PER_PAGE),
+        limit: String(ITEMS_PER_PAGE),
+        ...overrides,
+      };
+      if (selectedTenantId) p.tenant_id = String(selectedTenantId);
+      const s = overrides.search ?? search;
+      const st = overrides.status ?? (paymentStatus !== "all" ? paymentStatus : "");
+      const ch = overrides.channel ?? (channel !== "all" ? channel : "");
+      if (s) p.search = s;
+      if (st) p.status = st;
+      if (ch) p.channel = ch;
+      return p;
+    },
+    [currentPage, search, paymentStatus, channel, selectedTenantId]
+  );
+
+  const handleSearch = (value: string) => {
+    setSearch(value);
+    setCurrentPage(1);
+    debouncedFetch(buildParams({ search: value, skip: "0" }));
   };
 
-  // Pagination — event handler (rerender-move-effect-to-event)
+  const handlePaymentStatus = (value: string) => {
+    setPaymentStatus(value);
+    setCurrentPage(1);
+    fetchData(buildParams({ status: value !== "all" ? value : "", skip: "0" }));
+  };
+
+  const handleChannel = (value: string) => {
+    setChannel(value);
+    setCurrentPage(1);
+    fetchData(buildParams({ channel: value !== "all" ? value : "", skip: "0" }));
+  };
+
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
-    fetchOrders(newPage, selectedTenantId);
+    fetchData(buildParams({ skip: String((newPage - 1) * ITEMS_PER_PAGE) }));
   };
 
   // Tenant change — only useEffect (comes from context, not a click)
   const prevTenantId = useRef(selectedTenantId);
   useEffect(() => {
-    if (prevTenantId.current === selectedTenantId) return; // Skip mount — SSR data is fresh
+    if (prevTenantId.current === selectedTenantId) return;
     prevTenantId.current = selectedTenantId;
     setCurrentPage(1);
-    fetchOrders(1, selectedTenantId);
+    fetchData({ skip: "0", limit: String(ITEMS_PER_PAGE), ...(selectedTenantId ? { tenant_id: String(selectedTenantId) } : {}) });
   }, [selectedTenantId]);
-
-  // Client-side filters on current page items
-  const filteredOrders = useMemo(() => orders.filter((order) => {
-    if (search) {
-      const s = search.toLowerCase();
-      if (!(order.shopify_draft_order_id?.toLowerCase().includes(s) ||
-            order.shopify_order_id?.toLowerCase().includes(s) ||
-            order.woocommerce_order_id?.toString().includes(s) ||
-            order.customer_name?.toLowerCase().includes(s) ||
-            order.customer_email?.toLowerCase().includes(s))) return false;
-    }
-    if (paymentStatus !== "all" && order.status !== paymentStatus) return false;
-    if (channel !== "all" && order.channel !== channel) return false;
-    return true;
-  }), [orders, search, paymentStatus, channel]);
-
-  const totalPages = Math.ceil(total / itemsPerPage);
 
   // Build tenant name map for display
   const tenantMap = new Map(tenants.map((t) => [t.id, t.name]));
@@ -99,15 +116,12 @@ export function SuperAdminOrdersClient({
           <Input
             placeholder="Buscar por ID de pedido o cliente..."
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={(e) => handleSearch(e.target.value)}
             className="pl-10"
           />
         </div>
 
-        <Select value={paymentStatus} onValueChange={(v) => { setPaymentStatus(v); setCurrentPage(1); }}>
+        <Select value={paymentStatus} onValueChange={handlePaymentStatus}>
           <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Estado de Pago" />
           </SelectTrigger>
@@ -119,7 +133,7 @@ export function SuperAdminOrdersClient({
           </SelectContent>
         </Select>
 
-        <Select value={channel} onValueChange={(v) => { setChannel(v); setCurrentPage(1); }}>
+        <Select value={channel} onValueChange={handleChannel}>
           <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Canal" />
           </SelectTrigger>
@@ -141,7 +155,8 @@ export function SuperAdminOrdersClient({
       </p>
 
       {/* Table */}
-      {loading ? (
+      <div className={isStale ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
+      {loading && !isStale ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           <span className="ml-2 text-muted-foreground">Cargando pedidos...</span>
@@ -172,6 +187,8 @@ export function SuperAdminOrdersClient({
       ) : (
         <OrdersTable orders={filteredOrders} basePath="/superadmin" />
       )}
+
+      </div>
 
       {/* Pagination */}
       {totalPages > 1 ? (
