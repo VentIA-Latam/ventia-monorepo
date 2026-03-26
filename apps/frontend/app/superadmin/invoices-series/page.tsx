@@ -20,7 +20,7 @@ async function fetchInvoiceSeries(): Promise<InvoiceSerie[]> {
       return [];
     }
 
-    const response = await fetch(`${API_BASE_URL}/invoice-series`, {
+    const response = await fetch(`${API_BASE_URL}/invoice-series?limit=10`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

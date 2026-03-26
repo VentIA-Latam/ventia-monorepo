@@ -5,11 +5,12 @@ export const dynamic = "force-dynamic";
 
 export default async function SuperAdminInvoicesPage() {
   try {
-    const invoicesData = await fetchInvoicesFull({ limit: 100 });
+    const invoicesData = await fetchInvoicesFull({ limit: 10 });
 
     return (
       <SuperAdminInvoicesClient
         initialInvoices={invoicesData.items}
+        initialTotal={invoicesData.total ?? 0}
       />
     );
   } catch (error) {

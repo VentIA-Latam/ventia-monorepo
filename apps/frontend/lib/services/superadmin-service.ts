@@ -147,3 +147,13 @@ export async function fetchInvoicesFull(params?: {
 }): Promise<{ items: import("@/lib/types/invoice").Invoice[]; total: number }> {
   return fetchWithAuth("/invoices", params as Record<string, number>);
 }
+
+// ==================== API KEYS ====================
+
+export async function fetchApiKeys(params?: {
+  skip?: number;
+  limit?: number;
+  tenant_id?: number;
+}): Promise<{ items: import("@/lib/types/api-key").APIKey[]; total: number }> {
+  return fetchWithAuth("/api-keys", params as Record<string, number>);
+}

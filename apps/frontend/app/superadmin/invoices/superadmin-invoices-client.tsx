@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -52,14 +52,17 @@ import Link from "next/link";
 
 interface SuperAdminInvoicesClientProps {
   initialInvoices: Invoice[];
+  initialTotal: number;
 }
 
 export function SuperAdminInvoicesClient({
   initialInvoices,
+  initialTotal,
 }: SuperAdminInvoicesClientProps) {
   const { toast } = useToast();
   const { selectedTenantId, tenants } = useTenant();
   const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
+  const [total, setTotal] = useState(initialTotal);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
@@ -67,36 +70,38 @@ export function SuperAdminInvoicesClient({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // Server-side pagination + tenant filter
   useEffect(() => {
     let cancelled = false;
-    setCurrentPage(1);
     setLoading(true);
-    getInvoicesByTenant(selectedTenantId ?? undefined, 100)
-      .then((data) => { if (!cancelled) setInvoices(data.items); })
+    const skip = (currentPage - 1) * itemsPerPage;
+    const params: { skip: number; limit: number; tenant_id?: number } = { skip, limit: itemsPerPage };
+    if (selectedTenantId) params.tenant_id = selectedTenantId;
+    getInvoicesByTenant(params)
+      .then((data) => { if (!cancelled) { setInvoices(data.items); setTotal(data.total ?? 0); } })
       .catch((err) => console.error("Error fetching invoices:", err))
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [selectedTenantId]);
+  }, [currentPage, selectedTenantId]);
 
-  const filteredInvoices = invoices.filter((invoice) => {
-    const matchesSearch =
-      !search ||
-      invoice.full_number.toLowerCase().includes(search.toLowerCase()) ||
-      invoice.cliente_razon_social?.toLowerCase().includes(search.toLowerCase()) ||
-      invoice.cliente_numero_documento?.toLowerCase().includes(search.toLowerCase());
+  // Reset page on tenant change
+  useEffect(() => { setCurrentPage(1); }, [selectedTenantId]);
 
-    const matchesType =
-      filterType === "all" || invoice.invoice_type === filterType;
+  // Client-side filters on current page
+  const filteredInvoices = useMemo(() => invoices.filter((invoice) => {
+    if (search) {
+      const s = search.toLowerCase();
+      if (!(invoice.full_number?.toLowerCase().includes(s) ||
+            invoice.cliente_razon_social?.toLowerCase().includes(s) ||
+            invoice.cliente_numero_documento?.toLowerCase().includes(s))) return false;
+    }
+    if (filterType !== "all" && invoice.invoice_type !== filterType) return false;
+    if (filterStatus !== "all" && invoice.efact_status !== filterStatus) return false;
+    return true;
+  }), [invoices, search, filterType, filterStatus]);
 
-    const matchesStatus =
-      filterStatus === "all" || invoice.efact_status === filterStatus;
-
-    return matchesSearch && matchesType && matchesStatus;
-  });
-
-  const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentInvoices = filteredInvoices.slice(startIndex, startIndex + itemsPerPage);
+  const totalPages = Math.ceil(total / itemsPerPage);
+  const currentInvoices = filteredInvoices;
 
   const tenantMap = new Map(tenants.map((t) => [t.id, t.name]));
 
@@ -178,9 +183,9 @@ export function SuperAdminInvoicesClient({
       {/* Results count */}
       <p className="text-sm text-muted-foreground">
         Mostrando <span className="font-semibold">{filteredInvoices.length}</span> comprobantes
-        {selectedTenantId && tenantMap.get(selectedTenantId) && (
+        {selectedTenantId !== null && tenantMap.has(selectedTenantId) ? (
           <> de <span className="font-semibold">{tenantMap.get(selectedTenantId)}</span></>
-        )}
+        ) : null}
       </p>
 
       {/* Table */}
@@ -267,7 +272,7 @@ export function SuperAdminInvoicesClient({
                               Ver detalles
                             </DropdownMenuItem>
                           </Link>
-                          {invoice.efact_status === "success" && (
+                          {invoice.efact_status === "success" ? (
                             <>
                               <DropdownMenuItem
                                 onClick={() => handleDownloadPDF(invoice.id, invoice.full_number)}
@@ -282,7 +287,7 @@ export function SuperAdminInvoicesClient({
                                 Descargar XML
                               </DropdownMenuItem>
                             </>
-                          )}
+                          ) : null}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -295,10 +300,10 @@ export function SuperAdminInvoicesClient({
       )}
 
       {/* Pagination */}
-      {!loading && filteredInvoices.length > itemsPerPage && (
+      {totalPages > 1 ? (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Mostrando {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredInvoices.length)} de {filteredInvoices.length}
+            Página {currentPage} de {totalPages} ({total} resultados)
           </p>
           <div className="flex items-center gap-2">
             <Button
@@ -343,7 +348,7 @@ export function SuperAdminInvoicesClient({
             </Button>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

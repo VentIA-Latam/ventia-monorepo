@@ -41,25 +41,38 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedSerie, setSelectedSerie] = useState<InvoiceSerie | null>(null);
 
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Refetch when global tenant changes
+  // Server-side pagination + tenant filter
   useEffect(() => {
     let cancelled = false;
-    setCurrentPage(1);
     setLoading(true);
-    const url = selectedTenantId ? `/api/invoice-series?tenant_id=${selectedTenantId}` : "/api/invoice-series";
+    const skip = (currentPage - 1) * itemsPerPage;
+    let url = `/api/invoice-series?skip=${skip}&limit=${itemsPerPage}`;
+    if (selectedTenantId) url += `&tenant_id=${selectedTenantId}`;
     fetch(url)
       .then((r) => r.ok ? r.json() : Promise.reject("Error al cargar series"))
-      .then((data) => { if (!cancelled) { setSeries(data); setError(null); } })
+      .then((data) => {
+        if (!cancelled) {
+          const items = Array.isArray(data) ? data : (data.items || []);
+          const t = Array.isArray(data) ? items.length : (data.total ?? 0);
+          setSeries(items);
+          setTotal(t);
+          setError(null);
+        }
+      })
       .catch((err) => { if (!cancelled) setError(String(err)); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [selectedTenantId]);
+  }, [currentPage, selectedTenantId]);
+
+  // Reset page on tenant change
+  useEffect(() => { setCurrentPage(1); }, [selectedTenantId]);
 
   // Client-side filtering for search/status
   const filteredSeries = useMemo(() => series.filter((s) => {
@@ -72,8 +85,8 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
     return true;
   }), [series, search, statusFilter]);
 
-  const totalPages = Math.ceil(filteredSeries.length / itemsPerPage);
-  const currentSeries = filteredSeries.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(total / itemsPerPage);
+  const currentSeries = filteredSeries;
 
   const getTenantName = (tenantId: number): string => {
     const tenant = tenants.find((t) => t.id === tenantId);
@@ -82,11 +95,16 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
 
   const loadSeries = async () => {
     try {
-      const url = selectedTenantId ? `/api/invoice-series?tenant_id=${selectedTenantId}` : "/api/invoice-series";
+      const skip = (currentPage - 1) * itemsPerPage;
+      let url = `/api/invoice-series?skip=${skip}&limit=${itemsPerPage}`;
+      if (selectedTenantId) url += `&tenant_id=${selectedTenantId}`;
       const response = await fetch(url);
       if (!response.ok) throw new Error("Error al cargar series");
       const data = await response.json();
-      setSeries(data);
+      const items = Array.isArray(data) ? data : (data.items || []);
+      const t = Array.isArray(data) ? items.length : (data.total ?? 0);
+      setSeries(items);
+      setTotal(t);
       setError(null);
     } catch (err) {
       console.error("Error loading series:", err);
@@ -251,10 +269,10 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">Página {currentPage} de {totalPages}</p>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}>
+            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)}>
+            <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>

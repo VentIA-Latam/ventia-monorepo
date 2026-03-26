@@ -180,25 +180,29 @@ export async function getGlobalOrders(limit: number = 20): Promise<GlobalOrder[]
  * Obtener orders filtradas por tenant (full Order type for OrdersTable)
  * GET /api/superadmin/global-orders?tenant_id=X
  */
-export async function getOrdersByTenant(tenantId?: number, limit: number = 100): Promise<OrderListResponse> {
-  const params: Record<string, number> = { limit };
-  if (tenantId) params.tenant_id = tenantId;
+export async function getOrdersByTenant(params?: {
+  skip?: number;
+  limit?: number;
+  tenant_id?: number;
+}): Promise<OrderListResponse> {
   return apiGet<OrderListResponse>(
     '/api/superadmin/global-orders',
-    params
+    params as Record<string, number>
   );
 }
 
 /**
  * Obtener invoices filtradas por tenant
- * GET /api/superadmin/invoices?tenant_id=X
+ * GET /api/superadmin/invoices?tenant_id=X&skip=0&limit=10
  */
-export async function getInvoicesByTenant(tenantId?: number, limit: number = 100): Promise<InvoiceListResponse> {
-  const params: Record<string, number> = { limit };
-  if (tenantId) params.tenant_id = tenantId;
+export async function getInvoicesByTenant(params?: {
+  skip?: number;
+  limit?: number;
+  tenant_id?: number;
+}): Promise<InvoiceListResponse> {
   return apiGet<InvoiceListResponse>(
     '/api/superadmin/invoices',
-    params
+    params as Record<string, number>
   );
 }
 

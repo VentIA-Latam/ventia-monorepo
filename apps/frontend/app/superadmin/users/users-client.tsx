@@ -36,10 +36,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ToggleUserStatusDialog } from "@/components/superadmin/toggle-user-status-dialog";
 
-export function UsersClient({ initialUsers, tenants }: { initialUsers: User[], tenants: Tenant[] }) {
+export function UsersClient({ initialUsers, initialTotal, tenants }: { initialUsers: User[], initialTotal: number, tenants: Tenant[] }) {
   const router = useRouter();
   const { selectedTenantId } = useTenant();
   const [users, setUsers] = useState<User[]>(initialUsers);
+  const [total, setTotal] = useState(initialTotal);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -47,21 +48,24 @@ export function UsersClient({ initialUsers, tenants }: { initialUsers: User[], t
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Refetch when global tenant changes (server-side filtering)
+  // Server-side pagination + tenant filter
   useEffect(() => {
     let cancelled = false;
-    setCurrentPage(1);
     setLoading(true);
-    const params: { limit: number; tenant_id?: number } = { limit: 100 };
+    const skip = (currentPage - 1) * itemsPerPage;
+    const params: { skip: number; limit: number; tenant_id?: number } = { skip, limit: itemsPerPage };
     if (selectedTenantId) params.tenant_id = selectedTenantId;
     getUsers(params)
-      .then((data) => { if (!cancelled) setUsers(data.items || []); })
+      .then((data) => { if (!cancelled) { setUsers(data.items || []); setTotal(data.total ?? 0); } })
       .catch((err) => console.error("Error fetching users:", err))
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [selectedTenantId]);
+  }, [currentPage, selectedTenantId]);
 
-  // Client-side filtering for search/role/status (on already tenant-filtered data)
+  // Reset page on tenant change
+  useEffect(() => { setCurrentPage(1); }, [selectedTenantId]);
+
+  // Client-side filtering for search/role/status
   const filteredUsers = useMemo(() => users.filter((u) => {
     if (search) {
       const s = search.toLowerCase();
@@ -73,8 +77,7 @@ export function UsersClient({ initialUsers, tenants }: { initialUsers: User[], t
     return true;
   }), [users, search, roleFilter, statusFilter]);
 
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
-  const currentUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(total / itemsPerPage);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [toggleStatusDialogOpen, setToggleStatusDialogOpen] = useState(false);
@@ -84,10 +87,12 @@ export function UsersClient({ initialUsers, tenants }: { initialUsers: User[], t
 
   const refreshUsers = async () => {
     try {
-      const params: { limit: number; tenant_id?: number } = { limit: 100 };
+      const skip = (currentPage - 1) * itemsPerPage;
+      const params: { skip: number; limit: number; tenant_id?: number } = { skip, limit: itemsPerPage };
       if (selectedTenantId) params.tenant_id = selectedTenantId;
       const data = await getUsers(params);
       setUsers(data.items || []);
+      setTotal(data.total ?? 0);
     } catch {
       // handle error
     }
@@ -156,7 +161,7 @@ export function UsersClient({ initialUsers, tenants }: { initialUsers: User[], t
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           <span className="ml-2 text-muted-foreground">Cargando usuarios...</span>
         </div>
-      ) : currentUsers.length === 0 ? (
+      ) : filteredUsers.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12">
           <Users className="h-10 w-10 text-muted-foreground mb-3" />
           <p className="text-sm text-muted-foreground">No se encontraron usuarios</p>
@@ -175,7 +180,7 @@ export function UsersClient({ initialUsers, tenants }: { initialUsers: User[], t
               </TableRow>
             </TableHeader>
             <TableBody>
-              {currentUsers.map((user) => (
+              {filteredUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell className="text-muted-foreground">{user.email}</TableCell>
@@ -236,10 +241,10 @@ export function UsersClient({ initialUsers, tenants }: { initialUsers: User[], t
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">Página {currentPage} de {totalPages}</p>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}>
+            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)}>
+            <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>

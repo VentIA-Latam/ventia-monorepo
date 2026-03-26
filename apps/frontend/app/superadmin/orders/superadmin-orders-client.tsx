@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,13 +24,16 @@ import {
 
 interface SuperAdminOrdersClientProps {
   initialOrders: Order[];
+  initialTotal: number;
 }
 
 export function SuperAdminOrdersClient({
   initialOrders,
+  initialTotal,
 }: SuperAdminOrdersClientProps) {
   const { selectedTenantId, tenants } = useTenant();
   const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [total, setTotal] = useState(initialTotal);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("all");
@@ -38,40 +41,39 @@ export function SuperAdminOrdersClient({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Refetch when global tenant changes (rerender-dependencies: primitive number)
+  // Refetch on page change or tenant change (server-side pagination)
   useEffect(() => {
     let cancelled = false;
-    setCurrentPage(1);
     setLoading(true);
-    getOrdersByTenant(selectedTenantId ?? undefined, 100)
-      .then((data) => { if (!cancelled) setOrders(data.items); })
+    const skip = (currentPage - 1) * itemsPerPage;
+    const params: { skip: number; limit: number; tenant_id?: number } = { skip, limit: itemsPerPage };
+    if (selectedTenantId) params.tenant_id = selectedTenantId;
+    getOrdersByTenant(params)
+      .then((data) => { if (!cancelled) { setOrders(data.items); setTotal(data.total ?? 0); } })
       .catch((err) => console.error("Error fetching orders:", err))
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [selectedTenantId]);
+  }, [currentPage, selectedTenantId]);
 
-  // Filter orders client-side
-  const filteredOrders = orders.filter((order) => {
-    const matchesSearch =
-      !search ||
-      order.shopify_draft_order_id?.toLowerCase().includes(search.toLowerCase()) ||
-      order.shopify_order_id?.toLowerCase().includes(search.toLowerCase()) ||
-      order.woocommerce_order_id?.toString().includes(search) ||
-      order.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
-      order.customer_email.toLowerCase().includes(search.toLowerCase());
+  // Reset page when tenant changes
+  useEffect(() => { setCurrentPage(1); }, [selectedTenantId]);
 
-    const matchesPayment =
-      paymentStatus === "all" || order.status === paymentStatus;
+  // Client-side filters on current page items
+  const filteredOrders = useMemo(() => orders.filter((order) => {
+    if (search) {
+      const s = search.toLowerCase();
+      if (!(order.shopify_draft_order_id?.toLowerCase().includes(s) ||
+            order.shopify_order_id?.toLowerCase().includes(s) ||
+            order.woocommerce_order_id?.toString().includes(s) ||
+            order.customer_name?.toLowerCase().includes(s) ||
+            order.customer_email?.toLowerCase().includes(s))) return false;
+    }
+    if (paymentStatus !== "all" && order.status !== paymentStatus) return false;
+    if (channel !== "all" && order.channel !== channel) return false;
+    return true;
+  }), [orders, search, paymentStatus, channel]);
 
-    const matchesChannel =
-      channel === "all" || order.channel === channel;
-
-    return matchesSearch && matchesPayment && matchesChannel;
-  });
-
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentOrders = filteredOrders.slice(startIndex, startIndex + itemsPerPage);
+  const totalPages = Math.ceil(total / itemsPerPage);
 
   // Build tenant name map for display
   const tenantMap = new Map(tenants.map((t) => [t.id, t.name]));
@@ -121,7 +123,7 @@ export function SuperAdminOrdersClient({
       {/* Results count */}
       <p className="text-sm text-muted-foreground">
         Mostrando <span className="font-semibold">{filteredOrders.length}</span> pedidos
-        {selectedTenantId && tenantMap.get(selectedTenantId) ? (
+        {selectedTenantId !== null && tenantMap.has(selectedTenantId) ? (
           <> de <span className="font-semibold">{tenantMap.get(selectedTenantId)}</span></>
         ) : null}
       </p>
@@ -156,14 +158,14 @@ export function SuperAdminOrdersClient({
           }
         />
       ) : (
-        <OrdersTable orders={currentOrders} basePath="/superadmin" />
+        <OrdersTable orders={filteredOrders} basePath="/superadmin" />
       )}
 
       {/* Pagination */}
-      {!loading && filteredOrders.length > 0 && (
+      {totalPages > 1 ? (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Mostrando {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredOrders.length)} de {filteredOrders.length} resultados
+            Página {currentPage} de {totalPages} ({total} resultados)
           </p>
           <div className="flex items-center gap-2">
             <Button
@@ -208,7 +210,7 @@ export function SuperAdminOrdersClient({
             </Button>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
