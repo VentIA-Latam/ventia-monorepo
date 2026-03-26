@@ -37,7 +37,7 @@ export function useServerTable<T>({
       abortRef.current = controller;
 
       // Keep previous data visible during loading
-      setPrevData((prev) => prev ?? items);
+      setItems((current) => { setPrevData((prev) => prev ?? current); return current; });
       setLoading(true);
 
       try {
@@ -46,7 +46,6 @@ export function useServerTable<T>({
         setItems(data.items);
         setTotal(data.total ?? 0);
       } catch (err) {
-        // Ignore aborted requests
         if (err instanceof DOMException && err.name === "AbortError") return;
         console.error("Fetch error:", err);
         setPrevData(null);
@@ -54,7 +53,7 @@ export function useServerTable<T>({
         if (!controller.signal.aborted) setLoading(false);
       }
     },
-    [fetchFn, items]
+    [fetchFn]
   );
 
   const debouncedFetch = useCallback(

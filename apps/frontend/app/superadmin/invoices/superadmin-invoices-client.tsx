@@ -28,7 +28,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getInvoicesByTenant } from "@/lib/api-client/superadmin";
 import { useTenant } from "@/lib/context/tenant-context";
 import { formatDate } from "@/lib/utils";
 import type { Invoice } from "@/lib/types/invoice";
@@ -217,7 +216,8 @@ export function SuperAdminInvoicesClient({
       </p>
 
       {/* Table */}
-      {loading ? (
+      <div className={isStale ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
+      {loading && !isStale ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           <span className="ml-2 text-muted-foreground">Cargando comprobantes...</span>
@@ -326,6 +326,8 @@ export function SuperAdminInvoicesClient({
           </Table>
         </div>
       )}
+
+      </div>
 
       {/* Pagination */}
       {totalPages > 1 ? (

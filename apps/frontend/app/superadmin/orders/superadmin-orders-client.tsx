@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/select";
 import { OrdersTable } from "@/components/dashboard/orders/orders-table";
 import { EmptyState } from "@/components/ui/empty-state";
-import { getOrdersByTenant } from "@/lib/api-client/superadmin";
 import { useTenant } from "@/lib/context/tenant-context";
 import type { Order } from "@/lib/services/order-service";
 import {
@@ -178,6 +177,8 @@ export function SuperAdminOrdersClient({
                 setSearch("");
                 setPaymentStatus("all");
                 setChannel("all");
+                setCurrentPage(1);
+                fetchData({ skip: "0", limit: String(ITEMS_PER_PAGE), ...(selectedTenantId ? { tenant_id: String(selectedTenantId) } : {}) });
               }}
             >
               Limpiar filtros
