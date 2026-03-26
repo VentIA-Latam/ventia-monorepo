@@ -52,7 +52,7 @@ export function UsersClient({ initialUsers, initialTotal, tenants }: { initialUs
 
   // Server-side pagination + tenant filter
   useEffect(() => {
-    if (isInitialMount.current) { isInitialMount.current = false; return; }
+    if (isInitialMount.current) { isInitialMount.current = false; return () => { isInitialMount.current = true; }; }
     let cancelled = false;
     setLoading(true);
     const skip = (currentPage - 1) * itemsPerPage;

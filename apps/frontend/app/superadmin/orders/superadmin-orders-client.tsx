@@ -46,7 +46,7 @@ export function SuperAdminOrdersClient({
 
   // Refetch on page change or tenant change (server-side pagination)
   useEffect(() => {
-    if (isInitialMount.current) { isInitialMount.current = false; return; }
+    if (isInitialMount.current) { isInitialMount.current = false; return () => { isInitialMount.current = true; }; }
     let cancelled = false;
     setLoading(true);
     const skip = (currentPage - 1) * itemsPerPage;
