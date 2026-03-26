@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -70,8 +70,11 @@ export function SuperAdminInvoicesClient({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  const isInitialMount = useRef(true);
+
   // Server-side pagination + tenant filter
   useEffect(() => {
+    if (isInitialMount.current) { isInitialMount.current = false; return; }
     let cancelled = false;
     setLoading(true);
     const skip = (currentPage - 1) * itemsPerPage;

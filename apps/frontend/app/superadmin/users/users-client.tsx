@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Users, Plus, Eye, Power, MoreHorizontal, Edit, CheckCircle, XCircle, Search, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -48,8 +48,11 @@ export function UsersClient({ initialUsers, initialTotal, tenants }: { initialUs
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  const isInitialMount = useRef(true);
+
   // Server-side pagination + tenant filter
   useEffect(() => {
+    if (isInitialMount.current) { isInitialMount.current = false; return; }
     let cancelled = false;
     setLoading(true);
     const skip = (currentPage - 1) * itemsPerPage;

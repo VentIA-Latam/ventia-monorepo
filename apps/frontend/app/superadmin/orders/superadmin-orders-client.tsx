@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -41,8 +41,12 @@ export function SuperAdminOrdersClient({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // Skip initial mount fetch — server already provided data
+  const isInitialMount = useRef(true);
+
   // Refetch on page change or tenant change (server-side pagination)
   useEffect(() => {
+    if (isInitialMount.current) { isInitialMount.current = false; return; }
     let cancelled = false;
     setLoading(true);
     const skip = (currentPage - 1) * itemsPerPage;

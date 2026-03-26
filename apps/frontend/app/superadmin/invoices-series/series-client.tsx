@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useTenant } from "@/lib/context/tenant-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,8 +48,11 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  const isInitialMount = useRef(true);
+
   // Server-side pagination + tenant filter
   useEffect(() => {
+    if (isInitialMount.current) { isInitialMount.current = false; return; }
     let cancelled = false;
     setLoading(true);
     const skip = (currentPage - 1) * itemsPerPage;

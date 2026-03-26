@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { Key, Plus, Search, MoreHorizontal, Trash2, CheckCircle, XCircle, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,8 +42,11 @@ export function ApiKeysClient({ initialApiKeys, initialTotal }: ApiKeysClientPro
   const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
   const [selectedApiKey, setSelectedApiKey] = useState<APIKey | null>(null);
 
+  const isInitialMount = useRef(true);
+
   // Server-side pagination + tenant filter
   useEffect(() => {
+    if (isInitialMount.current) { isInitialMount.current = false; return; }
     let cancelled = false;
     setLoading(true);
     const skip = (currentPage - 1) * itemsPerPage;
