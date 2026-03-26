@@ -3,7 +3,7 @@ import { getAccessToken } from "@/lib/auth0";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const accessToken = await getAccessToken();
 
@@ -14,7 +14,17 @@ export async function GET() {
       );
     }
 
-    const response = await fetch(`${API_BASE_URL}/invoice-series`, {
+    const { searchParams } = new URL(request.url);
+    const backendParams = new URLSearchParams();
+    const skip = searchParams.get("skip");
+    const limit = searchParams.get("limit");
+    const tenantId = searchParams.get("tenant_id");
+    if (skip) backendParams.set("skip", skip);
+    if (limit) backendParams.set("limit", limit);
+    if (tenantId) backendParams.set("tenant_id", tenantId);
+    const qs = backendParams.toString();
+
+    const response = await fetch(`${API_BASE_URL}/invoice-series${qs ? `?${qs}` : ""}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },

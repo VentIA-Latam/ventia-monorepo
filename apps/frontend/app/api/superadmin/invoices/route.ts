@@ -17,9 +17,10 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const limit = searchParams.get('limit') || '100';
+    const skip = searchParams.get('skip') || '0';
     const tenantId = searchParams.get('tenant_id');
 
-    const backendParams = new URLSearchParams({ limit });
+    const backendParams = new URLSearchParams({ limit, skip });
     if (tenantId) backendParams.set('tenant_id', tenantId);
 
     const response = await fetch(`${API_URL}/invoices?${backendParams}`, {
