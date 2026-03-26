@@ -131,7 +131,7 @@ async def check_invoice_status(
                 f"Invoice {invoice_id} already in final status '{invoice.efact_status}'. "
                 f"Returning cached result."
             )
-            return InvoiceResponse.from_orm(invoice)
+            return invoice
 
         # 5. Try to download PDF to verify status
         efact_client = EFactClient()
@@ -179,7 +179,7 @@ async def check_invoice_status(
                     f"Error: {error_msg}"
                 )
 
-        return InvoiceResponse.from_orm(invoice)
+        return invoice
 
     except HTTPException:
         # Re-raise HTTP exceptions as-is
@@ -533,6 +533,9 @@ async def list_invoices(
     skip: int = 0,
     limit: int = 100,
     tenant_id: int | None = None,
+    search: str | None = None,
+    invoice_type: str | None = None,
+    efact_status: str | None = None,
     current_user: User = Depends(require_permission_dual("GET", "/invoices")),
     db: Session = Depends(get_database),
 ) -> InvoiceListResponse:
@@ -591,6 +594,9 @@ async def list_invoices(
             tenant_id=tenant_id,
             skip=skip,
             limit=limit,
+            search=search,
+            invoice_type=invoice_type,
+            efact_status=efact_status,
         )
 
         logger.info(

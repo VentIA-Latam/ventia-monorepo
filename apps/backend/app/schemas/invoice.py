@@ -278,11 +278,12 @@ class InvoiceSerieResponse(InvoiceSerieBase):
 
 
 class InvoiceSerieListResponse(BaseModel):
-    """Schema for invoice series list response."""
+    """Schema for invoice series list response with pagination."""
 
+    total: int = Field(..., description="Total number of series matching filters")
     items: list[InvoiceSerieResponse] = Field(..., description="List of invoice series")
-
-    model_config = ConfigDict(from_attributes=True)
+    skip: int = Field(0, description="Number of records skipped")
+    limit: int = Field(100, description="Maximum records returned")
 
 
 # ============================================================================

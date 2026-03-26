@@ -135,6 +135,9 @@ async def list_orders(
     limit: int = 100,
     validado: bool | None = None,
     tenant_id: int | None = None,
+    search: str | None = None,
+    status: str | None = None,
+    channel: str | None = None,
     sort_by: str = "created_at",
     sort_order: str = "desc",
     current_user: User = Depends(get_current_user_or_api_key),
@@ -185,8 +188,11 @@ async def list_orders(
                 db,
                 skip=skip,
                 limit=limit,
-                tenant_id=tenant_id,  # Optional filter
+                tenant_id=tenant_id,
                 validado=validado,
+                search=search,
+                status=status,
+                channel=channel,
                 sort_by=sort_by,
                 sort_order=sort_order,
             )
@@ -198,6 +204,9 @@ async def list_orders(
                 skip=skip,
                 limit=limit,
                 validado=validado,
+                search=search,
+                status=status,
+                channel=channel,
                 sort_by=sort_by,
                 sort_order=sort_order,
             )
@@ -831,7 +840,7 @@ async def create_invoice_for_order(
             f"eFact ticket: {invoice.efact_ticket}"
         )
 
-        return InvoiceResponse.from_orm(invoice)
+        return invoice
 
     except ValueError as e:
         logger.warning(
@@ -906,7 +915,7 @@ async def get_invoices_for_order(
             tenant_id=tenant_id,
         )
 
-        return [InvoiceResponse.from_orm(invoice) for invoice in invoices]
+        return invoices
 
     except HTTPException:
         raise

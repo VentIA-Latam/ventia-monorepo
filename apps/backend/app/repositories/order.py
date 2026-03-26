@@ -2,6 +2,7 @@
 Order repository.
 """
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.invoice import Invoice
@@ -62,33 +63,34 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         limit: int = 100,
         tenant_id: int | None = None,
         validado: bool | None = None,
+        search: str | None = None,
+        status: str | None = None,
+        channel: str | None = None,
         sort_by: str = "created_at",
         sort_order: str = "desc",
     ) -> list[Order]:
-        """
-        Get all orders from all tenants (for SUPERADMIN).
-
-        Args:
-            db: Database session
-            skip: Number to skip
-            limit: Max results
-            tenant_id: Optional filter by tenant ID
-            validado: Optional filter by validation status
-            sort_by: Field to sort by (default: created_at)
-            sort_order: Sort order 'asc' or 'desc' (default: desc)
-
-        Returns:
-            List of orders
-        """
+        """Get all orders with optional filters."""
         query = db.query(Order).options(joinedload(Order.invoices))
 
-        # Optional tenant filter (for SUPERADMIN with specific tenant)
         if tenant_id is not None:
             query = query.filter(Order.tenant_id == tenant_id)
-
-        # Apply validation filter if specified
         if validado is not None:
             query = query.filter(Order.validado == validado)
+        if search:
+            pattern = f"%{search}%"
+            conditions = [
+                Order.customer_name.ilike(pattern),
+                Order.customer_email.ilike(pattern),
+                Order.shopify_order_id.ilike(pattern),
+                Order.shopify_draft_order_id.ilike(pattern),
+            ]
+            if search.isdigit():
+                conditions.append(Order.woocommerce_order_id == int(search))
+            query = query.filter(or_(*conditions))
+        if status:
+            query = query.filter(Order.status == status)
+        if channel:
+            query = query.filter(Order.channel == channel)
 
         # Apply sorting
         sort_column = getattr(Order, sort_by, Order.created_at)
@@ -105,25 +107,32 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         *,
         tenant_id: int | None = None,
         validado: bool | None = None,
+        search: str | None = None,
+        status: str | None = None,
+        channel: str | None = None,
     ) -> int:
-        """
-        Count all orders from all tenants.
-
-        Args:
-            db: Database session
-            tenant_id: Optional filter by tenant ID
-            validado: Optional filter by validation status
-
-        Returns:
-            Total count of orders
-        """
+        """Count all orders with same filters as get_all."""
         query = db.query(Order)
 
         if tenant_id is not None:
             query = query.filter(Order.tenant_id == tenant_id)
-
         if validado is not None:
             query = query.filter(Order.validado == validado)
+        if search:
+            pattern = f"%{search}%"
+            conditions = [
+                Order.customer_name.ilike(pattern),
+                Order.customer_email.ilike(pattern),
+                Order.shopify_order_id.ilike(pattern),
+                Order.shopify_draft_order_id.ilike(pattern),
+            ]
+            if search.isdigit():
+                conditions.append(Order.woocommerce_order_id == int(search))
+            query = query.filter(or_(*conditions))
+        if status:
+            query = query.filter(Order.status == status)
+        if channel:
+            query = query.filter(Order.channel == channel)
 
         return query.count()
 

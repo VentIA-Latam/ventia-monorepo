@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_database, require_permission_dual
 from app.models.user import User
 from app.repositories.invoice_serie import invoice_serie_repository
-from app.schemas.invoice import InvoiceSerieCreate, InvoiceSerieResponse, InvoiceSerieUpdate
+from app.schemas.invoice import InvoiceSerieCreate, InvoiceSerieListResponse, InvoiceSerieResponse, InvoiceSerieUpdate
 from app.services.invoice_serie import invoice_serie_service
 from app.core.permissions import Role
 
@@ -117,7 +117,7 @@ async def create_invoice_serie(
             f"for tenant {target_tenant_id} by user {current_user.id} ({current_user.role})"
         )
 
-        return InvoiceSerieResponse.from_orm(serie)
+        return serie
 
     except ValueError as e:
         logger.warning(
@@ -141,12 +141,16 @@ async def create_invoice_serie(
 
 @router.get(
     "",
-    response_model=list[InvoiceSerieResponse],
+    response_model=InvoiceSerieListResponse,
     tags=["invoice-series"],
 )
 async def list_invoice_series(
     current_user: User = Depends(get_current_user),
     tenant_id: int | None = None,
+    search: str | None = None,
+    is_active: bool | None = None,
+    skip: int = 0,
+    limit: int = 100,
     db: Session = Depends(get_database),
 ) -> list[InvoiceSerieResponse]:
     """
@@ -209,28 +213,18 @@ async def list_invoice_series(
                 )
             filter_tenant_id = current_user.tenant_id
 
-        # Get series based on filter
-        if filter_tenant_id:
-            # Get series for specific tenant
-            series = invoice_serie_service.get_series_by_tenant(
-                db=db,
-                tenant_id=filter_tenant_id,
-            )
-            logger.info(
-                f"Retrieved {len(series)} invoice series for tenant {filter_tenant_id} "
-                f"by user {current_user.id} ({current_user.role})"
-            )
-        else:
-            # SUPERADMIN getting all series from all tenants
-            from app.repositories.invoice_serie import invoice_serie_repository
-            series = invoice_serie_repository.get_all(db)
-            logger.info(
-                f"Retrieved {len(series)} invoice series from all tenants "
-                f"by user {current_user.id} ({current_user.role})"
-            )
+        # Get series with filters
+        from app.repositories.invoice_serie import invoice_serie_repository
+        filter_kwargs = dict(tenant_id=filter_tenant_id, search=search, is_active=is_active)
+        series = invoice_serie_repository.get_all(db, skip=skip, limit=limit, **filter_kwargs)
+        total = invoice_serie_repository.count_all(db, **filter_kwargs)
 
-        # Convert to response models
-        return [InvoiceSerieResponse.from_orm(s) for s in series]
+        return InvoiceSerieListResponse(
+            total=total,
+            items=series,
+            skip=skip,
+            limit=limit,
+        )
 
     except ValueError as e:
         logger.warning(
@@ -321,7 +315,7 @@ async def get_invoice_serie(
             f"Retrieved invoice serie {serie_id} by user {current_user.id} ({current_user.role})"
         )
 
-        return InvoiceSerieResponse.from_orm(serie)
+        return serie
 
     except HTTPException:
         raise
@@ -415,7 +409,7 @@ async def update_invoice_serie(
             f"Updated invoice serie {serie_id} by user {current_user.id} ({current_user.role})"
         )
 
-        return InvoiceSerieResponse.from_orm(updated_serie)
+        return updated_serie
 
     except ValueError as e:
         logger.warning(f"Validation error updating serie {serie_id}: {str(e)}")

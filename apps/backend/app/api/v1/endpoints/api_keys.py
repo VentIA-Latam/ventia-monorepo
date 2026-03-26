@@ -103,6 +103,7 @@ async def list_api_keys(
     limit: int = 100,
     is_active: bool | None = None,
     tenant_id: int | None = None,
+    search: str | None = None,
     current_user: User = Depends(require_permission_dual("GET", "/api-keys")),
     db: Session = Depends(get_database),
 ) -> APIKeyListResponse:
@@ -145,8 +146,9 @@ async def list_api_keys(
             skip=skip,
             limit=limit,
             is_active=is_active,
+            search=search,
         )
-        total = api_key_service.count_all_api_keys(db, is_active=is_active)
+        total = api_key_service.count_all_api_keys(db, is_active=is_active, search=search)
     else:
         # Query specific tenant
         api_keys = api_key_service.get_api_keys_by_tenant(
@@ -155,16 +157,18 @@ async def list_api_keys(
             skip=skip,
             limit=limit,
             is_active=is_active,
+            search=search,
         )
         total = api_key_service.count_api_keys_by_tenant(
             db,
             query_tenant_id,
             is_active=is_active,
+            search=search,
         )
 
     return APIKeyListResponse(
         total=total,
-        items=[APIKeyResponse.model_validate(key) for key in api_keys],
+        items=api_keys,
         skip=skip,
         limit=limit,
     )
@@ -213,7 +217,7 @@ async def get_api_key(
             detail="Access denied to this API key",
         )
 
-    return APIKeyResponse.model_validate(api_key)
+    return api_key
 
 
 @router.patch("/{api_key_id}", response_model=APIKeyResponse, tags=["api-keys"])
@@ -266,7 +270,7 @@ async def update_api_key(
 
     try:
         updated_key = api_key_service.update_api_key(db, api_key, api_key_update)
-        return APIKeyResponse.model_validate(updated_key)
+        return updated_key
 
     except ValueError as e:
         raise HTTPException(

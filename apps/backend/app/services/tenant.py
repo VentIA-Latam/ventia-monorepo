@@ -5,7 +5,7 @@ Tenant service - business logic for tenant management.
 import logging
 import secrets
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -56,30 +56,25 @@ class TenantService:
         db: Session,
         skip: int = 0,
         limit: int = 100,
+        search: str | None = None,
         is_active: bool | None = None,
+        is_platform: bool | None = None,
     ) -> tuple[list[Tenant], int]:
-        """
-        Get all tenants with pagination.
-
-        Args:
-            db: Database session
-            skip: Number of records to skip
-            limit: Maximum records to return
-            is_active: Filter by active status (None = all)
-
-        Returns:
-            Tuple of (list of tenants, total count)
-        """
+        """Get all tenants with optional filters and pagination."""
         query = db.query(Tenant)
 
-        # Filter by active status if specified
+        if search:
+            pattern = f"%{search}%"
+            query = query.filter(or_(
+                Tenant.name.ilike(pattern),
+                Tenant.slug.ilike(pattern),
+            ))
         if is_active is not None:
             query = query.filter(Tenant.is_active == is_active)
+        if is_platform is not None:
+            query = query.filter(Tenant.is_platform == is_platform)
 
-        # Get total count before pagination
         total = query.count()
-
-        # Apply pagination and ordering
         tenants = query.order_by(Tenant.created_at.desc()).offset(skip).limit(limit).all()
 
         return tenants, total

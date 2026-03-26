@@ -27,6 +27,9 @@ router = APIRouter()
 async def list_tenants(
     skip: int = 0,
     limit: int = 100,
+    search: str | None = None,
+    is_active: bool | None = None,
+    is_platform: bool | None = None,
     current_user: User = Depends(require_permission_dual("GET", "/tenants")),
     db: Session = Depends(get_database),
 ) -> TenantListResponse:
@@ -65,7 +68,8 @@ async def list_tenants(
 
     try:
         tenants, total = tenant_service.get_tenants(
-            db, skip=skip, limit=limit, is_active=None
+            db, skip=skip, limit=limit,
+            search=search, is_active=is_active, is_platform=is_platform,
         )
 
         return TenantListResponse(

@@ -4,6 +4,7 @@ Invoice repository.
 
 from typing import Optional
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.models.invoice import Invoice
@@ -71,57 +72,53 @@ class InvoiceRepository(CRUDBase[Invoice, InvoiceCreate, InvoiceUpdate]):
         *,
         skip: int = 0,
         limit: int = 100,
+        tenant_id: int | None = None,
+        search: str | None = None,
+        invoice_type: str | None = None,
+        efact_status: str | None = None,
     ) -> list[Invoice]:
-        """
-        Get all invoices from all tenants with pagination (for SUPERADMIN).
-
-        Args:
-            db: Database session
-            skip: Number of records to skip
-            limit: Maximum number of records to return
-
-        Returns:
-            List of invoices ordered by created_at DESC
-        """
-        return (
-            db.query(Invoice)
-            .order_by(Invoice.created_at.desc())
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
-
-    def count_by_tenant(
-        self,
-        db: Session,
-        tenant_id: int,
-    ) -> int:
-        """
-        Count total number of invoices for a tenant.
-
-        Args:
-            db: Database session
-            tenant_id: Tenant ID
-
-        Returns:
-            Total count of invoices
-        """
-        return db.query(Invoice).filter(Invoice.tenant_id == tenant_id).count()
+        """Get all invoices with optional filters and pagination."""
+        query = db.query(Invoice)
+        if tenant_id is not None:
+            query = query.filter(Invoice.tenant_id == tenant_id)
+        if search:
+            pattern = f"%{search}%"
+            query = query.filter(or_(
+                Invoice.full_number.ilike(pattern),
+                Invoice.cliente_razon_social.ilike(pattern),
+                Invoice.cliente_numero_documento.ilike(pattern),
+            ))
+        if invoice_type:
+            query = query.filter(Invoice.invoice_type == invoice_type)
+        if efact_status:
+            query = query.filter(Invoice.efact_status == efact_status)
+        return query.order_by(Invoice.created_at.desc()).offset(skip).limit(limit).all()
 
     def count_all(
         self,
         db: Session,
+        *,
+        tenant_id: int | None = None,
+        search: str | None = None,
+        invoice_type: str | None = None,
+        efact_status: str | None = None,
     ) -> int:
-        """
-        Count total number of invoices from all tenants (for SUPERADMIN).
-
-        Args:
-            db: Database session
-
-        Returns:
-            Total count of invoices
-        """
-        return db.query(Invoice).count()
+        """Count invoices with same filters as get_all."""
+        query = db.query(Invoice)
+        if tenant_id is not None:
+            query = query.filter(Invoice.tenant_id == tenant_id)
+        if search:
+            pattern = f"%{search}%"
+            query = query.filter(or_(
+                Invoice.full_number.ilike(pattern),
+                Invoice.cliente_razon_social.ilike(pattern),
+                Invoice.cliente_numero_documento.ilike(pattern),
+            ))
+        if invoice_type:
+            query = query.filter(Invoice.invoice_type == invoice_type)
+        if efact_status:
+            query = query.filter(Invoice.efact_status == efact_status)
+        return query.count()
 
     def get_by_ticket(
         self,
