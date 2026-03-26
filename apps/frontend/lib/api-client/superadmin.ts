@@ -3,8 +3,8 @@
  * 
  * ⚠️ SOLO USAR DESDE CLIENT COMPONENTS ("use client")
  * 
- * Este módulo proporciona funciones para interactuar con la API de superadmin
- * desde componentes cliente. Todas las funciones llaman a /api/superadmin/* routes.
+ * Este módulo proporciona funciones para interactuar con la API desde el panel superadmin.
+ * Usa rutas consolidadas (/api/orders, /api/invoices, /api/api-keys) y rutas exclusivas (/api/superadmin/tenants, users, stats).
  */
 
 import { apiGet, apiPost, apiPatch, apiDelete } from './client';
@@ -166,11 +166,11 @@ export async function toggleUserStatus(
 
 /**
  * Obtener orders globales de todos los tenants
- * GET /api/superadmin/global-orders
+ * GET /api/orders
  */
 export async function getGlobalOrders(limit: number = 20): Promise<GlobalOrder[]> {
   const response = await apiGet<{ items: GlobalOrder[] }>(
-    '/api/superadmin/global-orders',
+    '/api/orders',
     { limit }
   );
   return response.items;
@@ -178,7 +178,7 @@ export async function getGlobalOrders(limit: number = 20): Promise<GlobalOrder[]
 
 /**
  * Obtener orders filtradas por tenant (full Order type for OrdersTable)
- * GET /api/superadmin/global-orders?tenant_id=X
+ * GET /api/orders?tenant_id=X
  */
 export async function getOrdersByTenant(params?: {
   skip?: number;
@@ -186,14 +186,14 @@ export async function getOrdersByTenant(params?: {
   tenant_id?: number;
 }): Promise<OrderListResponse> {
   return apiGet<OrderListResponse>(
-    '/api/superadmin/global-orders',
+    '/api/orders',
     params as Record<string, number>
   );
 }
 
 /**
  * Obtener invoices filtradas por tenant
- * GET /api/superadmin/invoices?tenant_id=X&skip=0&limit=10
+ * GET /api/invoices?tenant_id=X&skip=0&limit=10
  */
 export async function getInvoicesByTenant(params?: {
   skip?: number;
@@ -201,7 +201,7 @@ export async function getInvoicesByTenant(params?: {
   tenant_id?: number;
 }): Promise<InvoiceListResponse> {
   return apiGet<InvoiceListResponse>(
-    '/api/superadmin/invoices',
+    '/api/invoices',
     params as Record<string, number>
   );
 }
@@ -234,30 +234,30 @@ export async function getRecentActivity(
 
 /**
  * Obtener API keys
- * GET /api/superadmin/api-keys
+ * GET /api/api-keys
  */
 export async function getApiKeys(tenantId?: number): Promise<APIKey[]> {
   const params = tenantId ? { tenant_id: tenantId } : undefined;
-  return apiGet('/api/superadmin/api-keys', params as Record<string, number>);
+  return apiGet('/api/api-keys', params as Record<string, number>);
 }
 
 /**
  * Crear API key
- * POST /api/superadmin/api-keys
+ * POST /api/api-keys
  */
 export async function createApiKey(data: {
   name: string;
   tenant_id?: number;
 }): Promise<APIKey> {
-  return apiPost('/api/superadmin/api-keys', data);
+  return apiPost('/api/api-keys', data);
 }
 
 /**
  * Revocar API key
- * DELETE /api/superadmin/api-keys/:id
+ * DELETE /api/api-keys/:id
  */
 export async function revokeApiKey(apiKeyId: number): Promise<void> {
-  return apiPost(`/api/superadmin/api-keys/${apiKeyId}`, {});
+  return apiDelete(`/api/api-keys/${apiKeyId}`);
 }
 
 // ==================== MESSAGING WEBHOOKS ====================

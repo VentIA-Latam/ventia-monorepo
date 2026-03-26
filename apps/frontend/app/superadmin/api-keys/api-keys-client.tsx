@@ -46,7 +46,7 @@ export function ApiKeysClient({ initialApiKeys, initialTotal }: ApiKeysClientPro
     setLoading(true);
     try {
       const skip = (page - 1) * itemsPerPage;
-      let url = `/api/superadmin/api-keys?skip=${skip}&limit=${itemsPerPage}`;
+      let url = `/api/api-keys?skip=${skip}&limit=${itemsPerPage}`;
       if (status && status !== "all") url += `&is_active=${status === "active"}`;
       if (tenantId) url += `&tenant_id=${tenantId}`;
       const response = await fetch(url);
@@ -243,7 +243,7 @@ export function ApiKeysClient({ initialApiKeys, initialTotal }: ApiKeysClientPro
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onSuccess={refreshApiKeys}
-        apiEndpoint="/api/superadmin/api-keys"
+        apiEndpoint="/api/api-keys"
         tenants={tenants}
       />
       <RevokeAPIKeyDialog
@@ -251,7 +251,7 @@ export function ApiKeysClient({ initialApiKeys, initialTotal }: ApiKeysClientPro
         open={revokeDialogOpen}
         onOpenChange={setRevokeDialogOpen}
         onSuccess={refreshApiKeys}
-        apiEndpoint="/api/superadmin/api-keys"
+        apiEndpoint="/api/api-keys"
       />
     </div>
   );

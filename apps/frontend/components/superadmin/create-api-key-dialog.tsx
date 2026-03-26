@@ -15,7 +15,7 @@ interface CreateAPIKeyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
-  apiEndpoint: string; // "/api/superadmin/api-keys" or "/api/dashboard/api-keys"
+  apiEndpoint: string; // "/api/api-keys"
   tenants?: Tenant[]; // For superadmin - list of tenants to select from
 }
 

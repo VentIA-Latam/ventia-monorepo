@@ -55,7 +55,7 @@ export default function TenantAPIKeysPage() {
   const fetchAPIKeys = async () => {
     try {
       setLoading(true);
-      let url = `/api/dashboard/api-keys?limit=100`;
+      let url = `/api/api-keys?limit=100`;
 
       if (statusFilter !== "all") {
         url += `&is_active=${statusFilter === "active"}`;
@@ -294,7 +294,7 @@ export default function TenantAPIKeysPage() {
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onSuccess={fetchAPIKeys}
-        apiEndpoint="/api/dashboard/api-keys"
+        apiEndpoint="/api/api-keys"
       />
 
       <RevokeAPIKeyDialog
@@ -302,7 +302,7 @@ export default function TenantAPIKeysPage() {
         open={revokeDialogOpen}
         onOpenChange={setRevokeDialogOpen}
         onSuccess={fetchAPIKeys}
-        apiEndpoint="/api/dashboard/api-keys"
+        apiEndpoint="/api/api-keys"
       />
     </div>
   );
