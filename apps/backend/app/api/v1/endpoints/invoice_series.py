@@ -152,7 +152,7 @@ async def list_invoice_series(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_database),
-) -> list[InvoiceSerieResponse]:
+) -> InvoiceSerieListResponse:
     """
     List invoice series for current user or specific tenant (SUPERADMIN only).
 
