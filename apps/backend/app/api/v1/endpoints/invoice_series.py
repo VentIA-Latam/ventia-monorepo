@@ -145,7 +145,7 @@ async def create_invoice_serie(
     tags=["invoice-series"],
 )
 async def list_invoice_series(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission_dual("GET", "/invoice-series")),
     tenant_id: int | None = None,
     search: str | None = None,
     is_active: bool | None = None,
@@ -253,7 +253,7 @@ async def list_invoice_series(
 )
 async def get_invoice_serie(
     serie_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission_dual("GET", "/invoice-series/*")),
     db: Session = Depends(get_database),
 ) -> InvoiceSerieResponse:
     """
