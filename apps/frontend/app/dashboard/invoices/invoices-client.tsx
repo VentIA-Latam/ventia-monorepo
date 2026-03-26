@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useServerTable } from "@/lib/hooks/use-server-table";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -50,38 +52,83 @@ import { SendEmailDialog } from "@/components/invoices/send-email-dialog";
 import { downloadInvoicePdf, downloadInvoiceXml } from "@/lib/api-client/invoices";
 import { useToast } from "@/hooks/use-toast";
 
+const ITEMS_PER_PAGE = 10;
+
 interface InvoicesClientViewProps {
   initialInvoices: Invoice[];
+  initialTotal: number;
+}
+
+async function fetchInvoicesFromApi(
+  params: Record<string, string>,
+  signal: AbortSignal
+): Promise<{ items: Invoice[]; total: number }> {
+  const res = await fetch(`/api/invoices?${new URLSearchParams(params)}`, { signal });
+  if (!res.ok) throw new Error("Failed to fetch invoices");
+  return res.json();
 }
 
 /**
  * Client Component - Interactividad y filtros
  */
-export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps) {
+export function InvoicesClientView({ initialInvoices, initialTotal }: InvoicesClientViewProps) {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [sendingEmailId, setSendingEmailId] = useState<number | null>(null);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
-  // Filtrar facturas según los criterios
-  const filteredInvoices = initialInvoices.filter((invoice) => {
-    const matchesSearch =
-      searchTerm === "" ||
-      invoice.full_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (invoice.cliente_razon_social?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-      (invoice.cliente_numero_documento?.toLowerCase() || "").includes(searchTerm.toLowerCase());
-
-    const matchesType =
-      filterType === "all" || invoice.invoice_type === filterType;
-
-    const matchesStatus =
-      filterStatus === "all" || invoice.efact_status === filterStatus;
-
-    return matchesSearch && matchesType && matchesStatus;
+  const { items: filteredInvoices, total, loading, isStale, fetchData, debouncedFetch } = useServerTable<Invoice>({
+    initialItems: initialInvoices,
+    initialTotal,
+    fetchFn: fetchInvoicesFromApi,
   });
+
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+
+  const buildParams = useCallback(
+    (overrides: Record<string, string> = {}) => {
+      const p: Record<string, string> = {
+        skip: String((currentPage - 1) * ITEMS_PER_PAGE),
+        limit: String(ITEMS_PER_PAGE),
+        ...overrides,
+      };
+      const s = overrides.search ?? searchTerm;
+      const t = overrides.invoice_type ?? (filterType !== "all" ? filterType : "");
+      const st = overrides.efact_status ?? (filterStatus !== "all" ? filterStatus : "");
+      if (s) p.search = s;
+      if (t) p.invoice_type = t;
+      if (st) p.efact_status = st;
+      return p;
+    },
+    [currentPage, searchTerm, filterType, filterStatus]
+  );
+
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+    debouncedFetch(buildParams({ search: value, skip: "0" }));
+  };
+
+  const handleFilterType = (value: string) => {
+    setFilterType(value);
+    setCurrentPage(1);
+    fetchData(buildParams({ invoice_type: value !== "all" ? value : "", skip: "0" }));
+  };
+
+  const handleFilterStatus = (value: string) => {
+    setFilterStatus(value);
+    setCurrentPage(1);
+    fetchData(buildParams({ efact_status: value !== "all" ? value : "", skip: "0" }));
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    fetchData(buildParams({ skip: String((page - 1) * ITEMS_PER_PAGE) }));
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -226,11 +273,11 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
               <Input
                 placeholder="Buscar por serie, cliente, RUC/DNI..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearch(e.target.value)}
                 className="pl-9"
               />
             </div>
-            <Select value={filterType} onValueChange={setFilterType}>
+            <Select value={filterType} onValueChange={handleFilterType}>
               <SelectTrigger>
                 <SelectValue placeholder="Tipo de comprobante" />
               </SelectTrigger>
@@ -242,7 +289,7 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
                 <SelectItem value="08">Nota de Débito</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <Select value={filterStatus} onValueChange={handleFilterStatus}>
               <SelectTrigger>
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
@@ -262,12 +309,12 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           Mostrando <span className="font-semibold">{filteredInvoices.length}</span> de{" "}
-          <span className="font-semibold">{initialInvoices.length}</span> comprobantes
+          <span className="font-semibold">{total}</span> comprobantes
         </p>
       </div>
 
       {/* Invoices Table */}
-      <Card>
+      <Card className={isStale ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
         <CardHeader>
           <CardTitle>Lista de Comprobantes</CardTitle>
           <CardDescription>
@@ -382,6 +429,23 @@ export function InvoicesClientView({ initialInvoices }: InvoicesClientViewProps)
           </div>
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {totalPages > 1 ? (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Pagina {currentPage} de {totalPages} ({total} resultados)
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => handlePageChange(Math.max(1, currentPage - 1))}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {/* Dialog de confirmación de envío de email */}
       <SendEmailDialog

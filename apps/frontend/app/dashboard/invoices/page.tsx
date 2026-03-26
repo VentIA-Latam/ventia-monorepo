@@ -20,6 +20,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function InvoicesPage() {
   let invoices: Invoice[] = [];
+  let total = 0;
   let error: string | null = null;
 
   try {
@@ -33,10 +34,11 @@ export default async function InvoicesPage() {
     // 2. Hacer el fetch al backend con el token (usando el service)
     const response = await fetchInvoices(accessToken, {
       skip: 0,
-      limit: 1000,
+      limit: 10,
     });
 
     invoices = response.items;
+    total = response.total ?? 0;
   } catch (err) {
     console.error("Error loading invoices:", err);
     error = err instanceof Error ? err.message : "Error al cargar comprobantes";
@@ -64,7 +66,7 @@ export default async function InvoicesPage() {
   }
 
   // 3. Pasar los comprobantes al Client Component para manejar la interactividad
-  return <InvoicesClientView initialInvoices={invoices} />;
+  return <InvoicesClientView initialInvoices={invoices} initialTotal={total} />;
 }
 
 
