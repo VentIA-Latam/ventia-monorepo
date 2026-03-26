@@ -18,6 +18,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function OrdersPage() {
   let orders: Order[] = [];
+  let total = 0;
   let error: string | null = null;
 
   try {
@@ -31,11 +32,11 @@ export default async function OrdersPage() {
     // 2. Hacer el fetch al backend con el token (desde el servidor)
     const response = await fetchOrders(accessToken, {
       skip: 0,
-      limit: 100,
+      limit: 10,
     });
 
-    // 3. Usar datos del backend directamente (sin transformación innecesaria)
     orders = response.items;
+    total = response.total ?? 0;
 
   } catch (err) {
     console.error('Error loading orders:', err);
@@ -61,5 +62,5 @@ export default async function OrdersPage() {
   }
 
   // 4️⃣ Pasar las órdenes al Client Component para manejar la interactividad
-  return <OrdersClientView initialOrders={orders} />;
+  return <OrdersClientView initialOrders={orders} initialTotal={total} />;
 }
