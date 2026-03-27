@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useServerTable } from "@/lib/hooks/use-server-table";
 import { Key, Plus, Search, MoreHorizontal, Trash2, CheckCircle, XCircle, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +21,6 @@ import { CreateAPIKeyDialog } from "@/components/superadmin/create-api-key-dialo
 import { RevokeAPIKeyDialog } from "@/components/superadmin/revoke-api-key-dialog";
 import { formatDateTime } from "@/lib/utils";
 import { useTenant } from "@/lib/context/tenant-context";
-import { getApiKeys } from "@/lib/api-client/superadmin";
 
 interface ApiKeysClientProps {
   initialApiKeys: APIKey[];
@@ -28,70 +28,80 @@ interface ApiKeysClientProps {
 }
 
 export function ApiKeysClient({ initialApiKeys, initialTotal }: ApiKeysClientProps) {
+  const ITEMS_PER_PAGE = 10;
   const { selectedTenantId, tenants } = useTenant();
-  const [apiKeys, setApiKeys] = useState<APIKey[]>(initialApiKeys);
-  const [total, setTotal] = useState(initialTotal);
-  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
   const [selectedApiKey, setSelectedApiKey] = useState<APIKey | null>(null);
 
-  const fetchApiKeysData = async (page: number, tenantId?: number | null, status?: string) => {
-    setLoading(true);
-    try {
-      const skip = (page - 1) * itemsPerPage;
-      let url = `/api/api-keys?skip=${skip}&limit=${itemsPerPage}`;
-      if (status && status !== "all") url += `&is_active=${status === "active"}`;
-      if (tenantId) url += `&tenant_id=${tenantId}`;
-      const response = await fetch(url);
-      if (response.ok) {
-        const data = await response.json();
-        setApiKeys(data.items || []);
-        setTotal(data.total ?? 0);
-      }
-    } catch (err) { console.error("Error fetching API keys:", err); }
-    finally { setLoading(false); }
+  const fetchApiKeysFromApi = useCallback(async (params: Record<string, string>, signal: AbortSignal) => {
+    const res = await fetch(`/api/api-keys?${new URLSearchParams(params)}`, { signal });
+    if (!res.ok) throw new Error("Failed to fetch API keys");
+    return res.json();
+  }, []);
+
+  const { items: filteredKeys, total, loading, isStale, fetchData, debouncedFetch } = useServerTable<APIKey>({
+    initialItems: initialApiKeys,
+    initialTotal,
+    fetchFn: fetchApiKeysFromApi,
+  });
+
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+
+  const buildParams = useCallback(
+    (overrides: Record<string, string> = {}) => {
+      const p: Record<string, string> = {
+        skip: overrides.skip ?? String((currentPage - 1) * ITEMS_PER_PAGE),
+        limit: overrides.limit ?? String(ITEMS_PER_PAGE),
+      };
+      if (selectedTenantId) p.tenant_id = String(selectedTenantId);
+      const s = overrides.search ?? searchTerm;
+      const st = overrides.is_active ?? (statusFilter === "active" ? "true" : statusFilter === "inactive" ? "false" : "");
+      if (s) p.search = s;
+      if (st) p.is_active = st;
+      return p;
+    },
+    [currentPage, searchTerm, statusFilter, selectedTenantId]
+  );
+
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+    debouncedFetch(buildParams({ search: value, skip: "0" }));
+  };
+
+  const handleStatusFilter = (value: string) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+    const isActive = value === "active" ? "true" : value === "inactive" ? "false" : "";
+    fetchData(buildParams({ is_active: isActive, skip: "0" }));
   };
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
-    fetchApiKeysData(newPage, selectedTenantId, statusFilter);
+    fetchData(buildParams({ skip: String((newPage - 1) * ITEMS_PER_PAGE) }));
   };
 
-  const refreshApiKeys = () => fetchApiKeysData(currentPage, selectedTenantId, statusFilter);
-
-  // Tenant or status change — from context/select, not pagination click
+  // Tenant change — reset to page 1
   const prevTenantId = useRef(selectedTenantId);
-  const prevStatusFilter = useRef(statusFilter);
   useEffect(() => {
-    if (prevTenantId.current === selectedTenantId && prevStatusFilter.current === statusFilter) return;
+    if (prevTenantId.current === selectedTenantId) return;
     prevTenantId.current = selectedTenantId;
-    prevStatusFilter.current = statusFilter;
     setCurrentPage(1);
-    fetchApiKeysData(1, selectedTenantId, statusFilter);
-  }, [selectedTenantId, statusFilter]);
+    fetchData({ skip: "0", limit: String(ITEMS_PER_PAGE), ...(selectedTenantId ? { tenant_id: String(selectedTenantId) } : {}) });
+  }, [selectedTenantId]);
+
+  const refreshApiKeys = () => fetchData(buildParams());
 
   const handleRevoke = (apiKey: APIKey) => {
     setSelectedApiKey(apiKey);
     setRevokeDialogOpen(true);
   };
-
-  // Client-side search filter (rerender-derived-state-no-effect)
-  const filteredKeys = useMemo(() => {
-    if (!searchTerm) return apiKeys;
-    const s = searchTerm.toLowerCase();
-    return apiKeys.filter((key) =>
-      key.name.toLowerCase().includes(s) || key.key_prefix.toLowerCase().includes(s)
-    );
-  }, [apiKeys, searchTerm]);
-
-  const totalPages = Math.ceil(total / itemsPerPage);
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -121,9 +131,9 @@ export function ApiKeysClient({ initialApiKeys, initialTotal }: ApiKeysClientPro
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input placeholder="Buscar por nombre o prefijo..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+          <Input placeholder="Buscar por nombre o prefijo..." value={searchTerm} onChange={(e) => handleSearch(e.target.value)} className="pl-10" />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={handleStatusFilter}>
           <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Estado" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos los estados</SelectItem>
@@ -146,7 +156,8 @@ export function ApiKeysClient({ initialApiKeys, initialTotal }: ApiKeysClientPro
       </p>
 
       {/* Table */}
-      {loading ? (
+      <div className={isStale ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
+      {loading && !isStale ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           <span className="ml-2 text-muted-foreground">Cargando API Keys...</span>
@@ -222,6 +233,7 @@ export function ApiKeysClient({ initialApiKeys, initialTotal }: ApiKeysClientPro
           </Table>
         </div>
       )}
+      </div>
 
       {/* Pagination */}
       {totalPages > 1 ? (

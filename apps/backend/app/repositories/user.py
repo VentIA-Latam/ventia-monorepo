@@ -4,6 +4,7 @@ User repository.
 
 from datetime import datetime
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.permissions import Role
@@ -136,12 +137,10 @@ class UserRepository(CRUDBase[User, UserCreate, UserUpdate]):
             query = query.filter(User.is_active == is_active)
         if search:
             search_pattern = f"%{search}%"
-            query = query.filter(
-                db.func.or_(
-                    User.name.ilike(search_pattern),
-                    User.email.ilike(search_pattern),
-                )
-            )
+            query = query.filter(or_(
+                User.name.ilike(search_pattern),
+                User.email.ilike(search_pattern),
+            ))
 
         # Get total count before pagination
         total = query.count()

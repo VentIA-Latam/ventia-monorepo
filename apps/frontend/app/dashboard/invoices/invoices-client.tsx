@@ -92,9 +92,8 @@ export function InvoicesClientView({ initialInvoices, initialTotal }: InvoicesCl
   const buildParams = useCallback(
     (overrides: Record<string, string> = {}) => {
       const p: Record<string, string> = {
-        skip: String((currentPage - 1) * ITEMS_PER_PAGE),
-        limit: String(ITEMS_PER_PAGE),
-        ...overrides,
+        skip: overrides.skip ?? String((currentPage - 1) * ITEMS_PER_PAGE),
+        limit: overrides.limit ?? String(ITEMS_PER_PAGE),
       };
       const s = overrides.search ?? searchTerm;
       const t = overrides.invoice_type ?? (filterType !== "all" ? filterType : "");
@@ -314,7 +313,14 @@ export function InvoicesClientView({ initialInvoices, initialTotal }: InvoicesCl
       </div>
 
       {/* Invoices Table */}
-      <Card className={isStale ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
+      <div className={isStale ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
+      {loading && !isStale ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-muted-foreground">Cargando comprobantes...</span>
+        </div>
+      ) : (
+      <Card>
         <CardHeader>
           <CardTitle>Lista de Comprobantes</CardTitle>
           <CardDescription>
@@ -429,6 +435,8 @@ export function InvoicesClientView({ initialInvoices, initialTotal }: InvoicesCl
           </div>
         </CardContent>
       </Card>
+      )}
+      </div>
 
       {/* Pagination */}
       {totalPages > 1 ? (

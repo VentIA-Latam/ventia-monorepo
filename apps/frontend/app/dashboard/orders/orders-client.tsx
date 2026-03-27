@@ -57,9 +57,8 @@ export function OrdersClientView({ initialOrders, initialTotal }: OrdersClientVi
   const buildParams = useCallback(
     (overrides: Record<string, string> = {}) => {
       const p: Record<string, string> = {
-        skip: String((currentPage - 1) * ITEMS_PER_PAGE),
-        limit: String(ITEMS_PER_PAGE),
-        ...overrides,
+        skip: overrides.skip ?? String((currentPage - 1) * ITEMS_PER_PAGE),
+        limit: overrides.limit ?? String(ITEMS_PER_PAGE),
       };
       const s = overrides.search ?? search;
       const st = overrides.status ?? (paymentStatus !== "all" ? paymentStatus : "");

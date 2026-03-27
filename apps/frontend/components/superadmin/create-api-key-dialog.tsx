@@ -5,18 +5,23 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { APIKeyCreate, APIKeyCreateResponse } from "@/lib/types/api-key";
-import { Tenant } from "@/lib/types/tenant";
 import { useState } from "react";
 import { Copy, Check, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { REGULAR_ROLES, getRoleLabel } from "@/lib/constants/roles";
+
+interface TenantForSelect {
+  id: number;
+  name: string;
+  is_platform?: boolean;
+}
 
 interface CreateAPIKeyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   apiEndpoint: string; // "/api/api-keys"
-  tenants?: Tenant[]; // For superadmin - list of tenants to select from
+  tenants?: TenantForSelect[];
 }
 
 export function CreateAPIKeyDialog({ open, onOpenChange, onSuccess, apiEndpoint, tenants = [] }: CreateAPIKeyDialogProps) {

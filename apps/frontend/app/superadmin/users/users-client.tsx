@@ -1,5 +1,6 @@
 "use client";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useServerTable } from "@/lib/hooks/use-server-table";
 import { useRouter } from "next/navigation";
 import { Users, Plus, Eye, Power, MoreHorizontal, Edit, CheckCircle, XCircle, Search, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getUsers } from "@/lib/api-client";
+// getUsers removed — using useServerTable hook with direct fetch
 import { useTenant } from "@/lib/context/tenant-context";
 import { User } from "@/lib/types/user";
 import { Tenant } from "@/lib/types/tenant";
@@ -37,33 +38,68 @@ import {
 import { ToggleUserStatusDialog } from "@/components/superadmin/toggle-user-status-dialog";
 
 export function UsersClient({ initialUsers, initialTotal, tenants }: { initialUsers: User[], initialTotal: number, tenants: Tenant[] }) {
+  const ITEMS_PER_PAGE = 10;
   const router = useRouter();
   const { selectedTenantId } = useTenant();
-  const [users, setUsers] = useState<User[]>(initialUsers);
-  const [total, setTotal] = useState(initialTotal);
-  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
-  const fetchUsersData = async (page: number, tenantId?: number | null) => {
-    setLoading(true);
-    try {
-      const skip = (page - 1) * itemsPerPage;
-      const params: { skip: number; limit: number; tenant_id?: number } = { skip, limit: itemsPerPage };
-      if (tenantId) params.tenant_id = tenantId;
-      const data = await getUsers(params);
-      setUsers(data.items || []);
-      setTotal(data.total ?? 0);
-    } catch (err) { console.error("Error fetching users:", err); }
-    finally { setLoading(false); }
+  const fetchUsersFromApi = useCallback(async (params: Record<string, string>, signal: AbortSignal) => {
+    const res = await fetch(`/api/superadmin/users?${new URLSearchParams(params)}`, { signal });
+    if (!res.ok) throw new Error("Failed to fetch users");
+    return res.json();
+  }, []);
+
+  const { items: filteredUsers, total, loading, isStale, fetchData, debouncedFetch } = useServerTable<User>({
+    initialItems: initialUsers,
+    initialTotal,
+    fetchFn: fetchUsersFromApi,
+  });
+
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+
+  const buildParams = useCallback(
+    (overrides: Record<string, string> = {}) => {
+      const p: Record<string, string> = {
+        skip: overrides.skip ?? String((currentPage - 1) * ITEMS_PER_PAGE),
+        limit: overrides.limit ?? String(ITEMS_PER_PAGE),
+      };
+      if (selectedTenantId) p.tenant_id = String(selectedTenantId);
+      const s = overrides.search ?? search;
+      const r = overrides.role ?? (roleFilter !== "all" ? roleFilter : "");
+      const st = overrides.is_active ?? (statusFilter === "active" ? "true" : statusFilter === "inactive" ? "false" : "");
+      if (s) p.search = s;
+      if (r) p.role = r;
+      if (st) p.is_active = st;
+      return p;
+    },
+    [currentPage, search, roleFilter, statusFilter, selectedTenantId]
+  );
+
+  const handleSearch = (value: string) => {
+    setSearch(value);
+    setCurrentPage(1);
+    debouncedFetch(buildParams({ search: value, skip: "0" }));
+  };
+
+  const handleRoleFilter = (value: string) => {
+    setRoleFilter(value);
+    setCurrentPage(1);
+    fetchData(buildParams({ role: value !== "all" ? value : "", skip: "0" }));
+  };
+
+  const handleStatusFilter = (value: string) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+    const isActive = value === "active" ? "true" : value === "inactive" ? "false" : "";
+    fetchData(buildParams({ is_active: isActive, skip: "0" }));
   };
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
-    fetchUsersData(newPage, selectedTenantId);
+    fetchData(buildParams({ skip: String((newPage - 1) * ITEMS_PER_PAGE) }));
   };
 
   const prevTenantId = useRef(selectedTenantId);
@@ -71,22 +107,8 @@ export function UsersClient({ initialUsers, initialTotal, tenants }: { initialUs
     if (prevTenantId.current === selectedTenantId) return;
     prevTenantId.current = selectedTenantId;
     setCurrentPage(1);
-    fetchUsersData(1, selectedTenantId);
+    fetchData({ skip: "0", limit: String(ITEMS_PER_PAGE), ...(selectedTenantId ? { tenant_id: String(selectedTenantId) } : {}) });
   }, [selectedTenantId]);
-
-  // Client-side filtering for search/role/status
-  const filteredUsers = useMemo(() => users.filter((u) => {
-    if (search) {
-      const s = search.toLowerCase();
-      if (!u.name?.toLowerCase().includes(s) && !u.email?.toLowerCase().includes(s)) return false;
-    }
-    if (roleFilter !== "all" && u.role !== roleFilter) return false;
-    if (statusFilter === "active" && !u.is_active) return false;
-    if (statusFilter === "inactive" && u.is_active) return false;
-    return true;
-  }), [users, search, roleFilter, statusFilter]);
-
-  const totalPages = Math.ceil(total / itemsPerPage);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [toggleStatusDialogOpen, setToggleStatusDialogOpen] = useState(false);
@@ -94,9 +116,7 @@ export function UsersClient({ initialUsers, initialTotal, tenants }: { initialUs
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userForStatus, setUserForStatus] = useState<User | null>(null);
 
-  const refreshUsers = async () => {
-    await fetchUsersData(currentPage, selectedTenantId);
-  };
+  const refreshUsers = () => fetchData(buildParams());
 
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
@@ -124,9 +144,9 @@ export function UsersClient({ initialUsers, initialTotal, tenants }: { initialUs
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nombre o email..." value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} className="pl-10" />
+          <Input placeholder="Buscar por nombre o email..." value={search} onChange={(e) => handleSearch(e.target.value)} className="pl-10" />
         </div>
-        <Select value={roleFilter} onValueChange={(v) => { setRoleFilter(v); setCurrentPage(1); }}>
+        <Select value={roleFilter} onValueChange={handleRoleFilter}>
           <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Rol" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos los roles</SelectItem>
@@ -136,7 +156,7 @@ export function UsersClient({ initialUsers, initialTotal, tenants }: { initialUs
             <SelectItem value="VIEWER">Viewer</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
+        <Select value={statusFilter} onValueChange={handleStatusFilter}>
           <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Estado" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
@@ -156,7 +176,8 @@ export function UsersClient({ initialUsers, initialTotal, tenants }: { initialUs
       </p>
 
       {/* Table */}
-      {loading ? (
+      <div className={isStale ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
+      {loading && !isStale ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           <span className="ml-2 text-muted-foreground">Cargando usuarios...</span>
@@ -235,6 +256,8 @@ export function UsersClient({ initialUsers, initialTotal, tenants }: { initialUs
           </Table>
         </div>
       )}
+
+      </div>
 
       {/* Pagination */}
       {totalPages > 1 ? (

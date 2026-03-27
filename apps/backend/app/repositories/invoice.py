@@ -83,11 +83,14 @@ class InvoiceRepository(CRUDBase[Invoice, InvoiceCreate, InvoiceUpdate]):
             query = query.filter(Invoice.tenant_id == tenant_id)
         if search:
             pattern = f"%{search}%"
-            query = query.filter(or_(
-                Invoice.full_number.ilike(pattern),
+            conditions = [
+                Invoice.serie.ilike(pattern),
                 Invoice.cliente_razon_social.ilike(pattern),
                 Invoice.cliente_numero_documento.ilike(pattern),
-            ))
+            ]
+            if search.isdigit():
+                conditions.append(Invoice.correlativo == int(search))
+            query = query.filter(or_(*conditions))
         if invoice_type:
             query = query.filter(Invoice.invoice_type == invoice_type)
         if efact_status:
@@ -109,11 +112,14 @@ class InvoiceRepository(CRUDBase[Invoice, InvoiceCreate, InvoiceUpdate]):
             query = query.filter(Invoice.tenant_id == tenant_id)
         if search:
             pattern = f"%{search}%"
-            query = query.filter(or_(
-                Invoice.full_number.ilike(pattern),
+            conditions = [
+                Invoice.serie.ilike(pattern),
                 Invoice.cliente_razon_social.ilike(pattern),
                 Invoice.cliente_numero_documento.ilike(pattern),
-            ))
+            ]
+            if search.isdigit():
+                conditions.append(Invoice.correlativo == int(search))
+            query = query.filter(or_(*conditions))
         if invoice_type:
             query = query.filter(Invoice.invoice_type == invoice_type)
         if efact_status:

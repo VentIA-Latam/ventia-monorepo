@@ -25,7 +25,11 @@ import {
   InvoiceSerieCreate,
   INVOICE_TYPES,
 } from "@/lib/types/invoice";
-import { Tenant } from "@/lib/types/tenant";
+interface TenantForSelect {
+  id: number;
+  name: string;
+  is_platform?: boolean;
+}
 
 interface InvoiceSerieFormData extends InvoiceSerieCreate {
   tenant_id?: number;
@@ -35,7 +39,7 @@ export interface CreateSerieDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  tenants: Tenant[];
+  tenants: TenantForSelect[];
 }
 
 export function CreateSerieDialog({ open, onClose, onSuccess, tenants }: CreateSerieDialogProps) {

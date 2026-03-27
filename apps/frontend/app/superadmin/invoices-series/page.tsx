@@ -1,46 +1,27 @@
-import { InvoiceSerie } from "@/lib/types/invoice";
-import { getAccessToken } from "@/lib/auth0";
+import { fetchInvoiceSeries } from "@/lib/services/superadmin-service";
 import { InvoiceSeriesClientView } from "./series-client";
 
-// Forzar renderizado dinámico (SSR) porque usa cookies para auth
 export const dynamic = 'force-dynamic';
 
-/**
- * Server Component - Carga de series de facturación
- */
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
-async function fetchInvoiceSeries(): Promise<InvoiceSerie[]> {
+export default async function InvoiceSeriesPage() {
   try {
-    const token = await getAccessToken();
+    const data = await fetchInvoiceSeries({ limit: 10 });
 
-    if (!token) {
-      console.error("No access token available");
-      return [];
-    }
-
-    const response = await fetch(`${API_BASE_URL}/invoice-series?limit=10`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      console.error("Failed to fetch invoice series:", response.statusText);
-      return [];
-    }
-
-    return response.json();
+    return (
+      <InvoiceSeriesClientView
+        initialSeries={data.items}
+        initialTotal={data.total ?? 0}
+      />
+    );
   } catch (error) {
-    console.error("Error fetching invoice series:", error);
-    return [];
+    console.error("Error loading invoice series:", error);
+    return (
+      <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-lg">
+        <p className="font-semibold">Error al cargar series de facturación</p>
+        <p className="text-sm">
+          {error instanceof Error ? error.message : "Error desconocido"}
+        </p>
+      </div>
+    );
   }
 }
-
-export default async function InvoiceSeriesPage() {
-  const series = await fetchInvoiceSeries();
-  return <InvoiceSeriesClientView initialSeries={series} />;
-}
-

@@ -55,9 +55,8 @@ export function SuperAdminOrdersClient({
   const buildParams = useCallback(
     (overrides: Record<string, string> = {}) => {
       const p: Record<string, string> = {
-        skip: String((currentPage - 1) * ITEMS_PER_PAGE),
-        limit: String(ITEMS_PER_PAGE),
-        ...overrides,
+        skip: overrides.skip ?? String((currentPage - 1) * ITEMS_PER_PAGE),
+        limit: overrides.limit ?? String(ITEMS_PER_PAGE),
       };
       if (selectedTenantId) p.tenant_id = String(selectedTenantId);
       const s = overrides.search ?? search;
