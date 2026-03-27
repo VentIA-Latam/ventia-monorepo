@@ -2,9 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useServerTable } from "@/lib/hooks/use-server-table";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -30,13 +28,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { EmptyState } from "@/components/ui/empty-state";
 import { formatDate } from "@/lib/utils";
 import { Invoice, INVOICE_TYPE_NAMES, INVOICE_STATUS_NAMES, INVOICE_STATUS_COLORS } from "@/lib/types/invoice";
 import {
-  FileText,
   Search,
-  Filter,
   Download,
+  Plus,
   Eye,
   MoreVertical,
   FileDown,
@@ -46,6 +44,8 @@ import {
   AlertCircle,
   Mail,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import { SendEmailDialog } from "@/components/invoices/send-email-dialog";
@@ -68,9 +68,6 @@ async function fetchInvoicesFromApi(
   return res.json();
 }
 
-/**
- * Client Component - Interactividad y filtros
- */
 export function InvoicesClientView({ initialInvoices, initialTotal }: InvoicesClientViewProps) {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
@@ -129,6 +126,14 @@ export function InvoicesClientView({ initialInvoices, initialTotal }: InvoicesCl
     fetchData(buildParams({ skip: String((page - 1) * ITEMS_PER_PAGE) }));
   };
 
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setFilterType("all");
+    setFilterStatus("all");
+    setCurrentPage(1);
+    fetchData({ skip: "0", limit: String(ITEMS_PER_PAGE) });
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "success":
@@ -179,7 +184,6 @@ export function InvoicesClientView({ initialInvoices, initialTotal }: InvoicesCl
   };
 
   const handleOpenEmailDialog = (invoice: Invoice) => {
-    // Validar que tenga email
     if (!invoice.cliente_email) {
       toast({
         title: "Email no disponible",
@@ -189,7 +193,6 @@ export function InvoicesClientView({ initialInvoices, initialTotal }: InvoicesCl
       return;
     }
 
-    // Validar estado
     if (invoice.efact_status !== "success") {
       toast({
         title: "Factura no válida",
@@ -199,7 +202,6 @@ export function InvoicesClientView({ initialInvoices, initialTotal }: InvoicesCl
       return;
     }
 
-    // Abrir dialog de confirmación
     setSelectedInvoice(invoice);
     setEmailDialogOpen(true);
   };
@@ -212,9 +214,7 @@ export function InvoicesClientView({ initialInvoices, initialTotal }: InvoicesCl
 
       const response = await fetch(`/api/invoices/send-email/${selectedInvoice.id}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           recipient_email: email,
           include_xml: includeXml,
@@ -235,7 +235,6 @@ export function InvoicesClientView({ initialInvoices, initialTotal }: InvoicesCl
         description: `Comprobante enviado a ${result.sent_to}`,
       });
 
-      // Cerrar dialog al éxito
       setEmailDialogOpen(false);
     } catch (error) {
       toast({
@@ -251,83 +250,85 @@ export function InvoicesClientView({ initialInvoices, initialTotal }: InvoicesCl
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground font-heading flex items-center gap-2">
-            <FileText className="h-6 w-6" />
-            Comprobantes Electrónicos
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Gestiona facturas, boletas y comprobantes electrónicos
-          </p>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold font-heading text-foreground">Comprobantes Electrónicos</h1>
+            <p className="text-muted-foreground mt-1">
+              Gestiona facturas, boletas y comprobantes electrónicos.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" className="gap-2" disabled>
+              <Download className="w-4 h-4" />
+              Exportar
+            </Button>
+            <Button className="gap-2" disabled>
+              <Plus className="w-4 h-4" />
+              Nueva Factura
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por serie, cliente, RUC/DNI..."
-                value={searchTerm}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={filterType} onValueChange={handleFilterType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Tipo de comprobante" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los tipos</SelectItem>
-                <SelectItem value="01">Factura</SelectItem>
-                <SelectItem value="03">Boleta</SelectItem>
-                <SelectItem value="07">Nota de Crédito</SelectItem>
-                <SelectItem value="08">Nota de Débito</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterStatus} onValueChange={handleFilterStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los estados</SelectItem>
-                <SelectItem value="pending">Pendiente</SelectItem>
-                <SelectItem value="processing">Procesando</SelectItem>
-                <SelectItem value="success">Exitoso</SelectItem>
-                <SelectItem value="error">Error</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex gap-3">
+        <div className="flex-1 min-w-[250px] relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por serie, cliente, RUC/DNI..."
+            value={searchTerm}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="pl-10"
+          />
+        </div>
 
-      {/* Results Summary */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          Mostrando <span className="font-semibold">{filteredInvoices.length}</span> de{" "}
-          <span className="font-semibold">{total}</span> comprobantes
-        </p>
+        <Select value={filterType} onValueChange={handleFilterType}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Tipo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tipo</SelectItem>
+            <SelectItem value="01">Factura</SelectItem>
+            <SelectItem value="03">Boleta</SelectItem>
+            <SelectItem value="07">Nota de Crédito</SelectItem>
+            <SelectItem value="08">Nota de Débito</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={filterStatus} onValueChange={handleFilterStatus}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Estado" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Estado</SelectItem>
+            <SelectItem value="pending">Pendiente</SelectItem>
+            <SelectItem value="processing">Procesando</SelectItem>
+            <SelectItem value="success">Exitoso</SelectItem>
+            <SelectItem value="error">Error</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Invoices Table */}
+      {/* Table */}
       <div className={isStale ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
-      {loading && !isStale ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-muted-foreground">Cargando comprobantes...</span>
-        </div>
-      ) : (
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Comprobantes</CardTitle>
-          <CardDescription>
-            Comprobantes electrónicos generados desde órdenes
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        {loading && !isStale ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <span className="ml-2 text-muted-foreground">Cargando comprobantes...</span>
+          </div>
+        ) : filteredInvoices.length === 0 ? (
+          <EmptyState
+            icon={<Search className="h-6 w-6" />}
+            title="No se encontraron comprobantes"
+            description="Intenta ajustar los filtros de busqueda o tipo de comprobante."
+            action={
+              <Button variant="outline" size="sm" onClick={handleClearFilters}>
+                Limpiar filtros
+              </Button>
+            }
+          />
+        ) : (
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -343,99 +344,89 @@ export function InvoicesClientView({ initialInvoices, initialTotal }: InvoicesCl
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredInvoices.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                      No se encontraron comprobantes
+                {filteredInvoices.map((invoice) => (
+                  <TableRow key={invoice.id}>
+                    <TableCell className="font-mono font-medium">
+                      {invoice.full_number}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {INVOICE_TYPE_NAMES[invoice.invoice_type]}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {invoice.cliente_razon_social || <span className="text-muted-foreground">-</span>}
+                    </TableCell>
+                    <TableCell>
+                      {invoice.cliente_numero_documento || <span className="text-muted-foreground">-</span>}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {invoice.currency} {invoice.total.toFixed(2)}
+                    </TableCell>
+                    <TableCell>
+                      {formatDate(invoice.created_at)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={INVOICE_STATUS_COLORS[invoice.efact_status] || ""}
+                      >
+                        <span className="flex items-center gap-1">
+                          {getStatusIcon(invoice.efact_status)}
+                          {INVOICE_STATUS_NAMES[invoice.efact_status]}
+                        </span>
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <Link href={`/dashboard/invoices/${invoice.id}`}>
+                            <DropdownMenuItem>
+                              <Eye className="h-4 w-4 mr-2" />
+                              Ver detalles
+                            </DropdownMenuItem>
+                          </Link>
+                          {invoice.efact_status === "success" && (
+                            <>
+                              {invoice.cliente_email && (
+                                <DropdownMenuItem
+                                  onClick={() => handleOpenEmailDialog(invoice)}
+                                  disabled={sendingEmailId === invoice.id}
+                                >
+                                  <Mail className="h-4 w-4 mr-2" />
+                                  Enviar por Email
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem
+                                onClick={() => handleDownloadPDF(invoice.id, invoice.full_number)}
+                              >
+                                <FileDown className="h-4 w-4 mr-2" />
+                                Descargar PDF
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDownloadXML(invoice.id, invoice.full_number)}
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Descargar XML
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ) : (
-                  filteredInvoices.map((invoice) => (
-                    <TableRow key={invoice.id}>
-                      <TableCell className="font-mono font-medium">
-                        {invoice.full_number}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {INVOICE_TYPE_NAMES[invoice.invoice_type]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {invoice.cliente_razon_social || <span className="text-muted-foreground">-</span>}
-                      </TableCell>
-                      <TableCell>
-                        {invoice.cliente_numero_documento || <span className="text-muted-foreground">-</span>}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {invoice.currency} {invoice.total.toFixed(2)}
-                      </TableCell>
-                      <TableCell>
-                        {formatDate(invoice.created_at)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={INVOICE_STATUS_COLORS[invoice.efact_status] || ""}
-                        >
-                          <span className="flex items-center gap-1">
-                            {getStatusIcon(invoice.efact_status)}
-                            {INVOICE_STATUS_NAMES[invoice.efact_status]}
-                          </span>
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <Link href={`/dashboard/invoices/${invoice.id}`}>
-                              <DropdownMenuItem>
-                                <Eye className="h-4 w-4 mr-2" />
-                                Ver detalles
-                              </DropdownMenuItem>
-                            </Link>
-                            {invoice.efact_status === "success" && (
-                              <>
-                                {invoice.cliente_email && (
-                                  <DropdownMenuItem
-                                    onClick={() => handleOpenEmailDialog(invoice)}
-                                    disabled={sendingEmailId === invoice.id}
-                                  >
-                                    <Mail className="h-4 w-4 mr-2" />
-                                    Enviar por Email
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuItem
-                                  onClick={() => handleDownloadPDF(invoice.id, invoice.full_number)}
-                                >
-                                  <FileDown className="h-4 w-4 mr-2" />
-                                  Descargar PDF
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDownloadXML(invoice.id, invoice.full_number)}
-                                >
-                                  <Download className="h-4 w-4 mr-2" />
-                                  Descargar XML
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
+                ))}
               </TableBody>
             </Table>
           </div>
-        </CardContent>
-      </Card>
-      )}
+        )}
       </div>
 
       {/* Pagination */}
@@ -444,12 +435,46 @@ export function InvoicesClientView({ initialInvoices, initialTotal }: InvoicesCl
           <p className="text-sm text-muted-foreground">
             Pagina {currentPage} de {totalPages} ({total} resultados)
           </p>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => handlePageChange(Math.max(1, currentPage - 1))}>
-              <ChevronLeft className="h-4 w-4" />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="w-4 h-4" />
             </Button>
-            <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}>
-              <ChevronRight className="h-4 w-4" />
+
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+              return (
+                <Button
+                  key={pageNum}
+                  variant={currentPage === pageNum ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => handlePageChange(pageNum)}
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+            >
+              <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
         </div>
@@ -466,4 +491,3 @@ export function InvoicesClientView({ initialInvoices, initialTotal }: InvoicesCl
     </div>
   );
 }
-
