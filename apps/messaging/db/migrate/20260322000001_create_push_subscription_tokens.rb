@@ -1,8 +1,8 @@
 class CreatePushSubscriptionTokens < ActiveRecord::Migration[7.2]
   def change
-    create_table :push_subscription_tokens, if_not_exists: true do |t|
-      t.references :user, null: false, foreign_key: true
-      t.references :account, null: false, foreign_key: true
+    create_table :push_subscription_tokens, id: :uuid, default: -> { "gen_random_uuid()" }, if_not_exists: true do |t|
+      t.references :user, null: false, foreign_key: true, type: :uuid
+      t.references :account, null: false, foreign_key: true, type: :uuid
       t.text :token, null: false
       t.integer :platform, default: 0, null: false
       t.jsonb :device_info, default: {}

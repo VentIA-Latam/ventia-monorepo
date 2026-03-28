@@ -4,7 +4,7 @@ import { getAccessToken } from "@/lib/auth0";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -14,7 +14,8 @@ export async function GET(
     }
 
     const { id } = await params;
-    const response = await fetch(`${API_URL}/messaging/conversations/${id}`, {
+    const { searchParams } = new URL(request.url);
+    const response = await fetch(`${API_URL}/messaging/conversations/${id}?${searchParams.toString()}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
@@ -44,8 +45,9 @@ export async function PATCH(
     }
 
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
     const body = await request.json();
-    const response = await fetch(`${API_URL}/messaging/conversations/${id}`, {
+    const response = await fetch(`${API_URL}/messaging/conversations/${id}?${searchParams.toString()}`, {
       method: "PATCH",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -67,7 +69,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -77,7 +79,8 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    const response = await fetch(`${API_URL}/messaging/conversations/${id}`, {
+    const { searchParams } = new URL(request.url);
+    const response = await fetch(`${API_URL}/messaging/conversations/${id}?${searchParams.toString()}`, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${accessToken}`,

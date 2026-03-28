@@ -14,6 +14,7 @@ import { getInitials } from "@/lib/utils/messaging";
 interface ContactInfoPanelProps {
   conversation: Conversation;
   allLabels: Label[];
+  tenantId?: number;
   onClose?: () => void;
   onConversationUpdate?: (updated: Conversation) => void;
   onLabelCreated?: (label: Label) => void;
@@ -27,6 +28,7 @@ const stageConfig: Record<string, { label: string; className: string }> = {
 export const ContactInfoPanel = memo(function ContactInfoPanel({
   conversation,
   allLabels,
+  tenantId,
   onClose,
   onConversationUpdate,
   onLabelCreated,
@@ -93,6 +95,7 @@ export const ContactInfoPanel = memo(function ContactInfoPanel({
           <TemperatureSelector
             conversationId={conversation.id}
             value={conversation.temperature}
+            tenantId={tenantId}
             onChange={(temp: ConversationTemperature) =>
               onConversationUpdate?.({ ...conversation, temperature: temp })
             }

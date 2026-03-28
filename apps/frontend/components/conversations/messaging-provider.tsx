@@ -44,9 +44,10 @@ const WS_URL = process.env.NEXT_PUBLIC_MESSAGING_WS_URL || "ws://localhost:3001/
 
 interface MessagingProviderProps {
   children: React.ReactNode;
+  tenantId?: number;
 }
 
-export function MessagingProvider({ children }: MessagingProviderProps) {
+export function MessagingProvider({ children, tenantId }: MessagingProviderProps) {
   const [token, setToken] = useState<{
     pubsub_token: string;
     account_id: string;
@@ -54,19 +55,20 @@ export function MessagingProvider({ children }: MessagingProviderProps) {
   } | null>(null);
   const [lastEvent, setLastEvent] = useState<ActionCableEvent | null>(null);
 
-  // Fetch WS token on mount — lazy sync if user not yet provisioned
+  // Fetch WS token on mount or when tenantId changes
   useEffect(() => {
     let cancelled = false;
+    setToken(null); // Reset token to force reconnect
 
     async function fetchToken() {
       try {
-        const data = await getWsToken();
+        const data = await getWsToken(tenantId);
         if (!cancelled) setToken(data);
       } catch {
         // Token fetch failed — attempt lazy sync then retry once
         try {
           await syncUser();
-          const data = await getWsToken();
+          const data = await getWsToken(tenantId);
           if (!cancelled) setToken(data);
         } catch (retryErr) {
           console.error("Error getting WS token after sync:", retryErr);
@@ -76,7 +78,7 @@ export function MessagingProvider({ children }: MessagingProviderProps) {
 
     fetchToken();
     return () => { cancelled = true; };
-  }, []);
+  }, [tenantId]);
 
   const emitEvent = useCallback((event: ActionCableEvent) => {
     setLastEvent(event);

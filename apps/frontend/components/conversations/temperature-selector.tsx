@@ -9,6 +9,7 @@ import type { ConversationTemperature } from "@/lib/types/messaging";
 interface TemperatureSelectorProps {
   conversationId: number;
   value: ConversationTemperature;
+  tenantId?: number;
   onChange?: (value: ConversationTemperature) => void;
 }
 
@@ -23,13 +24,13 @@ const TEMPERATURES: {
   { value: "hot", label: "Caliente", icon: Flame, activeClass: "bg-red-100 text-red-600 border-red-300 dark:bg-red-950 dark:text-red-400 dark:border-red-800" },
 ];
 
-export function TemperatureSelector({ conversationId, value, onChange }: TemperatureSelectorProps) {
+export function TemperatureSelector({ conversationId, value, tenantId, onChange }: TemperatureSelectorProps) {
   const handleClick = useCallback(
     async (temp: ConversationTemperature) => {
       const newValue = value === temp ? null : temp;
       onChange?.(newValue);
       try {
-        await updateConversation(conversationId, { temperature: newValue });
+        await updateConversation(conversationId, { temperature: newValue }, tenantId);
       } catch (err) {
         console.error("Error updating temperature:", err);
         onChange?.(value);

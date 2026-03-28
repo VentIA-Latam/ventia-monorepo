@@ -21,13 +21,16 @@ from app.schemas.messaging import (
     WebSocketTokenResponse,
     WhatsAppConnectRequest,
 )
+from app.core.permissions import Role
 from app.services.messaging_service import messaging_service
 
 router = APIRouter()
 
 
-def _get_tenant_id(current_user: User) -> int:
-    """Extract tenant_id from the authenticated user."""
+def _resolve_tenant_id(current_user: User, tenant_id_override: int | None = None) -> int:
+    """Resolve tenant_id: SUPERADMIN can override to view other tenants."""
+    if tenant_id_override and current_user.role == Role.SUPERADMIN:
+        return tenant_id_override
     if not current_user.tenant_id:
         raise HTTPException(status_code=400, detail="User has no tenant assigned")
     return current_user.tenant_id
@@ -48,7 +51,7 @@ async def provision_account(
 ):
     from app.models.tenant import Tenant
 
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
     tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
@@ -77,7 +80,7 @@ async def provision_account(
 async def sync_user(
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     user_data = {
         "ventia_user_id": current_user.id,
@@ -101,9 +104,10 @@ async def sync_user(
     responses={503: {"model": MessagingError}},
 )
 async def get_ws_token(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.get_user_token(tenant_id, current_user.id)
     if result is None:
@@ -133,9 +137,10 @@ async def list_conversations(
     created_after: Optional[str] = Query(None, description="Filter by date (ISO) from"),
     created_before: Optional[str] = Query(None, description="Filter by date (ISO) to"),
     unread: Optional[str] = Query(None, description="Filter unread only: true"),
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
     params = {}
     if status:
         params["status"] = status
@@ -170,9 +175,10 @@ async def list_conversations(
     responses={503: {"model": MessagingError}},
 )
 async def get_conversation_counts(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.get_conversation_counts(tenant_id)
     if result is None:
@@ -189,9 +195,10 @@ async def get_conversation_counts(
 )
 async def get_conversation(
     conversation_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.get_conversation(tenant_id, conversation_id)
     if result is None:
@@ -209,9 +216,10 @@ async def get_conversation(
 async def update_conversation(
     conversation_id: str,
     payload: dict,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.update_conversation(
         tenant_id, conversation_id, payload
@@ -230,9 +238,10 @@ async def update_conversation(
 )
 async def update_last_seen(
     conversation_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.update_last_seen(tenant_id, conversation_id)
     if result is None:
@@ -249,9 +258,10 @@ async def update_last_seen(
 )
 async def delete_conversation(
     conversation_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.delete_conversation(tenant_id, conversation_id)
     if result is None:
@@ -271,7 +281,7 @@ async def update_conversation_stage(
     payload: dict,
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
     stage = payload.get("stage")
     if stage not in ("pre_sale", "sale"):
         raise HTTPException(status_code=400, detail="stage must be 'pre_sale' or 'sale'")
@@ -295,7 +305,7 @@ async def escalate_conversation(
     conversation_id: str,
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     result = await messaging_service.escalate_conversation(tenant_id, conversation_id)
     if result is None:
@@ -315,7 +325,7 @@ async def mark_payment_review(
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
     """Add 'en-revisión' label to a conversation."""
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     result = await messaging_service.mark_payment_review(tenant_id, conversation_id)
     if result is None:
@@ -335,9 +345,10 @@ async def mark_payment_review(
 async def list_messages(
     conversation_id: str,
     page: Optional[int] = Query(None, description="Page number"),
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
     params = {}
     if page:
         params["page"] = page
@@ -358,9 +369,10 @@ async def list_messages(
 async def send_message(
     conversation_id: str,
     payload: SendMessageRequest,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.send_message(
         tenant_id,
@@ -386,7 +398,7 @@ async def send_message_with_attachment(
     file: UploadFile = File(...),
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     result = await messaging_service.send_message_with_file(
         tenant_id,
@@ -414,7 +426,7 @@ async def assign_conversation(
     payload: AssignConversationRequest,
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     result = await messaging_service.assign_conversation(
         tenant_id, conversation_id, payload.model_dump(exclude_none=True)
@@ -435,7 +447,7 @@ async def unassign_conversation(
     conversation_id: str,
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     result = await messaging_service.unassign_conversation(tenant_id, conversation_id)
     if result is None:
@@ -453,9 +465,10 @@ async def unassign_conversation(
     responses={503: {"model": MessagingError}},
 )
 async def list_inboxes(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.get_inboxes(tenant_id)
     if result is None:
@@ -474,7 +487,7 @@ async def get_inbox_templates(
     inbox_id: str,
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     result = await messaging_service.get_inbox_templates(tenant_id, inbox_id)
     if result is None:
@@ -493,7 +506,7 @@ async def sync_inbox_templates(
     inbox_id: str,
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     result = await messaging_service.sync_inbox_templates(tenant_id, inbox_id)
     if result is None:
@@ -515,7 +528,7 @@ async def send_template_message(
     payload: SendTemplateMessageRequest,
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     message_data = {
         "content": payload.content,
@@ -547,7 +560,7 @@ async def list_contacts(
     page: Optional[int] = Query(None, description="Page number"),
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     if search:
         result = await messaging_service.search_contacts(tenant_id, search)
@@ -574,7 +587,7 @@ async def list_contacts(
 async def list_canned_responses(
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     result = await messaging_service.get_canned_responses(tenant_id)
     if result is None:
@@ -593,9 +606,10 @@ async def list_canned_responses(
     responses={503: {"model": MessagingError}},
 )
 async def list_labels(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.get_labels(tenant_id)
     if result is None:
@@ -614,7 +628,7 @@ async def create_label(
     payload: dict,
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     result = await messaging_service.create_label(tenant_id, payload)
     if result is None:
@@ -633,7 +647,7 @@ async def delete_label(
     label_id: str,
     current_user: User = Depends(require_permission_dual("DELETE", "/messaging/*")),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     result = await messaging_service.delete_label(tenant_id, label_id)
     if result is None:
@@ -652,7 +666,7 @@ async def list_conversation_labels(
     conversation_id: str,
     current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     result = await messaging_service.get_conversation_labels(tenant_id, conversation_id)
     if result is None:
@@ -672,7 +686,7 @@ async def add_conversation_label(
     payload: dict,
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     label_id = payload.get("label_id")
     if not label_id:
@@ -698,7 +712,7 @@ async def remove_conversation_label(
     label_id: str,
     current_user: User = Depends(require_permission_dual("DELETE", "/messaging/*")),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     result = await messaging_service.remove_conversation_label(
         tenant_id, conversation_id, label_id
@@ -720,7 +734,7 @@ async def remove_conversation_label(
 async def list_teams(
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     result = await messaging_service.get_teams(tenant_id)
     if result is None:
@@ -740,7 +754,7 @@ async def list_teams(
 async def list_notifications(
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     result = await messaging_service.get_notifications(
         tenant_id, current_user.id
@@ -764,7 +778,7 @@ async def connect_whatsapp(
     payload: WhatsAppConnectRequest,
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     result = await messaging_service.whatsapp_connect(
         tenant_id, payload.model_dump(exclude_none=True)
@@ -784,7 +798,7 @@ async def connect_whatsapp(
 async def whatsapp_status(
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     result = await messaging_service.whatsapp_status(tenant_id)
     if result is None:
@@ -803,7 +817,7 @@ async def whatsapp_health(
     inbox_id: str,
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     result = await messaging_service.whatsapp_health(tenant_id, inbox_id)
     if result is None:
@@ -822,7 +836,7 @@ async def manual_connect_whatsapp(
     payload: ManualWhatsAppRequest,
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
 
     inbox_data = {
         "name": payload.name or f"{payload.phone_number} WhatsApp",
@@ -859,7 +873,7 @@ async def register_push_token(
     current_user: User = Depends(get_current_user),
 ):
     """Register an FCM push subscription token for the current user."""
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
     result = await messaging_service.register_push_token(
         tenant_id, str(current_user.id), payload.model_dump(exclude_none=True)
     )
@@ -879,7 +893,7 @@ async def delete_push_token(
     current_user: User = Depends(get_current_user),
 ):
     """Remove an FCM push subscription token."""
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
     result = await messaging_service.delete_push_token(
         tenant_id, str(current_user.id), payload.token
     )
@@ -901,7 +915,7 @@ async def get_notification_settings(
     current_user: User = Depends(get_current_user),
 ):
     """Get push notification preferences for the current user."""
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
     result = await messaging_service.get_notification_settings(
         tenant_id, str(current_user.id)
     )
@@ -921,7 +935,7 @@ async def update_notification_settings(
     current_user: User = Depends(get_current_user),
 ):
     """Update push notification preferences for the current user."""
-    tenant_id = _get_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user)
     result = await messaging_service.update_notification_settings(
         tenant_id, str(current_user.id), payload.model_dump(exclude_none=True)
     )

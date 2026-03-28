@@ -11,14 +11,9 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const params = new URLSearchParams();
-    for (const key of ["status", "stage", "conversation_type", "page", "label", "temperature", "created_after", "created_before", "unread"]) {
-      const val = searchParams.get(key);
-      if (val) params.set(key, val);
-    }
 
     const response = await fetch(
-      `${API_URL}/messaging/conversations${params.toString() ? "?" + params.toString() : ""}`,
+      `${API_URL}/messaging/conversations?${searchParams.toString()}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,

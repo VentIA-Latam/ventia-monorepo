@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_11_000001) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
   create_schema "messaging"
 
   # These are extensions that must be enabled in order to support this database
@@ -38,8 +38,37 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_11_000001) do
     t.string "ventia_tenant_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "notify_ai_messages", default: false, null: false
     t.index ["status"], name: "index_accounts_on_status"
     t.index ["ventia_tenant_id"], name: "index_accounts_on_ventia_tenant_id", unique: true
+  end
+
+  create_table "active_storage_attachments", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "record_type", null: false
+    t.bigint "record_id", null: false
+    t.bigint "blob_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
+    t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
+  end
+
+  create_table "active_storage_blobs", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "filename", null: false
+    t.string "content_type"
+    t.text "metadata"
+    t.string "service_name", null: false
+    t.bigint "byte_size", null: false
+    t.string "checksum"
+    t.datetime "created_at", null: false
+    t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
+  end
+
+  create_table "active_storage_variant_records", force: :cascade do |t|
+    t.bigint "blob_id", null: false
+    t.string "variation_digest", null: false
+    t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
   create_table "agent_bot_inboxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -205,15 +234,22 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_11_000001) do
     t.uuid "assignee_agent_bot_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "ai_agent_enabled", default: true, null: false
+    t.integer "temperature"
+    t.integer "stage", default: 0, null: false
     t.index ["account_id"], name: "index_conversations_on_account_id"
     t.index ["assignee_id"], name: "index_conversations_on_assignee_id"
     t.index ["campaign_id"], name: "index_conversations_on_campaign_id"
     t.index ["contact_id"], name: "index_conversations_on_contact_id"
     t.index ["contact_inbox_id"], name: "index_conversations_on_contact_inbox_id"
+    t.index ["first_reply_created_at"], name: "index_conversations_on_first_reply_created_at"
     t.index ["inbox_id"], name: "index_conversations_on_inbox_id"
+    t.index ["stage"], name: "index_conversations_on_stage"
     t.index ["status"], name: "index_conversations_on_status"
     t.index ["team_id"], name: "index_conversations_on_team_id"
+    t.index ["temperature"], name: "index_conversations_on_temperature"
     t.index ["uuid"], name: "index_conversations_on_uuid", unique: true
+    t.index ["waiting_since"], name: "index_conversations_on_waiting_since"
   end
 
   create_table "inbox_members", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -252,6 +288,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_11_000001) do
     t.uuid "account_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "system", default: false, null: false
     t.index ["account_id"], name: "index_labels_on_account_id"
     t.index ["title", "account_id"], name: "index_labels_on_title_and_account_id", unique: true
   end
@@ -299,7 +336,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_11_000001) do
     t.uuid "account_id", null: false
     t.uuid "user_id", null: false
     t.integer "email_flags", default: 0, null: false
-    t.integer "push_flags", default: 0, null: false
+    t.integer "push_flags", default: 7, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id", "user_id"], name: "index_notification_settings_on_account_id_and_user_id", unique: true
@@ -321,6 +358,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_11_000001) do
     t.datetime "updated_at", null: false
     t.index ["primary_actor_type", "primary_actor_id"], name: "index_notifications_on_primary_actor_type_and_primary_actor_id"
     t.index ["user_id", "account_id", "read_at"], name: "index_notifications_on_user_id_and_account_id_and_read_at"
+  end
+
+  create_table "push_subscription_tokens", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.uuid "account_id", null: false
+    t.text "token", null: false
+    t.integer "platform", default: 0, null: false
+    t.jsonb "device_info", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_push_subscription_tokens_on_account_id"
+    t.index ["user_id", "token"], name: "index_push_subscription_tokens_on_user_id_and_token", unique: true
+    t.index ["user_id"], name: "index_push_subscription_tokens_on_user_id"
   end
 
   create_table "team_members", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -368,6 +418,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_11_000001) do
 
   add_foreign_key "account_users", "accounts"
   add_foreign_key "account_users", "users"
+  add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "agent_bot_inboxes", "agent_bots"
   add_foreign_key "agent_bot_inboxes", "inboxes"
   add_foreign_key "agent_bots", "accounts"
@@ -404,6 +456,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_11_000001) do
   add_foreign_key "notification_settings", "users"
   add_foreign_key "notifications", "accounts"
   add_foreign_key "notifications", "users"
+  add_foreign_key "push_subscription_tokens", "accounts"
+  add_foreign_key "push_subscription_tokens", "users"
   add_foreign_key "team_members", "teams"
   add_foreign_key "team_members", "users"
   add_foreign_key "teams", "accounts"

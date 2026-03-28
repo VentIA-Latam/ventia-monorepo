@@ -15,12 +15,9 @@ export async function GET(
 
     const { id } = await params;
     const { searchParams } = new URL(request.url);
-    const queryParams = new URLSearchParams();
-    const page = searchParams.get("page");
-    if (page) queryParams.set("page", page);
 
     const response = await fetch(
-      `${API_URL}/messaging/conversations/${id}/messages${queryParams.toString() ? "?" + queryParams.toString() : ""}`,
+      `${API_URL}/messaging/conversations/${id}/messages?${searchParams.toString()}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -52,6 +49,8 @@ export async function POST(
     }
 
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const qs = searchParams.toString();
     const contentType = request.headers.get("content-type") || "";
 
     // Multipart: forward file upload to FastAPI /upload endpoint
@@ -68,7 +67,7 @@ export async function POST(
       }
 
       const response = await fetch(
-        `${API_URL}/messaging/conversations/${id}/messages/upload`,
+        `${API_URL}/messaging/conversations/${id}/messages/upload${qs ? "?" + qs : ""}`,
         {
           method: "POST",
           headers: {
@@ -90,7 +89,7 @@ export async function POST(
     const body = await request.json();
 
     const response = await fetch(
-      `${API_URL}/messaging/conversations/${id}/messages`,
+      `${API_URL}/messaging/conversations/${id}/messages${qs ? "?" + qs : ""}`,
       {
         method: "POST",
         headers: {

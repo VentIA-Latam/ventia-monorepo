@@ -20,6 +20,7 @@ interface ConversationListProps {
   selectedId: number | null;
   allLabels: Label[];
   section?: string;
+  tenantId?: number;
   onSelect: (id: number) => void;
   onConversationsChange: (conversations: Conversation[]) => void;
   onDeleteConversation?: (id: number) => void;
@@ -34,6 +35,7 @@ export function ConversationList({
   selectedId,
   allLabels,
   section = "all",
+  tenantId,
   onSelect,
   onConversationsChange,
   onDeleteConversation,
@@ -56,6 +58,7 @@ export function ConversationList({
   const buildParams = useCallback(
     (section: SectionValue, filters: ActiveFilters): ConversationFilterParams => {
       const params: ConversationFilterParams = {};
+      if (tenantId) params.tenant_id = tenantId;
       if (section === "sale") params.stage = "sale";
       if (section === "unattended") params.conversation_type = "unattended";
       if (filters.label) params.label = filters.label;
@@ -67,7 +70,7 @@ export function ConversationList({
       if (filters.unread) params.unread = "true";
       return params;
     },
-    []
+    [tenantId]
   );
 
   const fetchConversations = useCallback(
@@ -96,7 +99,7 @@ export function ConversationList({
   const handleDelete = useCallback(
     async (id: number) => {
       try {
-        await deleteConversation(id);
+        await deleteConversation(id, tenantId);
         onConversationsChange(conversationsRef.current.filter((c) => c.id !== id));
         onDeleteConversation?.(id);
         emitEvent({ event: "conversation.deleted", data: { id } });

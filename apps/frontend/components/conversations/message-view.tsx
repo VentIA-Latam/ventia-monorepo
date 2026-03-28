@@ -54,12 +54,13 @@ const MESSAGE_ITEM_STYLE = { overflowAnchor: "none" as const, contentVisibility:
 
 interface MessageViewProps {
   conversation: Conversation | null;
+  tenantId?: number;
   onBack?: () => void;
   onOpenInfo?: () => void;
   onConversationUpdate?: (updated: Conversation) => void;
 }
 
-export const MessageView = memo(function MessageView({ conversation, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
+export const MessageView = memo(function MessageView({ conversation, tenantId, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
   const lastEvent = useMessagingEvent();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -93,7 +94,7 @@ export const MessageView = memo(function MessageView({ conversation, onBack, onO
     setHasMore(true);
     messageIdsRef.current = new Set<string>();
 
-    getMessages(conversation.id)
+    getMessages(conversation.id, undefined, tenantId)
       .then((data) => {
         if (!cancelled) {
           const msgs = data.data ?? [];
@@ -109,7 +110,7 @@ export const MessageView = memo(function MessageView({ conversation, onBack, onO
       });
 
     // Mark as read (non-blocking, with logging for diagnostics)
-    markConversationRead(conversation.id)
+    markConversationRead(conversation.id, tenantId)
       .then(() => console.log(`[mark-read] Conversation ${conversation.id} marked as read`))
       .catch((err) => console.error(`[mark-read] FAILED for conversation ${conversation.id}:`, err));
 
@@ -173,7 +174,7 @@ export const MessageView = memo(function MessageView({ conversation, onBack, onO
 
     // Re-mark as read so incoming messages don't show unread badge while viewing
     if (msgType === "incoming") {
-      markConversationRead(conversation.id).catch((err) =>
+      markConversationRead(conversation.id, tenantId).catch((err) =>
         console.error("[mark-read] Re-mark failed:", err)
       );
     }
@@ -231,7 +232,7 @@ export const MessageView = memo(function MessageView({ conversation, onBack, onO
 
     try {
       const nextPage = page + 1;
-      const data = await getMessages(conversation.id, nextPage);
+      const data = await getMessages(conversation.id, nextPage, tenantId);
       const olderMessages = data.data ?? [];
 
       if (olderMessages.length === 0) {
@@ -254,7 +255,7 @@ export const MessageView = memo(function MessageView({ conversation, onBack, onO
     } finally {
       setLoadingMore(false);
     }
-  }, [conversation?.id, page, loadingMore, hasMore]);
+  }, [conversation?.id, page, loadingMore, hasMore, tenantId]);
 
   // Scroll event handler: load older messages on scroll up + track pinned state
   useEffect(() => {
@@ -318,7 +319,7 @@ export const MessageView = memo(function MessageView({ conversation, onBack, onO
       setMessages((prev) => [...prev, tempMessage]);
 
       try {
-        const result = await sendMessage(conversation.id, { content }, file);
+        const result = await sendMessage(conversation.id, { content }, file, tenantId);
         if (result && typeof result === "object" && "id" in result) {
           const realId = String((result as Message).id);
           messageIdsRef.current.add(realId);
@@ -334,7 +335,7 @@ export const MessageView = memo(function MessageView({ conversation, onBack, onO
         if (previewUrl) URL.revokeObjectURL(previewUrl);
       }
     },
-    [conversation?.id]
+    [conversation?.id, tenantId]
   );
 
   // Toggle AI agent
@@ -345,13 +346,13 @@ export const MessageView = memo(function MessageView({ conversation, onBack, onO
       onConversationUpdate?.(updated);
 
       try {
-        await updateConversation(conversation.id, { ai_agent_enabled: checked });
+        await updateConversation(conversation.id, { ai_agent_enabled: checked }, tenantId);
       } catch (err) {
         console.error("Error toggling AI agent:", err);
         onConversationUpdate?.(conversation);
       }
     },
-    [conversation, onConversationUpdate]
+    [conversation, onConversationUpdate, tenantId]
   );
 
   // No conversation selected
@@ -514,7 +515,7 @@ export const MessageView = memo(function MessageView({ conversation, onBack, onO
           conversationId={conversation.id}
           onSent={() => {
             // Refresh messages after sending template
-            getMessages(conversation.id).then((data) => {
+            getMessages(conversation.id, undefined, tenantId).then((data) => {
               const msgs = data.data ?? [];
               messageIdsRef.current = new Set(msgs.map((m) => String(m.id)));
               scrollBehaviorRef.current = "smooth";

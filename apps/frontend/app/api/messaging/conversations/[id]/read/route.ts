@@ -14,9 +14,10 @@ export async function POST(
     }
 
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
 
     const response = await fetch(
-      `${API_URL}/messaging/conversations/${id}/update_last_seen`,
+      `${API_URL}/messaging/conversations/${id}/update_last_seen?${searchParams.toString()}`,
       {
         method: "POST",
         headers: {
