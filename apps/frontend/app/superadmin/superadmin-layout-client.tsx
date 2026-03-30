@@ -48,7 +48,7 @@ export default function SuperAdminLayoutClient({
             </h2>
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 md:gap-6 px-3 sm:px-4 md:px-6 lg:px-12 xl:px-16 py-4 md:py-6">
+        <div className="flex flex-1 flex-col gap-4 md:gap-6 px-3 sm:px-4 md:px-6 lg:px-12 xl:px-16 py-4 md:py-6 min-h-0">
           {children}
         </div>
       </SidebarInset>

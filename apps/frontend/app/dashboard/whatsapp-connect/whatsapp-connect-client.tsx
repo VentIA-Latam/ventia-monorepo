@@ -79,7 +79,7 @@ export function WhatsAppConnectClient({ initialChannels }: WhatsAppConnectClient
         </>
       ) : (
         /* Vista 1: Sin canales — split card + ilustracion */
-        <div className="mx-auto max-w-4xl">
+        <div className="mx-auto max-w-4xl flex items-center justify-center min-h-[calc(100vh-12rem)]">
           <Card className="overflow-hidden">
             <div className="flex flex-col md:flex-row">
               {/* Left: info */}
