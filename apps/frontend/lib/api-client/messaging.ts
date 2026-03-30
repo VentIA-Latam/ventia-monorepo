@@ -147,8 +147,9 @@ export async function removeConversationLabel(conversationId: number | string, l
 
 // --- User sync ---
 
-export async function syncUser(): Promise<unknown> {
-  return apiPost("/api/messaging/users/sync");
+export async function syncUser(tenantId?: number): Promise<unknown> {
+  const qs = tenantId ? `?tenant_id=${tenantId}` : "";
+  return apiPost(`/api/messaging/users/sync${qs}`);
 }
 
 // --- WhatsApp ---

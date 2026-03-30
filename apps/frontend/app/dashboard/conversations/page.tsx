@@ -1,5 +1,5 @@
 import { getAccessToken } from "@/lib/auth0";
-import { fetchConversations, fetchInboxes, fetchLabels } from "@/lib/services/messaging-service";
+import { fetchConversations, fetchInboxes, fetchLabels, ensureMessagingProvisioned } from "@/lib/services/messaging-service";
 import { ConversationsClient } from "./conversations-client";
 
 export const dynamic = "force-dynamic";
@@ -21,11 +21,23 @@ export default async function ConversationsPage({
       if (params.section === "sale") fetchParams.stage = "sale";
       if (params.section === "unattended") fetchParams.conversation_type = "unattended";
 
-      const [convResponse, inboxesResponse, labelsResponse] = await Promise.allSettled([
+      let [convResponse, inboxesResponse, labelsResponse] = await Promise.allSettled([
         fetchConversations(token, fetchParams),
         fetchInboxes(token),
         fetchLabels(token),
       ]);
+
+      // If all failed, account likely not provisioned — provision and retry
+      const allFailed = convResponse.status === "rejected" && inboxesResponse.status === "rejected" && labelsResponse.status === "rejected";
+      if (allFailed) {
+        await ensureMessagingProvisioned(token);
+        [convResponse, inboxesResponse, labelsResponse] = await Promise.allSettled([
+          fetchConversations(token, fetchParams),
+          fetchInboxes(token),
+          fetchLabels(token),
+        ]);
+      }
+
       initialConversations = convResponse.status === "fulfilled" ? convResponse.value.data ?? [] : [];
       initialInboxes = inboxesResponse.status === "fulfilled" ? inboxesResponse.value ?? [] : [];
       initialLabels = labelsResponse.status === "fulfilled" ? labelsResponse.value.data ?? [] : [];

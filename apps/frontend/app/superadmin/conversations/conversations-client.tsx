@@ -13,7 +13,7 @@ import { ConversationList } from "@/components/conversations/conversation-list";
 import { MessageView } from "@/components/conversations/message-view";
 import { ContactInfoPanel } from "@/components/conversations/contact-info-panel";
 import { MessagingProvider } from "@/components/conversations/messaging-provider";
-import { getConversations, getInboxes, getLabels } from "@/lib/api-client/messaging";
+import { getConversations, getInboxes, getLabels, getWsToken } from "@/lib/api-client/messaging";
 import type { Conversation, Label } from "@/lib/types/messaging";
 
 interface SuperAdminConversationsClientProps {
@@ -38,21 +38,41 @@ export function SuperAdminConversationsClient({ tenantId }: SuperAdminConversati
     setConversations([]);
     setAllLabels([]);
 
-    Promise.all([
-      getConversations({ status: "open", tenant_id: tenantId }),
-      getLabels(tenantId),
-    ])
-      .then(([convData, labelsData]) => {
+    async function loadData() {
+      try {
+        // Happy path: account already exists — parallel fetch, no waterfall
+        const [convData, labelsData] = await Promise.all([
+          getConversations({ status: "open", tenant_id: tenantId }),
+          getLabels(tenantId),
+        ]);
         if (cancelled) return;
         setConversations(convData.data ?? []);
         setAllLabels(labelsData.data ?? []);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Error loading conversations:", err);
-        if (!cancelled) setLoading(false);
-      });
+      } catch {
+        // Account likely not provisioned — trigger auto-provisioning via ws-token
+        try {
+          await getWsToken(tenantId);
+        } catch { /* provisioning attempted */ }
+        if (cancelled) return;
 
+        // Retry after provisioning
+        try {
+          const [convData, labelsData] = await Promise.all([
+            getConversations({ status: "open", tenant_id: tenantId }),
+            getLabels(tenantId),
+          ]);
+          if (cancelled) return;
+          setConversations(convData.data ?? []);
+          setAllLabels(labelsData.data ?? []);
+        } catch (retryErr) {
+          console.error("Error loading conversations after provisioning:", retryErr);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadData();
     prevTenantId.current = tenantId;
     return () => { cancelled = true; };
   }, [tenantId]);

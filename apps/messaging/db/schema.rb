@@ -11,15 +11,13 @@
 # It's strongly recommended that you check this file into your version control system.
 
 ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
-  create_schema "messaging"
-
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
 
-  create_table "account_users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "account_id", null: false
-    t.uuid "user_id", null: false
+  create_table "account_users", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
     t.integer "role", default: 0, null: false
     t.integer "availability", default: 0, null: false
     t.boolean "auto_offline", default: true, null: false
@@ -29,13 +27,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.index ["account_id", "user_id"], name: "index_account_users_on_account_id_and_user_id", unique: true
   end
 
-  create_table "accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "accounts", force: :cascade do |t|
     t.string "name", null: false
     t.string "locale", default: "en"
     t.integer "status", default: 0, null: false
     t.jsonb "settings", default: {}
     t.jsonb "limits", default: {}
-    t.string "ventia_tenant_id", null: false
+    t.integer "ventia_tenant_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "notify_ai_messages", default: false, null: false
@@ -71,9 +69,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
-  create_table "agent_bot_inboxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "inbox_id", null: false
-    t.uuid "agent_bot_id", null: false
+  create_table "agent_bot_inboxes", force: :cascade do |t|
+    t.bigint "inbox_id", null: false
+    t.bigint "agent_bot_id", null: false
     t.integer "status", default: 0
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -81,20 +79,20 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.index ["inbox_id"], name: "index_agent_bot_inboxes_on_inbox_id", unique: true
   end
 
-  create_table "agent_bots", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "agent_bots", force: :cascade do |t|
     t.string "name", null: false
     t.text "description"
     t.integer "bot_type", default: 0
     t.jsonb "bot_config", default: {}
-    t.uuid "account_id", null: false
+    t.bigint "account_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_agent_bots_on_account_id"
   end
 
-  create_table "attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "account_id", null: false
-    t.uuid "message_id", null: false
+  create_table "attachments", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "message_id", null: false
     t.integer "file_type", default: 0
     t.string "external_url"
     t.string "extension"
@@ -107,14 +105,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.index ["message_id"], name: "index_attachments_on_message_id"
   end
 
-  create_table "automation_rules", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "automation_rules", force: :cascade do |t|
     t.string "name", null: false
     t.text "description"
     t.integer "event_name", null: false
     t.jsonb "conditions", default: []
     t.jsonb "actions", default: []
     t.boolean "active", default: true
-    t.uuid "account_id", null: false
+    t.bigint "account_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_automation_rules_on_account_id"
@@ -122,14 +120,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.index ["event_name"], name: "index_automation_rules_on_event_name"
   end
 
-  create_table "campaigns", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "campaigns", force: :cascade do |t|
     t.string "title", null: false
     t.text "message"
     t.integer "campaign_type", default: 0
     t.integer "campaign_status", default: 0
-    t.uuid "account_id", null: false
-    t.uuid "inbox_id", null: false
-    t.uuid "sender_id"
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.bigint "sender_id"
     t.boolean "enabled", default: true
     t.jsonb "audience", default: []
     t.datetime "scheduled_at"
@@ -141,8 +139,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.index ["inbox_id"], name: "index_campaigns_on_inbox_id"
   end
 
-  create_table "canned_responses", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "account_id", null: false
+  create_table "canned_responses", force: :cascade do |t|
+    t.bigint "account_id", null: false
     t.string "short_code", null: false
     t.text "content", null: false
     t.datetime "created_at", null: false
@@ -150,22 +148,22 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.index ["account_id", "short_code"], name: "index_canned_responses_on_account_id_and_short_code", unique: true
   end
 
-  create_table "channel_whatsapp", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "channel_whatsapp", force: :cascade do |t|
     t.string "phone_number", null: false
     t.string "provider", default: "whatsapp_cloud"
     t.jsonb "provider_config", default: {}
     t.jsonb "message_templates", default: []
     t.datetime "message_templates_last_updated"
-    t.uuid "account_id", null: false
+    t.bigint "account_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_channel_whatsapp_on_account_id"
     t.index ["phone_number"], name: "index_channel_whatsapp_on_phone_number", unique: true
   end
 
-  create_table "contact_inboxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "contact_id", null: false
-    t.uuid "inbox_id", null: false
+  create_table "contact_inboxes", force: :cascade do |t|
+    t.bigint "contact_id", null: false
+    t.bigint "inbox_id", null: false
     t.string "source_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -174,7 +172,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.index ["source_id", "inbox_id"], name: "index_contact_inboxes_on_source_id_and_inbox_id", unique: true
   end
 
-  create_table "contacts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "contacts", force: :cascade do |t|
     t.string "name", default: ""
     t.string "email"
     t.string "phone_number"
@@ -184,7 +182,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.integer "contact_type", default: 0
     t.boolean "blocked", default: false
     t.datetime "last_activity_at"
-    t.uuid "account_id", null: false
+    t.bigint "account_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_contacts_on_account_id"
@@ -193,9 +191,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.index ["phone_number", "account_id"], name: "index_contacts_on_phone_number_and_account_id", unique: true, where: "((phone_number IS NOT NULL) AND ((phone_number)::text <> ''::text))"
   end
 
-  create_table "conversation_labels", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "conversation_id", null: false
-    t.uuid "label_id", null: false
+  create_table "conversation_labels", force: :cascade do |t|
+    t.bigint "conversation_id", null: false
+    t.bigint "label_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["conversation_id", "label_id"], name: "index_conversation_labels_on_conversation_id_and_label_id", unique: true
@@ -203,16 +201,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.index ["label_id"], name: "index_conversation_labels_on_label_id"
   end
 
-  create_table "conversation_participants", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "account_id", null: false
-    t.uuid "conversation_id", null: false
-    t.uuid "user_id", null: false
+  create_table "conversation_participants", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "user_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["conversation_id", "user_id"], name: "index_conversation_participants_on_conversation_id_and_user_id", unique: true
   end
 
-  create_table "conversations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "conversations", force: :cascade do |t|
     t.uuid "uuid", default: -> { "gen_random_uuid()" }, null: false
     t.integer "status", default: 0, null: false
     t.integer "priority", default: 0
@@ -224,14 +222,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.datetime "first_reply_created_at"
     t.datetime "waiting_since"
     t.datetime "snoozed_until"
-    t.uuid "account_id", null: false
-    t.uuid "inbox_id", null: false
-    t.uuid "contact_id", null: false
-    t.uuid "contact_inbox_id", null: false
-    t.uuid "assignee_id"
-    t.uuid "team_id"
-    t.uuid "campaign_id"
-    t.uuid "assignee_agent_bot_id"
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.bigint "contact_id", null: false
+    t.bigint "contact_inbox_id", null: false
+    t.bigint "assignee_id"
+    t.bigint "team_id"
+    t.bigint "campaign_id"
+    t.bigint "assignee_agent_bot_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "ai_agent_enabled", default: true, null: false
@@ -252,19 +250,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.index ["waiting_since"], name: "index_conversations_on_waiting_since"
   end
 
-  create_table "inbox_members", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "inbox_id", null: false
-    t.uuid "user_id", null: false
+  create_table "inbox_members", force: :cascade do |t|
+    t.bigint "inbox_id", null: false
+    t.bigint "user_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["inbox_id", "user_id"], name: "index_inbox_members_on_inbox_id_and_user_id", unique: true
   end
 
-  create_table "inboxes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "inboxes", force: :cascade do |t|
     t.string "name", null: false
     t.string "channel_type", null: false
-    t.uuid "channel_id", null: false
-    t.uuid "account_id", null: false
+    t.bigint "channel_id", null: false
+    t.bigint "account_id", null: false
     t.boolean "greeting_enabled", default: false
     t.string "greeting_message"
     t.boolean "enable_auto_assignment", default: true
@@ -280,12 +278,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.index ["channel_id", "channel_type"], name: "index_inboxes_on_channel_id_and_channel_type"
   end
 
-  create_table "labels", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "labels", force: :cascade do |t|
     t.string "title", null: false
     t.string "description"
     t.string "color", null: false
     t.boolean "show_on_sidebar", default: true
-    t.uuid "account_id", null: false
+    t.bigint "account_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "system", default: false, null: false
@@ -293,12 +291,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.index ["title", "account_id"], name: "index_labels_on_title_and_account_id", unique: true
   end
 
-  create_table "macros", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "account_id", null: false
+  create_table "macros", force: :cascade do |t|
+    t.bigint "account_id", null: false
     t.string "name", null: false
     t.integer "visibility", default: 0, null: false
-    t.uuid "created_by_id"
-    t.uuid "updated_by_id"
+    t.bigint "created_by_id"
+    t.bigint "updated_by_id"
     t.jsonb "actions", default: [], null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -307,21 +305,21 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.index ["visibility"], name: "index_macros_on_visibility"
   end
 
-  create_table "messages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "messages", force: :cascade do |t|
     t.text "content"
     t.integer "message_type", null: false
     t.integer "content_type", default: 0, null: false
     t.integer "status", default: 0
     t.boolean "private", default: false
     t.string "sender_type"
-    t.uuid "sender_id"
+    t.bigint "sender_id"
     t.string "source_id"
     t.jsonb "content_attributes", default: {}
     t.jsonb "additional_attributes", default: {}
     t.text "processed_message_content"
-    t.uuid "account_id", null: false
-    t.uuid "inbox_id", null: false
-    t.uuid "conversation_id", null: false
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.bigint "conversation_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_messages_on_account_id"
@@ -332,9 +330,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.index ["source_id"], name: "index_messages_on_source_id"
   end
 
-  create_table "notification_settings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "account_id", null: false
-    t.uuid "user_id", null: false
+  create_table "notification_settings", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
     t.integer "email_flags", default: 0, null: false
     t.integer "push_flags", default: 7, null: false
     t.datetime "created_at", null: false
@@ -342,14 +340,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.index ["account_id", "user_id"], name: "index_notification_settings_on_account_id_and_user_id", unique: true
   end
 
-  create_table "notifications", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "account_id", null: false
-    t.uuid "user_id", null: false
+  create_table "notifications", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
     t.integer "notification_type", null: false
     t.string "primary_actor_type", null: false
-    t.uuid "primary_actor_id", null: false
+    t.bigint "primary_actor_id", null: false
     t.string "secondary_actor_type"
-    t.uuid "secondary_actor_id"
+    t.bigint "secondary_actor_id"
     t.datetime "read_at"
     t.datetime "snoozed_until"
     t.datetime "last_activity_at"
@@ -360,9 +358,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.index ["user_id", "account_id", "read_at"], name: "index_notifications_on_user_id_and_account_id_and_read_at"
   end
 
-  create_table "push_subscription_tokens", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "user_id", null: false
-    t.uuid "account_id", null: false
+  create_table "push_subscription_tokens", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "account_id", null: false
     t.text "token", null: false
     t.integer "platform", default: 0, null: false
     t.jsonb "device_info", default: {}
@@ -373,16 +371,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.index ["user_id"], name: "index_push_subscription_tokens_on_user_id"
   end
 
-  create_table "team_members", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "team_id", null: false
-    t.uuid "user_id", null: false
+  create_table "team_members", force: :cascade do |t|
+    t.bigint "team_id", null: false
+    t.bigint "user_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["team_id", "user_id"], name: "index_team_members_on_team_id_and_user_id", unique: true
   end
 
-  create_table "teams", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "account_id", null: false
+  create_table "teams", force: :cascade do |t|
+    t.bigint "account_id", null: false
     t.string "name", null: false
     t.text "description"
     t.boolean "allow_auto_assign", default: true
@@ -391,8 +389,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.index ["account_id", "name"], name: "index_teams_on_account_id_and_name", unique: true
   end
 
-  create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "ventia_user_id", null: false
+  create_table "users", force: :cascade do |t|
+    t.integer "ventia_user_id", null: false
     t.string "name", null: false
     t.string "email", null: false
     t.string "avatar_url"
@@ -405,10 +403,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.index ["ventia_user_id"], name: "index_users_on_ventia_user_id", unique: true
   end
 
-  create_table "webhooks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "webhooks", force: :cascade do |t|
     t.string "url", null: false
-    t.uuid "account_id", null: false
-    t.uuid "inbox_id"
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id"
     t.jsonb "subscriptions", default: []
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

@@ -221,15 +221,17 @@ class UserService:
 
         # === SYNC USER TO MESSAGING SERVICE (non-blocking) ===
         try:
+            messaging_role = "administrator" if user.role == Role.ADMIN else "agent"
             await messaging_service.sync_user(
                 tenant_id=user.tenant_id,
                 user_data={
                     "ventia_user_id": user.id,
                     "name": user.name or user.email,
                     "email": user.email,
+                    "role": messaging_role,
                 }
             )
-            logger.info(f"Synced user {user.id} to messaging service")
+            logger.info(f"Synced user {user.id} to messaging service (role={messaging_role})")
         except Exception as e:
             logger.warning(f"Failed to sync user {user.id} to messaging: {e}")
 

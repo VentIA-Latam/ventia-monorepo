@@ -1,5 +1,5 @@
 import { getAccessToken } from "@/lib/auth0";
-import { fetchWhatsAppStatus } from "@/lib/services/messaging-service";
+import { fetchWhatsAppStatus, ensureMessagingProvisioned } from "@/lib/services/messaging-service";
 import { WhatsAppConnectClient } from "./whatsapp-connect-client";
 import type { WhatsAppChannel } from "@/lib/types/messaging";
 
@@ -11,8 +11,19 @@ export default async function WhatsAppConnectPage() {
   try {
     const accessToken = await getAccessToken();
     if (accessToken) {
-      const result = await fetchWhatsAppStatus(accessToken);
-      channels = result?.data ?? [];
+      try {
+        const result = await fetchWhatsAppStatus(accessToken);
+        channels = result?.data ?? [];
+      } catch {
+        // Account likely not provisioned — provision and retry
+        await ensureMessagingProvisioned(accessToken);
+        try {
+          const result = await fetchWhatsAppStatus(accessToken);
+          channels = result?.data ?? [];
+        } catch (retryErr) {
+          console.error("Error loading WhatsApp channels after provisioning:", retryErr);
+        }
+      }
     }
   } catch (err) {
     console.error("Error loading WhatsApp channels:", err);

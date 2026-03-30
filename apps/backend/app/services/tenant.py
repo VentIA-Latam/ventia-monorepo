@@ -152,7 +152,7 @@ class TenantService:
                 tenant_id=tenant.id,
                 account_data={
                     "name": tenant.name,
-                    "ventia_tenant_id": str(tenant.id),
+                    "ventia_tenant_id": tenant.id,
                 }
             )
             logger.info(f"Provisioned messaging account for tenant {tenant.id}")

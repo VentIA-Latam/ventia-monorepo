@@ -67,7 +67,7 @@ export function MessagingProvider({ children, tenantId }: MessagingProviderProps
       } catch {
         // Token fetch failed — attempt lazy sync then retry once
         try {
-          await syncUser();
+          await syncUser(tenantId);
           const data = await getWsToken(tenantId);
           if (!cancelled) setToken(data);
         } catch (retryErr) {

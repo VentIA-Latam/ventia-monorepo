@@ -17,7 +17,7 @@ class AccountUser < ApplicationRecord
   belongs_to :account
   belongs_to :user
 
-  enum :role, { agent: 0, administrator: 1 }
+  enum :role, { agent: 0, administrator: 1, superadmin: 2 }
   enum :availability, { online: 0, offline: 1, busy: 2 }
 
   validates :user_id, uniqueness: { scope: :account_id }

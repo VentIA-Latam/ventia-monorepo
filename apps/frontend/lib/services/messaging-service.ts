@@ -29,6 +29,17 @@ async function fetchWithAuth<T>(
   return response.json();
 }
 
+/**
+ * Trigger auto-provisioning by calling ws-token endpoint.
+ * Creates Account + User + AccountUser in messaging if missing.
+ */
+export async function ensureMessagingProvisioned(accessToken: string): Promise<void> {
+  const url = `${API_URL}/messaging/ws-token`;
+  await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  }).catch(() => {});
+}
+
 export async function fetchConversations(
   accessToken: string,
   params?: Record<string, string | number>

@@ -36,6 +36,15 @@ def _resolve_tenant_id(current_user: User, tenant_id_override: int | None = None
     return current_user.tenant_id
 
 
+def _map_ventia_role_to_messaging(role: Role) -> str:
+    """Map Ventia role to messaging AccountUser role."""
+    if role == Role.SUPERADMIN:
+        return "superadmin"
+    if role == Role.ADMIN:
+        return "administrator"
+    return "agent"
+
+
 # --- Account provisioning ---
 
 @router.post(
@@ -78,14 +87,17 @@ async def provision_account(
     responses={503: {"model": MessagingError}},
 )
 async def sync_user(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(get_current_user),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    role = _map_ventia_role_to_messaging(current_user.role)
 
     user_data = {
         "ventia_user_id": current_user.id,
         "name": current_user.name or current_user.email,
         "email": current_user.email,
+        "role": role,
     }
 
     result = await messaging_service.sync_user(tenant_id, user_data)
@@ -106,17 +118,53 @@ async def sync_user(
 async def get_ws_token(
     tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
+    from app.models.tenant import Tenant
+
     tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
+    # 1. Try to get token directly (happy path)
     result = await messaging_service.get_user_token(tenant_id, current_user.id)
-    if result is None:
-        raise HTTPException(
-            status_code=503,
-            detail="Messaging service unavailable or user not synced",
-        )
+    if result:
+        return result
 
-    return result
+    # 2. Token failed → sync user (creates User + AccountUser if missing)
+    role = _map_ventia_role_to_messaging(current_user.role)
+    user_data = {
+        "ventia_user_id": current_user.id,
+        "name": current_user.name or current_user.email,
+        "email": current_user.email,
+        "role": role,
+    }
+    sync_result = await messaging_service.sync_user(tenant_id, user_data)
+    if sync_result:
+        result = await messaging_service.get_user_token(tenant_id, current_user.id)
+        if result:
+            return result
+
+    # 3. Sync failed → account probably missing → provision it
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    await messaging_service.create_account(tenant_id, {
+        "name": tenant.name,
+        "ventia_tenant_id": tenant.id,
+    })
+
+    # 4. Account created → sync user again
+    await messaging_service.sync_user(tenant_id, user_data)
+
+    # 5. Final attempt
+    result = await messaging_service.get_user_token(tenant_id, current_user.id)
+    if result:
+        return result
+
+    raise HTTPException(
+        status_code=503,
+        detail="Messaging service unavailable",
+    )
 
 
 # --- Conversations ---

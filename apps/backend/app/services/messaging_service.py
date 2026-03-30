@@ -82,12 +82,17 @@ class MessagingService:
 
     async def sync_user(self, tenant_id: int, user_data: dict) -> Optional[dict]:
         """Create or update a user in the messaging service."""
+        data = {**user_data}
+        role = data.pop("role", None)
+        payload: dict = {"user": data}
+        if role:
+            payload["role"] = role
         return await self._request(
-            "POST", "/api/v1/users", tenant_id, json_data={"user": user_data}
+            "POST", "/api/v1/users", tenant_id, json_data=payload
         )
 
     async def get_user_token(
-        self, tenant_id: int, ventia_user_id: str
+        self, tenant_id: int, ventia_user_id: int
     ) -> Optional[dict]:
         """Get a user's pubsub_token for WebSocket authentication."""
         result = await self._request(
