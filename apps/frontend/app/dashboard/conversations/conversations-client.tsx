@@ -166,15 +166,17 @@ export function ConversationsClient({
       </div>
 
       {/* Message view */}
-      <MessageView
-        conversation={selectedConversation}
-        onOpenInfo={handleOpenInfo}
-        onConversationUpdate={handleConversationUpdate}
-      />
+      <div className="flex-1 min-w-0">
+        <MessageView
+          conversation={selectedConversation}
+          onOpenInfo={handleOpenInfo}
+          onConversationUpdate={handleConversationUpdate}
+        />
+      </div>
 
       {/* Contact info panel */}
       {showInfo && selectedConversation && (
-        <div className="w-80 border-l shrink-0">
+        <div className="w-80 border-l shrink-0 overflow-hidden">
           <ContactInfoPanel
             conversation={selectedConversation}
             allLabels={allLabels}

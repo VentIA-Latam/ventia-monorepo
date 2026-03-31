@@ -199,15 +199,17 @@ export function SuperAdminConversationsClient({ tenantId }: SuperAdminConversati
         />
       </div>
 
-      <MessageView
-        conversation={selectedConversation}
-        tenantId={tenantId}
-        onOpenInfo={handleOpenInfo}
-        onConversationUpdate={handleConversationUpdate}
-      />
+      <div className="flex-1 min-w-0">
+        <MessageView
+          conversation={selectedConversation}
+          tenantId={tenantId}
+          onOpenInfo={handleOpenInfo}
+          onConversationUpdate={handleConversationUpdate}
+        />
+      </div>
 
       {showInfo && selectedConversation && (
-        <div className="w-80 border-l shrink-0">
+        <div className="w-80 border-l shrink-0 overflow-hidden">
           <ContactInfoPanel
             conversation={selectedConversation}
             allLabels={allLabels}
