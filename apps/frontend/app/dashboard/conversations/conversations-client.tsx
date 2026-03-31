@@ -152,7 +152,7 @@ export function ConversationsClient({
   return (
     <div className="flex h-full w-full overflow-hidden border-t border-border/30">
       {/* Conversation list */}
-      <div className={`border-r min-h-0 ${showInfo ? "w-[300px] shrink-0" : "w-[400px] shrink-0"}`}>
+      <div className={`border-r min-h-0 shrink-0 ${showInfo ? "w-[260px]" : "w-[340px]"}`}>
         <ConversationList
           conversations={conversations}
           selectedId={selectedId}
@@ -176,7 +176,7 @@ export function ConversationsClient({
 
       {/* Contact info panel */}
       {showInfo && selectedConversation && (
-        <div className="w-80 border-l shrink-0 overflow-hidden">
+        <div className="w-72 border-l shrink-0 overflow-hidden">
           <ContactInfoPanel
             conversation={selectedConversation}
             allLabels={allLabels}
