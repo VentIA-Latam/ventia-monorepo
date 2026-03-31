@@ -118,7 +118,7 @@ export const MessageBubble = memo(function MessageBubble({
     >
       <div
         className={cn(
-          "relative rounded-lg px-3 py-1.5 text-sm shadow-sm",
+          "relative rounded-lg px-3 py-1.5 text-sm shadow-sm overflow-hidden",
           isOutgoing
             ? "bg-cielo rounded-tr-[4px]"
             : "bg-card rounded-tl-[4px]"
@@ -174,7 +174,7 @@ export const MessageBubble = memo(function MessageBubble({
                     key={att.id}
                     controls
                     src={getAttUrl(att)}
-                    className="rounded-md max-w-full max-h-64"
+                    className="rounded-md w-full max-h-64"
                   />
                 );
               }
