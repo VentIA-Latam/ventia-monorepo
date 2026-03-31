@@ -2,16 +2,23 @@ class Api::V1::MessagesController < Api::V1::BaseController
   before_action :set_conversation
 
   def index
-    messages = @conversation.messages
-                            .includes(attachments: { file_attachment: :blob })
-                            .order(created_at: :asc)
-                            .page(params[:page] || 1)
-                            .per(params[:per_page] || 50)
+    base = @conversation.messages.includes(attachments: { file_attachment: :blob })
+
+    messages = if params[:before].present?
+                 # Load older messages (scroll up)
+                 base.reorder(created_at: :desc).where('id < ?', params[:before].to_i).limit(20).reverse
+               elsif params[:after].present?
+                 # Load newer messages (real-time catch-up)
+                 base.reorder(created_at: :asc).where('id > ?', params[:after].to_i).limit(100)
+               else
+                 # Default: latest 20 messages in chronological order
+                 base.reorder(created_at: :desc).limit(20).reverse
+               end
 
     render json: {
       success: true,
       data: messages.map { |m| message_json(m) },
-      meta: pagination_meta(messages)
+      meta: { has_more: messages.size == 20 }
     }
   end
 

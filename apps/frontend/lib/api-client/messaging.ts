@@ -70,12 +70,12 @@ export async function markConversationRead(conversationId: number | string, tena
 
 export async function getMessages(
   conversationId: number | string,
-  page?: number,
-  tenantId?: number
+  options?: { before?: number; after?: number; tenantId?: number }
 ): Promise<MessageListResponse> {
   const params: Record<string, string | number> = {};
-  if (page) params.page = page;
-  if (tenantId) params.tenant_id = tenantId;
+  if (options?.before) params.before = options.before;
+  if (options?.after) params.after = options.after;
+  if (options?.tenantId) params.tenant_id = options.tenantId;
   return apiGet(
     `/api/messaging/conversations/${conversationId}/messages`,
     Object.keys(params).length > 0 ? params : undefined

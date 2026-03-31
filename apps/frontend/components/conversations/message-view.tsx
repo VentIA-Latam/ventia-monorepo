@@ -94,13 +94,14 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
     setHasMore(true);
     messageIdsRef.current = new Set<string>();
 
-    getMessages(conversation.id, undefined, tenantId)
+    getMessages(conversation.id, { tenantId })
       .then((data) => {
         if (!cancelled) {
           const msgs = data.data ?? [];
           messageIdsRef.current = new Set(msgs.map((m) => String(m.id)));
           scrollBehaviorRef.current = "instant";
           setMessages(msgs);
+          setHasMore(Boolean(data.meta?.has_more));
           setLoading(false);
         }
       })
@@ -231,8 +232,15 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
     setLoadingMore(true);
 
     try {
-      const nextPage = page + 1;
-      const data = await getMessages(conversation.id, nextPage, tenantId);
+      // Get the oldest message ID to use as cursor
+      const oldestId = messages[0]?.id;
+      if (!oldestId) {
+        setHasMore(false);
+        setLoadingMore(false);
+        return;
+      }
+
+      const data = await getMessages(conversation.id, { before: Number(oldestId), tenantId });
       const olderMessages = data.data ?? [];
 
       if (olderMessages.length === 0) {
@@ -240,7 +248,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
       } else {
         olderMessages.forEach((m) => messageIdsRef.current.add(String(m.id)));
         setMessages((prev) => [...olderMessages, ...prev]);
-        setPage(nextPage);
+        setHasMore(Boolean(data.meta?.has_more));
 
         // Restore scroll position after DOM update (Chatwoot pattern)
         requestAnimationFrame(() => {
@@ -255,7 +263,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
     } finally {
       setLoadingMore(false);
     }
-  }, [conversation?.id, page, loadingMore, hasMore, tenantId]);
+  }, [conversation?.id, messages, loadingMore, hasMore, tenantId]);
 
   // Scroll event handler: load older messages on scroll up + track pinned state
   useEffect(() => {
@@ -515,7 +523,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
           conversationId={conversation.id}
           onSent={() => {
             // Refresh messages after sending template
-            getMessages(conversation.id, undefined, tenantId).then((data) => {
+            getMessages(conversation.id, { tenantId }).then((data) => {
               const msgs = data.data ?? [];
               messageIdsRef.current = new Set(msgs.map((m) => String(m.id)));
               scrollBehaviorRef.current = "smooth";
