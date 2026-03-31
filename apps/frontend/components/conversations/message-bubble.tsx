@@ -112,7 +112,7 @@ export const MessageBubble = memo(function MessageBubble({
   return (
     <div
       className={cn(
-        "flex max-w-[65%]",
+        "flex max-w-[min(65%,500px)]",
         isOutgoing ? "ml-auto justify-end" : "mr-auto"
       )}
     >
@@ -133,7 +133,7 @@ export const MessageBubble = memo(function MessageBubble({
 
         {/* Content */}
         {message.content ? (
-          <p className="whitespace-pre-wrap break-words">
+          <p className="whitespace-pre-wrap break-words" style={{ overflowWrap: "anywhere" }}>
             {message.content}
             {/* Invisible spacer so time+check don't overlap text */}
             <span className="inline-block w-[70px]" />

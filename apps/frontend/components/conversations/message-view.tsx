@@ -443,7 +443,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
         className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-16 py-3 min-h-0 min-w-0"
         style={{ backgroundImage: "url('/images/fondo-conversacion.png')", backgroundRepeat: "repeat" }}
       >
-        <div ref={contentRef} className="space-y-1">
+        <div ref={contentRef} className="space-y-1 max-w-full">
           {loadingMore && (
             <div className="flex justify-center py-2">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
