@@ -150,7 +150,7 @@ export function ConversationsClient({
 
   // Desktop layout: 3 panels
   return (
-    <div className="flex h-full w-full overflow-hidden border-t border-border/30">
+    <div className="relative flex h-full w-full overflow-hidden border-t border-border/30">
       {/* Conversation list */}
       <div className="border-r min-h-0 shrink-0 w-[340px]">
         <ConversationList
@@ -177,8 +177,8 @@ export function ConversationsClient({
       {/* Contact info panel — overlay (Chatwoot pattern) */}
       {showInfo && selectedConversation && (
         <>
-          <div className="fixed inset-0 z-30" onClick={handleCloseInfo} />
-          <div className="fixed top-0 right-0 z-40 h-full w-80 max-w-sm bg-background border-l shadow-lg overflow-hidden transition-transform duration-300 ease-in-out">
+          <div className="absolute inset-0 z-30" onClick={handleCloseInfo} />
+          <div className="absolute top-0 right-0 z-40 h-full w-80 max-w-sm bg-background border-l shadow-lg overflow-hidden transition-transform duration-300 ease-in-out">
             <ContactInfoPanel
               conversation={selectedConversation}
               allLabels={allLabels}

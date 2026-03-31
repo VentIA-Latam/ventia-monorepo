@@ -185,7 +185,7 @@ export function SuperAdminConversationsClient({ tenantId }: SuperAdminConversati
       </Sheet>
     </div>
   ) : (
-    <div className="flex h-full w-full overflow-hidden border-t border-border/30">
+    <div className="relative flex h-full w-full overflow-hidden border-t border-border/30">
       <div className="border-r min-h-0 shrink-0 w-[340px]">
         <ConversationList
           conversations={conversations}
@@ -210,8 +210,8 @@ export function SuperAdminConversationsClient({ tenantId }: SuperAdminConversati
 
       {showInfo && selectedConversation && (
         <>
-          <div className="fixed inset-0 z-30" onClick={handleCloseInfo} />
-          <div className="fixed top-0 right-0 z-40 h-full w-80 max-w-sm bg-background border-l shadow-lg overflow-hidden transition-transform duration-300 ease-in-out">
+          <div className="absolute inset-0 z-30" onClick={handleCloseInfo} />
+          <div className="absolute top-0 right-0 z-40 h-full w-80 max-w-sm bg-background border-l shadow-lg overflow-hidden transition-transform duration-300 ease-in-out">
             <ContactInfoPanel
               conversation={selectedConversation}
               allLabels={allLabels}
