@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Search, MessageSquare } from "lucide-react";
+import { Search, MessageSquare, Loader2 } from "lucide-react";
 import { ConversationItem } from "./conversation-item";
 import { ConversationFilters, type ActiveFilters } from "./conversation-filters";
 import { useMessagingEvent, useMessagingEmit } from "./messaging-provider";
@@ -48,6 +48,12 @@ export function ConversationList({
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  // Refs for transient pagination state (rerender-use-ref-transient-values)
+  const loadingMoreRef = useRef(false);
+  const currentPageRef = useRef(1);
+  const hasMoreRef = useRef(true);
+  const listRef = useRef<HTMLDivElement>(null);
   const sectionFilterRef = useRef(sectionFilter);
   sectionFilterRef.current = sectionFilter;
   const activeFiltersRef = useRef(activeFilters);
@@ -76,9 +82,12 @@ export function ConversationList({
   const fetchConversations = useCallback(
     async (params: ConversationFilterParams) => {
       setLoading(true);
+      currentPageRef.current = 1;
+      hasMoreRef.current = true;
       try {
-        const data = await getConversations(params);
+        const data = await getConversations({ ...params, page: 1 });
         onConversationsChange(data.data ?? []);
+        hasMoreRef.current = data.meta?.next_page != null;
       } catch (error) {
         console.error("Error fetching conversations:", error);
       } finally {
@@ -87,6 +96,34 @@ export function ConversationList({
     },
     [onConversationsChange]
   );
+
+  // Load more conversations on scroll (rerender-move-effect-to-event)
+  const loadMoreConversations = useCallback(() => {
+    // js-early-exit: skip if already loading or no more pages
+    if (loadingMoreRef.current || !hasMoreRef.current) return;
+
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    const nextPage = currentPageRef.current + 1;
+    const params = buildParams(sectionFilterRef.current, activeFiltersRef.current);
+
+    getConversations({ ...params, page: nextPage })
+      .then((data) => {
+        const newConversations = data.data ?? [];
+        if (newConversations.length === 0) {
+          hasMoreRef.current = false;
+        } else {
+          onConversationsChange([...conversationsRef.current, ...newConversations]);
+          currentPageRef.current = nextPage;
+          hasMoreRef.current = data.meta?.next_page != null;
+        }
+      })
+      .catch((err) => console.error("Error loading more conversations:", err))
+      .finally(() => {
+        loadingMoreRef.current = false;
+        setLoadingMore(false);
+      });
+  }, [buildParams, onConversationsChange]);
 
   const handleFiltersChange = useCallback(
     (filters: ActiveFilters) => {
@@ -116,8 +153,12 @@ export function ConversationList({
     if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
     refetchTimerRef.current = setTimeout(() => {
       const params = buildParams(sectionFilterRef.current, activeFiltersRef.current);
-      getConversations(params)
-        .then((data) => onConversationsChange(data.data ?? []))
+      currentPageRef.current = 1;
+      getConversations({ ...params, page: 1 })
+        .then((data) => {
+          onConversationsChange(data.data ?? []);
+          hasMoreRef.current = data.meta?.next_page != null;
+        })
         .catch((err) => console.error("Error refreshing conversations:", err));
     }, 500);
   }, [buildParams, onConversationsChange]);
@@ -181,6 +222,21 @@ export function ConversationList({
     };
   }, [lastEvent, onConversationsChange, debouncedRefetch]);
 
+  // Scroll detection for infinite scroll (client-passive-event-listeners)
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 200) {
+        loadMoreConversations();
+      }
+    };
+
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [loadMoreConversations]);
+
   const filteredConversations = searchQuery
     ? conversations.filter((c) => {
         const query = searchQuery.toLowerCase();
@@ -222,7 +278,7 @@ export function ConversationList({
       />
 
       {/* List */}
-      <div className="flex-1 overflow-y-auto">
+      <div ref={listRef} className="flex-1 overflow-y-auto">
         {loading ? (
           <div className="space-y-0">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -250,16 +306,23 @@ export function ConversationList({
             }
           />
         ) : (
-          filteredConversations.map((conversation) => (
-            <div key={conversation.id} style={{ contentVisibility: "auto", containIntrinsicSize: "auto 72px" }}>
-              <ConversationItem
-                conversation={conversation}
-                isSelected={selectedId === conversation.id}
-                onClick={() => onSelect(conversation.id)}
-                onDelete={handleDelete}
-              />
-            </div>
-          ))
+          <>
+            {filteredConversations.map((conversation) => (
+              <div key={conversation.id} style={{ contentVisibility: "auto", containIntrinsicSize: "auto 72px" }}>
+                <ConversationItem
+                  conversation={conversation}
+                  isSelected={selectedId === conversation.id}
+                  onClick={() => onSelect(conversation.id)}
+                  onDelete={handleDelete}
+                />
+              </div>
+            ))}
+            {loadingMore && (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

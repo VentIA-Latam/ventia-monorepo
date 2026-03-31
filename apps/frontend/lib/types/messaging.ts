@@ -91,7 +91,7 @@ export interface ConversationCounts {
 export interface ConversationListResponse {
   success: boolean;
   data: Conversation[];
-  meta: { all_count?: number; page?: number } | null;
+  meta: { all_count?: number; page?: number; current_page?: number; next_page?: number | null; total_pages?: number; total_count?: number } | null;
 }
 
 // --- Message ---
