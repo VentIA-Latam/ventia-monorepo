@@ -1,5 +1,5 @@
 class Api::V1::ConversationsController < Api::V1::BaseController
-  before_action :set_conversation, only: [:show, :update, :toggle_status, :update_stage, :escalate, :update_last_seen, :destroy]
+  before_action :set_conversation, only: [:show, :update, :toggle_status, :update_stage, :escalate, :mark_payment_review, :update_last_seen, :destroy]
 
   def index
     conversations = current_account.conversations
