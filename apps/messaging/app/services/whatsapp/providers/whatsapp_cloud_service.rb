@@ -6,6 +6,8 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
       send_contact_message(phone_number, message)
     elsif message.attachments.present?
       send_attachment_message(phone_number, message)
+    elsif message.content_attributes&.dig('cta_url').present?
+      send_cta_url_message(phone_number, message)
     elsif message.content_attributes&.dig('items').present?
       send_interactive_text_message(phone_number, message)
     else
@@ -155,6 +157,32 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
       to: phone_number,
       type: 'contacts',
       contacts: contacts
+    }
+
+    response = HTTParty.post(
+      "#{phone_id_path}/messages",
+      headers: api_headers,
+      body: request_body.to_json
+    )
+
+    process_response(response, message)
+  end
+
+  def send_cta_url_message(phone_number, message)
+    cta = message.content_attributes['cta_url']
+
+    if cta['url'].blank? || cta['display_text'].blank?
+      message.update!(status: :failed, external_error: 'CTA URL requires both url and display_text')
+      return
+    end
+
+    payload = create_cta_url_payload(message)
+
+    request_body = {
+      messaging_product: 'whatsapp',
+      to: phone_number,
+      type: 'interactive',
+      interactive: payload
     }
 
     response = HTTParty.post(

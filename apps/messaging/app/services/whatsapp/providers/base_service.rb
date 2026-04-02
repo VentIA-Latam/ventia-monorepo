@@ -73,6 +73,22 @@ class Whatsapp::Providers::BaseService
 
   # Interactive message helpers
 
+  def create_cta_url_payload(message)
+    cta_data = message.content_attributes['cta_url']
+
+    {
+      type: 'cta_url',
+      body: { text: message.content },
+      action: {
+        name: 'cta_url',
+        parameters: {
+          display_text: cta_data['display_text'],
+          url: cta_data['url']
+        }
+      }
+    }
+  end
+
   def create_payload_based_on_items(message)
     items = message.content_attributes['items']
     return {} if items.blank?

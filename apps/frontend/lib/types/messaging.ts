@@ -98,10 +98,23 @@ export interface ConversationListResponse {
 
 export type MessageType = "incoming" | "outgoing" | "activity" | "template";
 
+export interface CtaUrlData {
+  url: string;
+  display_text: string;
+}
+
+export interface MessageContentAttributes {
+  cta_url?: CtaUrlData;
+  items?: Array<{ title: string; value: string }>;
+  contacts?: unknown[];
+  in_reply_to?: string;
+}
+
 export interface Message {
   id: string | number;
   content: string | null;
   message_type: MessageType | null;
+  content_attributes?: MessageContentAttributes | null;
   sender: AgentBrief | ContactBrief | null;
   attachments: AttachmentBrief[];
   created_at: string | number | null;
@@ -150,6 +163,7 @@ export interface WebSocketToken {
 export interface SendMessagePayload {
   content: string;
   content_type?: string;
+  content_attributes?: MessageContentAttributes;
 }
 
 export interface AssignConversationPayload {

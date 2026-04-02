@@ -103,6 +103,7 @@ class Message < ApplicationRecord
       content: content,
       message_type: message_type,
       content_type: content_type,
+      content_attributes: content_attributes,
       status: status,
       created_at: created_at.to_i,
       conversation_id: conversation_id,

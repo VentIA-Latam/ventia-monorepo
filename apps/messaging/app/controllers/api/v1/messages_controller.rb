@@ -117,6 +117,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
       content: message.content,
       message_type: message.message_type,
       content_type: message.content_type,
+      content_attributes: message.content_attributes,
       status: message.status,
       created_at: message.created_at,
       sender: message.sender&.class&.name == 'Contact' ? {

@@ -3,10 +3,10 @@
 import { memo, useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
-import { FileDown, CheckCheck, X, Download } from "lucide-react";
+import { FileDown, CheckCheck, X, Download, ExternalLink } from "lucide-react";
 import { LocationBubble } from "./location-bubble";
 import { ContactBubble } from "./contact-bubble";
-import type { Message, AttachmentBrief } from "@/lib/types/messaging";
+import type { Message, AttachmentBrief, CtaUrlData } from "@/lib/types/messaging";
 import { formatTime } from "@/lib/utils/messaging";
 import dynamic from "next/dynamic";
 
@@ -84,6 +84,32 @@ function ImageLightbox({
   );
 }
 
+/* ── CTA URL Button ── */
+function CtaUrlBubble({ cta, isOutgoing }: { cta: CtaUrlData; isOutgoing: boolean }) {
+  return (
+    <div className="mt-1.5">
+      <div className={cn(
+        "border-t",
+        isOutgoing ? "border-white/15" : "border-border/40"
+      )} />
+      <a
+        href={cta.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn(
+          "flex items-center justify-center gap-2 mt-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors",
+          isOutgoing
+            ? "bg-white/15 hover:bg-white/25 text-white"
+            : "bg-primary/10 hover:bg-primary/20 text-primary"
+        )}
+      >
+        <ExternalLink className="h-3.5 w-3.5" />
+        {cta.display_text}
+      </a>
+    </div>
+  );
+}
+
 interface MessageBubbleProps {
   message: Message;
 }
@@ -139,6 +165,11 @@ export const MessageBubble = memo(function MessageBubble({
             <span className="inline-block w-[70px]" />
           </p>
         ) : null}
+
+        {/* CTA URL Button */}
+        {message.content_attributes?.cta_url && (
+          <CtaUrlBubble cta={message.content_attributes.cta_url} isOutgoing={isOutgoing} />
+        )}
 
         {/* Attachments */}
         {message.attachments && message.attachments.length > 0 && (
@@ -210,7 +241,7 @@ export const MessageBubble = memo(function MessageBubble({
         )}
 
         {/* Timestamp + checkmarks */}
-        {message.attachments && message.attachments.length > 0 ? (
+        {(message.attachments && message.attachments.length > 0) || message.content_attributes?.cta_url ? (
           /* Flow-based timestamp below attachments (Chatwoot pattern) */
           <div
             className={cn(

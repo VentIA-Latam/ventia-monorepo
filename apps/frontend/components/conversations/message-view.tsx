@@ -20,7 +20,7 @@ import { MessageComposer } from "./message-composer";
 import { TemplatePicker } from "./template-picker";
 import { useMessagingEvent } from "./messaging-provider";
 import { getMessages, sendMessage, updateConversation, markConversationRead } from "@/lib/api-client/messaging";
-import type { Conversation, Message, MessageType, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
+import type { Conversation, Message, MessageType, MessageContentAttributes, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
 import { getInitials, getDateSeparatorLabel, parseTimestamp } from "@/lib/utils/messaging";
 
 function mapWebSocketAttachments(raw: unknown): AttachmentBrief[] {
@@ -153,6 +153,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
             id: msgId,
             content: (msgData.content as string) ?? "",
             message_type: msgType as MessageType,
+            content_attributes: (msgData.content_attributes as MessageContentAttributes) ?? undefined,
             sender: wsSender,
             attachments: wsAttachments.length > 0 ? wsAttachments : tempMsg.attachments,
             created_at: createdAt,
@@ -165,6 +166,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
         id: msgId,
         content: (msgData.content as string) ?? "",
         message_type: msgType as MessageType,
+        content_attributes: (msgData.content_attributes as MessageContentAttributes) ?? undefined,
         sender: wsSender,
         attachments: wsAttachments,
         created_at: createdAt,
