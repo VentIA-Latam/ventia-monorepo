@@ -67,7 +67,22 @@ class Api::V1::MessagesController < Api::V1::BaseController
   end
 
   def message_params
-    params.require(:message).permit(:content, :content_type)
+    permitted = params.require(:message).permit(:content, :content_type)
+    permitted[:content_attributes] = extract_content_attributes
+    permitted
+  end
+
+  # Chatwoot pattern: extract content_attributes as a plain hash
+  # Supports both Hash params and JSON string
+  def extract_content_attributes
+    raw = params.dig(:message, :content_attributes)
+    return {} if raw.blank?
+    return JSON.parse(raw) if raw.is_a?(String)
+    return raw.to_unsafe_h if raw.respond_to?(:to_unsafe_h)
+
+    raw.is_a?(Hash) ? raw : {}
+  rescue JSON::ParserError
+    {}
   end
 
   def determine_file_type(content_type)
