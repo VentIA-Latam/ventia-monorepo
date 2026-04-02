@@ -13,20 +13,33 @@ export function ContactBubble({ attachment }: ContactBubbleProps) {
   const lastName = (meta?.lastName as string) ?? (meta?.last_name as string) ?? "";
   const phone = (meta?.phone as string) ?? "";
   const name = [firstName, lastName].filter(Boolean).join(" ") || "Contacto";
+  const initials = name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
-    <div className="flex items-center gap-3 rounded-md bg-muted/30 px-3 py-2.5">
-      <div className="flex items-center justify-center h-10 w-10 rounded-full bg-green-100 dark:bg-green-950 shrink-0">
-        <User className="h-5 w-5 text-green-600 dark:text-green-400" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-sm font-medium truncate">{name}</p>
-        {phone ? (
-          <div className="flex items-center gap-1 mt-0.5">
-            <Phone className="h-3 w-3 text-muted-foreground shrink-0" />
-            <span className="text-xs text-muted-foreground truncate">{phone}</span>
-          </div>
-        ) : null}
+    <div className="w-[220px] rounded-lg overflow-hidden border border-border/40">
+      {/* Contact card header */}
+      <div className="flex items-center gap-3 px-3 py-3 bg-muted/20">
+        <div className="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 shrink-0 shadow-sm">
+          {initials !== "C" ? (
+            <span className="text-sm font-semibold text-white">{initials}</span>
+          ) : (
+            <User className="h-5 w-5 text-white" />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold truncate leading-tight">{name}</p>
+          {phone ? (
+            <div className="flex items-center gap-1 mt-0.5">
+              <Phone className="h-3 w-3 text-muted-foreground shrink-0" />
+              <span className="text-xs text-muted-foreground truncate">{phone}</span>
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );
