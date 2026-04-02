@@ -90,7 +90,7 @@ function CtaUrlBubble({ cta, isOutgoing }: { cta: CtaUrlData; isOutgoing: boolea
     <div className="mt-1.5">
       <div className={cn(
         "border-t",
-        isOutgoing ? "border-white/15" : "border-border/40"
+        isOutgoing ? "border-primary/15" : "border-border/40"
       )} />
       <a
         href={cta.url}
@@ -99,7 +99,7 @@ function CtaUrlBubble({ cta, isOutgoing }: { cta: CtaUrlData; isOutgoing: boolea
         className={cn(
           "flex items-center justify-center gap-2 mt-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors",
           isOutgoing
-            ? "bg-white/15 hover:bg-white/25 text-white"
+            ? "bg-primary/20 hover:bg-primary/30 text-primary"
             : "bg-primary/10 hover:bg-primary/20 text-primary"
         )}
       >
