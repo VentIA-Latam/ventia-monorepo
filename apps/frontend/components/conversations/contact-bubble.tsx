@@ -26,13 +26,13 @@ export function ContactBubble({ attachment, isOutgoing = false }: ContactBubbleP
         {hasName ? (
           <div className={`flex items-center justify-center h-10 w-10 rounded-full shrink-0 ${
             isOutgoing
-              ? "bg-blue-50 dark:bg-blue-950"
-              : "bg-emerald-50 dark:bg-emerald-950"
+              ? "bg-blue-100 dark:bg-blue-950"
+              : "bg-green-100 dark:bg-green-950"
           }`}>
             <span className={`text-sm font-semibold ${
               isOutgoing
-                ? "text-blue-700 dark:text-blue-300"
-                : "text-emerald-700 dark:text-emerald-300"
+                ? "text-blue-800 dark:text-blue-300"
+                : "text-green-800 dark:text-green-300"
             }`}>{initials}</span>
           </div>
         ) : (
