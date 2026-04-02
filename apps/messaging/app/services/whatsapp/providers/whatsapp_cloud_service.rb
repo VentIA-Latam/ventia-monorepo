@@ -2,7 +2,9 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
   API_BASE_URL = ENV.fetch('WHATSAPP_CLOUD_BASE_URL', 'https://graph.facebook.com')
 
   def send_message(phone_number, message)
-    if message.attachments.present?
+    if message.content_attributes&.dig('contacts').present?
+      send_contact_message(phone_number, message)
+    elsif message.attachments.present?
       send_attachment_message(phone_number, message)
     elsif message.content_attributes&.dig('items').present?
       send_interactive_text_message(phone_number, message)
@@ -135,6 +137,25 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
       type: type,
       type.to_s => type_content
     }.compact
+
+    response = HTTParty.post(
+      "#{phone_id_path}/messages",
+      headers: api_headers,
+      body: request_body.to_json
+    )
+
+    process_response(response, message)
+  end
+
+  def send_contact_message(phone_number, message)
+    contacts = message.content_attributes['contacts']
+
+    request_body = {
+      messaging_product: 'whatsapp',
+      to: phone_number,
+      type: 'contacts',
+      contacts: contacts
+    }
 
     response = HTTParty.post(
       "#{phone_id_path}/messages",

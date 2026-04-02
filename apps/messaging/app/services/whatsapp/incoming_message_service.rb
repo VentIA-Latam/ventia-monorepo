@@ -254,7 +254,8 @@ class Whatsapp::IncomingMessageService
     name_info = contact_data['name'] || contact_data[:name] || {}
     contact_meta = {
       firstName: name_info['first_name'] || name_info[:first_name],
-      lastName: name_info['last_name'] || name_info[:last_name]
+      lastName: name_info['last_name'] || name_info[:last_name],
+      phone: phones.first&.dig('phone') || phones.first&.dig(:phone)
     }.compact
 
     phones.each do |phone|
