@@ -34,11 +34,14 @@ class Attachment < ApplicationRecord
       id: id,
       message_id: message_id,
       file_type: file_type,
-      account_id: account_id
+      account_id: account_id,
+      meta: meta
     }
 
     if location?
       base.merge(coordinates_lat: coordinates_lat, coordinates_long: coordinates_long, data_url: external_url)
+    elsif contact?
+      base
     elsif file.attached?
       base.merge(extension: extension, data_url: file_url, file_size: file.byte_size)
     else
