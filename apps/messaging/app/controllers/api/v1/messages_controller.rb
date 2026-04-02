@@ -39,6 +39,24 @@ class Api::V1::MessagesController < Api::V1::BaseController
       message.message_type = :outgoing
     end
 
+    # Contact message: create contact attachment for frontend ContactBubble
+    contacts = message.content_attributes&.dig('contacts')
+    if contacts.present?
+      contacts.each do |contact|
+        name_info = contact['name'] || {}
+        phones = contact['phones'] || []
+        message.attachments.new(
+          account: current_account,
+          file_type: :contact,
+          meta: {
+            firstName: name_info['first_name'],
+            lastName: name_info['last_name'],
+            phone: phones.first&.dig('phone')
+          }.compact
+        )
+      end
+    end
+
     uploaded_file = params.dig(:message, :file)
     if uploaded_file.present?
       message.skip_send_reply = true
