@@ -26,6 +26,7 @@ import {
   FileText,
   MapPin,
   Paperclip,
+  User,
 } from "lucide-react";
 import type { Conversation } from "@/lib/types/messaging";
 import { getInitials, getWhatsAppTime } from "@/lib/utils/messaging";
@@ -44,6 +45,7 @@ const ATTACHMENT_ICONS: Record<string, { icon: typeof Image; label: string }> = 
   file: { icon: FileText, label: "Archivo" },
   document: { icon: FileText, label: "Documento" },
   location: { icon: MapPin, label: "Ubicación" },
+  contact: { icon: User, label: "Contacto" },
 };
 
 function getMessagePreview(conversation: Conversation): React.ReactNode {
@@ -60,13 +62,17 @@ function getMessagePreview(conversation: Conversation): React.ReactNode {
       label: "Adjunto",
     };
     const AttachmentIcon = attachment.icon;
+    // For contacts, show the contact name from content (like WhatsApp)
+    const displayLabel = last_message.attachment_type === "contact" && last_message.content
+      ? last_message.content
+      : attachment.label;
     return (
       <span className="inline-flex items-center gap-1">
         {last_message.message_type === "outgoing" && (
           <Check className="h-3 w-3 shrink-0 text-muted-foreground" />
         )}
         <AttachmentIcon className="h-3 w-3 shrink-0" />
-        <span>{attachment.label}</span>
+        <span className="truncate">{displayLabel}</span>
       </span>
     );
   }
