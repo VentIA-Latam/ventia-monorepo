@@ -209,18 +209,34 @@ export const MessageBubble = memo(function MessageBubble({
           </div>
         )}
 
-        {/* Timestamp + checkmarks (WhatsApp style: bottom-right inside bubble) */}
-        <span
-          className={cn(
-            "absolute bottom-1 right-2 flex items-center gap-0.5 text-[11px]",
-            isOutgoing ? "text-muted-foreground/60" : "text-muted-foreground/50"
-          )}
-        >
-          {time}
-          {isOutgoing && (
-            <CheckCheck className="h-[14px] w-[14px] text-primary/60" />
-          )}
-        </span>
+        {/* Timestamp + checkmarks */}
+        {message.attachments && message.attachments.length > 0 ? (
+          /* Flow-based timestamp below attachments (Chatwoot pattern) */
+          <div
+            className={cn(
+              "flex items-center justify-end gap-0.5 text-[11px] mt-1",
+              isOutgoing ? "text-muted-foreground/60" : "text-muted-foreground/50"
+            )}
+          >
+            {time}
+            {isOutgoing && (
+              <CheckCheck className="h-[14px] w-[14px] text-primary/60" />
+            )}
+          </div>
+        ) : (
+          /* Absolute timestamp for text-only messages (WhatsApp style with spacer) */
+          <span
+            className={cn(
+              "absolute bottom-1 right-2 flex items-center gap-0.5 text-[11px]",
+              isOutgoing ? "text-muted-foreground/60" : "text-muted-foreground/50"
+            )}
+          >
+            {time}
+            {isOutgoing && (
+              <CheckCheck className="h-[14px] w-[14px] text-primary/60" />
+            )}
+          </span>
+        )}
       </div>
 
       {/* Image Lightbox */}
