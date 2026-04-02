@@ -114,6 +114,7 @@ class WebSocketTokenResponse(BaseModel):
 class SendMessageRequest(BaseModel):
     content: str
     content_type: Optional[str] = None
+    content_attributes: Optional[dict] = None
 
 
 class TemplateParamsRequest(BaseModel):
