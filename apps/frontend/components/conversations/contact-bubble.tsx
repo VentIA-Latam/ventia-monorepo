@@ -19,9 +19,9 @@ export function ContactBubble({ attachment }: ContactBubbleProps) {
     : "";
 
   return (
-    <div className="w-[220px] rounded-lg overflow-hidden bg-muted/20">
+    <div className="w-[220px] rounded-lg overflow-hidden bg-background/60 border border-border/30">
       <div className="flex items-center gap-3 px-3 py-2.5">
-        {/* Avatar — plain muted color with initials, no gradients */}
+        {/* Avatar — plain muted color with initials (matching Pencil mockup) */}
         {hasName ? (
           <div className="flex items-center justify-center h-10 w-10 rounded-full bg-emerald-50 dark:bg-emerald-950 shrink-0">
             <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{initials}</span>
