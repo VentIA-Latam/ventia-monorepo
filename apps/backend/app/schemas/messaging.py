@@ -112,7 +112,7 @@ class WebSocketTokenResponse(BaseModel):
 # --- Request models ---
 
 class SendMessageRequest(BaseModel):
-    content: str
+    content: Optional[str] = None
     content_type: Optional[str] = None
     content_attributes: Optional[dict] = None
 

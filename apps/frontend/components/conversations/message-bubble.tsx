@@ -131,8 +131,8 @@ export const MessageBubble = memo(function MessageBubble({
           </p>
         )}
 
-        {/* Content */}
-        {message.content ? (
+        {/* Content — hide if message has contact attachment */}
+        {message.content && !message.attachments?.some(a => a.file_type === "contact") ? (
           <p className="whitespace-pre-wrap break-words" style={{ overflowWrap: "anywhere" }}>
             {message.content}
             {/* Invisible spacer so time+check don't overlap text */}
