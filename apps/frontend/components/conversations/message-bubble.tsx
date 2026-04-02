@@ -184,7 +184,7 @@ export const MessageBubble = memo(function MessageBubble({
               }
 
               if (att.file_type === "contact") {
-                return <ContactBubble key={att.id} attachment={att} />;
+                return <ContactBubble key={att.id} attachment={att} isOutgoing={isOutgoing} />;
               }
 
               // Generic file download
