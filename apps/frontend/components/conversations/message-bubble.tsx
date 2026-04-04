@@ -84,23 +84,26 @@ function ImageLightbox({
   );
 }
 
-/* ── CTA URL Button ── */
+/* ── CTA URL Button — WhatsApp-style separated action ── */
 function CtaUrlBubble({ cta, isOutgoing }: { cta: CtaUrlData; isOutgoing: boolean }) {
   return (
-    <div className="mt-1.5">
+    <div className="-mx-3 -mb-1.5 mt-2">
+      {/* Divider — full-width separator like WhatsApp native CTA */}
       <div className={cn(
-        "border-t",
-        isOutgoing ? "border-primary/15" : "border-border/40"
+        "h-px",
+        isOutgoing ? "bg-marino/10" : "bg-border/50"
       )} />
+      {/* Action button */}
       <a
         href={cta.url}
         target="_blank"
         rel="noopener noreferrer"
         className={cn(
-          "flex items-center justify-center gap-2 mt-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors",
+          "flex items-center justify-center gap-2 py-2.5 text-[13px] font-semibold",
+          "transition-colors cursor-pointer",
           isOutgoing
-            ? "bg-primary/20 hover:bg-primary/30 text-primary"
-            : "bg-primary/10 hover:bg-primary/20 text-primary"
+            ? "text-volt hover:bg-marino/5"
+            : "text-volt hover:bg-muted/40"
         )}
       >
         <ExternalLink className="h-3.5 w-3.5" />
@@ -161,14 +164,27 @@ export const MessageBubble = memo(function MessageBubble({
         {message.content && !message.attachments?.some(a => a.file_type === "contact") ? (
           <p className="whitespace-pre-wrap break-words" style={{ overflowWrap: "anywhere" }}>
             {message.content}
-            {/* Invisible spacer so time+check don't overlap text */}
-            <span className="inline-block w-[70px]" />
+            {/* Invisible spacer so time+check don't overlap text (skip for CTA — has flow timestamp) */}
+            {!message.content_attributes?.cta_url && <span className="inline-block w-[70px]" />}
           </p>
         ) : null}
 
-        {/* CTA URL Button */}
+        {/* CTA: timestamp above the divider, then the action button below */}
         {message.content_attributes?.cta_url && (
-          <CtaUrlBubble cta={message.content_attributes.cta_url} isOutgoing={isOutgoing} />
+          <>
+            <div
+              className={cn(
+                "flex items-center justify-end gap-0.5 text-[11px] mt-1",
+                isOutgoing ? "text-muted-foreground/60" : "text-muted-foreground/50"
+              )}
+            >
+              {time}
+              {isOutgoing && (
+                <CheckCheck className="h-[14px] w-[14px] text-primary/60" />
+              )}
+            </div>
+            <CtaUrlBubble cta={message.content_attributes.cta_url} isOutgoing={isOutgoing} />
+          </>
         )}
 
         {/* Attachments */}
@@ -240,8 +256,8 @@ export const MessageBubble = memo(function MessageBubble({
           </div>
         )}
 
-        {/* Timestamp + checkmarks */}
-        {(message.attachments && message.attachments.length > 0) || message.content_attributes?.cta_url ? (
+        {/* Timestamp + checkmarks (skip for CTA — already rendered above the button) */}
+        {message.content_attributes?.cta_url ? null : (message.attachments && message.attachments.length > 0) ? (
           /* Flow-based timestamp below attachments (Chatwoot pattern) */
           <div
             className={cn(
