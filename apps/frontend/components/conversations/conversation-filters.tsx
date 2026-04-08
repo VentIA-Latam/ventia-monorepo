@@ -371,12 +371,12 @@ export function ConversationFilters({ allLabels, filters, onChange, onLabelCreat
         </Popover>
 
       </div>
-      {/* Clear all — below filter row, always visible when active */}
+      {/* Clear all — below filter row */}
       {hasActiveFilters && (
-        <div className="px-3 pt-1">
+        <div className="px-3 pt-1.5 flex justify-end">
           <button
             onClick={clearAll}
-            className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-destructive transition-colors"
+            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/70 hover:text-destructive px-2 py-0.5 rounded-md hover:bg-destructive/5 transition-colors"
           >
             <X className="h-3 w-3" />
             Limpiar filtros
