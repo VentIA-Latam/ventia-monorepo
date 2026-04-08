@@ -155,7 +155,8 @@ export function ConversationFilters({ allLabels, filters, onChange, onLabelCreat
 
   return (
     <>
-      <div className="px-3 pb-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+      <div className="pb-2">
+      <div className="px-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
         {/* Label filter + management */}
         <Popover open={labelOpen} onOpenChange={(open) => { setLabelOpen(open); if (!open) setShowCreate(false); }}>
           <PopoverTrigger asChild>
@@ -369,16 +370,19 @@ export function ConversationFilters({ allLabels, filters, onChange, onLabelCreat
           </PopoverContent>
         </Popover>
 
-        {/* Clear all — compact circle button */}
-        {hasActiveFilters && (
+      </div>
+      {/* Clear all — below filter row, always visible when active */}
+      {hasActiveFilters && (
+        <div className="px-3 pt-1">
           <button
             onClick={clearAll}
-            title="Limpiar filtros"
-            className="shrink-0 h-7 w-7 flex items-center justify-center rounded-full border border-input text-muted-foreground hover:text-destructive hover:border-destructive/30 transition-colors"
+            className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-destructive transition-colors"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-3 w-3" />
+            Limpiar filtros
           </button>
-        )}
+        </div>
+      )}
       </div>
 
       {/* Delete confirmation dialog */}
