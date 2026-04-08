@@ -50,7 +50,7 @@ function mapWebSocketSender(raw: unknown): ContactBrief | AgentBrief | null {
   } as ContactBrief | AgentBrief;
 }
 
-const MESSAGE_ITEM_STYLE = { contentVisibility: "auto" as const, containIntrinsicSize: "auto 60px" };
+const MESSAGE_ITEM_STYLE = {};
 
 interface MessageViewProps {
   conversation: Conversation | null;
