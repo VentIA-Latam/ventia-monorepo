@@ -173,7 +173,10 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
       }];
     });
 
-    scrollBehaviorRef.current = "smooth";
+    // Only auto-scroll if user is near the bottom — don't pull them away from reading history
+    if (isPinnedToBottomRef.current) {
+      scrollBehaviorRef.current = "smooth";
+    }
 
     // Re-mark as read so incoming messages don't show unread badge while viewing
     if (msgType === "incoming") {
@@ -191,8 +194,6 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
 
     const container = scrollContainerRef.current;
     if (!container) return;
-
-    isPinnedToBottomRef.current = true;
 
     if (behavior === "instant") {
       // Use rAF so browser has completed layout (images with min-height are measured)
@@ -442,10 +443,18 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
       {/* Messages — WhatsApp style with chat wallpaper */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-16 py-3 min-h-0 min-w-0"
+        className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-16 py-3 min-h-0 min-w-0 overscroll-y-contain"
         style={{ backgroundImage: "url('/images/fondo-conversacion.png')", backgroundRepeat: "repeat" }}
       >
         <div ref={contentRef} className="space-y-1 max-w-full">
+          {!hasMore && !loading && messages.length > 0 && (
+            <div className="flex justify-center py-4">
+              <p className="text-xs text-muted-foreground/60">
+                Inicio de la conversación
+              </p>
+            </div>
+          )}
+
           {loadingMore && (
             <div className="flex justify-center py-2">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
