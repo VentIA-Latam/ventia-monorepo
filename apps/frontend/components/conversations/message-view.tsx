@@ -65,7 +65,6 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -94,7 +93,6 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
 
     let cancelled = false;
     setLoading(true);
-    setPage(1);
     setHasMore(true);
     messageIdsRef.current = new Set<string>();
 
@@ -242,22 +240,21 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
     return () => observer.disconnect();
   }, [conversation?.id]);
 
-  // Load older messages (Chatwoot pattern: save/restore scroll position)
-  // All guards use refs to avoid stale closure — function identity is stable
+  // Load older messages — Chatwoot pattern (MessagesView.vue fetchPreviousMessages)
+  // Reads oldest ID from DOM (always fresh, no stale closure). No dedup needed
+  // because the API uses `id < before` which guarantees unique results.
   const loadOlderMessages = useCallback(async () => {
-    if (!conversation) return;
-    if (isLoadingPreviousRef.current) return;
+    if (!conversation || isLoadingPreviousRef.current) return;
 
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    // Read the first visible message element's data-id, or fall back to DOM query
+    // Read oldest message ID from DOM — always fresh, no closure dependency
     const firstMsgEl = container.querySelector("[data-msg-id]");
     const oldestId = firstMsgEl?.getAttribute("data-msg-id");
-
     if (!oldestId) return;
 
-    // Save scroll state before fetch (Chatwoot: setScrollParams)
+    // Chatwoot: setScrollParams — save scroll state before fetch
     heightBeforeLoadRef.current = container.scrollHeight;
     scrollTopBeforeLoadRef.current = container.scrollTop;
     isLoadingPreviousRef.current = true;
@@ -267,24 +264,17 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
       const data = await getMessages(conversation.id, { before: Number(oldestId), tenantId });
       const olderMessages = data.data ?? [];
 
+      // Track IDs for WebSocket dedup (not for load-older dedup)
+      olderMessages.forEach((m) => messageIdsRef.current.add(String(m.id)));
+
       if (olderMessages.length === 0) {
         setHasMore(false);
         isLoadingPreviousRef.current = false;
       } else {
-        // Deduplicate: filter out any messages already present
-        const newMessages = olderMessages.filter(
-          (m) => !messageIdsRef.current.has(String(m.id))
-        );
-        newMessages.forEach((m) => messageIdsRef.current.add(String(m.id)));
-
-        if (newMessages.length === 0) {
-          setHasMore(false);
-          isLoadingPreviousRef.current = false;
-        } else {
-          pendingRestoreRef.current = true;
-          setMessages((prev) => [...newMessages, ...prev]);
-          setHasMore(Boolean(data.meta?.has_more));
-        }
+        // Chatwoot: chat.messages.unshift(...data) + scroll restore
+        pendingRestoreRef.current = true;
+        setMessages((prev) => [...olderMessages, ...prev]);
+        setHasMore(Boolean(data.meta?.has_more));
       }
     } catch (err) {
       console.error("Error loading older messages:", err);
