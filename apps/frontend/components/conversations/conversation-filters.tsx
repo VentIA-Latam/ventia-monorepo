@@ -88,11 +88,14 @@ export function ConversationFilters({ allLabels, filters, onChange, onLabelCreat
   const handleDateSelect = (range: DateRange | undefined) => {
     setDateRange(range);
     if (range?.from && range?.to) {
+      // Set end date to 23:59:59.999 so the entire day is included in the filter
+      const endOfDay = new Date(range.to);
+      endOfDay.setHours(23, 59, 59, 999);
       onChange({
         ...filters,
         dateRange: {
           from: range.from.toISOString(),
-          to: range.to.toISOString(),
+          to: endOfDay.toISOString(),
         },
       });
     } else if (!range?.from && !range?.to) {
