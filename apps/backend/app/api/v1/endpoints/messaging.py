@@ -391,6 +391,8 @@ async def mark_payment_review(
 async def list_messages(
     conversation_id: str,
     page: int | None = Query(None, description="Page number"),
+    before: int | None = Query(None, description="Load messages with id < this value (scroll up)"),
+    after: int | None = Query(None, description="Load messages with id > this value (catch up)"),
     tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):
@@ -398,6 +400,10 @@ async def list_messages(
     params = {}
     if page:
         params["page"] = page
+    if before:
+        params["before"] = before
+    if after:
+        params["after"] = after
 
     result = await messaging_service.get_messages(tenant_id, conversation_id, params or None)
     if result is None:
