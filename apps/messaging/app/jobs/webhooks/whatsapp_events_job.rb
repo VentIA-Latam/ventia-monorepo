@@ -9,7 +9,8 @@ class Webhooks::WhatsappEventsJob < ApplicationJob
       return
     end
 
-    Whatsapp::IncomingMessageService.new(inbox: channel.inbox, params: params).perform
+    outgoing_echo = message_echo_event?(params)
+    Whatsapp::IncomingMessageService.new(inbox: channel.inbox, params: params, outgoing_echo: outgoing_echo).perform
   end
 
   private
@@ -32,5 +33,11 @@ class Webhooks::WhatsappEventsJob < ApplicationJob
 
     channel = Channel::Whatsapp.find_by(phone_number: phone_number)
     return channel if channel && channel.provider_config['phone_number_id'] == phone_number_id
+  end
+
+  def message_echo_event?(params)
+    field = params.dig(:entry, 0, :changes, 0, :field) ||
+            params.dig('entry', 0, 'changes', 0, 'field')
+    field == 'smb_message_echoes'
   end
 end

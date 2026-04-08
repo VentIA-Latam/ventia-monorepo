@@ -1,10 +1,11 @@
 class Whatsapp::IncomingMessageService
   include Whatsapp::IncomingMessageServiceHelpers
 
-  def initialize(inbox:, params:)
+  def initialize(inbox:, params:, outgoing_echo: false)
     @inbox = inbox
     @params = params
     @channel = @inbox.channel
+    @outgoing_echo = outgoing_echo
   end
 
   def perform
@@ -33,7 +34,11 @@ class Whatsapp::IncomingMessageService
   end
 
   def messages_data
-    @messages_data ||= value_data['messages'] || value_data[:messages] || []
+    @messages_data ||= if @outgoing_echo
+                          value_data['message_echoes'] || value_data[:message_echoes] || []
+                        else
+                          value_data['messages'] || value_data[:messages] || []
+                        end
   end
 
   def contacts_data
@@ -90,16 +95,23 @@ class Whatsapp::IncomingMessageService
     msg_id = message_data['id'] || message_data[:id]
     from = message_data['from'] || message_data[:from]
 
+    # For echo messages, contact phone is in 'to' field (reversed — business sent TO customer)
+    contact_phone = if @outgoing_echo
+                      message_data['to'] || message_data[:to]
+                    else
+                      from
+                    end
+
     # Redis + DB deduplication to prevent race conditions
     return if message_under_process?(msg_id)
     return if Message.exists?(source_id: msg_id)
 
     cache_message_source_id(msg_id)
-    contact_info = find_contact_info(from)
+    contact_info = @outgoing_echo ? {} : find_contact_info(from)
 
     ActiveRecord::Base.transaction do
-      @contact = find_or_create_contact(from, contact_info)
-      @contact_inbox = find_or_create_contact_inbox(@contact, from)
+      @contact = find_or_create_contact(contact_phone, contact_info)
+      @contact_inbox = find_or_create_contact_inbox(@contact, contact_phone)
       @conversation = find_or_create_conversation(@contact, @contact_inbox)
 
       in_reply_to_external_id = message_data.dig('context', 'id') || message_data.dig(:context, :id)
@@ -162,18 +174,24 @@ class Whatsapp::IncomingMessageService
   def create_regular_message(message_data, msg_type, msg_id, in_reply_to_external_id)
     content = extract_message_content(message_data, msg_type)
 
+    echo_attrs = @outgoing_echo ? { external_echo: true } : {}
+    content_attrs = build_content_attributes(in_reply_to_external_id).merge(echo_attrs)
+
     @message = @conversation.messages.new(
       account: @inbox.account,
       inbox: @inbox,
-      sender: @contact,
-      message_type: :incoming,
+      sender: @outgoing_echo ? nil : @contact,
+      message_type: @outgoing_echo ? :outgoing : :incoming,
+      status: @outgoing_echo ? :delivered : :sent,
       content: content,
       source_id: msg_id,
-      content_attributes: build_content_attributes(in_reply_to_external_id)
+      content_attributes: content_attrs
     )
+    # Skip send_reply for echoes — message was already sent from WhatsApp Business App
+    @message.skip_send_reply = true if @outgoing_echo
 
-    attach_files(message_data, msg_type)
-    attach_location(message_data) if msg_type == 'location'
+    attach_files(message_data, msg_type) unless @outgoing_echo
+    attach_location(message_data) if msg_type == 'location' && !@outgoing_echo
     @message.save!
   end
 
@@ -183,16 +201,21 @@ class Whatsapp::IncomingMessageService
     contacts_list.each do |contact_data|
       formatted_name = contact_data.dig('name', 'formatted_name') || contact_data.dig(:name, :formatted_name) || ''
 
+      echo_attrs = @outgoing_echo ? { external_echo: true } : {}
+      content_attrs = build_content_attributes(in_reply_to_external_id).merge(echo_attrs)
+
       @message = @conversation.messages.new(
         account: @inbox.account,
         inbox: @inbox,
-        sender: @contact,
-        message_type: :incoming,
+        sender: @outgoing_echo ? nil : @contact,
+        message_type: @outgoing_echo ? :outgoing : :incoming,
+        status: @outgoing_echo ? :delivered : :sent,
         content_type: :text,
         content: formatted_name,
         source_id: msg_id,
-        content_attributes: build_content_attributes(in_reply_to_external_id)
+        content_attributes: content_attrs
       )
+      @message.skip_send_reply = true if @outgoing_echo
 
       attach_contact(contact_data)
       @message.save!
