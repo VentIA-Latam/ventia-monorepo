@@ -41,6 +41,7 @@ interface ConversationFiltersProps {
   onChange: (filters: ActiveFilters) => void;
   onLabelCreated?: (label: Label) => void;
   onLabelDeleted?: (labelId: number) => void;
+  tenantId?: number;
 }
 
 const TEMP_OPTIONS: {
@@ -60,7 +61,7 @@ const PRESET_COLORS = [
 
 const RESERVED_LABEL_NAMES = ["soporte-humano", "en-revisión"];
 
-export function ConversationFilters({ allLabels, filters, onChange, onLabelCreated, onLabelDeleted }: ConversationFiltersProps) {
+export function ConversationFilters({ allLabels, filters, onChange, onLabelCreated, onLabelDeleted, tenantId }: ConversationFiltersProps) {
   const { toast } = useToast();
   const [labelOpen, setLabelOpen] = useState(false);
   const [dateOpen, setDateOpen] = useState(false);
@@ -122,7 +123,7 @@ export function ConversationFilters({ allLabels, filters, onChange, onLabelCreat
     if (!newTitle.trim() || isReservedName) return;
     setCreating(true);
     try {
-      const result = await createLabel({ title: newTitle.trim(), color: newColor });
+      const result = await createLabel({ title: newTitle.trim(), color: newColor }, tenantId);
       const created = (result as { data: Label }).data;
       if (created?.id) {
         onLabelCreated?.(created);
@@ -142,7 +143,7 @@ export function ConversationFilters({ allLabels, filters, onChange, onLabelCreat
     const label = labelToDelete;
     startDeleteTransition(async () => {
       try {
-        await deleteLabel(label.id);
+        await deleteLabel(label.id, tenantId);
         onLabelDeleted?.(label.id);
       } catch (err) {
         console.error("Error deleting label:", err);

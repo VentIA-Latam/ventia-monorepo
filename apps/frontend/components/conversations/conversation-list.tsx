@@ -275,6 +275,7 @@ export function ConversationList({
         onChange={handleFiltersChange}
         onLabelCreated={onLabelCreated}
         onLabelDeleted={onLabelDeleted}
+        tenantId={tenantId}
       />
 
       {/* List */}

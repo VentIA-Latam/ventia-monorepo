@@ -129,12 +129,14 @@ export async function getLabels(tenantId?: number): Promise<{ success: boolean; 
   return apiGet("/api/messaging/labels", tenantId ? { tenant_id: tenantId } : undefined);
 }
 
-export async function createLabel(payload: { title: string; color: string }): Promise<unknown> {
-  return apiPost("/api/messaging/labels", payload);
+export async function createLabel(payload: { title: string; color: string }, tenantId?: number): Promise<unknown> {
+  const params = tenantId ? `?tenant_id=${tenantId}` : "";
+  return apiPost(`/api/messaging/labels${params}`, payload);
 }
 
-export async function deleteLabel(id: number | string): Promise<unknown> {
-  return apiDelete(`/api/messaging/labels/${id}`);
+export async function deleteLabel(id: number | string, tenantId?: number): Promise<unknown> {
+  const params = tenantId ? `?tenant_id=${tenantId}` : "";
+  return apiDelete(`/api/messaging/labels/${id}${params}`);
 }
 
 export async function addConversationLabel(conversationId: number | string, labelId: number | string): Promise<unknown> {

@@ -678,9 +678,10 @@ async def list_labels(
 )
 async def create_label(
     payload: dict,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.create_label(tenant_id, payload)
     if result is None:
@@ -697,9 +698,10 @@ async def create_label(
 )
 async def delete_label(
     label_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("DELETE", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.delete_label(tenant_id, label_id)
     if result is None:

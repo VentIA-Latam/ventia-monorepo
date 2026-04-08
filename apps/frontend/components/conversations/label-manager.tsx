@@ -17,6 +17,7 @@ interface LabelManagerProps {
   conversationId: number;
   labels: Label[];
   allLabels: Label[];
+  tenantId?: number;
   onChange?: (labels: Label[]) => void;
   onLabelsCreated?: (label: Label) => void;
 }
@@ -32,6 +33,7 @@ export function LabelManager({
   conversationId,
   labels,
   allLabels,
+  tenantId,
   onChange,
   onLabelsCreated,
 }: LabelManagerProps) {
@@ -78,7 +80,7 @@ export function LabelManager({
     if (!newTitle.trim() || isReservedName) return;
     setCreating(true);
     try {
-      const result = await createLabel({ title: newTitle.trim(), color: newColor });
+      const result = await createLabel({ title: newTitle.trim(), color: newColor }, tenantId);
       const created = (result as { data: Label }).data;
       if (created?.id) {
         onLabelsCreated?.(created);

@@ -113,6 +113,7 @@ export const ContactInfoPanel = memo(function ContactInfoPanel({
             conversationId={conversation.id}
             labels={conversation.labels ?? []}
             allLabels={allLabels}
+            tenantId={tenantId}
             onChange={(labels: Label[]) =>
               onConversationUpdate?.({ ...conversation, labels })
             }
