@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, memo } from "react";
-// useLayoutEffect: scroll before paint | ResizeObserver: re-scroll when content grows (images load)
+import { flushSync } from "react-dom";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -71,14 +71,9 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
   const contentRef = useRef<HTMLDivElement>(null);
   const scrollBehaviorRef = useRef<false | "instant" | "smooth">(false);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
-  // Chatwoot pattern: track scroll state before loading older messages
-  const heightBeforeLoadRef = useRef(0);
-  const scrollTopBeforeLoadRef = useRef(0);
   const isLoadingPreviousRef = useRef(false);
   // Track if we should stay pinned to the bottom
   const isPinnedToBottomRef = useRef(true);
-  // Flag for scroll restoration after loading older messages
-  const pendingRestoreRef = useRef(false);
   // O(1) dedup for incoming WS messages
   const messageIdsRef = useRef(new Set<string>());
   // Stable ref for loadOlderMessages to avoid scroll listener re-attachment
@@ -188,37 +183,14 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
     }
   }, [lastEvent, conversation?.id]);
 
-  // Scroll management after DOM commits (runs before paint — no visual flicker)
+  // Auto-scroll to bottom for new messages / initial load (NOT for load-older — handled by flushSync)
   useLayoutEffect(() => {
+    if (!scrollBehaviorRef.current) return;
+    const behavior = scrollBehaviorRef.current;
+    scrollBehaviorRef.current = false;
+
     const container = scrollContainerRef.current;
     if (!container) return;
-
-    // Capture scroll behavior before any early returns (avoid losing it during restore)
-    const behavior = scrollBehaviorRef.current;
-    if (behavior) scrollBehaviorRef.current = false;
-
-    // Restore scroll position after prepending older messages (before paint = no bounce)
-    if (pendingRestoreRef.current) {
-      pendingRestoreRef.current = false;
-      const heightDifference = container.scrollHeight - heightBeforeLoadRef.current;
-      const newScrollTop = scrollTopBeforeLoadRef.current + heightDifference;
-      console.log("[scroll-restore] heightDiff:", heightDifference, "| newScrollTop:", newScrollTop, "| scrollHeight:", container.scrollHeight);
-      container.scrollTop = newScrollTop;
-      // Delay unlocking by one frame so scroll events from restoration don't auto-trigger next load
-      requestAnimationFrame(() => {
-        isLoadingPreviousRef.current = false;
-      });
-      // If a new message also arrived during load, schedule its scroll for next frame
-      if (behavior === "smooth") {
-        requestAnimationFrame(() => {
-          bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-        });
-      }
-      return;
-    }
-
-    // Auto-scroll to bottom for new messages / initial load
-    if (!behavior) return;
 
     if (behavior === "instant") {
       requestAnimationFrame(() => {
@@ -245,37 +217,21 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
     return () => observer.disconnect();
   }, [conversation?.id]);
 
-  // Load older messages — Chatwoot pattern (MessagesView.vue fetchPreviousMessages)
-  // Reads messages[0].id from closure. Including `messages` and `hasMore` in deps
-  // ensures fresh values. The scroll handler uses loadOlderRef (stable) so it
-  // never re-attaches despite this callback being recreated.
+  // Load older messages — Chatwoot fetchPreviousMessages pattern adapted to React.
+  // Uses flushSync to commit DOM synchronously, then restores scroll in the SAME
+  // call stack — no timing gap, no auto-trigger cascade from scroll events.
   const loadOlderMessages = useCallback(async () => {
-    const guards = {
-      noConv: !conversation,
-      loading: isLoadingPreviousRef.current,
-      noMore: !hasMore,
-      msgCount: messages.length,
-      oldestId: messages[0]?.id,
-    };
-
-    if (!conversation || isLoadingPreviousRef.current || !hasMore) {
-      console.log("[load-older] BLOCKED:", guards);
-      return;
-    }
+    if (!conversation || isLoadingPreviousRef.current || !hasMore) return;
 
     const container = scrollContainerRef.current;
     if (!container) return;
 
     const oldestId = messages[0]?.id;
-    if (!oldestId || String(oldestId).startsWith("temp-")) {
-      console.log("[load-older] BAD oldestId:", oldestId);
-      return;
-    }
+    if (!oldestId || String(oldestId).startsWith("temp-")) return;
 
-    console.log("[load-older] FETCHING before:", oldestId, "| messages.length:", messages.length);
-
-    heightBeforeLoadRef.current = container.scrollHeight;
-    scrollTopBeforeLoadRef.current = container.scrollTop;
+    // Chatwoot: setScrollParams — save scroll state before fetch
+    const savedHeight = container.scrollHeight;
+    const savedScrollTop = container.scrollTop;
     isLoadingPreviousRef.current = true;
     setLoadingMore(true);
 
@@ -283,29 +239,26 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
       const data = await getMessages(conversation.id, { before: Number(oldestId), tenantId });
       const olderMessages = data.data ?? [];
 
-      console.log("[load-older] API returned:", olderMessages.length, "messages | has_more:", data.meta?.has_more,
-        "| first:", olderMessages[0]?.id, "| last:", olderMessages[olderMessages.length - 1]?.id);
-
       olderMessages.forEach((m) => messageIdsRef.current.add(String(m.id)));
 
       if (olderMessages.length === 0) {
-        console.log("[load-older] END — no more messages");
         setHasMore(false);
-        isLoadingPreviousRef.current = false;
       } else {
-        pendingRestoreRef.current = true;
-        setMessages((prev) => {
-          const newState = [...olderMessages, ...prev];
-          console.log("[load-older] PREPEND:", olderMessages.length, "| new total:", newState.length, "| new oldest:", newState[0]?.id);
-          return newState;
+        // flushSync: commit DOM synchronously (like Vue's nextTick in Chatwoot)
+        // This lets us restore scroll in the SAME call stack — no layout effect needed
+        flushSync(() => {
+          setMessages((prev) => [...olderMessages, ...prev]);
+          setHasMore(Boolean(data.meta?.has_more));
         });
-        setHasMore(Boolean(data.meta?.has_more));
+
+        // DOM is now updated — restore scroll position immediately (Chatwoot pattern)
+        const heightDifference = container.scrollHeight - savedHeight;
+        container.scrollTop = savedScrollTop + heightDifference;
       }
     } catch (err) {
-      console.error("[load-older] ERROR:", err);
-      isLoadingPreviousRef.current = false;
-      pendingRestoreRef.current = false;
+      console.error("Error loading older messages:", err);
     } finally {
+      isLoadingPreviousRef.current = false;
       setLoadingMore(false);
     }
   }, [conversation?.id, messages, hasMore, tenantId]);
