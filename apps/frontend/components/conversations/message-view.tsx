@@ -50,7 +50,7 @@ function mapWebSocketSender(raw: unknown): ContactBrief | AgentBrief | null {
   } as ContactBrief | AgentBrief;
 }
 
-const MESSAGE_ITEM_STYLE = { overflowAnchor: "none" as const, contentVisibility: "auto" as const, containIntrinsicSize: "auto 60px" };
+const MESSAGE_ITEM_STYLE = { contentVisibility: "auto" as const, containIntrinsicSize: "auto 60px" };
 
 interface MessageViewProps {
   conversation: Conversation | null;
@@ -78,6 +78,11 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
   const isLoadingPreviousRef = useRef(false);
   // Track if we should stay pinned to the bottom
   const isPinnedToBottomRef = useRef(true);
+  // Flag for scroll restoration after loading older messages
+  const pendingRestoreRef = useRef(false);
+  // Ref mirrors to avoid dependency churn in loadOlderMessages
+  const hasMoreRef = useRef(true);
+  const messagesRef = useRef<Message[]>([]);
   // O(1) dedup for incoming WS messages
   const messageIdsRef = useRef(new Set<string>());
 
@@ -186,17 +191,34 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
     }
   }, [lastEvent, conversation?.id]);
 
-  // Scroll to bottom after DOM commits
+  // Scroll management after DOM commits (runs before paint — no visual flicker)
   useLayoutEffect(() => {
-    if (!scrollBehaviorRef.current) return;
-    const behavior = scrollBehaviorRef.current;
-    scrollBehaviorRef.current = false;
-
     const container = scrollContainerRef.current;
     if (!container) return;
 
+    // Capture scroll behavior before any early returns (avoid losing it during restore)
+    const behavior = scrollBehaviorRef.current;
+    if (behavior) scrollBehaviorRef.current = false;
+
+    // Restore scroll position after prepending older messages (before paint = no bounce)
+    if (pendingRestoreRef.current) {
+      pendingRestoreRef.current = false;
+      const heightDifference = container.scrollHeight - heightBeforeLoadRef.current;
+      container.scrollTop = scrollTopBeforeLoadRef.current + heightDifference;
+      isLoadingPreviousRef.current = false;
+      // If a new message also arrived during load, schedule its scroll for next frame
+      if (behavior === "smooth") {
+        requestAnimationFrame(() => {
+          bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        });
+      }
+      return;
+    }
+
+    // Auto-scroll to bottom for new messages / initial load
+    if (!behavior) return;
+
     if (behavior === "instant") {
-      // Use rAF so browser has completed layout (images with min-height are measured)
       requestAnimationFrame(() => {
         container.scrollTop = container.scrollHeight;
       });
@@ -221,9 +243,13 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
     return () => observer.disconnect();
   }, [conversation?.id]);
 
+  // Keep refs in sync with state (avoids stale closure in loadOlderMessages)
+  useEffect(() => { hasMoreRef.current = hasMore; }, [hasMore]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+
   // Load older messages (Chatwoot pattern: save/restore scroll position)
   const loadOlderMessages = useCallback(async () => {
-    if (!conversation || loadingMore || !hasMore) return;
+    if (!conversation || isLoadingPreviousRef.current || !hasMoreRef.current) return;
 
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -235,11 +261,13 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
     setLoadingMore(true);
 
     try {
-      // Get the oldest message ID to use as cursor
-      const oldestId = messages[0]?.id;
+      // Read oldest message ID from ref (avoids messages in dependency array)
+      const oldestId = messagesRef.current[0]?.id;
+
       if (!oldestId) {
         setHasMore(false);
         setLoadingMore(false);
+        isLoadingPreviousRef.current = false;
         return;
       }
 
@@ -248,17 +276,13 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
 
       if (olderMessages.length === 0) {
         setHasMore(false);
+        isLoadingPreviousRef.current = false;
       } else {
         olderMessages.forEach((m) => messageIdsRef.current.add(String(m.id)));
+        // Store data for scroll restoration in useLayoutEffect (runs before paint)
+        pendingRestoreRef.current = true;
         setMessages((prev) => [...olderMessages, ...prev]);
         setHasMore(Boolean(data.meta?.has_more));
-
-        // Restore scroll position after DOM update (Chatwoot pattern)
-        requestAnimationFrame(() => {
-          const heightDifference = container.scrollHeight - heightBeforeLoadRef.current;
-          container.scrollTop = scrollTopBeforeLoadRef.current + heightDifference;
-          isLoadingPreviousRef.current = false;
-        });
       }
     } catch (err) {
       console.error("Error loading older messages:", err);
@@ -266,7 +290,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
     } finally {
       setLoadingMore(false);
     }
-  }, [conversation?.id, messages, loadingMore, hasMore, tenantId]);
+  }, [conversation?.id, tenantId]);
 
   // Scroll event handler: load older messages on scroll up + track pinned state
   useEffect(() => {
@@ -280,15 +304,15 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
       const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
       isPinnedToBottomRef.current = distanceFromBottom < 150;
 
-      // Load older messages when near the top
-      if (container.scrollTop < 100 && hasMore && !loadingMore) {
+      // Load older messages when near the top (loadOlderMessages guards with refs internally)
+      if (container.scrollTop < 100) {
         loadOlderMessages();
       }
     };
 
     container.addEventListener("scroll", handleScroll, { passive: true });
     return () => container.removeEventListener("scroll", handleScroll);
-  }, [conversation?.id, loading, loadOlderMessages, hasMore, loadingMore]);
+  }, [conversation?.id, loading, loadOlderMessages]);
 
   // Send message
   const handleSend = useCallback(
@@ -501,8 +525,8 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
             })
           )}
 
-          {/* Scroll anchor — only element with overflow-anchor: auto */}
-          <div ref={bottomRef} className="h-px" style={{ overflowAnchor: "auto" }} />
+          {/* Scroll anchor */}
+          <div ref={bottomRef} className="h-px" />
         </div>
       </div>
 
