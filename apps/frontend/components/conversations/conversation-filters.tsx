@@ -369,14 +369,14 @@ export function ConversationFilters({ allLabels, filters, onChange, onLabelCreat
           </PopoverContent>
         </Popover>
 
-        {/* Clear all */}
+        {/* Clear all — compact circle button */}
         {hasActiveFilters && (
           <button
             onClick={clearAll}
-            className="shrink-0 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            title="Limpiar filtros"
+            className="shrink-0 h-7 w-7 flex items-center justify-center rounded-full border border-input text-muted-foreground hover:text-destructive hover:border-destructive/30 transition-colors"
           >
-            <X className="h-3 w-3" />
-            Limpiar
+            <X className="h-3.5 w-3.5" />
           </button>
         )}
       </div>
