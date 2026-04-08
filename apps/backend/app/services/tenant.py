@@ -171,9 +171,9 @@ class TenantService:
                 # This will generate and store the first access token
                 await shopify_token_manager.get_valid_access_token(db, tenant)
                 logger.info(f"Generated initial Shopify access token for tenant {tenant.id}")
-            except ValueError as e:
+            except Exception as e:
                 logger.error(
-                    f"Failed to generate initial Shopify token for tenant {tenant.id}: {str(e)}"
+                    f"Failed to generate initial Shopify token for tenant {tenant.id}: {type(e).__name__}: {e}"
                 )
                 # Don't fail tenant creation, token can be regenerated later
 
