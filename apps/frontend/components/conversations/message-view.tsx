@@ -204,7 +204,10 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
       const newScrollTop = scrollTopBeforeLoadRef.current + heightDifference;
       console.log("[scroll-restore] heightDiff:", heightDifference, "| newScrollTop:", newScrollTop, "| scrollHeight:", container.scrollHeight);
       container.scrollTop = newScrollTop;
-      isLoadingPreviousRef.current = false;
+      // Delay unlocking by one frame so scroll events from restoration don't auto-trigger next load
+      requestAnimationFrame(() => {
+        isLoadingPreviousRef.current = false;
+      });
       // If a new message also arrived during load, schedule its scroll for next frame
       if (behavior === "smooth") {
         requestAnimationFrame(() => {
