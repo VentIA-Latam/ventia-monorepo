@@ -100,6 +100,7 @@ class Message < ApplicationRecord
   def webhook_data
     {
       id: id,
+      source_id: source_id,
       content: content,
       message_type: message_type,
       content_type: content_type,
