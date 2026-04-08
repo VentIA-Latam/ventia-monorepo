@@ -53,6 +53,7 @@ class Account < ApplicationRecord
 
   # Callbacks
   after_create_commit :notify_creation
+  after_create_commit :create_system_labels
 
   def webhook_data
     {
@@ -73,7 +74,18 @@ class Account < ApplicationRecord
   private
 
   def notify_creation
-    # Broadcast account created event
     Rails.logger.info "Account created: #{id}"
+  end
+
+  def create_system_labels
+    Label::SYSTEM_LABEL_NAMES.each do |title|
+      labels.find_or_create_by!(title: title) do |label|
+        label.color = title == 'soporte-humano' ? '#E91E63' : '#FF9800'
+        label.system = true
+      end
+    end
+    Rails.logger.info "System labels created for account #{id}"
+  rescue StandardError => e
+    Rails.logger.error "Failed to create system labels for account #{id}: #{e.message}"
   end
 end
