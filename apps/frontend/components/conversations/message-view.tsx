@@ -243,24 +243,19 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
   }, [conversation?.id]);
 
   // Load older messages (Chatwoot pattern: save/restore scroll position)
-  // Uses functional setState to read fresh messages[0].id — no stale closure risk
+  // All guards use refs to avoid stale closure — function identity is stable
   const loadOlderMessages = useCallback(async () => {
-    if (!conversation || isLoadingPreviousRef.current || !hasMore) return;
+    if (!conversation) return;
+    if (isLoadingPreviousRef.current) return;
 
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    // Read oldest ID from current state via functional updater (always fresh)
-    let oldestId: string | number | undefined;
-    setMessages((prev) => { oldestId = prev[0]?.id; return prev; });
+    // Read the first visible message element's data-id, or fall back to DOM query
+    const firstMsgEl = container.querySelector("[data-msg-id]");
+    const oldestId = firstMsgEl?.getAttribute("data-msg-id");
 
-    // Must await one microtask for the synchronous updater to have run
-    await Promise.resolve();
-
-    if (!oldestId) {
-      setHasMore(false);
-      return;
-    }
+    if (!oldestId) return;
 
     // Save scroll state before fetch (Chatwoot: setScrollParams)
     heightBeforeLoadRef.current = container.scrollHeight;
@@ -276,7 +271,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
         setHasMore(false);
         isLoadingPreviousRef.current = false;
       } else {
-        // Deduplicate: filter out any messages already present (like Chatwoot filterDuplicateSourceMessages)
+        // Deduplicate: filter out any messages already present
         const newMessages = olderMessages.filter(
           (m) => !messageIdsRef.current.has(String(m.id))
         );
@@ -286,7 +281,6 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
           setHasMore(false);
           isLoadingPreviousRef.current = false;
         } else {
-          // Store flag for scroll restoration in useLayoutEffect (runs before paint)
           pendingRestoreRef.current = true;
           setMessages((prev) => [...newMessages, ...prev]);
           setHasMore(Boolean(data.meta?.has_more));
@@ -295,17 +289,16 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
     } catch (err) {
       console.error("Error loading older messages:", err);
       isLoadingPreviousRef.current = false;
-      pendingRestoreRef.current = false; // Reset on error to prevent stale restore
+      pendingRestoreRef.current = false;
     } finally {
       setLoadingMore(false);
     }
-  }, [conversation?.id, hasMore, tenantId]);
+  }, [conversation?.id, tenantId]);
 
   // Keep stable ref for scroll handler (avoids re-attaching listener on every render)
   loadOlderRef.current = loadOlderMessages;
 
   // Scroll event handler: load older messages on scroll up + track pinned state
-  // Only re-attaches when conversation or loading state changes (NOT on every message)
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container || !conversation || loading) return;
@@ -522,7 +515,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
               );
 
               return (
-                <div key={msg.id}>
+                <div key={msg.id} data-msg-id={msg.id}>
                   {showSeparator ? (
                     <div className="flex justify-center my-3">
                       <span className="text-xs text-muted-foreground bg-background/90 border rounded-lg px-3 py-1 shadow-sm">
