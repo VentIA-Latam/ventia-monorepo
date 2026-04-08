@@ -155,7 +155,8 @@ export function ConversationFilters({ allLabels, filters, onChange, onLabelCreat
 
   return (
     <>
-      <div className="px-3 pb-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+      <div className="relative pb-2">
+      <div className="px-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar pr-16">
         {/* Label filter + management */}
         <Popover open={labelOpen} onOpenChange={(open) => { setLabelOpen(open); if (!open) setShowCreate(false); }}>
           <PopoverTrigger asChild>
@@ -286,7 +287,11 @@ export function ConversationFilters({ allLabels, filters, onChange, onLabelCreat
             >
               <CalendarDays className="h-3 w-3" />
               {filters.dateRange
-                ? `${format(new Date(filters.dateRange.from), "dd/MM", { locale: es })} - ${format(new Date(filters.dateRange.to), "dd/MM", { locale: es })}`
+                ? (() => {
+                    const from = format(new Date(filters.dateRange.from), "dd/MM", { locale: es });
+                    const to = format(new Date(filters.dateRange.to), "dd/MM", { locale: es });
+                    return from === to ? from : `${from} - ${to}`;
+                  })()
                 : "Fecha"}
             </Button>
           </PopoverTrigger>
@@ -365,16 +370,20 @@ export function ConversationFilters({ allLabels, filters, onChange, onLabelCreat
           </PopoverContent>
         </Popover>
 
-        {/* Clear all button */}
-        {hasActiveFilters && (
+      </div>
+      {/* Clear all — fixed right with fade gradient */}
+      {hasActiveFilters && (
+        <div className="absolute right-0 top-0 bottom-2 flex items-center">
+          <div className="w-6 h-full bg-gradient-to-l from-background to-transparent" />
           <button
             onClick={clearAll}
-            className="shrink-0 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors bg-background pr-3 pl-1"
           >
             <X className="h-3 w-3" />
             Limpiar
           </button>
-        )}
+        </div>
+      )}
       </div>
 
       {/* Delete confirmation dialog */}
