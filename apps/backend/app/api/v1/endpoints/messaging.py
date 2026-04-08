@@ -821,7 +821,7 @@ async def list_notifications(
 
 
 @router.post(
-    "/whatsapp/connect",
+    "/whatsapp/embedded_signup",
     summary="Connect WhatsApp via embedded signup",
     tags=["messaging", "whatsapp"],
     responses={503: {"model": MessagingError}},
