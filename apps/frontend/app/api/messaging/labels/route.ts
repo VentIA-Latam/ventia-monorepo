@@ -37,9 +37,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const qs = searchParams.toString();
     const body = await request.json();
 
-    const response = await fetch(`${API_URL}/messaging/labels`, {
+    const response = await fetch(`${API_URL}/messaging/labels${qs ? `?${qs}` : ""}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
