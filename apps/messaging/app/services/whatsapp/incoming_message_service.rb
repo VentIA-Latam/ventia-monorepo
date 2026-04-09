@@ -191,8 +191,8 @@ class Whatsapp::IncomingMessageService
     # Skip send_reply for echoes — message was already sent from WhatsApp Business App
     @message.skip_send_reply = true if @outgoing_echo
 
-    attach_files(message_data, msg_type) unless @outgoing_echo
-    attach_location(message_data) if msg_type == 'location' && !@outgoing_echo
+    attach_files(message_data, msg_type)
+    attach_location(message_data) if msg_type == 'location'
     @message.save!
   end
 
