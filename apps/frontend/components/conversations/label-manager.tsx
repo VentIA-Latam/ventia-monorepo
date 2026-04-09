@@ -51,13 +51,13 @@ export function LabelManager({
       const updated = [...labels, label];
       onChange?.(updated);
       try {
-        await addConversationLabel(conversationId, label.id);
+        await addConversationLabel(conversationId, label.id, tenantId);
       } catch (err) {
         console.error("Error adding label:", err);
         onChange?.(labels);
       }
     },
-    [conversationId, labels, onChange]
+    [conversationId, labels, tenantId, onChange]
   );
 
   const handleRemove = useCallback(
@@ -65,13 +65,13 @@ export function LabelManager({
       const updated = labels.filter((l) => l.id !== labelId);
       onChange?.(updated);
       try {
-        await removeConversationLabel(conversationId, labelId);
+        await removeConversationLabel(conversationId, labelId, tenantId);
       } catch (err) {
         console.error("Error removing label:", err);
         onChange?.(labels);
       }
     },
-    [conversationId, labels, onChange]
+    [conversationId, labels, tenantId, onChange]
   );
 
   const isReservedName = RESERVED_LABEL_NAMES.includes(newTitle.trim().toLowerCase());
@@ -84,7 +84,7 @@ export function LabelManager({
       const created = (result as { data: Label }).data;
       if (created?.id) {
         onLabelsCreated?.(created);
-        await addConversationLabel(conversationId, created.id);
+        await addConversationLabel(conversationId, created.id, tenantId);
         onChange?.([...labels, created]);
         setNewTitle("");
       }

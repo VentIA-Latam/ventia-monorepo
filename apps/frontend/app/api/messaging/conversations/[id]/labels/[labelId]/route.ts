@@ -4,7 +4,7 @@ import { getAccessToken } from "@/lib/auth0";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string; labelId: string }> }
 ) {
   try {
@@ -14,9 +14,11 @@ export async function DELETE(
     }
 
     const { id, labelId } = await params;
+    const { searchParams } = new URL(request.url);
+    const qs = searchParams.toString();
 
     const response = await fetch(
-      `${API_URL}/messaging/conversations/${id}/labels/${labelId}`,
+      `${API_URL}/messaging/conversations/${id}/labels/${labelId}${qs ? `?${qs}` : ""}`,
       {
         method: "DELETE",
         headers: {

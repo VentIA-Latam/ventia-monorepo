@@ -140,12 +140,14 @@ export async function deleteLabel(id: number | string, tenantId?: number): Promi
   return apiDelete(`/api/messaging/labels/${id}${params}`);
 }
 
-export async function addConversationLabel(conversationId: number | string, labelId: number | string): Promise<unknown> {
-  return apiPost(`/api/messaging/conversations/${conversationId}/labels`, { label_id: labelId });
+export async function addConversationLabel(conversationId: number | string, labelId: number | string, tenantId?: number): Promise<unknown> {
+  const qs = tenantId ? `?tenant_id=${tenantId}` : "";
+  return apiPost(`/api/messaging/conversations/${conversationId}/labels${qs}`, { label_id: labelId });
 }
 
-export async function removeConversationLabel(conversationId: number | string, labelId: number | string): Promise<unknown> {
-  return apiDelete(`/api/messaging/conversations/${conversationId}/labels/${labelId}`);
+export async function removeConversationLabel(conversationId: number | string, labelId: number | string, tenantId?: number): Promise<unknown> {
+  const qs = tenantId ? `?tenant_id=${tenantId}` : "";
+  return apiDelete(`/api/messaging/conversations/${conversationId}/labels/${labelId}${qs}`);
 }
 
 // --- Temperature config ---

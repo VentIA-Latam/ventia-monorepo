@@ -4,7 +4,7 @@ import { getAccessToken } from "@/lib/auth0";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -14,9 +14,11 @@ export async function GET(
     }
 
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const qs = searchParams.toString();
 
     const response = await fetch(
-      `${API_URL}/messaging/conversations/${id}/labels`,
+      `${API_URL}/messaging/conversations/${id}/labels${qs ? `?${qs}` : ""}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -48,10 +50,12 @@ export async function POST(
     }
 
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const qs = searchParams.toString();
     const body = await request.json();
 
     const response = await fetch(
-      `${API_URL}/messaging/conversations/${id}/labels`,
+      `${API_URL}/messaging/conversations/${id}/labels${qs ? `?${qs}` : ""}`,
       {
         method: "POST",
         headers: {
