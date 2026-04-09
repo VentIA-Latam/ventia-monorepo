@@ -194,7 +194,7 @@ export default function TenantDetailPage() {
             <div className="flex items-center gap-2">
               <h1 className="text-3xl font-bold text-foreground font-heading">{tenant.name}</h1>
               {tenant.is_active ? (
-                <Badge className="bg-success-bg text-success border-success/30">Activo</Badge>
+                <Badge variant="success">Activo</Badge>
               ) : (
                 <Badge className="bg-muted/50 text-foreground border-border">Inactivo</Badge>
               )}
@@ -313,7 +313,7 @@ export default function TenantDetailPage() {
               <div className="text-sm font-medium text-muted-foreground">Estado</div>
               <div className="mt-1">
                 {tenant.is_active ? (
-                  <Badge className="bg-success-bg text-success border-success/30">
+                  <Badge variant="success">
                     <CheckCircle2 className="mr-1 h-3 w-3" />
                     Activo
                   </Badge>
@@ -369,7 +369,7 @@ export default function TenantDetailPage() {
                   <div className="text-sm font-medium text-muted-foreground">Plataforma</div>
                   <div className="mt-2">
                     {getTenantPlatform() === "shopify" ? (
-                      <Badge className="bg-success-bg text-success border-0">
+                      <Badge variant="success">
                         <ShoppingBag className="mr-1 h-3 w-3" />
                         Shopify
                       </Badge>
@@ -416,7 +416,7 @@ export default function TenantDetailPage() {
                   <div className="text-sm font-medium text-muted-foreground">Sincronización Automática</div>
                   <div className="mt-2">
                     {getSyncStatus() ? (
-                      <Badge className="bg-success-bg text-success border-0">
+                      <Badge variant="success">
                         <CheckCircle2 className="mr-1 h-3 w-3" />
                         Activa al validar pagos
                       </Badge>
@@ -458,7 +458,7 @@ export default function TenantDetailPage() {
                             •••••••• (generado automáticamente)
                           </span>
                           <div className="mt-1">
-                            <Badge className="bg-success-bg text-success border-0 text-xs">
+                            <Badge variant="success" className="text-xs">
                               OAuth2 Activo
                             </Badge>
                           </div>
@@ -517,7 +517,7 @@ export default function TenantDetailPage() {
               </div>
             </div>
             {webhook ? (
-              <Badge className="bg-success-bg text-success border-success/30">
+              <Badge variant="success">
                 <CheckCircle2 className="mr-1 h-3 w-3" />
                 Configurado
               </Badge>

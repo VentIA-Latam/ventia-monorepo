@@ -221,7 +221,7 @@ export function InvoiceSeriesClientView({ initialSeries, initialTotal }: Invoice
                   </TableCell>
                   <TableCell>
                     {serie.is_active ? (
-                      <Badge className="bg-success-bg text-success border-success/30">
+                      <Badge variant="success">
                         <CheckCircle className="h-3 w-3 mr-1" />
                         Activa
                       </Badge>

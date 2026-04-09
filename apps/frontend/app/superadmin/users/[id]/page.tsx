@@ -113,7 +113,7 @@ export default function UserDetailPage() {
             <div className="flex items-center gap-2">
               <h1 className="text-3xl font-bold text-foreground font-heading">{user.name}</h1>
               {user.is_active ? (
-                <Badge className="bg-success-bg text-success border-success/30">Activo</Badge>
+                <Badge variant="success">Activo</Badge>
               ) : (
                 <Badge className="bg-muted/50 text-foreground border-border">Inactivo</Badge>
               )}
@@ -153,7 +153,7 @@ export default function UserDetailPage() {
           <CardContent>
             <div className="text-2xl font-bold">
               {user.is_active ? (
-                <Badge className="bg-success-bg text-success border-success/30">Activo</Badge>
+                <Badge variant="success">Activo</Badge>
               ) : (
                 <Badge className="bg-muted/50 text-foreground border-border">Inactivo</Badge>
               )}
@@ -217,7 +217,7 @@ export default function UserDetailPage() {
               <div className="text-sm font-medium text-muted-foreground">Estado</div>
               <div className="mt-1">
                 {user.is_active ? (
-                  <Badge className="bg-success-bg text-success border-success/30">Activo</Badge>
+                  <Badge variant="success">Activo</Badge>
                 ) : (
                   <Badge className="bg-muted/50 text-foreground border-border">Inactivo</Badge>
                 )}

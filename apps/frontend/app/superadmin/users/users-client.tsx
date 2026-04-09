@@ -213,7 +213,7 @@ export function UsersClient({ initialUsers, initialTotal, tenants }: { initialUs
                   {!selectedTenantId ? <TableCell>{getTenantName(user.tenant_id)}</TableCell> : null}
                   <TableCell>
                     {user.is_active ? (
-                      <Badge className="bg-success-bg text-success border-success/30">
+                      <Badge variant="success">
                         <CheckCircle className="h-3 w-3 mr-1" />
                         Activo
                       </Badge>

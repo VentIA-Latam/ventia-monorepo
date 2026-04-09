@@ -275,7 +275,7 @@ export function TenantsClient({ initialTenants }: { initialTenants: Tenant[] }) 
                       </TableCell>
                       <TableCell>
                         {tenant.is_active ? (
-                          <Badge className="bg-success-bg text-success border-success/30">
+                          <Badge variant="success">
                             <CheckCircle className="h-3 w-3 mr-1" />
                             Activa
                           </Badge>
