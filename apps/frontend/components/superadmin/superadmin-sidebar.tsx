@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { memo, useState, useCallback, useEffect, useRef } from "react"
 import {
   Settings,
   ChevronsUpDown,
@@ -16,8 +17,9 @@ import {
   MessageSquare,
   ShoppingCart,
   FileText,
+  ChevronRight,
 } from "lucide-react"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { useAuth } from "@/hooks/use-auth"
@@ -41,8 +43,19 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import { getConversationCounts } from "@/lib/api-client/messaging"
+import { useMessagingEvent } from "@/components/conversations/messaging-provider"
+import type { ConversationCounts } from "@/lib/types/messaging"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -96,12 +109,121 @@ const dataConfiguration = [
     url: "/superadmin/api-keys",
     icon: Key,
   },
-  {
-    title: "Conversaciones",
-    url: "/superadmin/conversations",
-    icon: MessageSquare,
-  },
 ]
+
+const conversationSections = [
+  { label: "Todas", section: null, countKey: "all" as const, badgeClass: "bg-volt text-white" },
+  { label: "Ventas", section: "sale", countKey: "sale" as const, badgeClass: "bg-success text-white" },
+  { label: "No atendidas", section: "unattended", countKey: "unattended" as const, badgeClass: "bg-muted text-muted-foreground" },
+]
+
+const REFETCH_EVENTS = new Set([
+  "message.created",
+  "conversation.created",
+  "conversation.updated",
+  "conversation.status_changed",
+  "conversation.deleted",
+])
+
+const ConversationsNav = memo(function ConversationsNav({
+  pathname,
+  tenantId,
+}: {
+  pathname: string;
+  tenantId: number | null;
+}) {
+  const searchParams = useSearchParams()
+  const lastEvent = useMessagingEvent()
+  const [convCounts, setConvCounts] = useState<ConversationCounts | null>(null)
+  const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [isOpen, setIsOpen] = useState(false)
+
+  const isConversationsPage = pathname.startsWith("/superadmin/conversations")
+  const activeSection = searchParams.get("section")
+
+  useEffect(() => {
+    setIsOpen(isConversationsPage)
+  }, [isConversationsPage])
+
+  const fetchCounts = useCallback(async () => {
+    if (!tenantId) return
+    try {
+      const result = await getConversationCounts(tenantId)
+      setConvCounts(result.data)
+    } catch {
+      // silently fail
+    }
+  }, [tenantId])
+
+  useEffect(() => {
+    if (isConversationsPage && tenantId) fetchCounts()
+  }, [isConversationsPage, tenantId, fetchCounts])
+
+  useEffect(() => {
+    if (!lastEvent) return
+    if (REFETCH_EVENTS.has(lastEvent.event)) {
+      if (refetchTimer.current) clearTimeout(refetchTimer.current)
+      refetchTimer.current = setTimeout(fetchCounts, 800)
+    }
+  }, [lastEvent, fetchCounts])
+
+  useEffect(() => {
+    return () => {
+      if (refetchTimer.current) clearTimeout(refetchTimer.current)
+    }
+  }, [])
+
+  return (
+    <Collapsible asChild open={isOpen} onOpenChange={setIsOpen} className="group/collapsible">
+      <SidebarMenuItem className="mb-1">
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton
+            asChild
+            isActive={isConversationsPage}
+            tooltip="Conversaciones"
+            className={`
+                w-full justify-between h-10 px-3 rounded-lg transition-all duration-200
+                ${isConversationsPage
+                  ? "bg-gradient-to-r from-volt/10 to-aqua/5 border-l-2 border-l-volt shadow-sm"
+                  : "hover:bg-muted/60"
+                }
+            `}
+          >
+            <Link href="/superadmin/conversations" className="flex items-center w-full">
+              <MessageSquare className="w-5 h-5 mr-3 shrink-0" />
+              <span className="flex-1 truncate">Conversaciones</span>
+              <ChevronRight className="ml-auto w-4 h-4 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+            </Link>
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {conversationSections.map((sub) => {
+              const isSubActive = isConversationsPage && activeSection === sub.section
+              const count = convCounts ? convCounts[sub.countKey] : 0
+              return (
+                <SidebarMenuSubItem key={sub.label}>
+                  <SidebarMenuSubButton
+                    asChild
+                    isActive={isSubActive}
+                    className="justify-between"
+                  >
+                    <Link href={sub.section ? `/superadmin/conversations?section=${sub.section}` : "/superadmin/conversations"}>
+                      <span>{sub.label}</span>
+                      <span className={`inline-flex items-center justify-center rounded-full text-[10px] font-bold min-w-[20px] h-5 px-1.5 ${sub.badgeClass}`}>
+                        {count}
+                      </span>
+                    </Link>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              )
+            })}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
+  )
+})
 
 export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
@@ -282,6 +404,7 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              <ConversationsNav pathname={pathname} tenantId={selectedTenantId} />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
