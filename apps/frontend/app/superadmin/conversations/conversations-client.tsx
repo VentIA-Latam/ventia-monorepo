@@ -12,7 +12,6 @@ import {
 import { ConversationList } from "@/components/conversations/conversation-list";
 import { MessageView } from "@/components/conversations/message-view";
 import { ContactInfoPanel } from "@/components/conversations/contact-info-panel";
-import { MessagingProvider } from "@/components/conversations/messaging-provider";
 import { getConversations, getInboxes, getLabels, getTemperatureConfig, getWsToken } from "@/lib/api-client/messaging";
 import type { Conversation, Label, TemperatureDefinition } from "@/lib/types/messaging";
 
@@ -248,9 +247,5 @@ export function SuperAdminConversationsClient({ tenantId, section = "all" }: Sup
     </div>
   );
 
-  return (
-    <MessagingProvider tenantId={tenantId}>
-      {content}
-    </MessagingProvider>
-  );
+  return content;
 }
