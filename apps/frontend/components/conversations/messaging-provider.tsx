@@ -61,6 +61,7 @@ export function MessagingProvider({ children, tenantId }: MessagingProviderProps
     setToken(null); // Reset token to force reconnect
 
     async function fetchToken() {
+      if (!tenantId) return;
       try {
         const data = await getWsToken(tenantId);
         if (!cancelled) setToken(data);

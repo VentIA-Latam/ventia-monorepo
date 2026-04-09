@@ -51,7 +51,7 @@ function SuperAdminLayoutInner({
   const { selectedTenantId } = useTenant();
 
   return (
-    <MessagingProvider tenantId={selectedTenantId ?? undefined}>
+    <MessagingProvider tenantId={selectedTenantId || undefined} key={selectedTenantId ?? "no-tenant"}>
       <SidebarProvider>
         <SuperAdminSidebar />
         <SidebarInset>
