@@ -78,6 +78,19 @@ class MessagingService:
             json_data={"account": account_data}
         )
 
+    # --- Temperature config ---
+
+    async def get_temperature_config(self, tenant_id: int) -> Optional[dict]:
+        """Get temperature configuration for an account."""
+        return await self._request("GET", "/api/v1/accounts/temperature_config", tenant_id)
+
+    async def update_temperature_config(self, tenant_id: int, config: list) -> Optional[dict]:
+        """Update temperature configuration for an account."""
+        return await self._request(
+            "PUT", "/api/v1/accounts/temperature_config", tenant_id,
+            json_data={"temperature_config": config}
+        )
+
     # --- User management ---
 
     async def sync_user(self, tenant_id: int, user_data: dict) -> Optional[dict]:

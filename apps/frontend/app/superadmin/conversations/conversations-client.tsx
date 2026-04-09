@@ -13,8 +13,8 @@ import { ConversationList } from "@/components/conversations/conversation-list";
 import { MessageView } from "@/components/conversations/message-view";
 import { ContactInfoPanel } from "@/components/conversations/contact-info-panel";
 import { MessagingProvider } from "@/components/conversations/messaging-provider";
-import { getConversations, getInboxes, getLabels, getWsToken } from "@/lib/api-client/messaging";
-import type { Conversation, Label } from "@/lib/types/messaging";
+import { getConversations, getInboxes, getLabels, getTemperatureConfig, getWsToken } from "@/lib/api-client/messaging";
+import type { Conversation, Label, TemperatureDefinition } from "@/lib/types/messaging";
 
 interface SuperAdminConversationsClientProps {
   tenantId: number;
@@ -24,6 +24,7 @@ export function SuperAdminConversationsClient({ tenantId }: SuperAdminConversati
   const isMobile = useIsMobile();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [allLabels, setAllLabels] = useState<Label[]>([]);
+  const [temperatureConfig, setTemperatureConfig] = useState<TemperatureDefinition[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -41,13 +42,15 @@ export function SuperAdminConversationsClient({ tenantId }: SuperAdminConversati
     async function loadData() {
       try {
         // Happy path: account already exists — parallel fetch, no waterfall
-        const [convData, labelsData] = await Promise.all([
+        const [convData, labelsData, tempConfigData] = await Promise.all([
           getConversations({ status: "open", tenant_id: tenantId }),
           getLabels(tenantId),
+          getTemperatureConfig(tenantId),
         ]);
         if (cancelled) return;
         setConversations(convData.data ?? []);
         setAllLabels(labelsData.data ?? []);
+        setTemperatureConfig(tempConfigData.data ?? []);
       } catch {
         // Account likely not provisioned — trigger auto-provisioning via ws-token
         try {
@@ -57,13 +60,15 @@ export function SuperAdminConversationsClient({ tenantId }: SuperAdminConversati
 
         // Retry after provisioning
         try {
-          const [convData, labelsData] = await Promise.all([
+          const [convData, labelsData, tempConfigData] = await Promise.all([
             getConversations({ status: "open", tenant_id: tenantId }),
             getLabels(tenantId),
+            getTemperatureConfig(tenantId),
           ]);
           if (cancelled) return;
           setConversations(convData.data ?? []);
           setAllLabels(labelsData.data ?? []);
+          setTemperatureConfig(tempConfigData.data ?? []);
         } catch (retryErr) {
           console.error("Error loading conversations after provisioning:", retryErr);
         }
@@ -146,6 +151,7 @@ export function SuperAdminConversationsClient({ tenantId }: SuperAdminConversati
             conversations={conversations}
             selectedId={selectedId}
             allLabels={allLabels}
+            temperatureConfig={temperatureConfig}
             tenantId={tenantId}
             onSelect={handleSelect}
             onConversationsChange={handleConversationsChange}
@@ -175,6 +181,7 @@ export function SuperAdminConversationsClient({ tenantId }: SuperAdminConversati
             <ContactInfoPanel
               conversation={selectedConversation}
               allLabels={allLabels}
+              temperatureConfig={temperatureConfig}
               tenantId={tenantId}
               onClose={handleCloseInfo}
               onConversationUpdate={handleConversationUpdate}
@@ -191,6 +198,7 @@ export function SuperAdminConversationsClient({ tenantId }: SuperAdminConversati
           conversations={conversations}
           selectedId={selectedId}
           allLabels={allLabels}
+          temperatureConfig={temperatureConfig}
           tenantId={tenantId}
           onSelect={handleSelect}
           onConversationsChange={handleConversationsChange}
@@ -215,6 +223,7 @@ export function SuperAdminConversationsClient({ tenantId }: SuperAdminConversati
             <ContactInfoPanel
               conversation={selectedConversation}
               allLabels={allLabels}
+              temperatureConfig={temperatureConfig}
               tenantId={tenantId}
               onClose={handleCloseInfo}
               onConversationUpdate={handleConversationUpdate}

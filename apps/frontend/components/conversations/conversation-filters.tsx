@@ -20,13 +20,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { Tag, CalendarDays, SlidersHorizontal, Snowflake, Thermometer, Flame, X, Trash2, Lock, Plus } from "lucide-react";
+import { Tag, CalendarDays, SlidersHorizontal, Thermometer, X, Trash2, Lock, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { createLabel, deleteLabel } from "@/lib/api-client/messaging";
+import { TEMPERATURE_ICON_MAP } from "@/lib/utils/temperature-icons";
 import { useToast } from "@/hooks/use-toast";
 import type { DateRange } from "react-day-picker";
-import type { Label, ConversationTemperature } from "@/lib/types/messaging";
+import type { Label, ConversationTemperature, TemperatureDefinition } from "@/lib/types/messaging";
 
 export interface ActiveFilters {
   label?: string;
@@ -38,21 +39,12 @@ export interface ActiveFilters {
 interface ConversationFiltersProps {
   allLabels: Label[];
   filters: ActiveFilters;
+  temperatureConfig?: TemperatureDefinition[];
   onChange: (filters: ActiveFilters) => void;
   onLabelCreated?: (label: Label) => void;
   onLabelDeleted?: (labelId: number) => void;
   tenantId?: number;
 }
-
-const TEMP_OPTIONS: {
-  value: ConversationTemperature;
-  label: string;
-  icon: typeof Snowflake;
-}[] = [
-  { value: "cold", label: "Frío", icon: Snowflake },
-  { value: "warm", label: "Tibio", icon: Thermometer },
-  { value: "hot", label: "Caliente", icon: Flame },
-];
 
 const PRESET_COLORS = [
   "#1f93ff", "#4CAF50", "#FF9800", "#E91E63",
@@ -61,7 +53,7 @@ const PRESET_COLORS = [
 
 const RESERVED_LABEL_NAMES = ["soporte-humano", "en-revisión"];
 
-export function ConversationFilters({ allLabels, filters, onChange, onLabelCreated, onLabelDeleted, tenantId }: ConversationFiltersProps) {
+export function ConversationFilters({ allLabels, filters, temperatureConfig = [], onChange, onLabelCreated, onLabelDeleted, tenantId }: ConversationFiltersProps) {
   const { toast } = useToast();
   const [labelOpen, setLabelOpen] = useState(false);
   const [dateOpen, setDateOpen] = useState(false);
@@ -349,24 +341,26 @@ export function ConversationFilters({ allLabels, filters, onChange, onLabelCreat
                 No leídas
               </button>
               <div className="h-px bg-border my-1" />
-              {TEMP_OPTIONS.map((opt) => {
-                const Icon = opt.icon;
-                return (
-                  <button
-                    key={opt.value}
-                    onClick={() => handleTempSelect(opt.value)}
-                    className={cn(
-                      "w-full flex items-center gap-2 text-xs px-2 py-1.5 rounded-md transition-colors text-left",
-                      filters.temperature === opt.value
-                        ? "bg-primary/10 text-primary"
-                        : "hover:bg-muted/50"
-                    )}
-                  >
-                    <Icon className="h-3 w-3" />
-                    {opt.label}
-                  </button>
-                );
-              })}
+              {temperatureConfig
+                .sort((a, b) => a.position - b.position)
+                .map((opt) => {
+                  const Icon = TEMPERATURE_ICON_MAP[opt.icon] ?? Thermometer;
+                  return (
+                    <button
+                      key={opt.key}
+                      onClick={() => handleTempSelect(opt.key)}
+                      className={cn(
+                        "w-full flex items-center gap-2 text-xs px-2 py-1.5 rounded-md transition-colors text-left",
+                        filters.temperature === opt.key
+                          ? "bg-primary/10 text-primary"
+                          : "hover:bg-muted/50"
+                      )}
+                    >
+                      <Icon className="h-3 w-3" style={{ color: opt.color }} />
+                      {opt.name}
+                    </button>
+                  );
+                })}
             </div>
           </PopoverContent>
         </Popover>

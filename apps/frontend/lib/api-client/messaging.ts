@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPatch, apiDelete } from "./client";
+import { apiGet, apiPost, apiPatch, apiPut, apiDelete } from "./client";
 import type {
   ConversationListResponse,
   ConversationCounts,
@@ -15,6 +15,7 @@ import type {
   ManualWhatsAppConnectParams,
   WhatsAppTemplate,
   WhatsAppChannel,
+  TemperatureDefinition,
 } from "@/lib/types/messaging";
 
 export interface ConversationFilters {
@@ -145,6 +146,20 @@ export async function addConversationLabel(conversationId: number | string, labe
 
 export async function removeConversationLabel(conversationId: number | string, labelId: number | string): Promise<unknown> {
   return apiDelete(`/api/messaging/conversations/${conversationId}/labels/${labelId}`);
+}
+
+// --- Temperature config ---
+
+export async function getTemperatureConfig(tenantId?: number): Promise<{ success: boolean; data: TemperatureDefinition[] }> {
+  return apiGet("/api/messaging/temperature-config", tenantId ? { tenant_id: tenantId } : undefined);
+}
+
+export async function updateTemperatureConfig(
+  config: TemperatureDefinition[],
+  tenantId?: number
+): Promise<{ success: boolean; data: TemperatureDefinition[] }> {
+  const qs = tenantId ? `?tenant_id=${tenantId}` : "";
+  return apiPut(`/api/messaging/temperature-config${qs}`, { temperature_config: config });
 }
 
 // --- User sync ---

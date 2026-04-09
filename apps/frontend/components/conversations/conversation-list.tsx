@@ -13,12 +13,13 @@ import {
   deleteConversation,
   type ConversationFilters as ConversationFilterParams,
 } from "@/lib/api-client/messaging";
-import type { Conversation, Label } from "@/lib/types/messaging";
+import type { Conversation, Label, TemperatureDefinition } from "@/lib/types/messaging";
 
 interface ConversationListProps {
   conversations: Conversation[];
   selectedId: number | null;
   allLabels: Label[];
+  temperatureConfig?: TemperatureDefinition[];
   section?: string;
   tenantId?: number;
   onSelect: (id: number) => void;
@@ -34,6 +35,7 @@ export function ConversationList({
   conversations,
   selectedId,
   allLabels,
+  temperatureConfig = [],
   section = "all",
   tenantId,
   onSelect,
@@ -272,6 +274,7 @@ export function ConversationList({
       <ConversationFilters
         allLabels={allLabels}
         filters={activeFilters}
+        temperatureConfig={temperatureConfig}
         onChange={handleFiltersChange}
         onLabelCreated={onLabelCreated}
         onLabelDeleted={onLabelDeleted}
@@ -313,6 +316,7 @@ export function ConversationList({
                 <ConversationItem
                   conversation={conversation}
                   isSelected={selectedId === conversation.id}
+                  temperatureConfig={temperatureConfig}
                   onClick={() => onSelect(conversation.id)}
                   onDelete={handleDelete}
                 />

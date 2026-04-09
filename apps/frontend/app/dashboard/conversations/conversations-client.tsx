@@ -11,12 +11,13 @@ import {
 import { ConversationList } from "@/components/conversations/conversation-list";
 import { MessageView } from "@/components/conversations/message-view";
 import { ContactInfoPanel } from "@/components/conversations/contact-info-panel";
-import type { Conversation, Label } from "@/lib/types/messaging";
+import type { Conversation, Label, TemperatureDefinition } from "@/lib/types/messaging";
 
 interface ConversationsClientProps {
   initialConversations: unknown[];
   initialInboxes: unknown[];
   initialLabels: unknown[];
+  initialTemperatureConfig?: unknown[];
   initialSection?: string;
   initialConversationId?: number;
 }
@@ -25,6 +26,7 @@ export function ConversationsClient({
   initialConversations,
   initialInboxes,
   initialLabels,
+  initialTemperatureConfig = [],
   initialSection = "all",
   initialConversationId,
 }: ConversationsClientProps) {
@@ -35,6 +37,7 @@ export function ConversationsClient({
   const [selectedId, setSelectedId] = useState<number | null>(initialConversationId ?? null);
   const [showInfo, setShowInfo] = useState(false);
   const [allLabels, setAllLabels] = useState<Label[]>(initialLabels as Label[]);
+  const [temperatureConfig] = useState<TemperatureDefinition[]>(initialTemperatureConfig as TemperatureDefinition[]);
 
   const handleLabelCreated = useCallback((label: Label) => {
     setAllLabels((prev) => [...prev, label]);
@@ -107,6 +110,7 @@ export function ConversationsClient({
               conversations={conversations}
               selectedId={selectedId}
               allLabels={allLabels}
+              temperatureConfig={temperatureConfig}
               section={initialSection}
               onSelect={handleSelect}
               onConversationsChange={handleConversationsChange}
@@ -135,8 +139,8 @@ export function ConversationsClient({
             {selectedConversation && (
               <ContactInfoPanel
                 conversation={selectedConversation}
-
                 allLabels={allLabels}
+                temperatureConfig={temperatureConfig}
                 onClose={handleCloseInfo}
                 onConversationUpdate={handleConversationUpdate}
                 onLabelCreated={handleLabelCreated}
@@ -157,6 +161,7 @@ export function ConversationsClient({
           conversations={conversations}
           selectedId={selectedId}
           allLabels={allLabels}
+          temperatureConfig={temperatureConfig}
           section={initialSection}
           onSelect={handleSelect}
           onConversationsChange={handleConversationsChange}
@@ -182,6 +187,7 @@ export function ConversationsClient({
             <ContactInfoPanel
               conversation={selectedConversation}
               allLabels={allLabels}
+              temperatureConfig={temperatureConfig}
               onClose={handleCloseInfo}
               onConversationUpdate={handleConversationUpdate}
               onLabelCreated={handleLabelCreated}

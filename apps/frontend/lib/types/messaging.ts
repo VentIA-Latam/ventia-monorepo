@@ -44,7 +44,15 @@ export interface Label {
 
 export type ConversationStatus = "open" | "resolved" | "pending";
 export type ConversationStage = "pre_sale" | "sale";
-export type ConversationTemperature = "cold" | "warm" | "hot" | null;
+export type ConversationTemperature = string | null;
+
+export interface TemperatureDefinition {
+  key: string;
+  name: string;
+  color: string;
+  icon: string;
+  position: number;
+}
 
 export interface LastMessageBrief {
   content: string | null;

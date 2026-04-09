@@ -16,9 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
   Trash2,
-  Snowflake,
   Thermometer,
-  Flame,
   Check,
   Image,
   Mic,
@@ -28,12 +26,14 @@ import {
   Paperclip,
   User,
 } from "lucide-react";
-import type { Conversation } from "@/lib/types/messaging";
+import { TEMPERATURE_ICON_MAP } from "@/lib/utils/temperature-icons";
+import type { Conversation, TemperatureDefinition } from "@/lib/types/messaging";
 import { getInitials, getWhatsAppTime } from "@/lib/utils/messaging";
 
 interface ConversationItemProps {
   conversation: Conversation;
   isSelected: boolean;
+  temperatureConfig?: TemperatureDefinition[];
   onClick: () => void;
   onDelete?: (id: number) => void;
 }
@@ -95,6 +95,7 @@ function getMessagePreview(conversation: Conversation): React.ReactNode {
 export const ConversationItem = memo(function ConversationItem({
   conversation,
   isSelected,
+  temperatureConfig = [],
   onClick,
   onDelete,
 }: ConversationItemProps) {
@@ -153,9 +154,12 @@ export const ConversationItem = memo(function ConversationItem({
             </div>
             <div className="flex items-center gap-1 shrink-0">
               {/* Temperature icon */}
-              {conversation.temperature === "cold" && <Snowflake className="h-3 w-3 text-blue-500" />}
-              {conversation.temperature === "warm" && <Thermometer className="h-3 w-3 text-orange-500" />}
-              {conversation.temperature === "hot" && <Flame className="h-3 w-3 text-red-500" />}
+              {conversation.temperature && (() => {
+                const tempDef = temperatureConfig.find((t) => t.key === conversation.temperature);
+                if (!tempDef) return null;
+                const TempIcon = TEMPERATURE_ICON_MAP[tempDef.icon] ?? Thermometer;
+                return <TempIcon className="h-3 w-3" style={{ color: tempDef.color }} />;
+              })()}
               {/* Unread badge */}
               {hasUnread && (
                 <span className="ml-0.5 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-semibold leading-none">

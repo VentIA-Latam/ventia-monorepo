@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TenantDetail, EcommercePlatform } from "@/lib/types/tenant";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TemperatureConfigCard } from "@/components/superadmin/temperature-config-card";
 import { formatDate, formatDateTime } from "@/lib/utils";
 
 export default function TenantDetailPage() {
@@ -582,6 +583,8 @@ export default function TenantDetailPage() {
           )}
         </CardContent>
       </Card>
+      {/* Temperature Configuration */}
+      <TemperatureConfigCard tenantId={parseInt(params.id as string)} />
     </div>
   );
 }

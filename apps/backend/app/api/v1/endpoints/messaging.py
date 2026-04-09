@@ -75,6 +75,44 @@ async def provision_account(
     return result
 
 
+# --- Temperature config ---
+
+@router.get(
+    "/temperature-config",
+    summary="Get temperature configuration for the tenant",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def get_temperature_config(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.get_temperature_config(tenant_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.put(
+    "/temperature-config",
+    summary="Update temperature configuration for the tenant",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def update_temperature_config(
+    payload: dict,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("PUT", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    config = payload.get("temperature_config", [])
+    result = await messaging_service.update_temperature_config(tenant_id, config)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
 # --- User sync ---
 
 @router.post(

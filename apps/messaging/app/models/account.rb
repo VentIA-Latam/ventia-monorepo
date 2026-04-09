@@ -19,12 +19,26 @@
 #
 
 class Account < ApplicationRecord
+  ALLOWED_TEMPERATURE_COLORS = %w[
+    #1f93ff #4CAF50 #FF9800 #E91E63
+    #9C27B0 #00BCD4 #795548 #607D8B
+  ].freeze
+
+  ALLOWED_TEMPERATURE_ICONS = %w[
+    snowflake thermometer flame sun moon star heart zap
+    cloud droplets wind target circle square triangle diamond
+    sparkles rocket leaf skull
+  ].freeze
+
+  MAX_TEMPERATURES = 5
+
   # Settings accessors
   store_accessor :settings, :auto_resolve_after, :auto_resolve_message
 
   # Validations
   validates :name, presence: true
   validates :ventia_tenant_id, presence: true
+  validate :validate_temperature_config
 
   # Associations
   has_many :inboxes, dependent: :destroy
@@ -63,6 +77,10 @@ class Account < ApplicationRecord
     }
   end
 
+  def valid_temperature_keys
+    (temperature_config || []).map { |t| t["key"] }
+  end
+
   def usage_limits
     limits.presence || {
       inboxes: 10,
@@ -75,6 +93,55 @@ class Account < ApplicationRecord
 
   def notify_creation
     Rails.logger.info "Account created: #{id}"
+  end
+
+  def validate_temperature_config
+    config = temperature_config
+    return if config.blank?
+
+    unless config.is_a?(Array)
+      errors.add(:temperature_config, "must be an array")
+      return
+    end
+
+    if config.length > MAX_TEMPERATURES
+      errors.add(:temperature_config, "cannot have more than #{MAX_TEMPERATURES} temperatures")
+      return
+    end
+
+    keys = []
+    config.each_with_index do |entry, idx|
+      unless entry.is_a?(Hash)
+        errors.add(:temperature_config, "entry #{idx} must be a hash")
+        next
+      end
+
+      key = entry["key"]
+      if key.blank? || !key.match?(/\A[a-z0-9_]+\z/)
+        errors.add(:temperature_config, "entry #{idx} key must be snake_case")
+      elsif keys.include?(key)
+        errors.add(:temperature_config, "entry #{idx} has duplicate key '#{key}'")
+      end
+      keys << key
+
+      errors.add(:temperature_config, "entry #{idx} name is required") if entry["name"].blank?
+
+      if entry["color"].blank?
+        errors.add(:temperature_config, "entry #{idx} color is required")
+      elsif !ALLOWED_TEMPERATURE_COLORS.include?(entry["color"])
+        errors.add(:temperature_config, "entry #{idx} has invalid color '#{entry['color']}'")
+      end
+
+      if entry["icon"].blank?
+        errors.add(:temperature_config, "entry #{idx} icon is required")
+      elsif !ALLOWED_TEMPERATURE_ICONS.include?(entry["icon"])
+        errors.add(:temperature_config, "entry #{idx} has invalid icon '#{entry['icon']}'")
+      end
+
+      unless entry["position"].is_a?(Integer)
+        errors.add(:temperature_config, "entry #{idx} position must be an integer")
+      end
+    end
   end
 
   def create_system_labels

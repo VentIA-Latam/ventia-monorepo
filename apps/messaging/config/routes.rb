@@ -20,7 +20,12 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       # Accounts
-      resources :accounts, only: [:index, :show, :create, :update]
+      resources :accounts, only: [:index, :show, :create, :update] do
+        collection do
+          get :temperature_config
+          put :temperature_config, action: :update_temperature_config
+        end
+      end
 
       # Users (synced from Ventia)
       resources :users, only: [:index, :show, :create, :update, :destroy]

@@ -46,6 +46,7 @@ class Conversation < ApplicationRecord
   validates :contact_id, presence: true
   validates :contact_inbox_id, presence: true
   validates :uuid, presence: true, uniqueness: true
+  validate :validate_temperature_key
 
   # Associations
   belongs_to :account
@@ -62,7 +63,7 @@ class Conversation < ApplicationRecord
   # Enums
   enum :status, { open: 0, resolved: 1, pending: 2, snoozed: 3 }
   enum :priority, { low: 0, medium: 1, high: 2, urgent: 3 }
-  enum :temperature, { cold: 0, warm: 1, hot: 2 }, prefix: true
+  # temperature is now a string column validated against account.temperature_config
   enum :stage, { pre_sale: 0, sale: 1 }
 
   # Scopes
@@ -144,11 +145,21 @@ class Conversation < ApplicationRecord
       ai_agent_enabled: ai_agent_enabled,
       additional_attributes: additional_attributes,
       waiting_since: waiting_since&.to_i,
-      first_reply_created_at: first_reply_created_at&.to_i
+      first_reply_created_at: first_reply_created_at&.to_i,
+      temperature: temperature
     }
   end
 
   private
+
+  def validate_temperature_key
+    return if temperature.blank?
+
+    valid_keys = account&.valid_temperature_keys || []
+    return if valid_keys.include?(temperature)
+
+    errors.add(:temperature, "'#{temperature}' is not a valid temperature for this account")
+  end
 
   def ensure_uuid
     self.uuid ||= SecureRandom.uuid

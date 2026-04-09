@@ -8,12 +8,13 @@ import { Separator } from "@/components/ui/separator";
 import { Phone, Mail, X } from "lucide-react";
 import { TemperatureSelector } from "./temperature-selector";
 import { LabelManager } from "./label-manager";
-import type { Conversation, Label, ConversationTemperature } from "@/lib/types/messaging";
+import type { Conversation, Label, ConversationTemperature, TemperatureDefinition } from "@/lib/types/messaging";
 import { getInitials } from "@/lib/utils/messaging";
 
 interface ContactInfoPanelProps {
   conversation: Conversation;
   allLabels: Label[];
+  temperatureConfig?: TemperatureDefinition[];
   tenantId?: number;
   onClose?: () => void;
   onConversationUpdate?: (updated: Conversation) => void;
@@ -28,6 +29,7 @@ const stageConfig: Record<string, { label: string; className: string }> = {
 export const ContactInfoPanel = memo(function ContactInfoPanel({
   conversation,
   allLabels,
+  temperatureConfig = [],
   tenantId,
   onClose,
   onConversationUpdate,
@@ -95,6 +97,7 @@ export const ContactInfoPanel = memo(function ContactInfoPanel({
           <TemperatureSelector
             conversationId={conversation.id}
             value={conversation.temperature}
+            temperatureConfig={temperatureConfig}
             tenantId={tenantId}
             onChange={(temp: ConversationTemperature) =>
               onConversationUpdate?.({ ...conversation, temperature: temp })
