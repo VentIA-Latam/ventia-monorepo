@@ -178,13 +178,7 @@ export function TemperatureConfigCard({ tenantId }: TemperatureConfigCardProps) 
               </CardDescription>
             </div>
           </div>
-          <Badge
-            className={cn(
-              config.length > 0
-                ? "bg-success-bg text-success border-success/30"
-                : "bg-muted/50 text-foreground border-border"
-            )}
-          >
+          <Badge variant={config.length > 0 ? "success" : "outline"} className={config.length === 0 ? "bg-muted/50" : ""}>
             {config.length}/{MAX_TEMPERATURES} configuradas
           </Badge>
         </div>
