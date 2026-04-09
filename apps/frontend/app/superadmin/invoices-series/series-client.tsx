@@ -226,7 +226,7 @@ export function InvoiceSeriesClientView({ initialSeries, initialTotal }: Invoice
                         Activa
                       </Badge>
                     ) : (
-                      <Badge className="bg-muted/50 text-foreground border-border">
+                      <Badge variant="outline" className="bg-muted/50">
                         <XCircle className="h-3 w-3 mr-1" />
                         Inactiva
                       </Badge>

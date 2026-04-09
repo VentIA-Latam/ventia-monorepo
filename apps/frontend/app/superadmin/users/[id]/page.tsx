@@ -115,7 +115,7 @@ export default function UserDetailPage() {
               {user.is_active ? (
                 <Badge variant="success">Activo</Badge>
               ) : (
-                <Badge className="bg-muted/50 text-foreground border-border">Inactivo</Badge>
+                <Badge variant="outline" className="bg-muted/50">Inactivo</Badge>
               )}
               <Badge className={getRoleBadgeColor(user.role)}>
                 <Shield className="mr-1 h-3 w-3" />
@@ -155,7 +155,7 @@ export default function UserDetailPage() {
               {user.is_active ? (
                 <Badge variant="success">Activo</Badge>
               ) : (
-                <Badge className="bg-muted/50 text-foreground border-border">Inactivo</Badge>
+                <Badge variant="outline" className="bg-muted/50">Inactivo</Badge>
               )}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -219,7 +219,7 @@ export default function UserDetailPage() {
                 {user.is_active ? (
                   <Badge variant="success">Activo</Badge>
                 ) : (
-                  <Badge className="bg-muted/50 text-foreground border-border">Inactivo</Badge>
+                  <Badge variant="outline" className="bg-muted/50">Inactivo</Badge>
                 )}
               </div>
             </div>

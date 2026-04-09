@@ -196,7 +196,7 @@ export default function TenantDetailPage() {
               {tenant.is_active ? (
                 <Badge variant="success">Activo</Badge>
               ) : (
-                <Badge className="bg-muted/50 text-foreground border-border">Inactivo</Badge>
+                <Badge variant="outline" className="bg-muted/50">Inactivo</Badge>
               )}
               {tenant.is_platform && (
                 <Badge variant="secondary" className="bg-luma/15 text-marino">
@@ -318,7 +318,7 @@ export default function TenantDetailPage() {
                     Activo
                   </Badge>
                 ) : (
-                  <Badge className="bg-muted/50 text-foreground border-border">
+                  <Badge variant="outline" className="bg-muted/50">
                     <XCircle className="mr-1 h-3 w-3" />
                     Inactivo
                   </Badge>
@@ -421,7 +421,7 @@ export default function TenantDetailPage() {
                         Activa al validar pagos
                       </Badge>
                     ) : (
-                      <Badge className="bg-muted text-muted-foreground border-0">
+                      <Badge variant="outline" className="bg-muted">
                         <XCircle className="mr-1 h-3 w-3" />
                         Desactivada
                       </Badge>
@@ -522,7 +522,7 @@ export default function TenantDetailPage() {
                 Configurado
               </Badge>
             ) : (
-              <Badge className="bg-muted/50 text-foreground border-border">
+              <Badge variant="outline" className="bg-muted/50">
                 Sin configurar
               </Badge>
             )}

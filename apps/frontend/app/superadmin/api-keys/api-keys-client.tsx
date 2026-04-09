@@ -205,7 +205,7 @@ export function ApiKeysClient({ initialApiKeys, initialTotal }: ApiKeysClientPro
                     {apiKey.is_active ? (
                       <Badge variant="success"><CheckCircle className="h-3 w-3 mr-1" />Activa</Badge>
                     ) : (
-                      <Badge className="bg-muted/50 text-foreground border-border"><XCircle className="h-3 w-3 mr-1" />Revocada</Badge>
+                      <Badge variant="outline" className="bg-muted/50"><XCircle className="h-3 w-3 mr-1" />Revocada</Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
