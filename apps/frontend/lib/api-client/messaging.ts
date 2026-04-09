@@ -59,9 +59,11 @@ export async function getConversationCounts(tenantId?: number): Promise<{ succes
 
 export async function updateConversationStage(
   id: number | string,
-  stage: "pre_sale" | "sale"
+  stage: "pre_sale" | "sale",
+  tenantId?: number
 ): Promise<unknown> {
-  return apiPost(`/api/messaging/conversations/${id}/stage`, { stage });
+  const qs = tenantId ? `?tenant_id=${tenantId}` : "";
+  return apiPost(`/api/messaging/conversations/${id}/stage${qs}`, { stage });
 }
 
 export async function markConversationRead(conversationId: number | string, tenantId?: number): Promise<unknown> {
@@ -119,8 +121,8 @@ export async function getInboxes(tenantId?: number): Promise<Inbox[]> {
   return apiGet("/api/messaging/inboxes", tenantId ? { tenant_id: tenantId } : undefined);
 }
 
-export async function getCannedResponses(): Promise<CannedResponse[]> {
-  return apiGet("/api/messaging/canned-responses");
+export async function getCannedResponses(tenantId?: number): Promise<CannedResponse[]> {
+  return apiGet("/api/messaging/canned-responses", tenantId ? { tenant_id: tenantId } : undefined);
 }
 
 
@@ -185,28 +187,32 @@ export async function connectWhatsAppManually(
   return apiPost("/api/messaging/whatsapp/manual-connect", params);
 }
 
-export async function getWhatsAppStatus(): Promise<{ success: boolean; data: WhatsAppChannel[] }> {
-  return apiGet("/api/messaging/whatsapp/status");
+export async function getWhatsAppStatus(tenantId?: number): Promise<{ success: boolean; data: WhatsAppChannel[] }> {
+  return apiGet("/api/messaging/whatsapp/status", tenantId ? { tenant_id: tenantId } : undefined);
 }
 
 // --- WhatsApp Templates ---
 
 export async function getTemplates(
-  inboxId: number | string
+  inboxId: number | string,
+  tenantId?: number
 ): Promise<{ success: boolean; data: WhatsAppTemplate[] }> {
-  return apiGet(`/api/messaging/inboxes/${inboxId}/templates`);
+  return apiGet(`/api/messaging/inboxes/${inboxId}/templates`, tenantId ? { tenant_id: tenantId } : undefined);
 }
 
-export async function syncTemplates(inboxId: number | string): Promise<unknown> {
-  return apiPost(`/api/messaging/inboxes/${inboxId}/templates`);
+export async function syncTemplates(inboxId: number | string, tenantId?: number): Promise<unknown> {
+  const qs = tenantId ? `?tenant_id=${tenantId}` : "";
+  return apiPost(`/api/messaging/inboxes/${inboxId}/templates${qs}`);
 }
 
 export async function sendTemplateMessage(
   conversationId: number | string,
-  payload: SendTemplatePayload
+  payload: SendTemplatePayload,
+  tenantId?: number
 ): Promise<unknown> {
+  const qs = tenantId ? `?tenant_id=${tenantId}` : "";
   return apiPost(
-    `/api/messaging/conversations/${conversationId}/messages/template`,
+    `/api/messaging/conversations/${conversationId}/messages/template${qs}`,
     payload
   );
 }

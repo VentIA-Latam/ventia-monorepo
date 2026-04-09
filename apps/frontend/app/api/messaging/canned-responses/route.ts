@@ -3,14 +3,17 @@ import { getAccessToken } from "@/lib/auth0";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const accessToken = await getAccessToken();
     if (!accessToken) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const response = await fetch(`${API_URL}/messaging/canned-responses`, {
+    const { searchParams } = new URL(request.url);
+    const qs = searchParams.toString();
+
+    const response = await fetch(`${API_URL}/messaging/canned-responses${qs ? `?${qs}` : ""}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",

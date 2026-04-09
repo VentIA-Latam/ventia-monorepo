@@ -549,6 +549,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
           onOpenChange={setShowTemplatePicker}
           inboxId={conversation.inbox_id}
           conversationId={conversation.id}
+          tenantId={tenantId}
           onSent={() => {
             // Refresh messages after sending template
             getMessages(conversation.id, { tenantId }).then((data) => {

@@ -14,9 +14,11 @@ export async function GET(
     }
 
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const qs = searchParams.toString();
 
     const response = await fetch(
-      `${API_URL}/messaging/inboxes/${id}/templates`,
+      `${API_URL}/messaging/inboxes/${id}/templates${qs ? `?${qs}` : ""}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -48,9 +50,11 @@ export async function POST(
     }
 
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const qs = searchParams.toString();
 
     const response = await fetch(
-      `${API_URL}/messaging/inboxes/${id}/sync_templates`,
+      `${API_URL}/messaging/inboxes/${id}/sync_templates${qs ? `?${qs}` : ""}`,
       {
         method: "POST",
         headers: {

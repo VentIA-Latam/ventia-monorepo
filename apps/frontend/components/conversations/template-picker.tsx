@@ -22,6 +22,7 @@ interface TemplatePickerProps {
   onOpenChange: (open: boolean) => void;
   inboxId: number | null;
   conversationId: number;
+  tenantId?: number;
   onSent: () => void;
 }
 
@@ -48,6 +49,7 @@ export function TemplatePicker({
   onOpenChange,
   inboxId,
   conversationId,
+  tenantId,
   onSent,
 }: TemplatePickerProps) {
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
@@ -64,7 +66,7 @@ export function TemplatePicker({
     setLoading(true);
     setError(null);
     try {
-      const result = await getTemplates(inboxId);
+      const result = await getTemplates(inboxId, tenantId);
       setTemplates(result.data ?? []);
     } catch (err) {
       console.error("Error fetching templates:", err);
@@ -72,7 +74,7 @@ export function TemplatePicker({
     } finally {
       setLoading(false);
     }
-  }, [inboxId]);
+  }, [inboxId, tenantId]);
 
   useEffect(() => {
     if (open && inboxId) {
@@ -88,7 +90,7 @@ export function TemplatePicker({
     setSyncing(true);
     setError(null);
     try {
-      await syncTemplates(inboxId);
+      await syncTemplates(inboxId, tenantId);
       await fetchTemplates();
     } catch (err) {
       console.error("Error syncing templates:", err);
@@ -103,7 +105,7 @@ export function TemplatePicker({
       setSending(true);
       setSendError(null);
       try {
-        await sendTemplateMessage(conversationId, payload);
+        await sendTemplateMessage(conversationId, payload, tenantId);
         onSent();
         onOpenChange(false);
       } catch (err) {

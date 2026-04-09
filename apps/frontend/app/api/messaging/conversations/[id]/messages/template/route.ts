@@ -14,10 +14,12 @@ export async function POST(
     }
 
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const qs = searchParams.toString();
     const body = await request.json();
 
     const response = await fetch(
-      `${API_URL}/messaging/conversations/${id}/messages/template`,
+      `${API_URL}/messaging/conversations/${id}/messages/template${qs ? `?${qs}` : ""}`,
       {
         method: "POST",
         headers: {
