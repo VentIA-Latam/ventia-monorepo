@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import {
   Sheet,
@@ -20,6 +21,14 @@ interface SuperAdminConversationsClientProps {
   tenantId: number;
 }
 
+type SectionValue = "all" | "sale" | "unattended";
+
+const SECTIONS: { value: SectionValue; label: string }[] = [
+  { value: "all", label: "Todas" },
+  { value: "sale", label: "Ventas" },
+  { value: "unattended", label: "No atendidas" },
+];
+
 export function SuperAdminConversationsClient({ tenantId }: SuperAdminConversationsClientProps) {
   const isMobile = useIsMobile();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -28,6 +37,7 @@ export function SuperAdminConversationsClient({ tenantId }: SuperAdminConversati
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [section, setSection] = useState<SectionValue>("all");
 
   // Fetch data when tenantId changes
   const prevTenantId = useRef(tenantId);
@@ -143,15 +153,36 @@ export function SuperAdminConversationsClient({ tenantId }: SuperAdminConversati
     );
   }
 
+  const sectionTabs = (
+    <div className="flex items-center gap-1 px-3 py-2 border-b border-border/30">
+      {SECTIONS.map((s) => (
+        <button
+          key={s.value}
+          onClick={() => setSection(s.value)}
+          className={cn(
+            "px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+            section === s.value
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-muted/50"
+          )}
+        >
+          {s.label}
+        </button>
+      ))}
+    </div>
+  );
+
   const content = isMobile ? (
-    <div className="h-full">
+    <div className="h-full flex flex-col">
       {selectedId === null ? (
-        <div className="h-full overflow-hidden">
+        <div className="flex-1 overflow-hidden flex flex-col">
+          {sectionTabs}
           <ConversationList
             conversations={conversations}
             selectedId={selectedId}
             allLabels={allLabels}
             temperatureConfig={temperatureConfig}
+            section={section}
             tenantId={tenantId}
             onSelect={handleSelect}
             onConversationsChange={handleConversationsChange}
@@ -193,12 +224,14 @@ export function SuperAdminConversationsClient({ tenantId }: SuperAdminConversati
     </div>
   ) : (
     <div className="relative flex h-full w-full overflow-hidden border-t border-border/30">
-      <div className="border-r min-h-0 shrink-0 w-[340px]">
+      <div className="border-r min-h-0 shrink-0 w-[340px] flex flex-col">
+        {sectionTabs}
         <ConversationList
           conversations={conversations}
           selectedId={selectedId}
           allLabels={allLabels}
           temperatureConfig={temperatureConfig}
+          section={section}
           tenantId={tenantId}
           onSelect={handleSelect}
           onConversationsChange={handleConversationsChange}
