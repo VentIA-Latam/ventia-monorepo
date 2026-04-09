@@ -363,9 +363,10 @@ async def delete_conversation(
 async def update_conversation_stage(
     conversation_id: str,
     payload: dict,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
     stage = payload.get("stage")
     if stage not in ("pre_sale", "sale"):
         raise HTTPException(status_code=400, detail="stage must be 'pre_sale' or 'sale'")
@@ -387,9 +388,10 @@ async def update_conversation_stage(
 )
 async def escalate_conversation(
     conversation_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.escalate_conversation(tenant_id, conversation_id)
     if result is None:
@@ -406,10 +408,11 @@ async def escalate_conversation(
 )
 async def mark_payment_review(
     conversation_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
     """Add 'en-revisión' label to a conversation."""
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.mark_payment_review(tenant_id, conversation_id)
     if result is None:
@@ -486,9 +489,10 @@ async def send_message_with_attachment(
     conversation_id: str,
     content: str = Form(""),
     file: UploadFile = File(...),
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.send_message_with_file(
         tenant_id,
@@ -514,9 +518,10 @@ async def send_message_with_attachment(
 async def assign_conversation(
     conversation_id: str,
     payload: AssignConversationRequest,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.assign_conversation(
         tenant_id, conversation_id, payload.model_dump(exclude_none=True)
@@ -535,9 +540,10 @@ async def assign_conversation(
 )
 async def unassign_conversation(
     conversation_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.unassign_conversation(tenant_id, conversation_id)
     if result is None:
@@ -575,9 +581,10 @@ async def list_inboxes(
 )
 async def get_inbox_templates(
     inbox_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.get_inbox_templates(tenant_id, inbox_id)
     if result is None:
@@ -594,9 +601,10 @@ async def get_inbox_templates(
 )
 async def sync_inbox_templates(
     inbox_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.sync_inbox_templates(tenant_id, inbox_id)
     if result is None:
@@ -616,9 +624,10 @@ async def sync_inbox_templates(
 async def send_template_message(
     conversation_id: str,
     payload: SendTemplateMessageRequest,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     message_data = {
         "content": payload.content,
@@ -648,9 +657,10 @@ async def send_template_message(
 async def list_contacts(
     search: str | None = Query(None, description="Search by name, email, or phone"),
     page: int | None = Query(None, description="Page number"),
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     if search:
         result = await messaging_service.search_contacts(tenant_id, search)
@@ -675,9 +685,10 @@ async def list_contacts(
     responses={503: {"model": MessagingError}},
 )
 async def list_canned_responses(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.get_canned_responses(tenant_id)
     if result is None:
@@ -756,9 +767,10 @@ async def delete_label(
 )
 async def list_conversation_labels(
     conversation_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.get_conversation_labels(tenant_id, conversation_id)
     if result is None:
@@ -776,9 +788,10 @@ async def list_conversation_labels(
 async def add_conversation_label(
     conversation_id: str,
     payload: dict,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     label_id = payload.get("label_id")
     if not label_id:
@@ -802,9 +815,10 @@ async def add_conversation_label(
 async def remove_conversation_label(
     conversation_id: str,
     label_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("DELETE", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.remove_conversation_label(
         tenant_id, conversation_id, label_id
@@ -824,9 +838,10 @@ async def remove_conversation_label(
     responses={503: {"model": MessagingError}},
 )
 async def list_teams(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.get_teams(tenant_id)
     if result is None:
@@ -844,9 +859,10 @@ async def list_teams(
     responses={503: {"model": MessagingError}},
 )
 async def list_notifications(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.get_notifications(
         tenant_id, current_user.id
@@ -868,9 +884,10 @@ async def list_notifications(
 )
 async def connect_whatsapp(
     payload: WhatsAppConnectRequest,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.whatsapp_connect(
         tenant_id, payload.model_dump(exclude_none=True)
@@ -888,9 +905,10 @@ async def connect_whatsapp(
     responses={503: {"model": MessagingError}},
 )
 async def whatsapp_status(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.whatsapp_status(tenant_id)
     if result is None:
@@ -907,9 +925,10 @@ async def whatsapp_status(
 )
 async def whatsapp_health(
     inbox_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.whatsapp_health(tenant_id, inbox_id)
     if result is None:
@@ -926,9 +945,10 @@ async def whatsapp_health(
 )
 async def manual_connect_whatsapp(
     payload: ManualWhatsAppRequest,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     inbox_data = {
         "name": payload.name or f"{payload.phone_number} WhatsApp",
@@ -962,10 +982,11 @@ async def manual_connect_whatsapp(
 )
 async def register_push_token(
     payload: PushTokenRequest,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
     """Register an FCM push subscription token for the current user."""
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
     result = await messaging_service.register_push_token(
         tenant_id, str(current_user.id), payload.model_dump(exclude_none=True)
     )
@@ -982,10 +1003,11 @@ async def register_push_token(
 )
 async def delete_push_token(
     payload: PushTokenRequest,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("DELETE", "/messaging/*")),
 ):
     """Remove an FCM push subscription token."""
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
     result = await messaging_service.delete_push_token(
         tenant_id, str(current_user.id), payload.token
     )
@@ -1004,10 +1026,11 @@ async def delete_push_token(
     responses={503: {"model": MessagingError}},
 )
 async def get_notification_settings(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):
     """Get push notification preferences for the current user."""
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
     result = await messaging_service.get_notification_settings(
         tenant_id, str(current_user.id)
     )
@@ -1024,10 +1047,11 @@ async def get_notification_settings(
 )
 async def update_notification_settings(
     payload: NotificationSettingsPayload,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("PATCH", "/messaging/*")),
 ):
     """Update push notification preferences for the current user."""
-    tenant_id = _resolve_tenant_id(current_user)
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
     result = await messaging_service.update_notification_settings(
         tenant_id, str(current_user.id), payload.model_dump(exclude_none=True)
     )
