@@ -1,13 +1,14 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useCallback, useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Phone, Mail, X } from "lucide-react";
+import { Phone, Mail, X, RotateCcw } from "lucide-react";
 import { TemperatureSelector } from "./temperature-selector";
 import { LabelManager } from "./label-manager";
+import { updateConversation } from "@/lib/api-client/messaging";
 import type { Conversation, Label, ConversationTemperature, TemperatureDefinition } from "@/lib/types/messaging";
 import { getInitials } from "@/lib/utils/messaging";
 
@@ -37,6 +38,20 @@ export const ContactInfoPanel = memo(function ContactInfoPanel({
 }: ContactInfoPanelProps) {
   const contact = conversation.contact;
   const stageConf = stageConfig[conversation.stage] ?? stageConfig.pre_sale;
+  const isSale = conversation.stage === "sale";
+  const [resettingStage, setResettingStage] = useState(false);
+
+  const handleResetStage = useCallback(async () => {
+    setResettingStage(true);
+    try {
+      await updateConversation(conversation.id, { stage: "pre_sale" }, tenantId);
+      onConversationUpdate?.({ ...conversation, stage: "pre_sale" });
+    } catch (err) {
+      console.error("Error resetting stage:", err);
+    } finally {
+      setResettingStage(false);
+    }
+  }, [conversation, tenantId, onConversationUpdate]);
 
   return (
     <div className="flex flex-col h-full">
@@ -64,6 +79,16 @@ export const ContactInfoPanel = memo(function ContactInfoPanel({
           <Badge variant="outline" className={`mt-2 ${stageConf.className}`}>
             {stageConf.label}
           </Badge>
+          {isSale && (
+            <button
+              onClick={handleResetStage}
+              disabled={resettingStage}
+              className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-muted-foreground/70 hover:text-primary px-2.5 py-1 rounded-md hover:bg-primary/5 transition-colors disabled:opacity-50"
+            >
+              <RotateCcw className="h-3 w-3" />
+              {resettingStage ? "Volviendo..." : "Volver a pre-venta"}
+            </button>
+          )}
         </div>
 
         <Separator />
