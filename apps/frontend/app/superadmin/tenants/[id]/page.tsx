@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getTenant } from "@/lib/api-client";
-import { ArrowLeft, Building2, Calendar, Globe, Users, Package, Shield, Store, ShoppingBag, CheckCircle2, XCircle } from "lucide-react";
+import { getTenant, getTenantWebhook, saveTenantWebhook, deleteTenantWebhook } from "@/lib/api-client";
+import type { WebhookConfig } from "@/lib/api-client/superadmin";
+import { ArrowLeft, Building2, Calendar, Globe, Users, Package, Shield, Store, ShoppingBag, CheckCircle2, XCircle, Webhook, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { TenantDetail, EcommercePlatform } from "@/lib/types/tenant";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TemperatureConfigCard } from "@/components/superadmin/temperature-config-card";
 import { formatDate, formatDateTime } from "@/lib/utils";
 
 export default function TenantDetailPage() {
@@ -18,6 +22,13 @@ export default function TenantDetailPage() {
   const [tenant, setTenant] = useState<TenantDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Webhook state
+  const [webhook, setWebhook] = useState<WebhookConfig | null>(null);
+  const [webhookLoading, setWebhookLoading] = useState(true);
+  const [webhookSaving, setWebhookSaving] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [webhookError, setWebhookError] = useState<string | null>(null);
 
   // Helper para obtener plataforma del tenant
   const getTenantPlatform = (): EcommercePlatform => {
@@ -70,8 +81,63 @@ export default function TenantDetailPage() {
     }
   };
 
+  const fetchWebhook = useCallback(async () => {
+    try {
+      setWebhookLoading(true);
+      setWebhookError(null);
+      const data = await getTenantWebhook(parseInt(params.id as string));
+      setWebhook(data);
+      if (data) {
+        setWebhookUrl(data.url);
+      } else {
+        setWebhookUrl("");
+      }
+    } catch {
+      setWebhookError("Error al cargar configuración de webhook");
+    } finally {
+      setWebhookLoading(false);
+    }
+  }, [params.id]);
+
+  const handleSaveWebhook = useCallback(async () => {
+    if (!webhookUrl.trim()) {
+      setWebhookError("La URL es requerida");
+      return;
+    }
+
+    try {
+      setWebhookSaving(true);
+      setWebhookError(null);
+      const result = await saveTenantWebhook(parseInt(params.id as string), {
+        url: webhookUrl.trim(),
+      });
+      // The response may come wrapped in { data: ... } or directly
+      const webhookData = result && "data" in result ? (result as { data: WebhookConfig }).data : result;
+      setWebhook(webhookData as WebhookConfig);
+    } catch (err) {
+      setWebhookError(err instanceof Error ? err.message : "Error al guardar webhook");
+    } finally {
+      setWebhookSaving(false);
+    }
+  }, [params.id, webhookUrl]);
+
+  const handleDeleteWebhook = useCallback(async () => {
+    try {
+      setWebhookSaving(true);
+      setWebhookError(null);
+      await deleteTenantWebhook(parseInt(params.id as string));
+      setWebhook(null);
+      setWebhookUrl("");
+    } catch (err) {
+      setWebhookError(err instanceof Error ? err.message : "Error al eliminar webhook");
+    } finally {
+      setWebhookSaving(false);
+    }
+  }, [params.id]);
+
   useEffect(() => {
     fetchTenantDetail();
+    fetchWebhook();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
@@ -128,9 +194,9 @@ export default function TenantDetailPage() {
             <div className="flex items-center gap-2">
               <h1 className="text-3xl font-bold text-foreground font-heading">{tenant.name}</h1>
               {tenant.is_active ? (
-                <Badge className="bg-success-bg text-success border-success/30">Activo</Badge>
+                <Badge variant="success">Activo</Badge>
               ) : (
-                <Badge className="bg-muted/50 text-foreground border-border">Inactivo</Badge>
+                <Badge variant="outline" className="bg-muted/50">Inactivo</Badge>
               )}
               {tenant.is_platform && (
                 <Badge variant="secondary" className="bg-luma/15 text-marino">
@@ -247,12 +313,12 @@ export default function TenantDetailPage() {
               <div className="text-sm font-medium text-muted-foreground">Estado</div>
               <div className="mt-1">
                 {tenant.is_active ? (
-                  <Badge className="bg-success-bg text-success border-success/30">
+                  <Badge variant="success">
                     <CheckCircle2 className="mr-1 h-3 w-3" />
                     Activo
                   </Badge>
                 ) : (
-                  <Badge className="bg-muted/50 text-foreground border-border">
+                  <Badge variant="outline" className="bg-muted/50">
                     <XCircle className="mr-1 h-3 w-3" />
                     Inactivo
                   </Badge>
@@ -303,7 +369,7 @@ export default function TenantDetailPage() {
                   <div className="text-sm font-medium text-muted-foreground">Plataforma</div>
                   <div className="mt-2">
                     {getTenantPlatform() === "shopify" ? (
-                      <Badge className="bg-success-bg text-success border-0">
+                      <Badge variant="success">
                         <ShoppingBag className="mr-1 h-3 w-3" />
                         Shopify
                       </Badge>
@@ -350,12 +416,12 @@ export default function TenantDetailPage() {
                   <div className="text-sm font-medium text-muted-foreground">Sincronización Automática</div>
                   <div className="mt-2">
                     {getSyncStatus() ? (
-                      <Badge className="bg-success-bg text-success border-0">
+                      <Badge variant="success">
                         <CheckCircle2 className="mr-1 h-3 w-3" />
                         Activa al validar pagos
                       </Badge>
                     ) : (
-                      <Badge className="bg-muted text-muted-foreground border-0">
+                      <Badge variant="outline" className="bg-muted">
                         <XCircle className="mr-1 h-3 w-3" />
                         Desactivada
                       </Badge>
@@ -392,7 +458,7 @@ export default function TenantDetailPage() {
                             •••••••• (generado automáticamente)
                           </span>
                           <div className="mt-1">
-                            <Badge className="bg-success-bg text-success border-0 text-xs">
+                            <Badge variant="success" className="text-xs">
                               OAuth2 Activo
                             </Badge>
                           </div>
@@ -436,6 +502,89 @@ export default function TenantDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Webhook Configuration */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Webhook className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <CardTitle>Configuración de Webhook</CardTitle>
+                <CardDescription>
+                  URL donde se envían los eventos de messaging (n8n)
+                </CardDescription>
+              </div>
+            </div>
+            {webhook ? (
+              <Badge variant="success">
+                <CheckCircle2 className="mr-1 h-3 w-3" />
+                Configurado
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="bg-muted/50">
+                Sin configurar
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {webhookLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="webhook-url">URL del Webhook (n8n)</Label>
+                <Input
+                  id="webhook-url"
+                  type="url"
+                  placeholder="https://n8n.ejemplo.com/webhook/..."
+                  value={webhookUrl}
+                  onChange={(e) => {
+                    setWebhookUrl(e.target.value);
+                    setWebhookError(null);
+                  }}
+                  disabled={webhookSaving}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Los mensajes entrantes se enviarán a esta URL cuando el AI Agent esté activado en la conversación.
+                </p>
+              </div>
+
+              {webhookError && (
+                <p className="text-sm text-destructive">{webhookError}</p>
+              )}
+
+              <div className="flex items-center gap-2 pt-2">
+                <Button
+                  onClick={handleSaveWebhook}
+                  disabled={webhookSaving || !webhookUrl.trim()}
+                >
+                  {webhookSaving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  Guardar
+                </Button>
+                {webhook && (
+                  <Button
+                    variant="destructive"
+                    onClick={handleDeleteWebhook}
+                    disabled={webhookSaving}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Eliminar
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+      {/* Temperature Configuration */}
+      <TemperatureConfigCard tenantId={parseInt(params.id as string)} />
     </div>
   );
 }

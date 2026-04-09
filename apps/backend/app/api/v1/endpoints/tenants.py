@@ -18,6 +18,7 @@ from app.schemas.tenant import (
     TenantUpdate,
 )
 from app.services.tenant import tenant_service
+from app.services.messaging_service import messaging_service
 
 router = APIRouter()
 
@@ -26,6 +27,9 @@ router = APIRouter()
 async def list_tenants(
     skip: int = 0,
     limit: int = 100,
+    search: str | None = None,
+    is_active: bool | None = None,
+    is_platform: bool | None = None,
     current_user: User = Depends(require_permission_dual("GET", "/tenants")),
     db: Session = Depends(get_database),
 ) -> TenantListResponse:
@@ -64,7 +68,8 @@ async def list_tenants(
 
     try:
         tenants, total = tenant_service.get_tenants(
-            db, skip=skip, limit=limit, is_active=None
+            db, skip=skip, limit=limit,
+            search=search, is_active=is_active, is_platform=is_platform,
         )
 
         return TenantListResponse(
@@ -346,3 +351,99 @@ async def deactivate_tenant(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to deactivate tenant: {str(e)}",
         )
+
+
+# ==================== MESSAGING WEBHOOKS ====================
+
+
+@router.get("/{tenant_id}/messaging-webhook", tags=["tenants"])
+async def get_tenant_messaging_webhook(
+    tenant_id: int,
+    current_user: User = Depends(require_permission_dual("GET", "/tenants/*")),
+) -> dict:
+    """
+    Get the messaging webhook configured for a tenant.
+
+    Returns the first webhook found (tenants typically have one n8n webhook).
+    """
+    result = await messaging_service.get_webhooks(tenant_id)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Messaging service unavailable",
+        )
+
+    webhooks = result.get("data", [])
+    if isinstance(webhooks, list) and len(webhooks) > 0:
+        return webhooks[0]
+    return {}
+
+
+@router.post("/{tenant_id}/messaging-webhook", tags=["tenants"])
+async def save_tenant_messaging_webhook(
+    tenant_id: int,
+    payload: dict,
+    current_user: User = Depends(require_permission_dual("PATCH", "/tenants/*")),
+) -> dict:
+    """
+    Create or update the messaging webhook for a tenant (upsert).
+
+    If a webhook already exists, updates it. Otherwise creates a new one.
+    Payload: { "url": "https://..." }
+    Always subscribes to message_created event (used by n8n AI Agent).
+    """
+    # Always use message_created - it's the only event n8n needs
+    webhook_payload = {
+        "url": payload.get("url"),
+        "subscriptions": ["message_created"],
+    }
+
+    # Check if webhook already exists
+    existing = await messaging_service.get_webhooks(tenant_id)
+    if existing is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Messaging service unavailable",
+        )
+
+    webhooks = existing.get("data", [])
+    if isinstance(webhooks, list) and len(webhooks) > 0:
+        # Update existing webhook
+        webhook_id = webhooks[0].get("id")
+        result = await messaging_service.update_webhook(tenant_id, webhook_id, webhook_payload)
+    else:
+        # Create new webhook
+        result = await messaging_service.create_webhook(tenant_id, webhook_payload)
+
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Messaging service unavailable",
+        )
+
+    return result
+
+
+@router.delete(
+    "/{tenant_id}/messaging-webhook",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["tenants"],
+)
+async def delete_tenant_messaging_webhook(
+    tenant_id: int,
+    current_user: User = Depends(require_permission_dual("PATCH", "/tenants/*")),
+) -> None:
+    """
+    Delete the messaging webhook for a tenant.
+    """
+    existing = await messaging_service.get_webhooks(tenant_id)
+    if existing is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Messaging service unavailable",
+        )
+
+    webhooks = existing.get("data", [])
+    if isinstance(webhooks, list) and len(webhooks) > 0:
+        webhook_id = webhooks[0].get("id")
+        await messaging_service.delete_webhook(tenant_id, webhook_id)

@@ -2,6 +2,7 @@
 InvoiceSerie repository with thread-safe correlative generation.
 """
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.models.invoice_serie import InvoiceSerie
@@ -163,32 +164,47 @@ class InvoiceSerieRepository(CRUDBase[InvoiceSerie, InvoiceSerieCreate, InvoiceS
         skip: int = 0,
         limit: int = 100,
         tenant_id: int | None = None,
+        search: str | None = None,
+        is_active: bool | None = None,
     ) -> list[InvoiceSerie]:
-        """
-        Get all invoice series from all tenants (for SUPER_ADMIN).
-
-        Args:
-            db: Database session
-            skip: Number to skip
-            limit: Max results
-            tenant_id: Optional filter by tenant ID
-
-        Returns:
-            List of invoice series
-        """
+        """Get all invoice series with optional filters."""
         query = db.query(InvoiceSerie)
-
-        # Optional tenant filter (for SUPER_ADMIN with specific tenant)
         if tenant_id is not None:
             query = query.filter(InvoiceSerie.tenant_id == tenant_id)
-
+        if search:
+            pattern = f"%{search}%"
+            query = query.filter(or_(
+                InvoiceSerie.serie.ilike(pattern),
+                InvoiceSerie.description.ilike(pattern),
+            ))
+        if is_active is not None:
+            query = query.filter(InvoiceSerie.is_active == is_active)
         return (
-            query
-            .order_by(InvoiceSerie.tenant_id, InvoiceSerie.invoice_type, InvoiceSerie.serie)
-            .offset(skip)
-            .limit(limit)
-            .all()
+            query.order_by(InvoiceSerie.tenant_id, InvoiceSerie.invoice_type, InvoiceSerie.serie)
+            .offset(skip).limit(limit).all()
         )
+
+    def count_all(
+        self,
+        db: Session,
+        *,
+        tenant_id: int | None = None,
+        search: str | None = None,
+        is_active: bool | None = None,
+    ) -> int:
+        """Count invoice series with same filters as get_all."""
+        query = db.query(InvoiceSerie)
+        if tenant_id is not None:
+            query = query.filter(InvoiceSerie.tenant_id == tenant_id)
+        if search:
+            pattern = f"%{search}%"
+            query = query.filter(or_(
+                InvoiceSerie.serie.ilike(pattern),
+                InvoiceSerie.description.ilike(pattern),
+            ))
+        if is_active is not None:
+            query = query.filter(InvoiceSerie.is_active == is_active)
+        return query.count()
 
 
 # Global repository instance

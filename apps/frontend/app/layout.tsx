@@ -34,6 +34,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Ventia - Latam | Vendemos y entregamos por ti.",
   description: "Landing VentIA",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

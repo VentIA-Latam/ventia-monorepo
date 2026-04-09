@@ -98,35 +98,23 @@ class OrderService:
         skip: int = 0,
         limit: int = 100,
         validado: bool | None = None,
+        search: str | None = None,
+        status: str | None = None,
+        channel: str | None = None,
         sort_by: str = "created_at",
         sort_order: str = "desc",
     ) -> OrderListResponse:
-        """
-        Get orders for a tenant with pagination.
+        """Get orders for a tenant with filters and pagination."""
+        filter_kwargs = dict(validado=validado, search=search, status=status, channel=channel)
 
-        Args:
-            db: Database session
-            tenant_id: Tenant ID
-            skip: Number to skip
-            limit: Max results
-            validado: Filter by validation status
-            sort_by: Field to sort by (default: created_at)
-            sort_order: Sort order 'asc' or 'desc' (default: desc)
-
-        Returns:
-            OrderListResponse with total count and items
-        """
-        orders = order_repository.get_by_tenant(
-            db,
-            tenant_id,
-            skip=skip,
-            limit=limit,
-            validado=validado,
-            sort_by=sort_by,
-            sort_order=sort_order,
+        orders = order_repository.get_all(
+            db, skip=skip, limit=limit,
+            tenant_id=tenant_id,
+            sort_by=sort_by, sort_order=sort_order,
+            **filter_kwargs,
         )
 
-        total = order_repository.count_by_tenant(db, tenant_id, validado=validado)
+        total = order_repository.count_all(db, tenant_id=tenant_id, **filter_kwargs)
 
         return OrderListResponse(
             total=total,
@@ -143,45 +131,28 @@ class OrderService:
         limit: int = 100,
         tenant_id: int | None = None,
         validado: bool | None = None,
+        search: str | None = None,
+        status: str | None = None,
+        channel: str | None = None,
         sort_by: str = "created_at",
         sort_order: str = "desc",
     ) -> OrderListResponse:
-        """
-        Get all orders from all tenants (SUPERADMIN only).
+        """Get all orders with optional filters (SUPERADMIN only)."""
+        filter_kwargs = dict(
+            tenant_id=tenant_id, validado=validado,
+            search=search, status=status, channel=channel,
+        )
 
-        Args:
-            db: Database session
-            skip: Number to skip
-            limit: Max results
-            tenant_id: Optional filter by specific tenant
-            validado: Optional filter by validation status
-            sort_by: Field to sort by (default: created_at)
-            sort_order: Sort order 'asc' or 'desc' (default: desc)
-
-        Returns:
-            OrderListResponse with total count and items
-        """
         orders = order_repository.get_all(
-            db,
-            skip=skip,
-            limit=limit,
-            tenant_id=tenant_id,
-            validado=validado,
-            sort_by=sort_by,
-            sort_order=sort_order,
+            db, skip=skip, limit=limit,
+            sort_by=sort_by, sort_order=sort_order,
+            **filter_kwargs,
         )
 
-        total = order_repository.count_all(
-            db,
-            tenant_id=tenant_id,
-            validado=validado,
-        )
+        total = order_repository.count_all(db, **filter_kwargs)
 
         return OrderListResponse(
-            total=total,
-            items=orders,
-            skip=skip,
-            limit=limit,
+            total=total, items=orders, skip=skip, limit=limit,
         )
 
     def get_pending_validation(

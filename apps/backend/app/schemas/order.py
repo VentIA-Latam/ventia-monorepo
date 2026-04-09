@@ -22,6 +22,7 @@ class LineItemBase(BaseModel):
     unitPrice: float = Field(..., ge=0, description="Unit price (must be >= 0)")
     quantity: int = Field(..., gt=0, description="Quantity (must be > 0)")
     subtotal: float | None = Field(None, description="Subtotal (calculated if not provided)")
+    variantId: str | None = Field(None, description="Shopify ProductVariant GID (e.g. gid://shopify/ProductVariant/123)")
 
 
 class OrderBase(BaseModel):
@@ -57,41 +58,37 @@ class OrderBase(BaseModel):
     shipping_province: str | None = Field(None, description="Shipping province/state")
     shipping_country: str | None = Field(None, description="Country name")
     channel: str | None = Field(None, description="Sales channel: shopify, woocommerce, venta_whatsapp")
+    messaging_conversation_id: int | None = Field(None, description="Linked conversation ID in messaging service")
 
 
 class OrderCreate(OrderBase):
     """
     Schema for creating a new Order.
 
-    Used by n8n when inserting orders from e-commerce platforms.
+    Used by n8n when inserting orders from e-commerce platforms or as native VentIA orders.
     The tenant_id is automatically set from the authenticated user's tenant (in API endpoints).
     For internal use (webhooks), tenant_id can be provided explicitly.
 
     Validation:
-    - At least one of shopify_draft_order_id or woocommerce_order_id must be provided
-    - Cannot provide both simultaneously (mutually exclusive)
+    - Both platform IDs can be None (native VentIA order, synced on validation)
+    - At most one platform ID can be provided (mutually exclusive)
     """
 
     tenant_id: int | None = Field(
         None, description="Tenant ID (optional - for internal use only, ignored in public endpoints)"
     )
     shopify_draft_order_id: str | None = Field(
-        None, description="Shopify draft order ID (required if not WooCommerce)"
+        None, description="Shopify draft order ID (optional - if absent, created on validation)"
     )
     woocommerce_order_id: int | None = Field(
-        None, description="WooCommerce order ID (required if not Shopify)"
+        None, description="WooCommerce order ID (optional - if absent, created on validation)"
     )
 
     @model_validator(mode="after")
     def validate_platform_id(self) -> "OrderCreate":
-        """Ensure exactly one platform ID is provided."""
+        """Ensure at most one platform ID is provided."""
         has_shopify = self.shopify_draft_order_id is not None
         has_woocommerce = self.woocommerce_order_id is not None
-
-        if not has_shopify and not has_woocommerce:
-            raise ValueError(
-                "Either shopify_draft_order_id or woocommerce_order_id must be provided"
-            )
 
         if has_shopify and has_woocommerce:
             raise ValueError(
@@ -115,6 +112,7 @@ class OrderUpdate(BaseModel):
     payment_method: str | None = None
     notes: str | None = None
     status: str | None = None
+    messaging_conversation_id: int | None = None
     shipping_address: str | None = None
     shipping_city: str | None = None
     shipping_province: str | None = None
@@ -185,6 +183,7 @@ class OrderResponse(OrderBase):
     validado: bool
     validated_at: datetime | None
     channel: str | None = Field(None, description="Sales channel: shopify, woocommerce, venta_whatsapp")
+    messaging_conversation_id: int | None = Field(None, description="Linked conversation ID in messaging service")
     status: str
     created_at: datetime
     updated_at: datetime

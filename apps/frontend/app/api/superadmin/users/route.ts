@@ -15,12 +15,9 @@ export async function GET(request: Request) {
     if (!accessToken) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
-    // Parse query parameters from the request URL
     const { searchParams } = new URL(request.url);
-    const skip = searchParams.get('skip') || '0';
-    const limit = searchParams.get('limit') || '100';
-    // Call backend /users endpoint
-    const response = await fetch(`${API_URL}/users?skip=${skip}&limit=${limit}`, {
+
+    const response = await fetch(`${API_URL}/users?${searchParams.toString()}`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',

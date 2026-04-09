@@ -4,7 +4,7 @@ API v1 router - aggregates all endpoint routers.
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import api_keys, chatwoot, health, invoices, invoice_series, metrics, orders, reminders, stats, tenants, users, webhooks
+from app.api.v1.endpoints import api_keys, chatwoot, health, invoices, invoice_series, messaging, metrics, orders, reminders, stats, tenants, users, webhooks
 
 
 # Create main API router
@@ -23,3 +23,4 @@ api_router.include_router(stats.router, prefix="/stats", tags=["stats"])
 api_router.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])
 api_router.include_router(chatwoot.router, prefix="/chatwoot", tags=["chatwoot"])
 api_router.include_router(reminders.router, prefix="/reminders", tags=["reminders"])
+api_router.include_router(messaging.router, prefix="/messaging", tags=["messaging"])

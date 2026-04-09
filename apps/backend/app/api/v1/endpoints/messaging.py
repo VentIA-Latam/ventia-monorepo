@@ -1,0 +1,1060 @@
+"""
+Messaging API endpoints - proxy to the standalone Rails messaging service.
+"""
+
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from sqlalchemy.orm import Session
+
+from app.api.deps import get_db, require_permission_dual
+from app.core.permissions import Role
+from app.models.user import User
+from app.schemas.messaging import (
+    AssignConversationRequest,
+    ManualWhatsAppRequest,
+    MessagingError,
+    NotificationSettingsPayload,
+    PushTokenRequest,
+    SendMessageRequest,
+    SendTemplateMessageRequest,
+    WebSocketTokenResponse,
+    WhatsAppConnectRequest,
+)
+from app.services.messaging_service import messaging_service
+
+router = APIRouter()
+
+
+def _resolve_tenant_id(current_user: User, tenant_id_override: int | None = None) -> int:
+    """Resolve tenant_id: SUPERADMIN can override to view other tenants."""
+    if tenant_id_override and current_user.role == Role.SUPERADMIN:
+        return tenant_id_override
+    if not current_user.tenant_id:
+        raise HTTPException(status_code=400, detail="User has no tenant assigned")
+    return current_user.tenant_id
+
+
+def _map_ventia_role_to_messaging(role: Role) -> str:
+    """Map Ventia role to messaging AccountUser role."""
+    if role == Role.SUPERADMIN:
+        return "superadmin"
+    if role == Role.ADMIN:
+        return "administrator"
+    return "agent"
+
+
+# --- Account provisioning ---
+
+@router.post(
+    "/accounts/provision",
+    summary="Provision messaging account for current tenant",
+    description="Creates a messaging Account linked to the current user's tenant. Idempotent.",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def provision_account(
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+    db: Session = Depends(get_db),
+):
+    from app.models.tenant import Tenant
+
+    tenant_id = _resolve_tenant_id(current_user)
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    account_data = {
+        "name": tenant.name,
+        "ventia_tenant_id": str(tenant.id),
+    }
+
+    result = await messaging_service.create_account(tenant_id, account_data)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+# --- Temperature config ---
+
+@router.get(
+    "/temperature-config",
+    summary="Get temperature configuration for the tenant",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def get_temperature_config(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.get_temperature_config(tenant_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.put(
+    "/temperature-config",
+    summary="Update temperature configuration for the tenant",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def update_temperature_config(
+    payload: dict,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("PUT", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    config = payload.get("temperature_config", [])
+    result = await messaging_service.update_temperature_config(tenant_id, config)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+# --- User sync ---
+
+@router.post(
+    "/users/sync",
+    summary="Sync current user to messaging service",
+    description="Creates or updates the current user in the messaging service.",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def sync_user(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    role = _map_ventia_role_to_messaging(current_user.role)
+
+    user_data = {
+        "ventia_user_id": current_user.id,
+        "name": current_user.name or current_user.email,
+        "email": current_user.email,
+        "role": role,
+    }
+
+    result = await messaging_service.sync_user(tenant_id, user_data)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.get(
+    "/ws-token",
+    response_model=WebSocketTokenResponse,
+    summary="Get WebSocket token for real-time messaging",
+    description="Returns the pubsub_token needed to connect to ActionCable WebSocket.",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def get_ws_token(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+    db: Session = Depends(get_db),
+):
+    from app.models.tenant import Tenant
+
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    # 1. Try to get token directly (happy path)
+    result = await messaging_service.get_user_token(tenant_id, current_user.id)
+    if result:
+        return result
+
+    # 2. Token failed → sync user (creates User + AccountUser if missing)
+    role = _map_ventia_role_to_messaging(current_user.role)
+    user_data = {
+        "ventia_user_id": current_user.id,
+        "name": current_user.name or current_user.email,
+        "email": current_user.email,
+        "role": role,
+    }
+    sync_result = await messaging_service.sync_user(tenant_id, user_data)
+    if sync_result:
+        result = await messaging_service.get_user_token(tenant_id, current_user.id)
+        if result:
+            return result
+
+    # 3. Sync failed → account probably missing → provision it
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    await messaging_service.create_account(tenant_id, {
+        "name": tenant.name,
+        "ventia_tenant_id": tenant.id,
+    })
+
+    # 4. Account created → sync user again
+    await messaging_service.sync_user(tenant_id, user_data)
+
+    # 5. Final attempt
+    result = await messaging_service.get_user_token(tenant_id, current_user.id)
+    if result:
+        return result
+
+    raise HTTPException(
+        status_code=503,
+        detail="Messaging service unavailable",
+    )
+
+
+# --- Conversations ---
+
+@router.get(
+    "/conversations",
+    summary="List conversations",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def list_conversations(
+    status: str | None = Query(None, description="Filter by status: open, resolved, pending"),
+    stage: str | None = Query(None, description="Filter by stage: pre_sale, sale"),
+    conversation_type: str | None = Query(None, description="Filter by type: unattended"),
+    page: int | None = Query(None, description="Page number"),
+    label: str | None = Query(None, description="Filter by label title"),
+    temperature: str | None = Query(None, description="Filter by temperature: cold, warm, hot"),
+    created_after: str | None = Query(None, description="Filter by date (ISO) from"),
+    created_before: str | None = Query(None, description="Filter by date (ISO) to"),
+    unread: str | None = Query(None, description="Filter unread only: true"),
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    params = {}
+    if status:
+        params["status"] = status
+    if stage:
+        params["stage"] = stage
+    if conversation_type:
+        params["conversation_type"] = conversation_type
+    if page:
+        params["page"] = page
+    if label:
+        params["label"] = label
+    if temperature:
+        params["temperature"] = temperature
+    if created_after:
+        params["created_after"] = created_after
+    if created_before:
+        params["created_before"] = created_before
+    if unread:
+        params["unread"] = unread
+
+    result = await messaging_service.get_conversations(tenant_id, params or None)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.get(
+    "/conversations/counts",
+    summary="Get conversation counts by section",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def get_conversation_counts(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.get_conversation_counts(tenant_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.get(
+    "/conversations/{conversation_id}",
+    summary="Get conversation details",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def get_conversation(
+    conversation_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.get_conversation(tenant_id, conversation_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.patch(
+    "/conversations/{conversation_id}",
+    summary="Update a conversation",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def update_conversation(
+    conversation_id: str,
+    payload: dict,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("PATCH", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.update_conversation(
+        tenant_id, conversation_id, payload
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/conversations/{conversation_id}/update_last_seen",
+    summary="Mark conversation as read",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def update_last_seen(
+    conversation_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.update_last_seen(tenant_id, conversation_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.delete(
+    "/conversations/{conversation_id}",
+    summary="Delete a conversation",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def delete_conversation(
+    conversation_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("DELETE", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.delete_conversation(tenant_id, conversation_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/conversations/{conversation_id}/update_stage",
+    summary="Update conversation business stage",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def update_conversation_stage(
+    conversation_id: str,
+    payload: dict,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    stage = payload.get("stage")
+    if stage not in ("pre_sale", "sale"):
+        raise HTTPException(status_code=400, detail="stage must be 'pre_sale' or 'sale'")
+
+    result = await messaging_service.update_conversation_stage(
+        tenant_id, conversation_id, stage
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/conversations/{conversation_id}/escalate",
+    summary="Escalate conversation to human support",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def escalate_conversation(
+    conversation_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.escalate_conversation(tenant_id, conversation_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/conversations/{conversation_id}/mark-payment-review",
+    summary="Mark conversation for payment review",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def mark_payment_review(
+    conversation_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    """Add 'en-revisión' label to a conversation."""
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.mark_payment_review(tenant_id, conversation_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+# --- Messages ---
+
+@router.get(
+    "/conversations/{conversation_id}/messages",
+    summary="List messages in a conversation",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def list_messages(
+    conversation_id: str,
+    page: int | None = Query(None, description="Page number"),
+    before: int | None = Query(None, description="Load messages with id < this value (scroll up)"),
+    after: int | None = Query(None, description="Load messages with id > this value (catch up)"),
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    params = {}
+    if page:
+        params["page"] = page
+    if before:
+        params["before"] = before
+    if after:
+        params["after"] = after
+
+    result = await messaging_service.get_messages(tenant_id, conversation_id, params or None)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/conversations/{conversation_id}/messages",
+    summary="Send a message",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def send_message(
+    conversation_id: str,
+    payload: SendMessageRequest,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.send_message(
+        tenant_id,
+        conversation_id,
+        payload.model_dump(exclude_none=True),
+        user_id=current_user.id,
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/conversations/{conversation_id}/messages/upload",
+    summary="Send a message with file attachment",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def send_message_with_attachment(
+    conversation_id: str,
+    content: str = Form(""),
+    file: UploadFile = File(...),
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.send_message_with_file(
+        tenant_id,
+        conversation_id,
+        content=content,
+        file=file,
+        user_id=current_user.id,
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+# --- Assignments ---
+
+@router.post(
+    "/conversations/{conversation_id}/assign",
+    summary="Assign conversation to agent or team",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def assign_conversation(
+    conversation_id: str,
+    payload: AssignConversationRequest,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.assign_conversation(
+        tenant_id, conversation_id, payload.model_dump(exclude_none=True)
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/conversations/{conversation_id}/unassign",
+    summary="Remove assignment from conversation",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def unassign_conversation(
+    conversation_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.unassign_conversation(tenant_id, conversation_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+# --- Inboxes ---
+
+@router.get(
+    "/inboxes",
+    summary="List inboxes",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def list_inboxes(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.get_inboxes(tenant_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.get(
+    "/inboxes/{inbox_id}/templates",
+    summary="Get WhatsApp templates for an inbox",
+    tags=["messaging", "whatsapp"],
+    responses={503: {"model": MessagingError}},
+)
+async def get_inbox_templates(
+    inbox_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.get_inbox_templates(tenant_id, inbox_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/inboxes/{inbox_id}/sync_templates",
+    summary="Sync WhatsApp templates from Meta for an inbox",
+    tags=["messaging", "whatsapp"],
+    responses={503: {"model": MessagingError}},
+)
+async def sync_inbox_templates(
+    inbox_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.sync_inbox_templates(tenant_id, inbox_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+# --- Template Messages ---
+
+@router.post(
+    "/conversations/{conversation_id}/messages/template",
+    summary="Send a template message",
+    tags=["messaging", "whatsapp"],
+    responses={503: {"model": MessagingError}},
+)
+async def send_template_message(
+    conversation_id: str,
+    payload: SendTemplateMessageRequest,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    message_data = {
+        "content": payload.content,
+        "template_params": payload.template_params.model_dump(exclude_none=True),
+    }
+
+    result = await messaging_service.send_message(
+        tenant_id,
+        conversation_id,
+        message_data,
+        user_id=current_user.id,
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+# --- Contacts ---
+
+@router.get(
+    "/contacts",
+    summary="List contacts",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def list_contacts(
+    search: str | None = Query(None, description="Search by name, email, or phone"),
+    page: int | None = Query(None, description="Page number"),
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    if search:
+        result = await messaging_service.search_contacts(tenant_id, search)
+    else:
+        params = {}
+        if page:
+            params["page"] = page
+        result = await messaging_service.get_contacts(tenant_id, params or None)
+
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+# --- Canned Responses ---
+
+@router.get(
+    "/canned-responses",
+    summary="List canned responses",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def list_canned_responses(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.get_canned_responses(tenant_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+# --- Labels ---
+
+
+@router.get(
+    "/labels",
+    summary="List labels",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def list_labels(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.get_labels(tenant_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/labels",
+    summary="Create a label",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def create_label(
+    payload: dict,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.create_label(tenant_id, payload)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.delete(
+    "/labels/{label_id}",
+    summary="Delete a label from the system",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def delete_label(
+    label_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("DELETE", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.delete_label(tenant_id, label_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.get(
+    "/conversations/{conversation_id}/labels",
+    summary="List labels for a conversation",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def list_conversation_labels(
+    conversation_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.get_conversation_labels(tenant_id, conversation_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/conversations/{conversation_id}/labels",
+    summary="Add a label to a conversation",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def add_conversation_label(
+    conversation_id: str,
+    payload: dict,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    label_id = payload.get("label_id")
+    if not label_id:
+        raise HTTPException(status_code=400, detail="label_id is required")
+
+    result = await messaging_service.add_conversation_label(
+        tenant_id, conversation_id, label_id
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.delete(
+    "/conversations/{conversation_id}/labels/{label_id}",
+    summary="Remove a label from a conversation",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def remove_conversation_label(
+    conversation_id: str,
+    label_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("DELETE", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.remove_conversation_label(
+        tenant_id, conversation_id, label_id
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+# --- Teams ---
+
+@router.get(
+    "/teams",
+    summary="List teams",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def list_teams(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.get_teams(tenant_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+# --- Notifications ---
+
+@router.get(
+    "/notifications",
+    summary="List notifications",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def list_notifications(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.get_notifications(
+        tenant_id, current_user.id
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+# --- WhatsApp ---
+
+
+@router.post(
+    "/whatsapp/embedded_signup",
+    summary="Connect WhatsApp via embedded signup",
+    tags=["messaging", "whatsapp"],
+    responses={503: {"model": MessagingError}},
+)
+async def connect_whatsapp(
+    payload: WhatsAppConnectRequest,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.whatsapp_connect(
+        tenant_id, payload.model_dump(exclude_none=True)
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.get(
+    "/whatsapp/status",
+    summary="List connected WhatsApp channels",
+    tags=["messaging", "whatsapp"],
+    responses={503: {"model": MessagingError}},
+)
+async def whatsapp_status(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.whatsapp_status(tenant_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.get(
+    "/whatsapp/health/{inbox_id}",
+    summary="Get WhatsApp channel health status",
+    tags=["messaging", "whatsapp"],
+    responses={503: {"model": MessagingError}},
+)
+async def whatsapp_health(
+    inbox_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.whatsapp_health(tenant_id, inbox_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/whatsapp/manual-connect",
+    summary="Connect WhatsApp with manual credentials",
+    tags=["messaging", "whatsapp"],
+    responses={503: {"model": MessagingError}},
+)
+async def manual_connect_whatsapp(
+    payload: ManualWhatsAppRequest,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    inbox_data = {
+        "name": payload.name or f"{payload.phone_number} WhatsApp",
+        "channel": {
+            "type": "whatsapp",
+            "phone_number": payload.phone_number,
+            "provider": "whatsapp_cloud",
+            "provider_config": {
+                "api_key": payload.api_key,
+                "phone_number_id": payload.phone_number_id,
+                "business_account_id": payload.business_account_id,
+            },
+        },
+    }
+
+    result = await messaging_service.create_whatsapp_inbox(tenant_id, inbox_data)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+# --- Push Subscription Tokens ---
+
+
+@router.post(
+    "/push-tokens",
+    summary="Register FCM push token",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def register_push_token(
+    payload: PushTokenRequest,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    """Register an FCM push subscription token for the current user."""
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.register_push_token(
+        tenant_id, str(current_user.id), payload.model_dump(exclude_none=True)
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.delete(
+    "/push-tokens",
+    summary="Remove FCM push token",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def delete_push_token(
+    payload: PushTokenRequest,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("DELETE", "/messaging/*")),
+):
+    """Remove an FCM push subscription token."""
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.delete_push_token(
+        tenant_id, str(current_user.id), payload.token
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+# --- Notification Settings ---
+
+
+@router.get(
+    "/notification-settings",
+    summary="Get notification settings",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def get_notification_settings(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    """Get push notification preferences for the current user."""
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.get_notification_settings(
+        tenant_id, str(current_user.id)
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.put(
+    "/notification-settings",
+    summary="Update notification settings",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def update_notification_settings(
+    payload: NotificationSettingsPayload,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("PATCH", "/messaging/*")),
+):
+    """Update push notification preferences for the current user."""
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.update_notification_settings(
+        tenant_id, str(current_user.id), payload.model_dump(exclude_none=True)
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result

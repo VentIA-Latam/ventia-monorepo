@@ -159,6 +159,14 @@ class Order(Base, TimestampMixin):
         comment="Sales channel: shopify, woocommerce, venta_whatsapp",
     )
 
+    # Messaging conversation link (cross-database reference, NOT a FK)
+    messaging_conversation_id = Column(
+        Integer,
+        nullable=True,
+        index=True,
+        comment="Linked conversation ID in the messaging service",
+    )
+
     # Relationships
     invoices = relationship("Invoice", back_populates="order", cascade="all, delete-orphan")
 

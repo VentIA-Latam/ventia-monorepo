@@ -3,10 +3,17 @@
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/dashboard/app-sidebar"
 import { Separator } from "@/components/ui/separator"
+import { MessagingProvider } from "@/components/conversations/messaging-provider"
 import { usePathname } from "next/navigation"
 import { ChevronRight, Home } from "lucide-react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
+import dynamic from "next/dynamic"
+
+const NotificationSetup = dynamic(
+  () => import("@/components/notifications/notification-setup"),
+  { ssr: false }
+)
 
 const PAGE_META: Record<string, { title: string; breadcrumb: string[] }> = {
   '/assistant': { title: 'Configuración de tu vendedor', breadcrumb: ['Asistente'] },
@@ -15,6 +22,7 @@ const PAGE_META: Record<string, { title: string; breadcrumb: string[] }> = {
   '/campaigns': { title: 'Campañas', breadcrumb: ['Campañas'] },
   '/agent-customization': { title: 'Personalización del Agente', breadcrumb: ['Personalización'] },
   '/metrics': { title: 'Métricas', breadcrumb: ['Métricas'] },
+  '/whatsapp-connect': { title: 'Conectar WhatsApp', breadcrumb: ['WhatsApp'] },
   '/get-started': { title: 'Inicio', breadcrumb: [] },
   '/payments': { title: 'Pagos', breadcrumb: ['Pagos'] },
   '/invoices-series': { title: 'Series de facturación', breadcrumb: ['Facturación', 'Series'] },
@@ -22,7 +30,6 @@ const PAGE_META: Record<string, { title: string; breadcrumb: string[] }> = {
   '/invoices': { title: 'Facturación', breadcrumb: ['Facturación'] },
   '/orders': { title: 'Pedidos', breadcrumb: ['Pedidos'] },
   '/settings/api-keys': { title: 'Credenciales (API Key)', breadcrumb: ['Configuración', 'API Keys'] },
-  '/chatwoot': { title: 'Chatwoot', breadcrumb: ['Chatwoot'] },
 }
 
 function getPageMeta(pathname: string) {
@@ -51,9 +58,10 @@ export default function DashboardLayoutClient({
   const { title, breadcrumb } = getPageMeta(pathname);
 
   return (
+    <MessagingProvider>
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="min-w-0">
         <header className="flex h-14 sm:h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 border-b bg-gradient-to-r from-cielo/10 to-transparent">
           <div className="flex items-center gap-2 px-3 sm:px-4 w-full">
             <SidebarTrigger className="-ml-1" />
@@ -83,7 +91,8 @@ export default function DashboardLayoutClient({
             </div>
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 sm:gap-6 px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 overflow-x-hidden">
+        <div className="flex flex-1 flex-col gap-4 sm:gap-6 px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 overflow-x-hidden min-h-0 min-w-0">
+          <NotificationSetup />
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}
@@ -91,7 +100,7 @@ export default function DashboardLayoutClient({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="flex flex-1 flex-col gap-4 sm:gap-6"
+              className="flex flex-1 flex-col gap-4 sm:gap-6 min-h-0 min-w-0"
             >
               {children}
             </motion.div>
@@ -99,5 +108,6 @@ export default function DashboardLayoutClient({
         </div>
       </SidebarInset>
     </SidebarProvider>
+    </MessagingProvider>
   );
 }

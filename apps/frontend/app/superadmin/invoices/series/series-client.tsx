@@ -195,12 +195,12 @@ export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientVi
                       </TableCell>
                       <TableCell>
                         {serie.is_active ? (
-                          <Badge className="bg-success-bg text-success border-success/30">
+                          <Badge variant="success">
                             <CheckCircle className="h-3 w-3 mr-1" />
                             Activa
                           </Badge>
                         ) : (
-                          <Badge className="bg-muted/50 text-foreground border-border">
+                          <Badge variant="outline" className="bg-muted/50">
                             <XCircle className="h-3 w-3 mr-1" />
                             Inactiva
                           </Badge>
