@@ -175,6 +175,7 @@ export function ConversationList({
       const convId = Number(data.conversation_id);
       const content = (data.content as string) ?? null;
       const msgType = (data.message_type as string) ?? "incoming";
+      const msgStatus = (data.status as string) ?? undefined;
       const createdAt = data.created_at ?? new Date().toISOString();
       const attachments = Array.isArray(data.attachments) && data.attachments.length > 0
         ? data.attachments[0] : null;
@@ -185,6 +186,7 @@ export function ConversationList({
           last_message: {
             content,
             message_type: msgType as Conversation["last_message"] extends { message_type: infer T } ? T : string,
+            status: msgStatus as Conversation["last_message"] extends { status: infer S } ? S : string,
             attachment_type: attachments ? (attachments as Record<string, unknown>).file_type as string ?? null : null,
             created_at: createdAt as string | number,
           } as Conversation["last_message"],
@@ -200,6 +202,15 @@ export function ConversationList({
       if (!current.some((c) => c.id === convId)) {
         debouncedRefetch();
       }
+    } else if (event === "message.updated" && data.status) {
+      const convId = Number(data.conversation_id);
+      const newStatus = data.status as string;
+      onConversationsChange(
+        current.map((c) => {
+          if (c.id !== convId || !c.last_message) return c;
+          return { ...c, last_message: { ...c.last_message, status: newStatus } as typeof c.last_message };
+        })
+      );
     } else if (event === "conversation.read") {
       const convId = Number(data.id ?? data.conversation_id);
       onConversationsChange(

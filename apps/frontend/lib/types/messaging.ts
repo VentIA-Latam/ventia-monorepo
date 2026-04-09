@@ -57,6 +57,7 @@ export interface TemperatureDefinition {
 export interface LastMessageBrief {
   content: string | null;
   message_type: MessageType | null;
+  status?: MessageStatus;
   attachment_type: string | null;
   created_at: string | number | null;
 }

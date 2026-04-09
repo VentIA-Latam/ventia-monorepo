@@ -198,6 +198,7 @@ class Api::V1::ConversationsController < Api::V1::BaseController
       last_message: last_msg ? {
         content: last_msg.content&.truncate(100),
         message_type: last_msg.message_type,
+        status: last_msg.status,
         attachment_type: last_msg.attachments.any? ? last_msg.attachments.first.file_type : nil,
         created_at: last_msg.created_at
       } : nil

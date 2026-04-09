@@ -18,6 +18,8 @@ import {
   Trash2,
   Thermometer,
   Check,
+  CheckCheck,
+  AlertCircle,
   Image,
   Mic,
   Video,
@@ -27,7 +29,7 @@ import {
   User,
 } from "lucide-react";
 import { TEMPERATURE_ICON_MAP } from "@/lib/utils/temperature-icons";
-import type { Conversation, TemperatureDefinition } from "@/lib/types/messaging";
+import type { Conversation, TemperatureDefinition, MessageStatus } from "@/lib/types/messaging";
 import { getInitials, getWhatsAppTime } from "@/lib/utils/messaging";
 
 interface ConversationItemProps {
@@ -36,6 +38,20 @@ interface ConversationItemProps {
   temperatureConfig?: TemperatureDefinition[];
   onClick: () => void;
   onDelete?: (id: number) => void;
+}
+
+function ListStatusIcon({ status }: { status?: MessageStatus }) {
+  switch (status) {
+    case "sent":
+      return <Check className="h-3 w-3 shrink-0 text-muted-foreground" />;
+    case "read":
+      return <CheckCheck className="h-3 w-3 shrink-0 text-primary" />;
+    case "failed":
+      return <AlertCircle className="h-3 w-3 shrink-0 text-destructive" />;
+    case "delivered":
+    default:
+      return <CheckCheck className="h-3 w-3 shrink-0 text-muted-foreground" />;
+  }
 }
 
 const ATTACHMENT_ICONS: Record<string, { icon: typeof Image; label: string }> = {
@@ -69,7 +85,7 @@ function getMessagePreview(conversation: Conversation): React.ReactNode {
     return (
       <span className="inline-flex items-center gap-1">
         {last_message.message_type === "outgoing" && (
-          <Check className="h-3 w-3 shrink-0 text-muted-foreground" />
+          <ListStatusIcon status={last_message.status} />
         )}
         <AttachmentIcon className="h-3 w-3 shrink-0" />
         <span className="truncate">{displayLabel}</span>
@@ -82,7 +98,7 @@ function getMessagePreview(conversation: Conversation): React.ReactNode {
     return (
       <span className="inline-flex items-center gap-1 min-w-0">
         {last_message.message_type === "outgoing" && (
-          <Check className="h-3 w-3 shrink-0 text-muted-foreground" />
+          <ListStatusIcon status={last_message.status} />
         )}
         <span className="truncate">{last_message.content}</span>
       </span>
