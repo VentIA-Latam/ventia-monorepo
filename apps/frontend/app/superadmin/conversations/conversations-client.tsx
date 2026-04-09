@@ -44,7 +44,12 @@ export function SuperAdminConversationsClient({ tenantId, section = "all" }: Sup
       try {
         // Happy path: account already exists — parallel fetch, no waterfall
         const [convData, labelsData, tempConfigData] = await Promise.all([
-          getConversations({ status: "open", tenant_id: tenantId }),
+          getConversations({
+            status: "open",
+            tenant_id: tenantId,
+            ...(section === "sale" && { stage: "sale" }),
+            ...(section === "unattended" && { conversation_type: "unattended" }),
+          }),
           getLabels(tenantId),
           getTemperatureConfig(tenantId),
         ]);
@@ -62,7 +67,12 @@ export function SuperAdminConversationsClient({ tenantId, section = "all" }: Sup
         // Retry after provisioning
         try {
           const [convData, labelsData, tempConfigData] = await Promise.all([
-            getConversations({ status: "open", tenant_id: tenantId }),
+            getConversations({
+            status: "open",
+            tenant_id: tenantId,
+            ...(section === "sale" && { stage: "sale" }),
+            ...(section === "unattended" && { conversation_type: "unattended" }),
+          }),
             getLabels(tenantId),
             getTemperatureConfig(tenantId),
           ]);
