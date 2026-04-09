@@ -1,11 +1,10 @@
 class Api::V1::BaseController < ApplicationController
   before_action :set_current_account
+  before_action :set_current_user
 
   private
 
   def set_current_account
-    # For now, we'll use tenant_id from params/headers
-    # In production, this should come from JWT token validation
     tenant_id = request.headers['X-Tenant-Id'] || params[:tenant_id]
 
     if tenant_id.present?
@@ -19,8 +18,19 @@ class Api::V1::BaseController < ApplicationController
     end
   end
 
+  def set_current_user
+    ventia_user_id = request.headers['X-User-Id']
+    return unless ventia_user_id.present?
+
+    @current_user = User.find_by(ventia_user_id: ventia_user_id)
+  end
+
   def current_account
     @current_account
+  end
+
+  def current_user
+    @current_user
   end
 
   def render_success(data, message: nil, status: :ok)

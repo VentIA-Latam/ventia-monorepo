@@ -26,6 +26,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
     message = @conversation.messages.new(message_params)
     message.account = current_account
     message.inbox = @conversation.inbox
+    message.sender = current_user if current_user
 
     # Template message: set type and store template_params in additional_attributes
     if params.dig(:message, :template_params).present?
@@ -120,11 +121,12 @@ class Api::V1::MessagesController < Api::V1::BaseController
       content_attributes: message.content_attributes,
       status: message.status,
       created_at: message.created_at,
-      sender: message.sender&.class&.name == 'Contact' ? {
-        type: 'contact',
-        id: message.sender.id,
-        name: message.sender.name
-      } : nil,
+      sender: case message.sender&.class&.name
+              when 'Contact'
+                { type: 'contact', id: message.sender.id, name: message.sender.name }
+              when 'User'
+                { type: 'user', id: message.sender.id, name: message.sender.name }
+              end,
       attachments: message.attachments.map { |att| attachment_json(att) }
     }
   end
