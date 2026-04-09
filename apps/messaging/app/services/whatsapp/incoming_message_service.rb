@@ -173,9 +173,10 @@ class Whatsapp::IncomingMessageService
 
   def create_regular_message(message_data, msg_type, msg_id, in_reply_to_external_id)
     content = extract_message_content(message_data, msg_type)
+    referral = message_data['referral'] || message_data[:referral]
 
     echo_attrs = @outgoing_echo ? { external_echo: true } : {}
-    content_attrs = build_content_attributes(in_reply_to_external_id).merge(echo_attrs)
+    content_attrs = build_content_attributes(in_reply_to_external_id, referral).merge(echo_attrs)
 
     @message = @conversation.messages.new(
       account: @inbox.account,
@@ -315,9 +316,20 @@ class Whatsapp::IncomingMessageService
     end
   end
 
-  def build_content_attributes(in_reply_to_external_id)
+  def build_content_attributes(in_reply_to_external_id, referral = nil)
     attrs = {}
     attrs['in_reply_to'] = in_reply_to_external_id if in_reply_to_external_id.present?
+    if referral.present?
+      attrs['referral'] = {
+        'source_url' => referral['source_url'] || referral[:source_url],
+        'source_type' => referral['source_type'] || referral[:source_type],
+        'source_id' => referral['source_id'] || referral[:source_id],
+        'headline' => referral['headline'] || referral[:headline],
+        'body' => referral['body'] || referral[:body],
+        'media_type' => referral['media_type'] || referral[:media_type],
+        'image_url' => referral['image_url'] || referral[:image_url]
+      }.compact
+    end
     attrs
   end
 
