@@ -3,7 +3,8 @@
 import { memo, useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
-import { FileDown, CheckCheck, X, Download, ExternalLink } from "lucide-react";
+import { FileDown, Check, CheckCheck, AlertCircle, X, Download, ExternalLink } from "lucide-react";
+import type { MessageStatus } from "@/lib/types/messaging";
 import { LocationBubble } from "./location-bubble";
 import { ContactBubble } from "./contact-bubble";
 import type { Message, AttachmentBrief, CtaUrlData } from "@/lib/types/messaging";
@@ -113,6 +114,20 @@ function CtaUrlBubble({ cta, isOutgoing }: { cta: CtaUrlData; isOutgoing: boolea
   );
 }
 
+function StatusIcon({ status }: { status?: MessageStatus }) {
+  switch (status) {
+    case "sent":
+      return <Check className="h-[14px] w-[14px] text-muted-foreground/60" />;
+    case "read":
+      return <CheckCheck className="h-[14px] w-[14px] text-primary" />;
+    case "failed":
+      return <AlertCircle className="h-[14px] w-[14px] text-destructive" />;
+    case "delivered":
+    default:
+      return <CheckCheck className="h-[14px] w-[14px] text-muted-foreground/60" />;
+  }
+}
+
 interface MessageBubbleProps {
   message: Message;
 }
@@ -179,9 +194,7 @@ export const MessageBubble = memo(function MessageBubble({
               )}
             >
               {time}
-              {isOutgoing && (
-                <CheckCheck className="h-[14px] w-[14px] text-primary/60" />
-              )}
+              {isOutgoing && <StatusIcon status={message.status} />}
             </div>
             <CtaUrlBubble cta={message.content_attributes.cta_url} isOutgoing={isOutgoing} />
           </>
@@ -266,9 +279,7 @@ export const MessageBubble = memo(function MessageBubble({
             )}
           >
             {time}
-            {isOutgoing && (
-              <CheckCheck className="h-[14px] w-[14px] text-primary/60" />
-            )}
+            {isOutgoing && <StatusIcon status={message.status} />}
           </div>
         ) : (
           /* Absolute timestamp for text-only messages (WhatsApp style with spacer) */
@@ -279,9 +290,7 @@ export const MessageBubble = memo(function MessageBubble({
             )}
           >
             {time}
-            {isOutgoing && (
-              <CheckCheck className="h-[14px] w-[14px] text-primary/60" />
-            )}
+            {isOutgoing && <StatusIcon status={message.status} />}
           </span>
         )}
       </div>

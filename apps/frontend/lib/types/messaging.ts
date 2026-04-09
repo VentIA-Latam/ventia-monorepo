@@ -118,10 +118,13 @@ export interface MessageContentAttributes {
   in_reply_to?: string;
 }
 
+export type MessageStatus = "sent" | "delivered" | "read" | "failed";
+
 export interface Message {
   id: string | number;
   content: string | null;
   message_type: MessageType | null;
+  status?: MessageStatus;
   content_attributes?: MessageContentAttributes | null;
   sender: AgentBrief | ContactBrief | null;
   attachments: AttachmentBrief[];

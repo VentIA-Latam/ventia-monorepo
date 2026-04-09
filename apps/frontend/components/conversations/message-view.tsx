@@ -20,7 +20,7 @@ import { MessageComposer } from "./message-composer";
 import { TemplatePicker } from "./template-picker";
 import { useMessagingEvent } from "./messaging-provider";
 import { getMessages, sendMessage, updateConversation, markConversationRead } from "@/lib/api-client/messaging";
-import type { Conversation, Message, MessageType, MessageContentAttributes, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
+import type { Conversation, Message, MessageType, MessageStatus, MessageContentAttributes, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
 import { getInitials, getDateSeparatorLabel, parseTimestamp } from "@/lib/utils/messaging";
 
 function mapWebSocketAttachments(raw: unknown): AttachmentBrief[] {
@@ -150,6 +150,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
             id: msgId,
             content: (msgData.content as string) ?? "",
             message_type: msgType as MessageType,
+            status: (msgData.status as MessageStatus) ?? undefined,
             content_attributes: (msgData.content_attributes as MessageContentAttributes) ?? undefined,
             sender: wsSender,
             attachments: wsAttachments.length > 0 ? wsAttachments : tempMsg.attachments,
@@ -163,6 +164,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
         id: msgId,
         content: (msgData.content as string) ?? "",
         message_type: msgType as MessageType,
+        status: (msgData.status as MessageStatus) ?? undefined,
         content_attributes: (msgData.content_attributes as MessageContentAttributes) ?? undefined,
         sender: wsSender,
         attachments: wsAttachments,
@@ -181,6 +183,23 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
         console.error("[mark-read] Re-mark failed:", err)
       );
     }
+  }, [lastEvent, conversation?.id]);
+
+  // Update message status from WebSocket events (sent → delivered → read)
+  useEffect(() => {
+    if (!lastEvent || !conversation) return;
+    if (lastEvent.event !== "message.updated") return;
+
+    const msgData = lastEvent.data;
+    if (String(msgData.conversation_id) !== String(conversation.id)) return;
+    if (!msgData.status) return;
+
+    const msgId = String(msgData.id);
+    setMessages((prev) =>
+      prev.map((m) =>
+        String(m.id) === msgId ? { ...m, status: msgData.status as MessageStatus } : m
+      )
+    );
   }, [lastEvent, conversation?.id]);
 
   // Auto-scroll to bottom for new messages / initial load (NOT for load-older — handled by flushSync)
