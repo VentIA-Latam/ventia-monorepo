@@ -1,0 +1,30 @@
+# Wisper configuration for event broadcasting
+Wisper.configure do |config|
+  # Use Wisper's default configuration
+end
+
+# Register global listeners
+Rails.application.config.after_initialize do
+  # Automation Rules - listeners dispatch to Sidekiq jobs internally
+  Wisper.subscribe(AutomationRuleListener.instance)
+
+  # Webhooks - listeners dispatch to Sidekiq jobs internally
+  Wisper.subscribe(WebhookListener.instance)
+
+  # Campaigns - execute synchronously for immediate logging
+  Wisper.subscribe(CampaignListener.instance)
+
+  # Notifications - creates notifications on conversation/message events
+  Wisper.subscribe(NotificationListener.instance)
+
+  # ActionCable - broadcasts real-time updates via WebSocket
+  Wisper.subscribe(ActionCableListener.instance)
+
+  # Participation - auto-creates participants when assignee changes
+  Wisper.subscribe(ParticipationListener.instance)
+
+  # FCM Push Notifications - sends push to offline agents
+  Wisper.subscribe(FcmListener.instance)
+
+  Rails.logger.info "[Wisper] Event listeners registered successfully (7 listeners)"
+end

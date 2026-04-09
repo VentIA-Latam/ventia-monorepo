@@ -540,28 +540,17 @@ class InvoiceService:
         tenant_id: Optional[int] = None,
         skip: int = 0,
         limit: int = 100,
+        search: str | None = None,
+        invoice_type: str | None = None,
+        efact_status: str | None = None,
     ) -> tuple[list[Invoice], int]:
-        """
-        Get paginated invoices for a tenant.
-
-        Args:
-            db: Database session
-            tenant_id: Tenant ID. If None, returns invoices from all tenants (for SUPERADMIN)
-            skip: Number of records to skip
-            limit: Maximum number of records
-
-        Returns:
-            Tuple of (invoices list, total count)
-        """
-        # SUPERADMIN: get all invoices from all tenants
-        if tenant_id is None:
-            invoices = invoice_repository.get_all(db, skip=skip, limit=limit)
-            total = invoice_repository.count_all(db)
-        # Regular users: get invoices from their tenant
-        else:
-            invoices = invoice_repository.get_by_tenant(db, tenant_id, skip=skip, limit=limit)
-            total = invoice_repository.count_by_tenant(db, tenant_id)
-        
+        """Get paginated invoices with optional filters."""
+        filter_kwargs = dict(
+            tenant_id=tenant_id, search=search,
+            invoice_type=invoice_type, efact_status=efact_status,
+        )
+        invoices = invoice_repository.get_all(db, skip=skip, limit=limit, **filter_kwargs)
+        total = invoice_repository.count_all(db, **filter_kwargs)
         return invoices, total
 
 

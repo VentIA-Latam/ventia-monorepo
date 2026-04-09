@@ -32,6 +32,7 @@ from app.services.order import order_service
 from app.services.invoice import invoice_service
 from app.services.export_service import export_service
 from app.services.ecommerce import ecommerce_service
+from app.services.messaging_service import messaging_service
 from app.repositories.order import order_repository
 from app.integrations.woocommerce_client import (
     WooCommerceAuthError,
@@ -205,6 +206,9 @@ async def list_orders(
     limit: int = 100,
     validado: bool | None = None,
     tenant_id: int | None = None,
+    search: str | None = None,
+    order_status: str | None = Query(None, alias="status"),
+    channel: str | None = None,
     sort_by: str = "created_at",
     sort_order: str = "desc",
     current_user: User = Depends(get_current_user_or_api_key),
@@ -255,8 +259,11 @@ async def list_orders(
                 db,
                 skip=skip,
                 limit=limit,
-                tenant_id=tenant_id,  # Optional filter
+                tenant_id=tenant_id,
                 validado=validado,
+                search=search,
+                status=order_status,
+                channel=channel,
                 sort_by=sort_by,
                 sort_order=sort_order,
             )
@@ -268,6 +275,9 @@ async def list_orders(
                 skip=skip,
                 limit=limit,
                 validado=validado,
+                search=search,
+                status=order_status,
+                channel=channel,
                 sort_by=sort_by,
                 sort_order=sort_order,
             )
@@ -485,27 +495,11 @@ async def validate_order(
     )
 
     # === COHERENCE CHECKS ===
-    # If sync is enabled, verify order has the required platform ID
-    if sync_enabled and settings.has_ecommerce:
-        if platform == "shopify" and not order.shopify_draft_order_id:
-            logger.warning(
-                f"Coherence check failed: order_id={order_id}, platform=shopify but no shopify_draft_order_id"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Sync enabled for Shopify but order has no shopify_draft_order_id. "
-                       "Cannot sync order that was not created from Shopify.",
-            )
-        
-        if platform == "woocommerce" and not order.woocommerce_order_id:
-            logger.warning(
-                f"Coherence check failed: order_id={order_id}, platform=woocommerce but no woocommerce_order_id"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Sync enabled for WooCommerce but order has no woocommerce_order_id. "
-                       "Cannot sync order that was not created from WooCommerce.",
-            )
+    # If sync is enabled but no e-commerce platform configured, warn
+    if sync_enabled and not settings.has_ecommerce:
+        logger.warning(
+            f"sync_enabled but no ecommerce configured: order_id={order_id}, tenant_id={tenant.id}"
+        )
 
     try:
         # Extract payment method and notes from validate_data
@@ -525,6 +519,55 @@ async def validate_order(
             f"shopify_order_id={validated_order.shopify_order_id}, "
             f"woocommerce_order_id={validated_order.woocommerce_order_id}"
         )
+
+        # Auto-transition linked conversation to "sale" stage (post-sale)
+        if validated_order.messaging_conversation_id:
+            try:
+                stage_result = await messaging_service.update_conversation_stage(
+                    tenant_id=validated_order.tenant_id,
+                    conversation_id=str(validated_order.messaging_conversation_id),
+                    stage="sale",
+                )
+                if stage_result:
+                    logger.info(
+                        f"conversation_stage_updated: order_id={order_id}, "
+                        f"conversation_id={validated_order.messaging_conversation_id}, stage=sale"
+                    )
+                else:
+                    logger.warning(
+                        f"conversation_stage_update_failed: order_id={order_id}, "
+                        f"conversation_id={validated_order.messaging_conversation_id}"
+                    )
+            except Exception as stage_err:
+                logger.warning(
+                    f"conversation_stage_update_error: order_id={order_id}, error={stage_err}"
+                )
+
+            # Auto-remove "en-revisión" label after payment validation
+            try:
+                labels_result = await messaging_service.get_conversation_labels(
+                    tenant_id=validated_order.tenant_id,
+                    conversation_id=str(validated_order.messaging_conversation_id),
+                )
+                if labels_result:
+                    labels = labels_result.get("data", labels_result)
+                    if isinstance(labels, list):
+                        for label in labels:
+                            if label.get("title") == "en-revisión":
+                                await messaging_service.remove_conversation_label(
+                                    tenant_id=validated_order.tenant_id,
+                                    conversation_id=str(validated_order.messaging_conversation_id),
+                                    label_id=str(label["id"]),
+                                )
+                                logger.info(
+                                    f"label_removed: order_id={order_id}, label=en-revisión, "
+                                    f"conversation_id={validated_order.messaging_conversation_id}"
+                                )
+                                break
+            except Exception as label_err:
+                logger.warning(
+                    f"label_removal_error: order_id={order_id}, error={label_err}"
+                )
 
         return validated_order
 
@@ -868,7 +911,7 @@ async def create_invoice_for_order(
             f"eFact ticket: {invoice.efact_ticket}"
         )
 
-        return InvoiceResponse.from_orm(invoice)
+        return invoice
 
     except ValueError as e:
         logger.warning(
@@ -943,7 +986,7 @@ async def get_invoices_for_order(
             tenant_id=tenant_id,
         )
 
-        return [InvoiceResponse.from_orm(invoice) for invoice in invoices]
+        return invoices
 
     except HTTPException:
         raise

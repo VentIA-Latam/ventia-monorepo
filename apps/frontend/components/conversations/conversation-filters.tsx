@@ -1,0 +1,406 @@
+"use client";
+
+import { useState, useCallback, useTransition } from "react";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
+import { Tag, CalendarDays, SlidersHorizontal, Thermometer, X, Trash2, Lock, Plus } from "lucide-react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { createLabel, deleteLabel } from "@/lib/api-client/messaging";
+import { TEMPERATURE_ICON_MAP } from "@/lib/utils/temperature-icons";
+import { useToast } from "@/hooks/use-toast";
+import type { DateRange } from "react-day-picker";
+import type { Label, ConversationTemperature, TemperatureDefinition } from "@/lib/types/messaging";
+
+export interface ActiveFilters {
+  label?: string;
+  temperature?: ConversationTemperature;
+  dateRange?: { from: string; to: string };
+  unread?: boolean;
+}
+
+interface ConversationFiltersProps {
+  allLabels: Label[];
+  filters: ActiveFilters;
+  temperatureConfig?: TemperatureDefinition[];
+  onChange: (filters: ActiveFilters) => void;
+  onLabelCreated?: (label: Label) => void;
+  onLabelDeleted?: (labelId: number) => void;
+  tenantId?: number;
+}
+
+const PRESET_COLORS = [
+  "#1f93ff", "#4CAF50", "#FF9800", "#E91E63",
+  "#9C27B0", "#00BCD4", "#795548", "#607D8B",
+];
+
+const RESERVED_LABEL_NAMES = ["soporte-humano", "en-revisión"];
+
+export function ConversationFilters({ allLabels, filters, temperatureConfig = [], onChange, onLabelCreated, onLabelDeleted, tenantId }: ConversationFiltersProps) {
+  const { toast } = useToast();
+  const [labelOpen, setLabelOpen] = useState(false);
+  const [dateOpen, setDateOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newColor, setNewColor] = useState(PRESET_COLORS[0]);
+  const [creating, setCreating] = useState(false);
+  const [labelToDelete, setLabelToDelete] = useState<Label | null>(null);
+  const [isDeleting, startDeleteTransition] = useTransition();
+
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(
+    filters.dateRange
+      ? { from: new Date(filters.dateRange.from), to: new Date(filters.dateRange.to) }
+      : undefined
+  );
+
+  const hasActiveFilters = filters.label || filters.temperature || filters.dateRange || filters.unread;
+  const isReservedName = RESERVED_LABEL_NAMES.includes(newTitle.trim().toLowerCase());
+
+  const handleLabelSelect = (title: string) => {
+    onChange({ ...filters, label: filters.label === title ? undefined : title });
+  };
+
+  const handleDateSelect = (range: DateRange | undefined) => {
+    setDateRange(range);
+    if (range?.from && range?.to) {
+      // Set end date to 23:59:59.999 so the entire day is included in the filter
+      const endOfDay = new Date(range.to);
+      endOfDay.setHours(23, 59, 59, 999);
+      onChange({
+        ...filters,
+        dateRange: {
+          from: range.from.toISOString(),
+          to: endOfDay.toISOString(),
+        },
+      });
+    } else if (!range?.from && !range?.to) {
+      onChange({ ...filters, dateRange: undefined });
+    }
+  };
+
+  const handleTempSelect = (temp: ConversationTemperature) => {
+    onChange({ ...filters, temperature: filters.temperature === temp ? undefined : temp });
+    setFilterOpen(false);
+  };
+
+  const handleUnreadToggle = () => {
+    onChange({ ...filters, unread: filters.unread ? undefined : true });
+    setFilterOpen(false);
+  };
+
+  const clearAll = () => {
+    setDateRange(undefined);
+    onChange({});
+  };
+
+  const handleCreate = useCallback(async () => {
+    if (!newTitle.trim() || isReservedName) return;
+    setCreating(true);
+    try {
+      const result = await createLabel({ title: newTitle.trim(), color: newColor }, tenantId);
+      const created = (result as { data: Label }).data;
+      if (created?.id) {
+        onLabelCreated?.(created);
+        setNewTitle("");
+        setShowCreate(false);
+      }
+    } catch (err) {
+      console.error("Error creating label:", err);
+      toast({ title: "Error al crear etiqueta", variant: "destructive" });
+    } finally {
+      setCreating(false);
+    }
+  }, [newTitle, newColor, isReservedName, onLabelCreated, toast]);
+
+  const confirmDelete = useCallback(() => {
+    if (!labelToDelete) return;
+    const label = labelToDelete;
+    startDeleteTransition(async () => {
+      try {
+        await deleteLabel(label.id, tenantId);
+        onLabelDeleted?.(label.id);
+      } catch (err) {
+        console.error("Error deleting label:", err);
+        toast({ title: "Error al eliminar etiqueta", variant: "destructive" });
+      } finally {
+        setLabelToDelete(null);
+      }
+    });
+  }, [labelToDelete, onLabelDeleted, toast]);
+
+  return (
+    <>
+      <div className="pb-2">
+      <div className="px-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+        {/* Label filter + management */}
+        <Popover open={labelOpen} onOpenChange={(open) => { setLabelOpen(open); if (!open) setShowCreate(false); }}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                "h-7 px-2.5 text-xs gap-1 shrink-0 rounded-full",
+                filters.label && "bg-primary/10 border-primary/30 text-primary"
+              )}
+            >
+              <Tag className="h-3 w-3" />
+              {filters.label || "Etiquetas"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-56 p-2">
+            {/* Label list */}
+            {allLabels.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-2">Sin etiquetas</p>
+            ) : (
+              <div className="space-y-0.5 max-h-48 overflow-y-auto">
+                {allLabels.map((label) => (
+                  <div
+                    key={label.id}
+                    className="group flex items-center gap-1"
+                  >
+                    <button
+                      onClick={() => handleLabelSelect(label.title)}
+                      className={cn(
+                        "flex-1 flex items-center gap-2 text-xs px-2 py-1.5 rounded-md transition-colors text-left min-w-0",
+                        filters.label === label.title
+                          ? "bg-primary/10 text-primary"
+                          : "hover:bg-muted/50"
+                      )}
+                    >
+                      <span
+                        className="h-2.5 w-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: label.color }}
+                      />
+                      <span className="truncate">{label.title}</span>
+                    </button>
+                    {label.system ? (
+                      <Lock className="h-3 w-3 text-muted-foreground/50 shrink-0 mr-1" />
+                    ) : (
+                      <button
+                        onClick={() => setLabelToDelete(label)}
+                        className="shrink-0 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Create section */}
+            <div className="border-t mt-2 pt-2">
+              {showCreate ? (
+                <div className="space-y-2">
+                  <Input
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    placeholder="Nombre de la etiqueta"
+                    className="h-7 text-xs"
+                    autoFocus
+                    onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+                  />
+                  <div className="flex gap-1">
+                    {PRESET_COLORS.map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => setNewColor(color)}
+                        className="h-4 w-4 rounded-full border-2 transition-transform hover:scale-110"
+                        style={{
+                          backgroundColor: color,
+                          borderColor: newColor === color ? "white" : "transparent",
+                          boxShadow: newColor === color ? `0 0 0 1.5px ${color}` : "none",
+                        }}
+                      />
+                    ))}
+                  </div>
+                  {isReservedName && (
+                    <p className="text-[11px] text-destructive">Nombre reservado.</p>
+                  )}
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      className="flex-1 h-6 text-xs"
+                      onClick={handleCreate}
+                      disabled={!newTitle.trim() || creating || isReservedName}
+                    >
+                      {creating ? "..." : "Crear"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs px-2"
+                      onClick={() => { setShowCreate(false); setNewTitle(""); }}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowCreate(true)}
+                  className="w-full flex items-center gap-2 text-xs px-2 py-1.5 rounded-md text-muted-foreground hover:bg-muted/50 transition-colors"
+                >
+                  <Plus className="h-3 w-3" />
+                  Crear etiqueta
+                </button>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {/* Date range filter */}
+        <Popover open={dateOpen} onOpenChange={setDateOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                "h-7 px-2.5 text-xs gap-1 shrink-0 rounded-full",
+                filters.dateRange && "bg-primary/10 border-primary/30 text-primary"
+              )}
+            >
+              <CalendarDays className="h-3 w-3" />
+              {dateRange?.from
+                ? (() => {
+                    const from = format(dateRange.from, "dd/MM", { locale: es });
+                    const to = dateRange.to ? format(dateRange.to, "dd/MM", { locale: es }) : from;
+                    return from === to ? from : `${from} - ${to}`;
+                  })()
+                : "Fecha"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-auto p-0">
+            <Calendar
+              mode="range"
+              selected={dateRange}
+              onSelect={handleDateSelect}
+              locale={es}
+              numberOfMonths={1}
+            />
+            {dateRange && (
+              <div className="px-3 pb-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-xs"
+                  onClick={() => {
+                    setDateRange(undefined);
+                    onChange({ ...filters, dateRange: undefined });
+                  }}
+                >
+                  Limpiar fechas
+                </Button>
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
+
+        {/* Temperature + unread filter */}
+        <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                "h-7 px-2.5 text-xs gap-1 shrink-0 rounded-full",
+                (filters.temperature || filters.unread) && "bg-primary/10 border-primary/30 text-primary"
+              )}
+            >
+              <SlidersHorizontal className="h-3 w-3" />
+              Filtros
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-48 p-2">
+            <div className="space-y-0.5">
+              <button
+                onClick={handleUnreadToggle}
+                className={cn(
+                  "w-full flex items-center gap-2 text-xs px-2 py-1.5 rounded-md transition-colors text-left",
+                  filters.unread ? "bg-primary/10 text-primary" : "hover:bg-muted/50"
+                )}
+              >
+                No leídas
+              </button>
+              <div className="h-px bg-border my-1" />
+              {temperatureConfig
+                .sort((a, b) => a.position - b.position)
+                .map((opt) => {
+                  const Icon = TEMPERATURE_ICON_MAP[opt.icon] ?? Thermometer;
+                  return (
+                    <button
+                      key={opt.key}
+                      onClick={() => handleTempSelect(opt.key)}
+                      className={cn(
+                        "w-full flex items-center gap-2 text-xs px-2 py-1.5 rounded-md transition-colors text-left",
+                        filters.temperature === opt.key
+                          ? "bg-primary/10 text-primary"
+                          : "hover:bg-muted/50"
+                      )}
+                    >
+                      <Icon className="h-3 w-3" style={{ color: opt.color }} />
+                      {opt.name}
+                    </button>
+                  );
+                })}
+            </div>
+          </PopoverContent>
+        </Popover>
+
+      </div>
+      {/* Clear all — below filter row */}
+      {hasActiveFilters && (
+        <div className="px-3 pt-1.5 flex justify-end">
+          <button
+            onClick={clearAll}
+            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/70 hover:text-destructive px-2 py-0.5 rounded-md hover:bg-destructive/5 transition-colors"
+          >
+            <X className="h-3 w-3" />
+            Limpiar filtros
+          </button>
+        </div>
+      )}
+      </div>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!labelToDelete} onOpenChange={(open) => { if (!open) setLabelToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar etiqueta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              La etiqueta <strong>&ldquo;{labelToDelete?.title}&rdquo;</strong> se eliminará permanentemente y se quitará de todas las conversaciones.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Eliminando..." : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}

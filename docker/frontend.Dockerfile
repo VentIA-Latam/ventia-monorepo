@@ -1,20 +1,16 @@
-# Frontend Dockerfile - Next.js 16 with standalone output
+# Frontend Dockerfile - Next.js with standalone output
 
 FROM node:20-alpine AS base
-
-# Install pnpm
-RUN npm install -g pnpm
 
 # Dependencies stage
 FROM base AS deps
 WORKDIR /app
 
-# Copy package files
+# Copy package file
 COPY apps/frontend/package.json ./
-COPY pnpm-workspace.yaml ../
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Install dependencies with npm (avoids pnpm workspace/symlink issues)
+RUN npm install
 
 # Builder stage
 FROM base AS builder
@@ -31,6 +27,10 @@ ARG NEXT_PUBLIC_AUTH0_CLIENT_ID
 ARG NEXT_PUBLIC_AUTH0_AUDIENCE
 ARG NEXT_PUBLIC_CHATWOOT_BASE_URL=https://chatwoot.ventia-latam.com
 ARG NEXT_PUBLIC_CHATWOOT_ACCOUNT_ID=3
+ARG NEXT_PUBLIC_WHATSAPP_APP_ID
+ARG NEXT_PUBLIC_WHATSAPP_CONFIGURATION_ID
+ARG NEXT_PUBLIC_WHATSAPP_API_VERSION=v22.0
+ARG NEXT_PUBLIC_MESSAGING_WS_URL
 
 # Set environment variables for the build
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
@@ -39,9 +39,13 @@ ENV NEXT_PUBLIC_AUTH0_CLIENT_ID=$NEXT_PUBLIC_AUTH0_CLIENT_ID
 ENV NEXT_PUBLIC_AUTH0_AUDIENCE=$NEXT_PUBLIC_AUTH0_AUDIENCE
 ENV NEXT_PUBLIC_CHATWOOT_BASE_URL=$NEXT_PUBLIC_CHATWOOT_BASE_URL
 ENV NEXT_PUBLIC_CHATWOOT_ACCOUNT_ID=$NEXT_PUBLIC_CHATWOOT_ACCOUNT_ID
+ENV NEXT_PUBLIC_WHATSAPP_APP_ID=$NEXT_PUBLIC_WHATSAPP_APP_ID
+ENV NEXT_PUBLIC_WHATSAPP_CONFIGURATION_ID=$NEXT_PUBLIC_WHATSAPP_CONFIGURATION_ID
+ENV NEXT_PUBLIC_WHATSAPP_API_VERSION=$NEXT_PUBLIC_WHATSAPP_API_VERSION
+ENV NEXT_PUBLIC_MESSAGING_WS_URL=$NEXT_PUBLIC_MESSAGING_WS_URL
 
 # Build Next.js app with standalone output
-RUN pnpm build
+RUN npm run build
 
 # Runner stage
 FROM base AS runner

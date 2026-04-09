@@ -2,8 +2,7 @@
 Order repository.
 """
 
-from datetime import datetime
-
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.invoice import Invoice
@@ -25,8 +24,6 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         validado: bool | None = None,
         sort_by: str = "created_at",
         sort_order: str = "desc",
-        start_date: datetime | None = None,
-        end_date: datetime | None = None,
     ) -> list[Order]:
         """
         Get all orders for a specific tenant.
@@ -39,8 +36,6 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
             validado: Filter by validation status (None = all orders)
             sort_by: Field to sort by (default: created_at)
             sort_order: Sort order 'asc' or 'desc' (default: desc)
-            start_date: Filter orders created after this UTC datetime
-            end_date: Filter orders created before this UTC datetime
 
         Returns:
             List of orders
@@ -50,12 +45,6 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         # Apply validation filter if specified
         if validado is not None:
             query = query.filter(Order.validado == validado)
-
-        # Apply date range filter
-        if start_date is not None:
-            query = query.filter(Order.created_at >= start_date)
-        if end_date is not None:
-            query = query.filter(Order.created_at <= end_date)
 
         # Apply sorting
         sort_column = getattr(Order, sort_by, Order.created_at)
@@ -74,43 +63,34 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         limit: int = 100,
         tenant_id: int | None = None,
         validado: bool | None = None,
+        search: str | None = None,
+        status: str | None = None,
+        channel: str | None = None,
         sort_by: str = "created_at",
         sort_order: str = "desc",
-        start_date: datetime | None = None,
-        end_date: datetime | None = None,
     ) -> list[Order]:
-        """
-        Get all orders from all tenants (for SUPERADMIN).
-
-        Args:
-            db: Database session
-            skip: Number to skip
-            limit: Max results
-            tenant_id: Optional filter by tenant ID
-            validado: Optional filter by validation status
-            sort_by: Field to sort by (default: created_at)
-            sort_order: Sort order 'asc' or 'desc' (default: desc)
-            start_date: Filter orders created after this UTC datetime
-            end_date: Filter orders created before this UTC datetime
-
-        Returns:
-            List of orders
-        """
+        """Get all orders with optional filters."""
         query = db.query(Order).options(joinedload(Order.invoices))
 
-        # Optional tenant filter (for SUPERADMIN with specific tenant)
         if tenant_id is not None:
             query = query.filter(Order.tenant_id == tenant_id)
-
-        # Apply validation filter if specified
         if validado is not None:
             query = query.filter(Order.validado == validado)
-
-        # Apply date range filter
-        if start_date is not None:
-            query = query.filter(Order.created_at >= start_date)
-        if end_date is not None:
-            query = query.filter(Order.created_at <= end_date)
+        if search:
+            pattern = f"%{search}%"
+            conditions = [
+                Order.customer_name.ilike(pattern),
+                Order.customer_email.ilike(pattern),
+                Order.shopify_order_id.ilike(pattern),
+                Order.shopify_draft_order_id.ilike(pattern),
+            ]
+            if search.isdigit():
+                conditions.append(Order.woocommerce_order_id == int(search))
+            query = query.filter(or_(*conditions))
+        if status:
+            query = query.filter(Order.status == status)
+        if channel:
+            query = query.filter(Order.channel == channel)
 
         # Apply sorting
         sort_column = getattr(Order, sort_by, Order.created_at)
@@ -127,34 +107,32 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         *,
         tenant_id: int | None = None,
         validado: bool | None = None,
-        start_date: datetime | None = None,
-        end_date: datetime | None = None,
+        search: str | None = None,
+        status: str | None = None,
+        channel: str | None = None,
     ) -> int:
-        """
-        Count all orders from all tenants.
-
-        Args:
-            db: Database session
-            tenant_id: Optional filter by tenant ID
-            validado: Optional filter by validation status
-            start_date: Filter orders created after this UTC datetime
-            end_date: Filter orders created before this UTC datetime
-
-        Returns:
-            Total count of orders
-        """
+        """Count all orders with same filters as get_all."""
         query = db.query(Order)
 
         if tenant_id is not None:
             query = query.filter(Order.tenant_id == tenant_id)
-
         if validado is not None:
             query = query.filter(Order.validado == validado)
-
-        if start_date is not None:
-            query = query.filter(Order.created_at >= start_date)
-        if end_date is not None:
-            query = query.filter(Order.created_at <= end_date)
+        if search:
+            pattern = f"%{search}%"
+            conditions = [
+                Order.customer_name.ilike(pattern),
+                Order.customer_email.ilike(pattern),
+                Order.shopify_order_id.ilike(pattern),
+                Order.shopify_draft_order_id.ilike(pattern),
+            ]
+            if search.isdigit():
+                conditions.append(Order.woocommerce_order_id == int(search))
+            query = query.filter(or_(*conditions))
+        if status:
+            query = query.filter(Order.status == status)
+        if channel:
+            query = query.filter(Order.channel == channel)
 
         return query.count()
 
@@ -334,8 +312,6 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         tenant_id: int,
         *,
         validado: bool | None = None,
-        start_date: datetime | None = None,
-        end_date: datetime | None = None,
     ) -> int:
         """
         Count orders for a tenant.
@@ -344,8 +320,6 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
             db: Database session
             tenant_id: Tenant ID
             validado: Filter by validation status
-            start_date: Filter orders created after this UTC datetime
-            end_date: Filter orders created before this UTC datetime
 
         Returns:
             Count of orders
@@ -354,11 +328,6 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
 
         if validado is not None:
             query = query.filter(Order.validado == validado)
-
-        if start_date is not None:
-            query = query.filter(Order.created_at >= start_date)
-        if end_date is not None:
-            query = query.filter(Order.created_at <= end_date)
 
         return query.count()
 

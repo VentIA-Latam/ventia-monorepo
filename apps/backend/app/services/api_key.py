@@ -209,13 +209,12 @@ class APIKeyService:
         skip: int = 0,
         limit: int = 100,
         is_active: bool | None = None,
+        search: str | None = None,
     ) -> list[APIKey]:
         """Get all API keys across all tenants (SUPERADMIN only)."""
         return api_key_repository.get_all(
-            db,
-            skip=skip,
-            limit=limit,
-            is_active=is_active,
+            db, skip=skip, limit=limit,
+            is_active=is_active, search=search,
         )
 
     def get_api_keys_by_tenant(
@@ -226,32 +225,32 @@ class APIKeyService:
         skip: int = 0,
         limit: int = 100,
         is_active: bool | None = None,
+        search: str | None = None,
     ) -> list[APIKey]:
         """Get all API keys for a tenant."""
-        return api_key_repository.get_by_tenant(
-            db,
-            tenant_id,
-            skip=skip,
-            limit=limit,
-            is_active=is_active,
+        return api_key_repository.get_all(
+            db, skip=skip, limit=limit,
+            is_active=is_active, tenant_id=tenant_id, search=search,
         )
 
     def count_all_api_keys(
         self,
         db: Session,
         is_active: bool | None = None,
+        search: str | None = None,
     ) -> int:
         """Count all API keys across all tenants (SUPERADMIN only)."""
-        return api_key_repository.count_all(db, is_active=is_active)
+        return api_key_repository.count_all(db, is_active=is_active, search=search)
 
     def count_api_keys_by_tenant(
         self,
         db: Session,
         tenant_id: int,
         is_active: bool | None = None,
+        search: str | None = None,
     ) -> int:
         """Count API keys for a tenant."""
-        return api_key_repository.count_by_tenant(db, tenant_id, is_active=is_active)
+        return api_key_repository.count_all(db, is_active=is_active, tenant_id=tenant_id, search=search)
 
     def update_api_key(
         self,

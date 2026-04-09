@@ -2,6 +2,7 @@
 API Key repository - database operations for API keys.
 """
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.models.api_key import APIKey
@@ -32,46 +33,42 @@ class APIKeyRepository(CRUDBase[APIKey, APIKeyCreate, APIKeyUpdate]):
         skip: int = 0,
         limit: int = 100,
         is_active: bool | None = None,
+        tenant_id: int | None = None,
+        search: str | None = None,
     ) -> list[APIKey]:
-        """
-        Get all API keys across all tenants (SUPERADMIN only).
-
-        Args:
-            db: Database session
-            skip: Number of records to skip (pagination)
-            limit: Maximum number of records to return
-            is_active: Optional filter by active status
-
-        Returns:
-            List of API keys
-        """
+        """Get all API keys with optional filters."""
         query = db.query(APIKey)
-
         if is_active is not None:
             query = query.filter(APIKey.is_active == is_active)
-
+        if tenant_id is not None:
+            query = query.filter(APIKey.tenant_id == tenant_id)
+        if search:
+            pattern = f"%{search}%"
+            query = query.filter(or_(
+                APIKey.name.ilike(pattern),
+                APIKey.key_prefix.ilike(pattern),
+            ))
         return query.offset(skip).limit(limit).all()
 
     def count_all(
         self,
         db: Session,
         is_active: bool | None = None,
+        tenant_id: int | None = None,
+        search: str | None = None,
     ) -> int:
-        """
-        Count total API keys across all tenants (SUPERADMIN only).
-
-        Args:
-            db: Database session
-            is_active: Optional filter by active status
-
-        Returns:
-            Total count
-        """
+        """Count API keys with same filters as get_all."""
         query = db.query(APIKey)
-
         if is_active is not None:
             query = query.filter(APIKey.is_active == is_active)
-
+        if tenant_id is not None:
+            query = query.filter(APIKey.tenant_id == tenant_id)
+        if search:
+            pattern = f"%{search}%"
+            query = query.filter(or_(
+                APIKey.name.ilike(pattern),
+                APIKey.key_prefix.ilike(pattern),
+            ))
         return query.count()
 
     def get_by_tenant(

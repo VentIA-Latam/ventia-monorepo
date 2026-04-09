@@ -1,0 +1,188 @@
+# == Schema Information
+#
+# Table name: messaging.conversations
+#
+#  id                     :bigint           not null, primary key
+#  uuid                   :uuid             not null
+#  status                 :integer          default("open")
+#  priority               :integer          default("low")
+#  additional_attributes  :jsonb            default({})
+#  custom_attributes      :jsonb            default({})
+#  last_activity_at       :datetime         not null
+#  contact_last_seen_at   :datetime
+#  agent_last_seen_at     :datetime
+#  first_reply_created_at :datetime
+#  waiting_since          :datetime
+#  snoozed_until          :datetime
+#  account_id             :bigint           not null
+#  inbox_id               :bigint           not null
+#  contact_id             :bigint           not null
+#  contact_inbox_id       :bigint           not null
+#  assignee_id            :bigint
+#  team_id                :bigint
+#  campaign_id            :bigint
+#  assignee_agent_bot_id  :bigint
+#  created_at             :datetime         not null
+#  updated_at             :datetime         not null
+#
+# Indexes
+#
+#  index_conversations_on_account_id      (account_id)
+#  index_conversations_on_inbox_id        (inbox_id)
+#  index_conversations_on_contact_id      (contact_id)
+#  index_conversations_on_uuid            (uuid) UNIQUE
+#  index_conversations_on_status          (status)
+#
+
+class Conversation < ApplicationRecord
+  include AASM
+  include Wisper::Publisher
+  include AssignmentHandler
+  include AutoAssignmentHandler
+
+  # Validations
+  validates :account_id, presence: true
+  validates :inbox_id, presence: true
+  validates :contact_id, presence: true
+  validates :contact_inbox_id, presence: true
+  validates :uuid, presence: true, uniqueness: true
+  validate :validate_temperature_key
+
+  # Associations
+  belongs_to :account
+  belongs_to :inbox
+  belongs_to :contact
+  belongs_to :contact_inbox
+  belongs_to :campaign, optional: true
+  belongs_to :assignee_agent_bot, class_name: 'AgentBot', optional: true
+
+  has_many :messages, dependent: :destroy
+  has_many :conversation_labels, dependent: :destroy
+  has_many :labels, through: :conversation_labels
+
+  # Enums
+  enum :status, { open: 0, resolved: 1, pending: 2, snoozed: 3 }
+  enum :priority, { low: 0, medium: 1, high: 2, urgent: 3 }
+  # temperature is now a string column validated against account.temperature_config
+  enum :stage, { pre_sale: 0, sale: 1 }
+
+  # Scopes
+  scope :unassigned, -> { where(assignee_id: nil) }
+  scope :assigned, -> { where.not(assignee_id: nil) }
+  scope :recent, -> { order(last_activity_at: :desc) }
+  scope :with_label, ->(title) { joins(:labels).where(labels: { title: title }).distinct }
+  scope :in_date_range, ->(from, to) { where(last_activity_at: from..to) }
+  scope :by_stage, ->(stage) { where(stage: stage) }
+  scope :unattended, -> { where(first_reply_created_at: nil).or(where.not(waiting_since: nil)) }
+
+  # Callbacks
+  before_validation :ensure_uuid
+  before_validation :set_initial_status, on: :create
+  after_create_commit :broadcast_created
+  after_update_commit :broadcast_updated
+  after_update_commit :broadcast_status_changed, if: :saved_change_to_status?
+
+  # State machine
+  aasm column: :status, enum: true do
+    state :open, initial: true
+    state :resolved
+    state :pending
+    state :snoozed
+
+    event :toggle_status do
+      transitions from: :open, to: :resolved
+      transitions from: :resolved, to: :open
+    end
+
+    event :snooze do
+      transitions from: :open, to: :snoozed
+    end
+
+    event :resolve do
+      transitions to: :resolved
+    end
+
+    event :reopen do
+      transitions to: :open
+    end
+  end
+
+  def last_activity_at
+    self[:last_activity_at] || created_at
+  end
+
+  def last_incoming_message
+    messages.incoming.order(created_at: :asc).last
+  end
+
+  def last_outgoing_message
+    messages.outgoing.order(created_at: :asc).last
+  end
+
+  def unread_messages
+    if agent_last_seen_at.present?
+      messages.incoming.where('created_at > ?', agent_last_seen_at)
+    else
+      messages.incoming
+    end
+  end
+
+  def can_reply?
+    Conversations::MessageWindowService.new(self).can_reply?
+  end
+
+  def webhook_data
+    {
+      id: id,
+      uuid: uuid,
+      status: status,
+      stage: stage,
+      account_id: account_id,
+      inbox_id: inbox_id,
+      contact_id: contact_id,
+      assignee_id: assignee_id,
+      team_id: team_id,
+      ai_agent_enabled: ai_agent_enabled,
+      additional_attributes: additional_attributes,
+      waiting_since: waiting_since&.to_i,
+      first_reply_created_at: first_reply_created_at&.to_i,
+      temperature: temperature
+    }
+  end
+
+  private
+
+  def validate_temperature_key
+    return if temperature.blank?
+
+    valid_keys = account&.valid_temperature_keys || []
+    return if valid_keys.include?(temperature)
+
+    errors.add(:temperature, "'#{temperature}' is not a valid temperature for this account")
+  end
+
+  def ensure_uuid
+    self.uuid ||= SecureRandom.uuid
+  end
+
+  def set_initial_status
+    self.status ||= :open
+    self.last_activity_at ||= Time.current
+    self.waiting_since ||= Time.current
+  end
+
+  def broadcast_created
+    Rails.logger.info "[Event] Conversation #{id} created"
+    broadcast(:conversation_created, data: { conversation: self })
+  end
+
+  def broadcast_updated
+    Rails.logger.info "[Event] Conversation #{id} updated"
+    broadcast(:conversation_updated, data: { conversation: self, changed_attributes: saved_changes })
+  end
+
+  def broadcast_status_changed
+    Rails.logger.info "[Event] Conversation #{id} status changed to #{status}"
+    broadcast(:conversation_status_changed, data: { conversation: self })
+  end
+end

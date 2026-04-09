@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useState, useEffect, useCallback, useRef, memo } from "react"
 import {
   Settings,
   HelpCircle,
@@ -18,12 +19,20 @@ import {
   Key,
   Receipt,
   MessageSquare,
-  Clock,
 } from "lucide-react"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
+import { getConversationCounts } from "@/lib/api-client/messaging"
+import { useMessagingEvent } from "@/components/conversations/messaging-provider"
+import type { ConversationCounts } from "@/lib/types/messaging"
 import Image from "next/image"
 import Link from "next/link"
 import { useAuth } from "@/hooks/use-auth"
+import dynamic from "next/dynamic"
+
+const NotificationSettingsDialog = dynamic(
+  () => import("@/components/notifications/notification-settings-dialog").then(m => ({ default: m.NotificationSettingsDialog })),
+  { ssr: false }
+)
 
 import {
   Sidebar,
@@ -36,6 +45,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -74,8 +86,8 @@ const dataPlatform = [
     icon: Receipt,
   },
   {
-    title: "Conversaciones",
-    url: "/dashboard/conversations",
+    title: "WhatsApp",
+    url: "/dashboard/whatsapp-connect",
     icon: MessageSquare,
   },
   {
@@ -88,17 +100,127 @@ const dataPlatform = [
     url: "/dashboard/agent-customization",
     icon: Bot,
   },
-  {
-    title: "Recordatorios",
-    url: "/dashboard/reminders",
-    icon: Clock,
-    adminOnly: true,
-  },
 ]
+
+const conversationSections = [
+  { label: "Todas", section: null, countKey: "all" as const, badgeClass: "bg-volt text-white" },
+  { label: "Ventas", section: "sale", countKey: "sale" as const, badgeClass: "bg-success text-white" },
+  { label: "No atendidas", section: "unattended", countKey: "unattended" as const, badgeClass: "bg-muted text-muted-foreground" },
+]
+
+const REFETCH_EVENTS = new Set([
+  "message.created",
+  "conversation.created",
+  "conversation.updated",
+  "conversation.status_changed",
+  "conversation.deleted",
+])
+
+// Memoized sub-component: isolates count-fetching state from sidebar re-renders
+const ConversationsNav = memo(function ConversationsNav({ pathname }: { pathname: string }) {
+  const searchParams = useSearchParams()
+  const lastEvent = useMessagingEvent()
+  const [convCounts, setConvCounts] = useState<ConversationCounts | null>(null)
+  const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [isOpen, setIsOpen] = useState(false)
+
+  const isConversationsPage = pathname.startsWith("/dashboard/conversations")
+  const activeSection = searchParams.get("section")
+
+  // Auto-open when navigating to conversations, auto-close when leaving
+  useEffect(() => {
+    setIsOpen(isConversationsPage)
+  }, [isConversationsPage])
+
+  const fetchCounts = useCallback(async () => {
+    try {
+      const result = await getConversationCounts()
+      setConvCounts(result.data)
+    } catch {
+      // silently fail
+    }
+  }, [])
+
+  // Fetch on navigation to conversations page
+  useEffect(() => {
+    if (isConversationsPage) fetchCounts()
+  }, [isConversationsPage, fetchCounts])
+
+  // Refetch counts (debounced) when relevant WS events arrive
+  // NOTE: No cleanup here — cleanup on every re-run would cancel the 800ms
+  // debounce timer when non-matching events (e.g. conversation.read) arrive
+  // right after message.created. Unmount cleanup is handled separately below.
+  useEffect(() => {
+    if (!lastEvent) return
+    if (REFETCH_EVENTS.has(lastEvent.event)) {
+      if (refetchTimer.current) clearTimeout(refetchTimer.current)
+      refetchTimer.current = setTimeout(fetchCounts, 800)
+    }
+  }, [lastEvent, fetchCounts])
+
+  // Cleanup timer on unmount only
+  useEffect(() => {
+    return () => {
+      if (refetchTimer.current) clearTimeout(refetchTimer.current)
+    }
+  }, [])
+
+  return (
+    <Collapsible asChild open={isOpen} onOpenChange={setIsOpen} className="group/collapsible">
+      <SidebarMenuItem className="mb-1">
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton
+            asChild
+            isActive={isConversationsPage}
+            tooltip="Conversaciones"
+            className={`
+                w-full justify-between h-10 px-3 rounded-lg transition-all duration-200
+                ${isConversationsPage
+                  ? "bg-gradient-to-r from-volt/10 to-aqua/5 border-l-2 border-l-volt shadow-sm"
+                  : "hover:bg-muted/60"
+                }
+            `}
+          >
+            <Link href="/dashboard/conversations" className="flex items-center w-full">
+              <MessageSquare className="w-5 h-5 mr-3 shrink-0" />
+              <span className="flex-1 truncate">Conversaciones</span>
+              <ChevronRight className="ml-auto w-4 h-4 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+            </Link>
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {conversationSections.map((sub) => {
+              const isSubActive = isConversationsPage && activeSection === sub.section
+              const count = convCounts ? convCounts[sub.countKey] : 0
+              return (
+                <SidebarMenuSubItem key={sub.label}>
+                  <SidebarMenuSubButton
+                    asChild
+                    isActive={isSubActive}
+                    className="justify-between"
+                  >
+                    <Link href={sub.section ? `/dashboard/conversations?section=${sub.section}` : "/dashboard/conversations"}>
+                      <span>{sub.label}</span>
+                      <span className={`inline-flex items-center justify-center rounded-full text-[10px] font-bold min-w-[20px] h-5 px-1.5 ${sub.badgeClass}`}>
+                        {count}
+                      </span>
+                    </Link>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              )
+            })}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
+  )
+})
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
-  const { user, isUserLoading, isSuperAdmin, isAdmin } = useAuth()
+  const { user, isUserLoading, isSuperAdmin } = useAuth()
+  const [notifDialogOpen, setNotifDialogOpen] = useState(false)
 
   const isActive = (url: string) => {
     if (url === "/dashboard") return pathname === "/dashboard";
@@ -155,7 +277,31 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {dataPlatform.filter((item) => !item.adminOnly || isSuperAdmin || isAdmin).map((item) => (
+              {dataPlatform.slice(0, 4).map((item) => (
+                <SidebarMenuItem key={item.title} className="mb-1">
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.url)}
+                    tooltip={item.title}
+                    className={`
+                        w-full justify-between h-10 px-3 rounded-lg transition-all duration-200
+                        ${isActive(item.url)
+                          ? "bg-gradient-to-r from-volt/10 to-aqua/5 border-l-2 border-l-volt shadow-sm"
+                          : "hover:bg-muted/60"
+                        }
+                    `}
+                  >
+                    <Link href={item.url} className="flex items-center w-full">
+                      <item.icon className="w-5 h-5 mr-3 shrink-0" />
+                      <span className="flex-1 truncate">{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+
+              <ConversationsNav pathname={pathname} />
+
+              {dataPlatform.slice(4).map((item) => (
                 <SidebarMenuItem key={item.title} className="mb-1">
                   <SidebarMenuButton
                     asChild
@@ -258,6 +404,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator className="bg-sidebar-border" />
                 <DropdownMenuItem
+                  onClick={() => setNotifDialogOpen(true)}
+                  className="cursor-pointer"
+                >
+                  <Bell className="mr-2 h-4 w-4" />
+                  Notificaciones
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-sidebar-border" />
+                <DropdownMenuItem
                   onClick={handleLogout}
                   className="text-danger focus:text-danger focus:bg-danger-bg cursor-pointer"
                 >
@@ -266,6 +420,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            {notifDialogOpen ? (
+              <NotificationSettingsDialog
+                open={notifDialogOpen}
+                onOpenChange={setNotifDialogOpen}
+              />
+            ) : null}
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

@@ -258,8 +258,6 @@ def seed_database():
                 role=Role.SUPERADMIN,
                 is_active=True,
                 last_login=datetime.now(),
-                chatwoot_user_id=1,
-                chatwoot_account_id=1,
                 created_at=datetime.now(),
                 updated_at=datetime.now(),
             )
@@ -737,7 +735,65 @@ def seed_database():
         db.add_all(invoice_series)
         db.commit()
         print(f"Created {len(invoice_series)} invoice series")
-        
+
+        # ============ PROVISION MESSAGING SERVICE ============
+        print("\n💬 Provisioning messaging service accounts and users...")
+        try:
+            import httpx
+
+            messaging_url = settings.MESSAGING_SERVICE_URL.rstrip("/")
+            messaging_headers = {"Content-Type": "application/json"}
+
+            # Create accounts for ALL tenants (including platform — SUPERADMIN needs messaging)
+            db_tenants = db.query(Tenant).all()
+            db_users = db.query(User).all()
+
+            # Role mapping: Ventia role → messaging role
+            role_map = {
+                Role.SUPERADMIN: "superadmin",
+                Role.ADMIN: "administrator",
+            }
+
+            for tenant in db_tenants:
+                try:
+                    headers = {**messaging_headers, "X-Tenant-Id": str(tenant.id)}
+                    resp = httpx.post(
+                        f"{messaging_url}/api/v1/accounts",
+                        json={"account": {"name": tenant.name, "ventia_tenant_id": tenant.id}},
+                        headers=headers,
+                        timeout=10,
+                    )
+                    if resp.status_code in (200, 201):
+                        print(f"   ✅ Account for tenant '{tenant.name}' (id={tenant.id})")
+                    else:
+                        print(f"   ⚠️  Account for '{tenant.name}': {resp.status_code} - {resp.text[:100]}")
+                except Exception as e:
+                    print(f"   ❌ Account for '{tenant.name}': {e}")
+
+            for user in db_users:
+                try:
+                    messaging_role = role_map.get(user.role, "agent")
+                    headers = {**messaging_headers, "X-Tenant-Id": str(user.tenant_id)}
+                    resp = httpx.post(
+                        f"{messaging_url}/api/v1/users",
+                        json={
+                            "user": {"ventia_user_id": user.id, "name": user.name, "email": user.email},
+                            "role": messaging_role,
+                        },
+                        headers=headers,
+                        timeout=10,
+                    )
+                    if resp.status_code in (200, 201):
+                        print(f"   ✅ User '{user.name}' synced (tenant={user.tenant_id}, role={messaging_role})")
+                    else:
+                        print(f"   ⚠️  User '{user.name}': {resp.status_code} - {resp.text[:100]}")
+                except Exception as e:
+                    print(f"   ❌ User '{user.name}': {e}")
+
+            print("✅ Messaging provisioning completed")
+        except Exception as e:
+            print(f"⚠️  Messaging provisioning skipped (service may not be running): {e}")
+
         print("\nDatabase seed completed successfully!")
         
     except Exception as e:

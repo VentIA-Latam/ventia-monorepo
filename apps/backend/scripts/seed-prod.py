@@ -80,8 +80,6 @@ def seed_production():
             tenant_id=ventia_tenant.id,
             role=Role.SUPERADMIN,
             is_active=True,
-            chatwoot_user_id=2,  # Assuming Chatwoot user ID 2 exists
-            chatwoot_account_id=1,  # Assuming Chatwoot account ID 1 exists
             last_login=None,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),

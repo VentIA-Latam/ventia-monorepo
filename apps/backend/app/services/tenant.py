@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.models.tenant import Tenant
 from app.repositories.tenant import tenant_repository
+from app.services.messaging_service import messaging_service
 from app.schemas.tenant import TenantCreate, TenantUpdate
 from app.schemas.tenant_settings import (
     EcommerceSettings,
@@ -55,32 +56,14 @@ class TenantService:
         db: Session,
         skip: int = 0,
         limit: int = 100,
+        search: str | None = None,
         is_active: bool | None = None,
+        is_platform: bool | None = None,
     ) -> tuple[list[Tenant], int]:
-        """
-        Get all tenants with pagination.
-
-        Args:
-            db: Database session
-            skip: Number of records to skip
-            limit: Maximum records to return
-            is_active: Filter by active status (None = all)
-
-        Returns:
-            Tuple of (list of tenants, total count)
-        """
-        query = db.query(Tenant)
-
-        # Filter by active status if specified
-        if is_active is not None:
-            query = query.filter(Tenant.is_active == is_active)
-
-        # Get total count before pagination
-        total = query.count()
-
-        # Apply pagination and ordering
-        tenants = query.order_by(Tenant.created_at.desc()).offset(skip).limit(limit).all()
-
+        """Get all tenants with optional filters and pagination."""
+        filter_kwargs = dict(search=search, is_active=is_active, is_platform=is_platform)
+        tenants = tenant_repository.get_all(db, skip=skip, limit=limit, **filter_kwargs)
+        total = tenant_repository.count_all(db, **filter_kwargs)
         return tenants, total
 
     async def create_tenant(self, db: Session, tenant_in: TenantCreate) -> Tenant:
@@ -163,6 +146,19 @@ class TenantService:
                 # Re-raise for other integrity errors
                 raise ValueError(f"Failed to create tenant: {str(e.orig)}") from e
 
+        # Provision messaging account (non-blocking)
+        try:
+            await messaging_service.create_account(
+                tenant_id=tenant.id,
+                account_data={
+                    "name": tenant.name,
+                    "ventia_tenant_id": tenant.id,
+                }
+            )
+            logger.info(f"Provisioned messaging account for tenant {tenant.id}")
+        except Exception as e:
+            logger.warning(f"Failed to provision messaging account for tenant {tenant.id}: {e}")
+
         # Generate initial access token for Shopify if OAuth credentials provided
         if tenant_in.ecommerce_platform == "shopify" and tenant_in.shopify_client_id:
             import logging
@@ -175,9 +171,9 @@ class TenantService:
                 # This will generate and store the first access token
                 await shopify_token_manager.get_valid_access_token(db, tenant)
                 logger.info(f"Generated initial Shopify access token for tenant {tenant.id}")
-            except ValueError as e:
+            except Exception as e:
                 logger.error(
-                    f"Failed to generate initial Shopify token for tenant {tenant.id}: {str(e)}"
+                    f"Failed to generate initial Shopify token for tenant {tenant.id}: {type(e).__name__}: {e}"
                 )
                 # Don't fail tenant creation, token can be regenerated later
 

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "react-day-picker/style.css";
 
 @plugin "tailwindcss-animate";
 
@@ -41,6 +42,7 @@ html {
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -112,6 +114,7 @@ html {
   --accent: oklch(0.93 0.04 230);
   --accent-foreground: oklch(0.33 0.10 255);
   --destructive: oklch(0.55 0.22 27);
+  --destructive-foreground: oklch(1 0 0);
   --border: oklch(0.92 0.01 250);
   --input: oklch(0.92 0.01 250);
   --ring: oklch(0.58 0.19 260);
@@ -150,6 +153,7 @@ html {
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(1 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);

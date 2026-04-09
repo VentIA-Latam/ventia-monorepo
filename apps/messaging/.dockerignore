@@ -1,0 +1,45 @@
+# Git
+.git
+.gitignore
+
+# Logs
+log/*
+tmp/*
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+.bundle/
+
+# Test coverage
+coverage/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+*.md
+README*
+CHANGELOG*
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Storage
+storage/*
+public/uploads/*

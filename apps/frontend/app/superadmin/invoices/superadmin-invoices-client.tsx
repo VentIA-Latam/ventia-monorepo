@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useServerTable } from "@/lib/hooks/use-server-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -27,8 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TenantSelector, type TenantOption } from "@/components/superadmin/tenant-selector";
-import { getInvoicesByTenant } from "@/lib/api-client/superadmin";
+import { useTenant } from "@/lib/context/tenant-context";
 import { formatDate } from "@/lib/utils";
 import type { Invoice } from "@/lib/types/invoice";
 import { INVOICE_TYPE_NAMES, INVOICE_STATUS_NAMES, INVOICE_STATUS_COLORS } from "@/lib/types/invoice";
@@ -51,57 +51,84 @@ import {
 import Link from "next/link";
 
 interface SuperAdminInvoicesClientProps {
-  tenants: TenantOption[];
   initialInvoices: Invoice[];
+  initialTotal: number;
 }
 
 export function SuperAdminInvoicesClient({
-  tenants,
   initialInvoices,
+  initialTotal,
 }: SuperAdminInvoicesClientProps) {
+  const ITEMS_PER_PAGE = 10;
   const { toast } = useToast();
-  const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
-  const [selectedTenant, setSelectedTenant] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { selectedTenantId, tenants } = useTenant();
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
-  const handleTenantChange = useCallback(async (tenantId: number | null) => {
-    setSelectedTenant(tenantId);
-    setCurrentPage(1);
-    setLoading(true);
-    try {
-      const data = await getInvoicesByTenant(tenantId ?? undefined, 100);
-      setInvoices(data.items);
-    } catch (error) {
-      console.error("Error fetching invoices:", error);
-    } finally {
-      setLoading(false);
-    }
+  const fetchInvoicesFromApi = useCallback(async (params: Record<string, string>, signal: AbortSignal) => {
+    const res = await fetch(`/api/invoices?${new URLSearchParams(params)}`, { signal });
+    if (!res.ok) throw new Error("Failed to fetch invoices");
+    return res.json();
   }, []);
 
-  const filteredInvoices = invoices.filter((invoice) => {
-    const matchesSearch =
-      !search ||
-      invoice.full_number.toLowerCase().includes(search.toLowerCase()) ||
-      invoice.cliente_razon_social?.toLowerCase().includes(search.toLowerCase()) ||
-      invoice.cliente_numero_documento?.toLowerCase().includes(search.toLowerCase());
-
-    const matchesType =
-      filterType === "all" || invoice.invoice_type === filterType;
-
-    const matchesStatus =
-      filterStatus === "all" || invoice.efact_status === filterStatus;
-
-    return matchesSearch && matchesType && matchesStatus;
+  const { items: filteredInvoices, total, loading, isStale, fetchData, debouncedFetch } = useServerTable<Invoice>({
+    initialItems: initialInvoices,
+    initialTotal,
+    fetchFn: fetchInvoicesFromApi,
   });
 
-  const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentInvoices = filteredInvoices.slice(startIndex, startIndex + itemsPerPage);
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+
+  const buildParams = useCallback(
+    (overrides: Record<string, string> = {}) => {
+      const p: Record<string, string> = {
+        skip: overrides.skip ?? String((currentPage - 1) * ITEMS_PER_PAGE),
+        limit: overrides.limit ?? String(ITEMS_PER_PAGE),
+      };
+      if (selectedTenantId) p.tenant_id = String(selectedTenantId);
+      const s = overrides.search ?? search;
+      const t = overrides.invoice_type ?? (filterType !== "all" ? filterType : "");
+      const st = overrides.efact_status ?? (filterStatus !== "all" ? filterStatus : "");
+      if (s) p.search = s;
+      if (t) p.invoice_type = t;
+      if (st) p.efact_status = st;
+      return p;
+    },
+    [currentPage, search, filterType, filterStatus, selectedTenantId]
+  );
+
+  const handleSearch = (value: string) => {
+    setSearch(value);
+    setCurrentPage(1);
+    debouncedFetch(buildParams({ search: value, skip: "0" }));
+  };
+
+  const handleFilterType = (value: string) => {
+    setFilterType(value);
+    setCurrentPage(1);
+    fetchData(buildParams({ invoice_type: value !== "all" ? value : "", skip: "0" }));
+  };
+
+  const handleFilterStatus = (value: string) => {
+    setFilterStatus(value);
+    setCurrentPage(1);
+    fetchData(buildParams({ efact_status: value !== "all" ? value : "", skip: "0" }));
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    fetchData(buildParams({ skip: String((newPage - 1) * ITEMS_PER_PAGE) }));
+  };
+
+  const prevTenantId = useRef(selectedTenantId);
+  useEffect(() => {
+    if (prevTenantId.current === selectedTenantId) return;
+    prevTenantId.current = selectedTenantId;
+    setCurrentPage(1);
+    fetchData({ skip: "0", limit: String(ITEMS_PER_PAGE), ...(selectedTenantId ? { tenant_id: String(selectedTenantId) } : {}) });
+  }, [selectedTenantId]);
 
   const tenantMap = new Map(tenants.map((t) => [t.id, t.name]));
 
@@ -138,13 +165,6 @@ export function SuperAdminInvoicesClient({
 
   return (
     <div className="space-y-6">
-      {/* Tenant Selector */}
-      <TenantSelector
-        tenants={tenants}
-        value={selectedTenant}
-        onChange={handleTenantChange}
-      />
-
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1 relative">
@@ -153,14 +173,13 @@ export function SuperAdminInvoicesClient({
             placeholder="Buscar por serie, cliente, RUC/DNI..."
             value={search}
             onChange={(e) => {
-              setSearch(e.target.value);
-              setCurrentPage(1);
+              handleSearch(e.target.value);
             }}
             className="pl-10"
           />
         </div>
 
-        <Select value={filterType} onValueChange={(v) => { setFilterType(v); setCurrentPage(1); }}>
+        <Select value={filterType} onValueChange={handleFilterType}>
           <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Tipo" />
           </SelectTrigger>
@@ -173,7 +192,7 @@ export function SuperAdminInvoicesClient({
           </SelectContent>
         </Select>
 
-        <Select value={filterStatus} onValueChange={(v) => { setFilterStatus(v); setCurrentPage(1); }}>
+        <Select value={filterStatus} onValueChange={handleFilterStatus}>
           <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Estado" />
           </SelectTrigger>
@@ -190,13 +209,14 @@ export function SuperAdminInvoicesClient({
       {/* Results count */}
       <p className="text-sm text-muted-foreground">
         Mostrando <span className="font-semibold">{filteredInvoices.length}</span> comprobantes
-        {selectedTenant && tenantMap.get(selectedTenant) && (
-          <> de <span className="font-semibold">{tenantMap.get(selectedTenant)}</span></>
-        )}
+        {selectedTenantId !== null && tenantMap.has(selectedTenantId) ? (
+          <> de <span className="font-semibold">{tenantMap.get(selectedTenantId)}</span></>
+        ) : null}
       </p>
 
       {/* Table */}
-      {loading ? (
+      <div className={isStale ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
+      {loading && !isStale ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           <span className="ml-2 text-muted-foreground">Cargando comprobantes...</span>
@@ -210,7 +230,7 @@ export function SuperAdminInvoicesClient({
                 <TableHead>Tipo</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Documento</TableHead>
-                {!selectedTenant && <TableHead>Empresa</TableHead>}
+                {selectedTenantId === null ? <TableHead>Empresa</TableHead> : null}
                 <TableHead className="text-right">Monto</TableHead>
                 <TableHead>Fecha</TableHead>
                 <TableHead>Estado</TableHead>
@@ -218,14 +238,14 @@ export function SuperAdminInvoicesClient({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {currentInvoices.length === 0 ? (
+              {filteredInvoices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={selectedTenant ? 8 : 9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={selectedTenantId ? 8 : 9} className="text-center py-8 text-muted-foreground">
                     No se encontraron comprobantes
                   </TableCell>
                 </TableRow>
               ) : (
-                currentInvoices.map((invoice) => (
+                filteredInvoices.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-mono font-medium">
                       {invoice.full_number}
@@ -241,11 +261,11 @@ export function SuperAdminInvoicesClient({
                     <TableCell>
                       {invoice.cliente_numero_documento || <span className="text-muted-foreground">-</span>}
                     </TableCell>
-                    {!selectedTenant && (
+                    {selectedTenantId === null ? (
                       <TableCell className="text-sm text-muted-foreground">
                         {tenantMap.get(invoice.tenant_id) || `Tenant ${invoice.tenant_id}`}
                       </TableCell>
-                    )}
+                    ) : null}
                     <TableCell className="text-right font-medium">
                       {invoice.currency} {invoice.total.toFixed(2)}
                     </TableCell>
@@ -279,7 +299,7 @@ export function SuperAdminInvoicesClient({
                               Ver detalles
                             </DropdownMenuItem>
                           </Link>
-                          {invoice.efact_status === "success" && (
+                          {invoice.efact_status === "success" ? (
                             <>
                               <DropdownMenuItem
                                 onClick={() => handleDownloadPDF(invoice.id, invoice.full_number)}
@@ -294,7 +314,7 @@ export function SuperAdminInvoicesClient({
                                 Descargar XML
                               </DropdownMenuItem>
                             </>
-                          )}
+                          ) : null}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -306,17 +326,19 @@ export function SuperAdminInvoicesClient({
         </div>
       )}
 
+      </div>
+
       {/* Pagination */}
-      {!loading && filteredInvoices.length > itemsPerPage && (
+      {totalPages > 1 ? (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Mostrando {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredInvoices.length)} de {filteredInvoices.length}
+            Página {currentPage} de {totalPages} ({total} resultados)
           </p>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
             >
               <ChevronLeft className="w-4 h-4" />
@@ -338,7 +360,7 @@ export function SuperAdminInvoicesClient({
                   key={pageNum}
                   variant={currentPage === pageNum ? "default" : "outline"}
                   size="icon"
-                  onClick={() => setCurrentPage(pageNum)}
+                  onClick={() => handlePageChange(pageNum)}
                 >
                   {pageNum}
                 </Button>
@@ -348,14 +370,14 @@ export function SuperAdminInvoicesClient({
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
             >
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
