@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Users, CreditCard, MessageSquare, Bot, Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -82,13 +82,9 @@ export function NotificationSettingsDialog({
     }
   }, [fetched]);
 
-  const handleOpenChange = useCallback(
-    (isOpen: boolean) => {
-      if (isOpen) fetchSettings();
-      onOpenChange(isOpen);
-    },
-    [fetchSettings, onOpenChange]
-  );
+  useEffect(() => {
+    if (open) fetchSettings();
+  }, [open, fetchSettings]);
 
   const handleToggle = useCallback(
     async (key: keyof NotificationFlags, checked: boolean) => {
@@ -113,7 +109,7 @@ export function NotificationSettingsDialog({
   );
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Notificaciones push</DialogTitle>
