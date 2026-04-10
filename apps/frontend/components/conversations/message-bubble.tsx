@@ -157,13 +157,13 @@ export const MessageBubble = memo(function MessageBubble({
   return (
     <div
       className={cn(
-        "max-w-[min(65%,500px)]",
-        isOutgoing ? "ml-auto" : "mr-auto"
+        "flex max-w-[min(65%,500px)]",
+        isOutgoing ? "ml-auto justify-end" : "mr-auto"
       )}
     >
       <div
         className={cn(
-          "relative rounded-lg px-3 py-1.5 text-sm shadow-sm overflow-hidden",
+          "relative rounded-lg px-3 py-1.5 text-sm shadow-sm overflow-hidden min-w-0",
           isOutgoing
             ? "bg-cielo rounded-tr-[4px]"
             : "bg-card rounded-tl-[4px]"
