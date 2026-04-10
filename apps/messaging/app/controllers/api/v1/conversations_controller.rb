@@ -26,6 +26,9 @@ class Api::V1::ConversationsController < Api::V1::BaseController
     # Filter by temperature
     conversations = conversations.where(temperature: params[:temperature]) if params[:temperature].present?
 
+    # Filter by AI agent enabled status
+    conversations = conversations.where(ai_agent_enabled: ActiveModel::Type::Boolean.new.cast(params[:ai_agent_enabled])) if params[:ai_agent_enabled].present?
+
     # Filter by date range (last_activity_at)
     if params[:created_after].present? || params[:created_before].present?
       from = params[:created_after].present? ? Time.parse(params[:created_after]) : Time.at(0)
