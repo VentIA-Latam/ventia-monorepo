@@ -112,8 +112,19 @@ export interface CtaUrlData {
   display_text: string;
 }
 
+export interface ReferralData {
+  source_url?: string;
+  source_type?: string;
+  source_id?: string;
+  headline?: string;
+  body?: string;
+  media_type?: string;
+  image_url?: string;
+}
+
 export interface MessageContentAttributes {
   cta_url?: CtaUrlData;
+  referral?: ReferralData;
   items?: Array<{ title: string; value: string }>;
   contacts?: unknown[];
   in_reply_to?: string;

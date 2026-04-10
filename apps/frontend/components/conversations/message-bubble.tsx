@@ -7,7 +7,8 @@ import { FileDown, Check, CheckCheck, AlertCircle, X, Download, ExternalLink } f
 import type { MessageStatus } from "@/lib/types/messaging";
 import { LocationBubble } from "./location-bubble";
 import { ContactBubble } from "./contact-bubble";
-import type { Message, AttachmentBrief, CtaUrlData } from "@/lib/types/messaging";
+import type { Message, AttachmentBrief, CtaUrlData, ReferralData } from "@/lib/types/messaging";
+import { ReferralBubble } from "./referral-bubble";
 import { formatTime } from "@/lib/utils/messaging";
 import dynamic from "next/dynamic";
 
@@ -168,6 +169,11 @@ export const MessageBubble = memo(function MessageBubble({
             : "bg-card rounded-tl-[4px]"
         )}
       >
+        {/* Referral preview for incoming messages from ads */}
+        {!isOutgoing && message.content_attributes?.referral ? (
+          <ReferralBubble referral={message.content_attributes.referral} />
+        ) : null}
+
         {/* Sender name for incoming */}
         {!isOutgoing && message.sender && "name" in message.sender && (
           <p className="text-xs font-medium text-primary/80 mb-0.5">
