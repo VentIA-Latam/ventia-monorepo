@@ -22,7 +22,7 @@ export function ReferralBubble({ referral }: { referral: ReferralData }) {
       target="_blank"
       rel="noopener noreferrer"
       title={referral.source_url || "Ver anuncio"}
-      className="block -mx-3 -mt-1.5 mb-1.5 cursor-pointer hover:opacity-95 transition-opacity"
+      className="block -mx-3 -mt-1.5 mb-1.5 max-w-[calc(100%+24px)] cursor-pointer hover:opacity-95 transition-opacity"
     >
       <div className="bg-muted/40 overflow-hidden">
         {referral.image_url ? (
@@ -41,7 +41,7 @@ export function ReferralBubble({ referral }: { referral: ReferralData }) {
               </p>
             ) : null}
             {referral.body ? (
-              <p className="text-[12px] text-muted-foreground leading-snug line-clamp-3">
+              <p className="text-[12px] text-muted-foreground leading-snug line-clamp-2">
                 {referral.body}
               </p>
             ) : null}
