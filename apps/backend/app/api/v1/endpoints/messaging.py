@@ -990,13 +990,8 @@ async def register_push_token(
 ):
     """Register an FCM push subscription token for the current user."""
     tenant_id = _resolve_tenant_id(current_user, tenant_id)
-
-    # Resolve Rails user_id (backend user.id != messaging user.id)
-    ws_data = await messaging_service.get_user_token(tenant_id, current_user.id)
-    rails_user_id = ws_data["user_id"] if ws_data else str(current_user.id)
-
     result = await messaging_service.register_push_token(
-        tenant_id, rails_user_id, payload.model_dump(exclude_none=True)
+        tenant_id, str(current_user.id), payload.model_dump(exclude_none=True)
     )
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")
@@ -1016,13 +1011,8 @@ async def delete_push_token(
 ):
     """Remove an FCM push subscription token."""
     tenant_id = _resolve_tenant_id(current_user, tenant_id)
-
-    # Resolve Rails user_id (backend user.id != messaging user.id)
-    ws_data = await messaging_service.get_user_token(tenant_id, current_user.id)
-    rails_user_id = ws_data["user_id"] if ws_data else str(current_user.id)
-
     result = await messaging_service.delete_push_token(
-        tenant_id, rails_user_id, payload.token
+        tenant_id, str(current_user.id), payload.token
     )
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")
