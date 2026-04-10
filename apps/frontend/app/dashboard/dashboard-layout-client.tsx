@@ -5,6 +5,7 @@ import { AppSidebar } from "@/components/dashboard/app-sidebar"
 import { Separator } from "@/components/ui/separator"
 import { MessagingProvider } from "@/components/conversations/messaging-provider"
 import { usePathname } from "next/navigation"
+import { useAuth } from "@/hooks/use-auth"
 import { ChevronRight, Home } from "lucide-react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
@@ -56,9 +57,10 @@ export default function DashboardLayoutClient({
 }) {
   const pathname = usePathname();
   const { title, breadcrumb } = getPageMeta(pathname);
+  const { userDetails } = useAuth();
 
   return (
-    <MessagingProvider>
+    <MessagingProvider tenantId={userDetails?.tenant_id ?? undefined}>
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset className="min-w-0">
