@@ -19,6 +19,7 @@ import {
   Key,
   Receipt,
   MessageSquare,
+  Clock,
 } from "lucide-react"
 import { usePathname, useSearchParams } from "next/navigation"
 import { getConversationCounts } from "@/lib/api-client/messaging"
@@ -99,6 +100,11 @@ const dataPlatform = [
     title: "Personalización",
     url: "/dashboard/agent-customization",
     icon: Bot,
+  },
+  {
+    title: "Recordatorios",
+    url: "/dashboard/reminders",
+    icon: Clock,
   },
 ]
 
