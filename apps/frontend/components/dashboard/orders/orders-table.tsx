@@ -167,32 +167,31 @@ export function OrdersTable({ orders, basePath = '/dashboard', onCancelled }: Or
 
   return (
     <div className="border rounded-lg bg-card shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
-        <Table>
+      <Table className="table-fixed">
           <TableHeader>
             <TableRow className="bg-muted/50 border-b border-border">
-              <TableHead className="min-w-[120px]">
+              <TableHead className="w-[120px]">
                 ID DRAFT
               </TableHead>
-              <TableHead className="min-w-[120px]">
+              <TableHead className="w-[140px]">
                 ID ORDEN
               </TableHead>
-              <TableHead className="min-w-[200px]">
+              <TableHead className="w-[220px]">
                 CLIENTE
               </TableHead>
-              <TableHead className="min-w-[60px] w-[100px]">
+              <TableHead className="w-[100px]">
                 CANAL
               </TableHead>
-              <TableHead className="min-w-[120px]">
+              <TableHead className="w-[120px]">
                 ESTADO PAGO
               </TableHead>
-              <TableHead className="min-w-[120px]">
+              <TableHead className="w-[120px]">
                 FACTURACIÓN
               </TableHead>
-              <TableHead className="text-right min-w-[100px]">
+              <TableHead className="text-right w-[100px]">
                 MONTO
               </TableHead>
-              <TableHead className="text-center min-w-[120px]">
+              <TableHead className="text-center w-[100px]">
                 ACCIONES
               </TableHead>
             </TableRow>
@@ -204,7 +203,7 @@ export function OrdersTable({ orders, basePath = '/dashboard', onCancelled }: Or
                 className="hover:bg-cielo/20 cursor-pointer transition-all duration-200 border-b border-border last:border-0 border-l-2 border-l-transparent hover:border-l-volt"
                 onClick={() => handleOrderClick(order.id)}
               >
-                <TableCell className="min-w-[120px]">
+                <TableCell>
                   <div>
                     <div className="font-semibold text-volt hover:underline cursor-pointer text-sm">
                       {getEcommerceOrderId({
@@ -217,10 +216,10 @@ export function OrdersTable({ orders, basePath = '/dashboard', onCancelled }: Or
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="min-w-[120px]">
+                <TableCell>
                   {order.shopify_order_id ? (
                     <div>
-                      <div className="font-semibold text-success text-sm">
+                      <div className="font-semibold text-success text-sm truncate">
                         {extractShopifyOrderId(order.shopify_order_id)}
                       </div>
                       {order.validated_at && (
@@ -233,25 +232,28 @@ export function OrdersTable({ orders, basePath = '/dashboard', onCancelled }: Or
                     <span className="text-xs text-muted-foreground italic">Pendiente</span>
                   )}
                 </TableCell>
-                <TableCell className="min-w-[200px]">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold text-xs sm:text-sm ${getAvatarColor(order.customer_name || 'Sin nombre')}`}>
+                <TableCell>
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold text-xs sm:text-sm shrink-0 ${getAvatarColor(order.customer_name || 'Sin nombre')}`}>
                       {(order.customer_name || 'SN').substring(0, 2).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="font-medium text-sm text-foreground truncate">
                         {order.customer_name || 'Sin nombre'}
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5 truncate">
+                      <div
+                        className="text-xs text-muted-foreground mt-0.5 truncate"
+                        title={order.customer_email || undefined}
+                      >
                         {order.customer_email}
                       </div>
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="min-w-[120px]">
+                <TableCell>
                   <ChannelBadge channel={order.channel} />
                 </TableCell>
-                <TableCell className="min-w-[120px]">
+                <TableCell>
                   <Badge
                     variant="outline"
                     className={cn(
@@ -262,13 +264,13 @@ export function OrdersTable({ orders, basePath = '/dashboard', onCancelled }: Or
                     {order.status}
                   </Badge>
                 </TableCell>
-                <TableCell className="min-w-[120px]">
+                <TableCell>
                   <InvoiceBadge invoices={order.invoices} />
                 </TableCell>
-                <TableCell className="text-right font-semibold text-sm text-foreground font-mono tabular-nums min-w-[100px]">
+                <TableCell className="text-right font-semibold text-sm text-foreground font-mono tabular-nums">
                   {getCurrencySymbol(order.currency)}{order.total_price.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </TableCell>
-                <TableCell className="text-center min-w-[80px]">
+                <TableCell className="text-center">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -322,7 +324,6 @@ export function OrdersTable({ orders, basePath = '/dashboard', onCancelled }: Or
             ))}
           </TableBody>
         </Table>
-      </div>
     </div>
   );
 }
