@@ -222,6 +222,7 @@ async def list_conversations(
     created_before: str | None = Query(None, description="Filter by date (ISO) to"),
     unread: str | None = Query(None, description="Filter unread only: true"),
     ai_agent_enabled: bool | None = Query(None, description="Filter by AI agent status: true/false"),
+    search: str | None = Query(None, description="Search by contact name, phone or email"),
     tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):
@@ -247,6 +248,8 @@ async def list_conversations(
         params["unread"] = unread
     if ai_agent_enabled is not None:
         params["ai_agent_enabled"] = str(ai_agent_enabled).lower()
+    if search:
+        params["search"] = search
 
     result = await messaging_service.get_conversations(tenant_id, params or None)
     if result is None:

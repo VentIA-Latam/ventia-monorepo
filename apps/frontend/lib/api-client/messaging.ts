@@ -28,11 +28,15 @@ export interface ConversationFilters {
   created_after?: string;
   created_before?: string;
   unread?: string;
+  search?: string;
   tenant_id?: number;
 }
 
-export async function getConversations(params?: ConversationFilters): Promise<ConversationListResponse> {
-  return apiGet("/api/messaging/conversations", params as Record<string, string | number>);
+export async function getConversations(
+  params?: ConversationFilters,
+  signal?: AbortSignal,
+): Promise<ConversationListResponse> {
+  return apiGet("/api/messaging/conversations", params as Record<string, string | number>, { signal });
 }
 
 export async function getConversation(id: number | string, tenantId?: number): Promise<Conversation> {

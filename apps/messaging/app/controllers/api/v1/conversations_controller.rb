@@ -29,6 +29,17 @@ class Api::V1::ConversationsController < Api::V1::BaseController
     # Filter by AI agent enabled status
     conversations = conversations.where(ai_agent_enabled: ActiveModel::Type::Boolean.new.cast(params[:ai_agent_enabled])) if params[:ai_agent_enabled].present?
 
+    # Search by contact name, phone number or email
+    # Use references(:contact) instead of joins(:contact) so it works with the
+    # existing eager-loaded :contact (avoids INNER JOIN duplication).
+    if params[:search].present?
+      term = "%#{ActiveRecord::Base.sanitize_sql_like(params[:search])}%"
+      conversations = conversations.references(:contact).where(
+        'contacts.name ILIKE :q OR contacts.phone_number ILIKE :q OR contacts.email ILIKE :q',
+        q: term
+      )
+    end
+
     # Filter by date range (last_activity_at)
     if params[:created_after].present? || params[:created_before].present?
       from = params[:created_after].present? ? Time.parse(params[:created_after]) : Time.at(0)

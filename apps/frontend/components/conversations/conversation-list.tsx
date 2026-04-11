@@ -60,11 +60,13 @@ export function ConversationList({
   sectionFilterRef.current = sectionFilter;
   const activeFiltersRef = useRef(activeFilters);
   activeFiltersRef.current = activeFilters;
+  const searchQueryRef = useRef(searchQuery);
+  searchQueryRef.current = searchQuery;
   const conversationsRef = useRef(conversations);
   conversationsRef.current = conversations;
 
   const buildParams = useCallback(
-    (section: SectionValue, filters: ActiveFilters): ConversationFilterParams => {
+    (section: SectionValue, filters: ActiveFilters, search?: string): ConversationFilterParams => {
       const params: ConversationFilterParams = {};
       if (tenantId) params.tenant_id = tenantId;
       if (section === "sale") params.stage = "sale";
@@ -76,28 +78,56 @@ export function ConversationList({
         params.created_before = filters.dateRange.to;
       }
       if (filters.unread) params.unread = "true";
+      const trimmed = search?.trim();
+      if (trimmed) params.search = trimmed;
       return params;
     },
     [tenantId]
   );
 
+  const searchAbortRef = useRef<AbortController | null>(null);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const fetchConversations = useCallback(
-    async (params: ConversationFilterParams) => {
+    async (params: ConversationFilterParams, signal?: AbortSignal) => {
       setLoading(true);
       currentPageRef.current = 1;
       hasMoreRef.current = true;
       try {
-        const data = await getConversations({ ...params, page: 1 });
+        const data = await getConversations({ ...params, page: 1 }, signal);
         onConversationsChange(data.data ?? []);
         hasMoreRef.current = data.meta?.next_page != null;
       } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
         console.error("Error fetching conversations:", error);
       } finally {
-        setLoading(false);
+        if (!signal?.aborted) setLoading(false);
       }
     },
     [onConversationsChange]
   );
+
+  const debouncedSearch = useCallback(
+    (search: string) => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = setTimeout(() => {
+        searchAbortRef.current?.abort();
+        const controller = new AbortController();
+        searchAbortRef.current = controller;
+        const params = buildParams(sectionFilterRef.current, activeFiltersRef.current, search);
+        fetchConversations(params, controller.signal);
+      }, 300);
+    },
+    [buildParams, fetchConversations]
+  );
+
+  // Cleanup pending debounce/abort on unmount
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+      searchAbortRef.current?.abort();
+    };
+  }, []);
 
   // Load more conversations on scroll (rerender-move-effect-to-event)
   const loadMoreConversations = useCallback(() => {
@@ -107,7 +137,7 @@ export function ConversationList({
     loadingMoreRef.current = true;
     setLoadingMore(true);
     const nextPage = currentPageRef.current + 1;
-    const params = buildParams(sectionFilterRef.current, activeFiltersRef.current);
+    const params = buildParams(sectionFilterRef.current, activeFiltersRef.current, searchQueryRef.current);
 
     getConversations({ ...params, page: nextPage })
       .then((data) => {
@@ -130,7 +160,7 @@ export function ConversationList({
   const handleFiltersChange = useCallback(
     (filters: ActiveFilters) => {
       setActiveFilters(filters);
-      fetchConversations(buildParams(sectionFilterRef.current, filters));
+      fetchConversations(buildParams(sectionFilterRef.current, filters, searchQueryRef.current));
     },
     [fetchConversations, buildParams]
   );
@@ -250,17 +280,6 @@ export function ConversationList({
     return () => el.removeEventListener("scroll", handleScroll);
   }, [loadMoreConversations]);
 
-  const filteredConversations = searchQuery
-    ? conversations.filter((c) => {
-        const query = searchQuery.toLowerCase();
-        return (
-          c.contact?.name?.toLowerCase().includes(query) ||
-          c.contact?.phone_number?.toLowerCase().includes(query) ||
-          c.contact?.email?.toLowerCase().includes(query)
-        );
-      })
-    : conversations;
-
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
@@ -275,7 +294,11 @@ export function ConversationList({
           <Input
             placeholder="Buscar o iniciar chat"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearchQuery(value);
+              debouncedSearch(value);
+            }}
             className="pl-9 h-9 text-sm rounded-full bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/30"
           />
         </div>
@@ -306,7 +329,7 @@ export function ConversationList({
               </div>
             ))}
           </div>
-        ) : filteredConversations.length === 0 ? (
+        ) : conversations.length === 0 ? (
           <EmptyState
             icon={<MessageSquare className="h-6 w-6" />}
             title="Sin conversaciones"
@@ -322,7 +345,7 @@ export function ConversationList({
           />
         ) : (
           <>
-            {filteredConversations.map((conversation) => (
+            {conversations.map((conversation) => (
               <div key={conversation.id} style={{ contentVisibility: "auto", containIntrinsicSize: "auto 72px" }}>
                 <ConversationItem
                   conversation={conversation}

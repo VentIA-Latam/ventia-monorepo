@@ -59,7 +59,8 @@ export async function apiRequest<T>(
  */
 export async function apiGet<T>(
   url: string,
-  params?: Record<string, string | number | boolean>
+  params?: Record<string, string | number | boolean>,
+  options?: { signal?: AbortSignal }
 ): Promise<T> {
   const queryParams = new URLSearchParams();
 
@@ -70,7 +71,7 @@ export async function apiGet<T>(
   }
 
   const fullUrl = params ? `${url}?${queryParams}` : url;
-  return apiRequest<T>(fullUrl, { method: 'GET' });
+  return apiRequest<T>(fullUrl, { method: 'GET', signal: options?.signal });
 }
 
 /**
