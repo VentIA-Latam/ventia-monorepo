@@ -153,6 +153,7 @@ export const MessageBubble = memo(function MessageBubble({
   }
 
   const time = formatTime(message.created_at);
+  const hasReferral = !isOutgoing && !!message.content_attributes?.referral;
 
   return (
     <div
@@ -164,6 +165,7 @@ export const MessageBubble = memo(function MessageBubble({
       <div
         className={cn(
           "relative rounded-lg px-3 py-1.5 text-sm shadow-sm overflow-hidden min-w-0",
+          hasReferral && "w-[280px]",
           isOutgoing
             ? "bg-cielo rounded-tr-[4px]"
             : "bg-card rounded-tl-[4px]"
