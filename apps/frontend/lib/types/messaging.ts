@@ -5,6 +5,7 @@ export interface ContactBrief {
   name: string | null;
   phone_number: string | null;
   email: string | null;
+  last_activity_at?: string | null;
 }
 
 export interface AgentBrief {
