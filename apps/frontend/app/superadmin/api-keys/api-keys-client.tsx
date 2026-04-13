@@ -87,14 +87,16 @@ export function ApiKeysClient({ initialApiKeys, initialTotal }: ApiKeysClientPro
     fetchData(buildParams({ skip: String((newPage - 1) * ITEMS_PER_PAGE) }));
   };
 
-  // Tenant change — reset to page 1
+  // Tenant change — reset filters and refetch
   const prevTenantId = useRef(selectedTenantId);
   useEffect(() => {
     if (prevTenantId.current === selectedTenantId) return;
     prevTenantId.current = selectedTenantId;
+    setSearchTerm("");
+    setStatusFilter("all");
     setCurrentPage(1);
     fetchData({ skip: "0", limit: String(ITEMS_PER_PAGE), ...(selectedTenantId ? { tenant_id: String(selectedTenantId) } : {}) });
-  }, [selectedTenantId]);
+  }, [selectedTenantId, fetchData]);
 
   const refreshApiKeys = () => fetchData(buildParams());
 

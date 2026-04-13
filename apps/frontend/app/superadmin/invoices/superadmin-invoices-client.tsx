@@ -126,9 +126,12 @@ export function SuperAdminInvoicesClient({
   useEffect(() => {
     if (prevTenantId.current === selectedTenantId) return;
     prevTenantId.current = selectedTenantId;
+    setSearch("");
+    setFilterType("all");
+    setFilterStatus("all");
     setCurrentPage(1);
     fetchData({ skip: "0", limit: String(ITEMS_PER_PAGE), ...(selectedTenantId ? { tenant_id: String(selectedTenantId) } : {}) });
-  }, [selectedTenantId]);
+  }, [selectedTenantId, fetchData]);
 
   const tenantMap = new Map(tenants.map((t) => [t.id, t.name]));
 

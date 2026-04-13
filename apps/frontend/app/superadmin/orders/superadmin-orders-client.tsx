@@ -93,14 +93,17 @@ export function SuperAdminOrdersClient({
     fetchData(buildParams({ skip: String((newPage - 1) * ITEMS_PER_PAGE) }));
   };
 
-  // Tenant change — only useEffect (comes from context, not a click)
+  // Tenant change — reset filters and refetch
   const prevTenantId = useRef(selectedTenantId);
   useEffect(() => {
     if (prevTenantId.current === selectedTenantId) return;
     prevTenantId.current = selectedTenantId;
+    setSearch("");
+    setPaymentStatus("all");
+    setChannel("all");
     setCurrentPage(1);
     fetchData({ skip: "0", limit: String(ITEMS_PER_PAGE), ...(selectedTenantId ? { tenant_id: String(selectedTenantId) } : {}) });
-  }, [selectedTenantId]);
+  }, [selectedTenantId, fetchData]);
 
   // Build tenant name map for display
   const tenantMap = new Map(tenants.map((t) => [t.id, t.name]));

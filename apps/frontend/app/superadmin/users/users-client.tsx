@@ -106,9 +106,12 @@ export function UsersClient({ initialUsers, initialTotal, tenants }: { initialUs
   useEffect(() => {
     if (prevTenantId.current === selectedTenantId) return;
     prevTenantId.current = selectedTenantId;
+    setSearch("");
+    setRoleFilter("all");
+    setStatusFilter("all");
     setCurrentPage(1);
     fetchData({ skip: "0", limit: String(ITEMS_PER_PAGE), ...(selectedTenantId ? { tenant_id: String(selectedTenantId) } : {}) });
-  }, [selectedTenantId]);
+  }, [selectedTenantId, fetchData]);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [toggleStatusDialogOpen, setToggleStatusDialogOpen] = useState(false);
