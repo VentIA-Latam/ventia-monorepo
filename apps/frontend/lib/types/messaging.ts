@@ -129,6 +129,10 @@ export interface MessageContentAttributes {
   items?: Array<{ title: string; value: string }>;
   contacts?: unknown[];
   in_reply_to?: string;
+  is_unavailable?: boolean;
+  unavailable_reason?: string;
+  automated?: boolean;
+  automated_reason?: string;
 }
 
 export type MessageStatus = "sent" | "delivered" | "read" | "failed";

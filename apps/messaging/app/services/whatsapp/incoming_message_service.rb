@@ -1,5 +1,6 @@
 class Whatsapp::IncomingMessageService
   include Whatsapp::IncomingMessageServiceHelpers
+  include Whatsapp::ContactResolution
 
   def initialize(inbox:, params:, outgoing_echo: false)
     @inbox = inbox
@@ -83,11 +84,30 @@ class Whatsapp::IncomingMessageService
 
   def process_messages
     messages_data.each do |message_data|
+      if unavailable_message?(message_data)
+        Whatsapp::UnavailableMessageHandler.new(
+          inbox: @inbox,
+          message_data: message_data,
+          contacts_data: contacts_data
+        ).perform
+        next
+      end
+
       next if error_webhook_event?(message_data)
       next if unprocessable_message_type?(message_data['type'] || message_data[:type])
 
       process_single_message(message_data)
     end
+  end
+
+  def unavailable_message?(message_data)
+    type = message_data['type'] || message_data[:type]
+    errors = message_data['errors'] || message_data[:errors]
+    return false unless type == 'unsupported'
+    return false unless errors.is_a?(Array)
+
+    code = errors.first&.dig('code') || errors.first&.dig(:code)
+    code == 131_060
   end
 
   def process_single_message(message_data)
@@ -130,43 +150,6 @@ class Whatsapp::IncomingMessageService
     contacts_data.find do |c|
       (c['wa_id'] || c[:wa_id]) == wa_id
     end || {}
-  end
-
-  def find_or_create_contact(phone, contact_info)
-    name = contact_info.dig('profile', 'name') || contact_info.dig(:profile, :name) || phone
-
-    Contact.find_or_create_by!(
-      account: @inbox.account,
-      phone_number: "+#{phone}"
-    ) do |contact|
-      contact.name = name
-    end
-  end
-
-  def find_or_create_contact_inbox(contact, source_id)
-    ContactInbox.find_or_create_by!(
-      contact: contact,
-      inbox: @inbox,
-      source_id: source_id
-    )
-  end
-
-  def find_or_create_conversation(contact, contact_inbox)
-    conversation = if @inbox.lock_to_single_conversation
-                     contact_inbox.conversations.where(inbox: @inbox).last
-                   else
-                     contact.conversations
-                            .where(inbox: @inbox, status: [:open, :pending])
-                            .first
-                   end
-
-    conversation || Conversation.create!(
-      account: @inbox.account,
-      inbox: @inbox,
-      contact: contact,
-      contact_inbox: contact_inbox,
-      status: :open
-    )
   end
 
   # --- Message creation ---

@@ -153,6 +153,32 @@ export const MessageBubble = memo(function MessageBubble({
   }
 
   const time = formatTime(message.created_at);
+  const isUnavailable = !isOutgoing && message.content_attributes?.is_unavailable === true;
+
+  if (isUnavailable) {
+    return (
+      <div className="flex max-w-[min(65%,500px)] mr-auto">
+        <div className="relative rounded-lg rounded-tl-[4px] px-3 py-2 text-sm shadow-sm bg-card/60 border border-dashed border-border/60 min-w-0">
+          {message.content_attributes?.referral ? (
+            <ReferralBubble referral={message.content_attributes.referral} />
+          ) : null}
+
+          <div className="flex items-center gap-2 text-muted-foreground italic">
+            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+            <span className="text-[13px]">
+              Mensaje no disponible
+              <span className="inline-block w-[70px]" />
+            </span>
+          </div>
+
+          <span className="absolute bottom-1 right-2 text-[11px] text-muted-foreground/50">
+            {time}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   const hasReferral = !isOutgoing && !!message.content_attributes?.referral;
 
   return (
@@ -310,6 +336,12 @@ export const MessageBubble = memo(function MessageBubble({
           alt="Imagen ampliada"
           onClose={closeLightbox}
         />
+      )}
+
+      {isOutgoing && message.content_attributes?.automated && (
+        <span className="block w-full text-[10px] text-muted-foreground/70 mt-0.5 text-right pr-1 italic">
+          Mensaje automático
+        </span>
       )}
     </div>
   );
