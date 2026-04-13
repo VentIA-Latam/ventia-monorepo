@@ -98,12 +98,15 @@ export function InvoiceSeriesClientView({ initialSeries, initialTotal }: Invoice
   };
 
   // Tenant change — reset filters and refetch
-  const prevTenantId = useRef(selectedTenantId);
+  const prevTenantId = useRef<number | null | undefined>(undefined);
   useEffect(() => {
     if (prevTenantId.current === selectedTenantId) return;
+    const isMount = prevTenantId.current === undefined;
     prevTenantId.current = selectedTenantId;
-    setSearch("");
-    setStatusFilter("all");
+    if (!isMount) {
+      setSearch("");
+      setStatusFilter("all");
+    }
     setCurrentPage(1);
     fetchData({ skip: "0", limit: String(ITEMS_PER_PAGE), ...(selectedTenantId ? { tenant_id: String(selectedTenantId) } : {}) });
   }, [selectedTenantId, fetchData]);

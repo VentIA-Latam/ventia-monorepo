@@ -122,13 +122,16 @@ export function SuperAdminInvoicesClient({
     fetchData(buildParams({ skip: String((newPage - 1) * ITEMS_PER_PAGE) }));
   };
 
-  const prevTenantId = useRef(selectedTenantId);
+  const prevTenantId = useRef<number | null | undefined>(undefined);
   useEffect(() => {
     if (prevTenantId.current === selectedTenantId) return;
+    const isMount = prevTenantId.current === undefined;
     prevTenantId.current = selectedTenantId;
-    setSearch("");
-    setFilterType("all");
-    setFilterStatus("all");
+    if (!isMount) {
+      setSearch("");
+      setFilterType("all");
+      setFilterStatus("all");
+    }
     setCurrentPage(1);
     fetchData({ skip: "0", limit: String(ITEMS_PER_PAGE), ...(selectedTenantId ? { tenant_id: String(selectedTenantId) } : {}) });
   }, [selectedTenantId, fetchData]);

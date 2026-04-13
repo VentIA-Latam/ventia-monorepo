@@ -94,13 +94,16 @@ export function SuperAdminOrdersClient({
   };
 
   // Tenant change — reset filters and refetch
-  const prevTenantId = useRef(selectedTenantId);
+  const prevTenantId = useRef<number | null | undefined>(undefined);
   useEffect(() => {
     if (prevTenantId.current === selectedTenantId) return;
+    const isMount = prevTenantId.current === undefined;
     prevTenantId.current = selectedTenantId;
-    setSearch("");
-    setPaymentStatus("all");
-    setChannel("all");
+    if (!isMount) {
+      setSearch("");
+      setPaymentStatus("all");
+      setChannel("all");
+    }
     setCurrentPage(1);
     fetchData({ skip: "0", limit: String(ITEMS_PER_PAGE), ...(selectedTenantId ? { tenant_id: String(selectedTenantId) } : {}) });
   }, [selectedTenantId, fetchData]);
