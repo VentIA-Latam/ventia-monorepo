@@ -184,7 +184,7 @@ export function ConversationList({
   const debouncedRefetch = useCallback(() => {
     if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
     refetchTimerRef.current = setTimeout(() => {
-      const params = buildParams(sectionFilterRef.current, activeFiltersRef.current);
+      const params = buildParams(sectionFilterRef.current, activeFiltersRef.current, searchQueryRef.current);
       currentPageRef.current = 1;
       getConversations({ ...params, page: 1 })
         .then((data) => {
