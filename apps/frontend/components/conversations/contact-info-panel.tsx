@@ -1,14 +1,20 @@
 "use client";
 
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useState, useTransition } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Phone, Mail, X, RotateCcw } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Phone, Mail, X, ChevronDown, Check } from "lucide-react";
 import { TemperatureSelector } from "./temperature-selector";
 import { LabelManager } from "./label-manager";
-import { updateConversation } from "@/lib/api-client/messaging";
+import { updateConversation, updateConversationStage } from "@/lib/api-client/messaging";
 import type { Conversation, Label, ConversationTemperature, TemperatureDefinition } from "@/lib/types/messaging";
 import { getInitials } from "@/lib/utils/messaging";
 
@@ -38,19 +44,18 @@ export const ContactInfoPanel = memo(function ContactInfoPanel({
 }: ContactInfoPanelProps) {
   const contact = conversation.contact;
   const stageConf = stageConfig[conversation.stage] ?? stageConfig.pre_sale;
-  const isSale = conversation.stage === "sale";
-  const [resettingStage, setResettingStage] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  const handleResetStage = useCallback(async () => {
-    setResettingStage(true);
-    try {
-      await updateConversation(conversation.id, { stage: "pre_sale" }, tenantId);
-      onConversationUpdate?.({ ...conversation, stage: "pre_sale" });
-    } catch (err) {
-      console.error("Error resetting stage:", err);
-    } finally {
-      setResettingStage(false);
-    }
+  const handleStageChange = useCallback((stage: "pre_sale" | "sale") => {
+    if (stage === conversation.stage) return;
+    startTransition(async () => {
+      try {
+        await updateConversationStage(conversation.id, stage, tenantId);
+        onConversationUpdate?.({ ...conversation, stage });
+      } catch (err) {
+        console.error("Error updating stage:", err);
+      }
+    });
   }, [conversation, tenantId, onConversationUpdate]);
 
   return (
@@ -76,19 +81,26 @@ export const ContactInfoPanel = memo(function ContactInfoPanel({
           <p className="font-medium">
             {contact?.name || "Sin nombre"}
           </p>
-          <Badge variant="outline" className={`mt-2 ${stageConf.className}`}>
-            {stageConf.label}
-          </Badge>
-          {isSale && (
-            <button
-              onClick={handleResetStage}
-              disabled={resettingStage}
-              className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-muted-foreground/70 hover:text-primary px-2.5 py-1 rounded-md hover:bg-primary/5 transition-colors disabled:opacity-50"
-            >
-              <RotateCcw className="h-3 w-3" />
-              {resettingStage ? "Volviendo..." : "Volver a pre-venta"}
-            </button>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild disabled={isPending}>
+              <button className={`mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium transition-colors hover:opacity-80 disabled:opacity-50 ${stageConf.className}`}>
+                {isPending ? "Cambiando..." : stageConf.label}
+                <ChevronDown className="h-3 w-3" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" className="w-36">
+              {(Object.entries(stageConfig) as [string, { label: string; className: string }][]).map(([key, conf]) => (
+                <DropdownMenuItem
+                  key={key}
+                  onClick={() => handleStageChange(key as "pre_sale" | "sale")}
+                  className="flex items-center justify-between"
+                >
+                  {conf.label}
+                  {conversation.stage === key && <Check className="h-3.5 w-3.5 text-primary" />}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <Separator />
