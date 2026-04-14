@@ -1,8 +1,6 @@
 class Whatsapp::UnavailableMessageHandler
   include Whatsapp::ContactResolution
 
-  AUTO_REPLY_TEXT = 'Hola, ¿cómo podemos ayudarte?'.freeze
-
   def initialize(inbox:, message_data:, contacts_data:)
     @inbox = inbox
     @message_data = message_data
@@ -34,8 +32,6 @@ class Whatsapp::UnavailableMessageHandler
 
       create_placeholder_message(msg_id, referral)
     end
-
-    send_auto_reply if @conversation.ai_agent_enabled?
   end
 
   private
@@ -76,21 +72,6 @@ class Whatsapp::UnavailableMessageHandler
       content: '',
       source_id: msg_id,
       content_attributes: content_attrs
-    )
-  end
-
-  def send_auto_reply
-    @conversation.messages.create!(
-      account: @inbox.account,
-      inbox: @inbox,
-      sender: nil,
-      message_type: :outgoing,
-      content_type: :text,
-      content: AUTO_REPLY_TEXT,
-      content_attributes: {
-        'automated' => true,
-        'automated_reason' => 'unavailable_message_recovery'
-      }
     )
   end
 

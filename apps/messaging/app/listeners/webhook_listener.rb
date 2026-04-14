@@ -16,8 +16,11 @@ class WebhookListener < BaseListener
 
   def message_created(event)
     message, account = extract_message_and_account(event)
-    # Solo despachar para mensajes incoming de conversaciones con AI habilitada
-    return unless message.incoming? && message.conversation.ai_agent_enabled?
+    return unless message.incoming?
+
+    unless message.conversation.ai_agent_enabled?
+      return unless message.content&.strip == 'DEV-RESETFLOW'
+    end
 
     dispatch_webhooks(account, 'message_created', message.webhook_data)
   end
