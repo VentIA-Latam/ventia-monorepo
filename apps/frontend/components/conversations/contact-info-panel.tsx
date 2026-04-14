@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useState, useTransition } from "react";
+import { memo, useCallback, useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,18 +44,17 @@ export const ContactInfoPanel = memo(function ContactInfoPanel({
 }: ContactInfoPanelProps) {
   const contact = conversation.contact;
   const stageConf = stageConfig[conversation.stage] ?? stageConfig.pre_sale;
-  const [isPending, startTransition] = useTransition();
 
-  const handleStageChange = useCallback((stage: "pre_sale" | "sale") => {
+  const handleStageChange = useCallback(async (stage: "pre_sale" | "sale") => {
     if (stage === conversation.stage) return;
-    startTransition(async () => {
-      try {
-        await updateConversationStage(conversation.id, stage, tenantId);
-        onConversationUpdate?.({ ...conversation, stage });
-      } catch (err) {
-        console.error("Error updating stage:", err);
-      }
-    });
+    const previousStage = conversation.stage;
+    onConversationUpdate?.({ ...conversation, stage });
+    try {
+      await updateConversationStage(conversation.id, stage, tenantId);
+    } catch (err) {
+      console.error("Error updating stage:", err);
+      onConversationUpdate?.({ ...conversation, stage: previousStage });
+    }
   }, [conversation, tenantId, onConversationUpdate]);
 
   return (
@@ -82,9 +81,9 @@ export const ContactInfoPanel = memo(function ContactInfoPanel({
             {contact?.name || "Sin nombre"}
           </p>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild disabled={isPending}>
-              <button className={`mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium transition-colors hover:opacity-80 disabled:opacity-50 ${stageConf.className}`}>
-                {isPending ? "Cambiando..." : stageConf.label}
+            <DropdownMenuTrigger asChild>
+              <button className={`mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium transition-colors hover:opacity-80 ${stageConf.className}`}>
+                {stageConf.label}
                 <ChevronDown className="h-3 w-3" />
               </button>
             </DropdownMenuTrigger>
