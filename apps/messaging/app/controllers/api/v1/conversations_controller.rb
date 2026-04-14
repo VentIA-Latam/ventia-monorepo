@@ -1,5 +1,5 @@
 class Api::V1::ConversationsController < Api::V1::BaseController
-  before_action :set_conversation, only: [:show, :update, :toggle_status, :update_stage, :escalate, :mark_payment_review, :update_last_seen, :destroy]
+  before_action :set_conversation, only: [:show, :update, :toggle_status, :update_stage, :escalate, :resolve_escalation, :mark_payment_review, :update_last_seen, :destroy]
 
   def index
     conversations = current_account.conversations
@@ -125,6 +125,17 @@ class Api::V1::ConversationsController < Api::V1::BaseController
     end
 
     render_success(conversation_json(@conversation.reload), message: 'Conversation escalated to human support')
+  end
+
+  def resolve_escalation
+    @conversation.update!(ai_agent_enabled: true)
+
+    label = current_account.labels.find_by(title: 'soporte-humano')
+    if label && @conversation.labels.exists?(label.id)
+      @conversation.labels.delete(label)
+    end
+
+    render_success(conversation_json(@conversation.reload), message: 'Escalation resolved, AI agent re-enabled')
   end
 
   def mark_payment_review

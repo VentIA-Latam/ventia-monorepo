@@ -199,6 +199,16 @@ class MessagingService:
             tenant_id,
         )
 
+    async def resolve_escalation(
+        self, tenant_id: int, conversation_id: str
+    ) -> Optional[dict]:
+        """Resolve escalation: remove human support label and re-enable AI agent."""
+        return await self._request(
+            "POST",
+            f"/api/v1/conversations/{conversation_id}/resolve_escalation",
+            tenant_id,
+        )
+
     async def mark_payment_review(
         self, tenant_id: int, conversation_id: str
     ) -> Optional[dict]:

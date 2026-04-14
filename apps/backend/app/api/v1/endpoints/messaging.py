@@ -407,6 +407,26 @@ async def escalate_conversation(
 
 
 @router.post(
+    "/conversations/{conversation_id}/resolve_escalation",
+    summary="Resolve escalation: remove human support label and re-enable AI agent",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def resolve_escalation(
+    conversation_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.resolve_escalation(tenant_id, conversation_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
     "/conversations/{conversation_id}/mark-payment-review",
     summary="Mark conversation for payment review",
     tags=["messaging"],
