@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 class LineItemBase(BaseModel):
     """Schema for a line item in an order."""
 
-    sku: str = Field(..., description="Product SKU")
+    sku: str | None = Field(None, description="Product SKU")
     product: str = Field(..., description="Product name")
     unitPrice: float = Field(..., ge=0, description="Unit price (must be >= 0)")
     quantity: int = Field(..., gt=0, description="Quantity (must be > 0)")
