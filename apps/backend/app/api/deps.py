@@ -3,6 +3,7 @@ FastAPI dependencies for authentication and database.
 """
 
 import warnings
+from contextvars import ContextVar
 from typing import Callable
 
 from fastapi import Depends, HTTPException, Request, status
@@ -16,6 +17,9 @@ from app.models.user import User
 from app.repositories.user import user_repository
 from app.services.api_key import api_key_service
 from app.services.user import user_service
+
+# User context for cross-service propagation (like Rails Current.user)
+current_user_id_var: ContextVar[int | None] = ContextVar("current_user_id", default=None)
 
 # Security schemes
 security = HTTPBearer(auto_error=False)  # auto_error=False to allow API key fallback
@@ -284,7 +288,10 @@ def require_permission_dual(method: str, path_pattern: str) -> Callable:
             db=db,
         )
 
-        # Step 2: Check permission against PERMISSIONS table
+        # Step 2: Propagate user context for cross-service calls
+        current_user_id_var.set(current_user.id)
+
+        # Step 3: Check permission against PERMISSIONS table
         # Use the actual request path for accurate permission checking
         actual_path = request.url.path.rstrip("/") or "/"
 

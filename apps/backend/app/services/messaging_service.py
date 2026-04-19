@@ -21,14 +21,17 @@ class MessagingService:
 
     def _headers(self, tenant_id: int, user_id: Optional[str] = None) -> dict:
         """Build request headers with tenant and optional user context."""
+        from app.api.deps import current_user_id_var
+
         headers = {
             "X-Tenant-Id": str(tenant_id),
             "Content-Type": "application/json",
         }
         if self.api_key:
             headers["X-API-Key"] = self.api_key
-        if user_id:
-            headers["X-User-Id"] = str(user_id)
+        resolved_user_id = user_id or current_user_id_var.get()
+        if resolved_user_id:
+            headers["X-User-Id"] = str(resolved_user_id)
         return headers
 
     async def _request(
