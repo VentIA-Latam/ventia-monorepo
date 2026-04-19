@@ -32,12 +32,27 @@ class ConversationLabel < ApplicationRecord
 
   def dispatch_create_event
     Rails.logger.info "Label #{label_id} added to conversation #{conversation_id}"
+    create_label_activity("Etiqueta '#{label.title}' añadida por #{Current.user&.name || 'Sistema'}")
     broadcast_label_update
   end
 
   def dispatch_destroy_event
     Rails.logger.info "Label #{label_id} removed from conversation #{conversation_id}"
+    create_label_activity("Etiqueta '#{label.title}' removida por #{Current.user&.name || 'Sistema'}")
     broadcast_label_update
+  end
+
+  def create_label_activity(content)
+    conversation.messages.create!(
+      message_type: :activity,
+      content: content,
+      account_id: conversation.account_id,
+      inbox_id: conversation.inbox_id,
+      sender: Current.user,
+      skip_send_reply: true
+    )
+  rescue StandardError => e
+    Rails.logger.error "[ActivityMessage] Label activity failed: #{e.message}"
   end
 
   def broadcast_label_update

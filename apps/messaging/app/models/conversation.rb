@@ -39,6 +39,7 @@ class Conversation < ApplicationRecord
   include Wisper::Publisher
   include AssignmentHandler
   include AutoAssignmentHandler
+  include ActivityMessageHandler
 
   # Validations
   validates :account_id, presence: true
