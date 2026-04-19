@@ -50,7 +50,8 @@ module ActivityMessageHandler
   def generate_temperature_activity
     return unless saved_change_to_temperature?
 
-    create_activity_message("Temperatura cambiada a #{temperature} por #{activity_user_name}")
+    temp_name = account&.temperature_config&.find { |t| t["key"] == temperature }&.dig("name") || temperature
+    create_activity_message("Temperatura cambiada a #{temp_name} por #{activity_user_name}")
   end
 
   def generate_assignee_activity
