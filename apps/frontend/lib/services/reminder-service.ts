@@ -3,7 +3,7 @@
  * Used by Server Components and API routes.
  */
 
-import { ReminderMessagesResponse, ReminderMessageUpdate } from "@/lib/types/reminder";
+import { ReminderMessagesResponse, ReminderMessageUpdate, WorkflowStatusResponse } from "@/lib/types/reminder";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -25,6 +25,29 @@ export async function fetchReminderMessages(
   if (!response.ok) {
     const error = await response.text();
     throw new Error(`Failed to fetch reminder messages: ${error}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Fetch workflow active status.
+ * GET /reminders/workflow-status
+ */
+export async function fetchWorkflowStatus(
+  accessToken: string
+): Promise<WorkflowStatusResponse> {
+  const response = await fetch(`${API_URL}/reminders/workflow-status`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to fetch workflow status: ${error}`);
   }
 
   return response.json();
