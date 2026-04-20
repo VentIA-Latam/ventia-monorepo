@@ -1,0 +1,73 @@
+# Deploy Messaging - Build, push to Docker Hub, deploy to GCP VM
+#
+# Trigger 1: Push a main con cambios en messaging → deploy automático como :latest
+# Trigger 2: Push de tag messaging-v* (ej: messaging-v1.1.0) → deploy con versión + :latest
+#
+# Secrets requeridos en GitHub (Settings > Secrets > Actions):
+#   SSH_PRIVATE_KEY    - Private key para conectar a la VM
+#   SSH_HOST           - IP externa de la VM en GCP
+#   SSH_USER           - Usuario SSH (renzo_ventia)
+#   DOCKERHUB_USERNAME - Usuario de Docker Hub
+#   DOCKERHUB_TOKEN    - Access token de Docker Hub
+
+name: Deploy Messaging
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/messaging/**'
+  create:
+    tags:
+      - 'messaging-v*'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag' || (github.ref == 'refs/heads/main' && github.event_name == 'push')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine Docker tags
+        id: tags
+        run: |
+          REPO="${{ secrets.DOCKERHUB_USERNAME }}/ventia-messaging"
+          if [[ "$GITHUB_REF" == refs/tags/messaging-v* ]]; then
+            VERSION="${GITHUB_REF_NAME#messaging-v}"
+            echo "TAGS=${REPO}:${VERSION},${REPO}:latest" >> $GITHUB_OUTPUT
+          else
+            echo "TAGS=${REPO}:latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/messaging
+          file: apps/messaging/Dockerfile
+          target: production
+          push: true
+          tags: ${{ steps.tags.outputs.TAGS }}
+
+      - name: Deploy to VM
+        uses: appleboy/ssh-action@v1
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
+          script: |
+            echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            cd /opt/ventia-docker/prod
+            docker compose pull messaging
+            docker compose up -d --no-deps --force-recreate messaging messaging-sidekiq
+            docker images ${{ secrets.DOCKERHUB_USERNAME }}/ventia-messaging --filter "before=${{ secrets.DOCKERHUB_USERNAME }}/ventia-messaging:latest" -q | xargs -r docker rmi -f
