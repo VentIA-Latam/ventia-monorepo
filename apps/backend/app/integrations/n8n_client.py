@@ -89,13 +89,13 @@ class N8NClient:
             return response.json()
 
     async def set_workflow_active(self, workflow_id: str, active: bool) -> bool:
-        """Activate or deactivate a workflow via PATCH."""
+        """Activate or deactivate a workflow via POST activate/deactivate."""
+        action = "activate" if active else "deactivate"
         async with httpx.AsyncClient(timeout=30.0) as client:
             try:
-                response = await client.patch(
-                    f"{self.base_url}/api/v1/workflows/{workflow_id}",
+                response = await client.post(
+                    f"{self.base_url}/api/v1/workflows/{workflow_id}/{action}",
                     headers=self.headers,
-                    json={"active": active},
                 )
             except httpx.ConnectError as e:
                 raise N8NConnectionError(f"Cannot connect to n8n: {e}")
