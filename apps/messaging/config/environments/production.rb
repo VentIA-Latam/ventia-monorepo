@@ -14,10 +14,10 @@ Rails.application.configure do
   config.action_controller.perform_caching = true
 
   # Active Storage
-  config.active_storage.service = :google
+  config.active_storage.service = :local
 
-  # Force all access to the app over SSL
-  config.force_ssl = true
+  # Force SSL unless behind reverse proxy (Nginx handles SSL termination)
+  config.force_ssl = ENV['FORCE_SSL'] == 'true'
 
   # Logging
   config.log_level = ENV.fetch('LOG_LEVEL', 'info')
@@ -40,5 +40,5 @@ Rails.application.configure do
   config.action_controller.raise_on_missing_callback_actions = true
 
   # Public URL for external services (WhatsApp media links, etc.)
-  Rails.application.routes.default_url_options = { host: ENV.fetch('FRONTEND_URL', 'https://app.ventia-latam.com') }
+  Rails.application.routes.default_url_options = { host: ENV.fetch('MESSAGING_SERVICE_URL', 'https://ws.ventia-latam.com') }
 end
