@@ -15,6 +15,7 @@ from app.schemas.reminder import (
     ReminderMessagesResponse,
     ReminderMessageUpdate,
     ReminderWindow,
+    WorkflowStatusResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -106,6 +107,42 @@ class ReminderService:
 
         # Return updated state
         return await self.get_messages(tenant_id, db)
+
+
+    async def get_workflow_status(
+        self, tenant_id: int, db: Session
+    ) -> WorkflowStatusResponse:
+        """Get the active/inactive status of the tenant's reminder workflow."""
+        tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+        if not tenant:
+            raise ValueError(f"Tenant {tenant_id} not found")
+
+        if not tenant.n8n_reminder_workflow_id:
+            return WorkflowStatusResponse(active=False, workflow_configured=False)
+
+        workflow = await n8n_client.get_workflow(tenant.n8n_reminder_workflow_id)
+        return WorkflowStatusResponse(
+            active=workflow.get("active", False), workflow_configured=True
+        )
+
+    async def set_workflow_active(
+        self, tenant_id: int, active: bool, db: Session
+    ) -> WorkflowStatusResponse:
+        """Activate or deactivate the tenant's reminder workflow in n8n."""
+        tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+        if not tenant:
+            raise ValueError(f"Tenant {tenant_id} not found")
+
+        if not tenant.n8n_reminder_workflow_id:
+            raise ValueError("No reminder workflow configured for this tenant")
+
+        new_active = await n8n_client.set_workflow_active(
+            tenant.n8n_reminder_workflow_id, active
+        )
+        logger.info(
+            f"Workflow {'activated' if new_active else 'deactivated'} for tenant {tenant_id}"
+        )
+        return WorkflowStatusResponse(active=new_active, workflow_configured=True)
 
 
 reminder_service = ReminderService()

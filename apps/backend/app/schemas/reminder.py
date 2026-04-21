@@ -31,6 +31,21 @@ class ReminderMessagesResponse(BaseModel):
     )
 
 
+class WorkflowStatusResponse(BaseModel):
+    """Response for GET/PATCH /reminders/workflow-status."""
+
+    active: bool = Field(..., description="Whether the reminder workflow is active")
+    workflow_configured: bool = Field(
+        ..., description="Whether a workflow ID exists for the tenant"
+    )
+
+
+class WorkflowStatusUpdate(BaseModel):
+    """Request body for PATCH /reminders/workflow-status."""
+
+    active: bool = Field(..., description="Desired workflow state")
+
+
 class ReminderMessageUpdate(BaseModel):
     """A single message update."""
 

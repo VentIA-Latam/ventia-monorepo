@@ -16,6 +16,8 @@ from app.models.user import User
 from app.schemas.reminder import (
     ReminderMessagesResponse,
     ReminderMessagesUpdateRequest,
+    WorkflowStatusResponse,
+    WorkflowStatusUpdate,
 )
 from app.services.reminder import reminder_service
 
@@ -79,6 +81,74 @@ async def update_reminder_messages(
     try:
         return await reminder_service.update_messages(
             current_user.tenant_id, body.messages, db
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except N8NConnectionError as e:
+        logger.error(f"n8n connection error for tenant {current_user.tenant_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Cannot connect to n8n service",
+        )
+    except N8NError as e:
+        logger.error(f"n8n error for tenant {current_user.tenant_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=e.message,
+        )
+
+
+@router.get(
+    "/workflow-status",
+    response_model=WorkflowStatusResponse,
+    tags=["reminders"],
+)
+async def get_workflow_status(
+    current_user: User = Depends(require_permission_dual("GET", "/reminders/*")),
+    db: Session = Depends(get_database),
+) -> WorkflowStatusResponse:
+    """
+    Get the active/inactive status of the tenant's reminder workflow.
+
+    **Permissions:** ADMIN, SUPERADMIN
+    """
+    try:
+        return await reminder_service.get_workflow_status(current_user.tenant_id, db)
+    except N8NConnectionError as e:
+        logger.error(f"n8n connection error for tenant {current_user.tenant_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Cannot connect to n8n service",
+        )
+    except N8NError as e:
+        logger.error(f"n8n error for tenant {current_user.tenant_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error reading workflow status: {e.message}",
+        )
+
+
+@router.patch(
+    "/workflow-status",
+    response_model=WorkflowStatusResponse,
+    tags=["reminders"],
+)
+async def update_workflow_status(
+    body: WorkflowStatusUpdate,
+    current_user: User = Depends(require_permission_dual("PATCH", "/reminders/*")),
+    db: Session = Depends(get_database),
+) -> WorkflowStatusResponse:
+    """
+    Activate or deactivate the tenant's reminder workflow in n8n.
+
+    **Permissions:** ADMIN, SUPERADMIN
+    """
+    try:
+        return await reminder_service.set_workflow_active(
+            current_user.tenant_id, body.active, db
         )
     except ValueError as e:
         raise HTTPException(

@@ -24,3 +24,8 @@ export interface ReminderMessageUpdate {
 export interface ReminderMessagesUpdateRequest {
   messages: ReminderMessageUpdate[];
 }
+
+export interface WorkflowStatusResponse {
+  active: boolean;
+  workflow_configured: boolean;
+}

@@ -88,6 +88,27 @@ class N8NClient:
                 )
             return response.json()
 
+    async def set_workflow_active(self, workflow_id: str, active: bool) -> bool:
+        """Activate or deactivate a workflow via POST activate/deactivate."""
+        action = "activate" if active else "deactivate"
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                response = await client.post(
+                    f"{self.base_url}/api/v1/workflows/{workflow_id}/{action}",
+                    headers=self.headers,
+                )
+            except httpx.ConnectError as e:
+                raise N8NConnectionError(f"Cannot connect to n8n: {e}")
+
+            if response.status_code == 404:
+                raise N8NError(f"Workflow {workflow_id} not found", status_code=404)
+            if response.status_code not in (200, 201):
+                raise N8NError(
+                    f"Failed to toggle workflow: {response.status_code} - {response.text}",
+                    status_code=response.status_code,
+                )
+            return response.json().get("active", active)
+
     def extract_reminder_messages(
         self, workflow: dict[str, Any]
     ) -> dict[str, Any]:

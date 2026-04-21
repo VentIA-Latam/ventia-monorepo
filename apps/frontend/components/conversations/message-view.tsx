@@ -71,6 +71,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
   const contentRef = useRef<HTMLDivElement>(null);
   const scrollBehaviorRef = useRef<false | "instant" | "smooth">(false);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [showActivityMessages, setShowActivityMessages] = useState(true);
   const isLoadingPreviousRef = useRef(false);
   // Track if we should stay pinned to the bottom
   const isPinnedToBottomRef = useRef(true);
@@ -448,6 +449,14 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
                 className="scale-75"
               />
             </div>
+            <div className="flex items-center justify-between px-2 py-1.5">
+              <span className="text-sm">Actividad</span>
+              <Switch
+                checked={showActivityMessages}
+                onCheckedChange={setShowActivityMessages}
+                className="scale-75"
+              />
+            </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onOpenInfo}>
               <User className="h-4 w-4 mr-2" />
@@ -491,9 +500,9 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
               <p className="text-sm text-muted-foreground">No hay mensajes aún</p>
             </div>
           ) : (
-            messages.map((msg, i) => {
+            (showActivityMessages ? messages : messages.filter(m => m.message_type !== "activity")).map((msg, i, arr) => {
               const msgDate = parseTimestamp(msg.created_at);
-              const prevDate = i > 0 ? parseTimestamp(messages[i - 1].created_at) : null;
+              const prevDate = i > 0 ? parseTimestamp(arr[i - 1].created_at) : null;
               const showSeparator = msgDate && (
                 !prevDate ||
                 msgDate.getFullYear() !== prevDate.getFullYear() ||

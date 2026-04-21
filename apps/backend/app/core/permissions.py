@@ -68,6 +68,8 @@ PERMISSIONS: Dict[Tuple[str, str], List[Role]] = {
     # REMINDERS ENDPOINTS (only ADMIN and SUPERADMIN)
     ("GET", "/reminders/messages"): [Role.SUPERADMIN, Role.ADMIN],
     ("PUT", "/reminders/messages"): [Role.SUPERADMIN, Role.ADMIN],
+    ("GET", "/reminders/workflow-status"): [Role.SUPERADMIN, Role.ADMIN],
+    ("PATCH", "/reminders/workflow-status"): [Role.SUPERADMIN, Role.ADMIN],
 
     # INVOICE SERIES ENDPOINTS
     ("GET", "/invoice-series"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],

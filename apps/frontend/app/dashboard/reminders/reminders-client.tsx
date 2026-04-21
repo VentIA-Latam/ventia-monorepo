@@ -7,8 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { updateReminders } from "@/lib/api-client/reminders";
+import { updateReminders, toggleWorkflowStatus } from "@/lib/api-client/reminders";
 import type {
   ReminderMessagesResponse,
   ReminderMessageUpdate,
@@ -61,11 +62,36 @@ function getCurrentTime(): string {
 
 interface Props {
   initialData: ReminderMessagesResponse;
+  initialWorkflowActive: boolean;
 }
 
-export function RemindersClient({ initialData }: Props) {
+export function RemindersClient({ initialData, initialWorkflowActive }: Props) {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
+  const [workflowActive, setWorkflowActive] = useState(initialWorkflowActive);
+  const [isToggling, setIsToggling] = useState(false);
+
+  const handleToggleWorkflow = useCallback(async (active: boolean) => {
+    setIsToggling(true);
+    try {
+      const result = await toggleWorkflowStatus(active);
+      setWorkflowActive(result.active);
+      toast({
+        title: result.active ? "Recordatorios activados" : "Recordatorios desactivados",
+        description: result.active
+          ? "Los recordatorios se enviarán automáticamente."
+          : "Los recordatorios están pausados.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "No se pudo cambiar el estado.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsToggling(false);
+    }
+  }, [toast]);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
 
   // Build initial text map from data
@@ -216,10 +242,17 @@ export function RemindersClient({ initialData }: Props) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Clock className="h-6 w-6" />
-          Recordatorios
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Clock className="h-6 w-6" />
+            Recordatorios
+          </h1>
+          <Switch
+            checked={workflowActive}
+            onCheckedChange={handleToggleWorkflow}
+            disabled={isToggling}
+          />
+        </div>
         <p className="text-sm text-muted-foreground">
           Edita los mensajes de seguimiento automatico por temperatura y ventana de tiempo.
         </p>

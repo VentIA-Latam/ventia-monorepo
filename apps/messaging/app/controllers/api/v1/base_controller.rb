@@ -23,6 +23,7 @@ class Api::V1::BaseController < ApplicationController
     return unless ventia_user_id.present?
 
     @current_user = User.find_by(ventia_user_id: ventia_user_id)
+    Current.user = @current_user
   end
 
   def current_account

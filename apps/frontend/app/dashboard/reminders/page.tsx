@@ -1,4 +1,4 @@
-import { fetchReminderMessages } from "@/lib/services/reminder-service";
+import { fetchReminderMessages, fetchWorkflowStatus } from "@/lib/services/reminder-service";
 import { getAccessToken } from "@/lib/auth0";
 import { RemindersClient } from "./reminders-client";
 import { Clock } from "lucide-react";
@@ -8,13 +8,17 @@ export const dynamic = "force-dynamic";
 export default async function RemindersPage() {
   let error: string | null = null;
   let data = null;
+  let workflowStatus = null;
 
   try {
     const accessToken = await getAccessToken();
     if (!accessToken) {
       throw new Error("No estas autenticado");
     }
-    data = await fetchReminderMessages(accessToken);
+    [data, workflowStatus] = await Promise.all([
+      fetchReminderMessages(accessToken),
+      fetchWorkflowStatus(accessToken).catch(() => ({ active: false, workflow_configured: false })),
+    ]);
   } catch (err) {
     console.error("Error loading reminders:", err);
     error = err instanceof Error ? err.message : "Error al cargar recordatorios";
@@ -40,5 +44,10 @@ export default async function RemindersPage() {
     );
   }
 
-  return <RemindersClient initialData={data} />;
+  return (
+    <RemindersClient
+      initialData={data}
+      initialWorkflowActive={workflowStatus?.active ?? false}
+    />
+  );
 }
