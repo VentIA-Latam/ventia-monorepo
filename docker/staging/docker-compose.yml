@@ -166,7 +166,7 @@ services:
       target: development
     container_name: ventia-messaging
     environment:
-      RAILS_ENV: ${RAILS_ENV:-development}
+      RAILS_ENV: ${RAILS_ENV:-staging}
       RAILS_LOG_TO_STDOUT: "true"
       LOG_LEVEL: ${LOG_LEVEL:-info}
       POSTGRES_HOST: postgres
@@ -219,7 +219,7 @@ services:
       target: development
     container_name: ventia-sidekiq
     environment:
-      RAILS_ENV: ${RAILS_ENV:-development}
+      RAILS_ENV: ${RAILS_ENV:-staging}
       RAILS_LOG_TO_STDOUT: "true"
       LOG_LEVEL: ${LOG_LEVEL:-info}
       POSTGRES_HOST: postgres
