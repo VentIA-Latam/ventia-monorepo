@@ -1,0 +1,203 @@
+# =============================================================================
+# Ventia Production Stack
+# Postgres & Redis already running from the old stack (chatbot-prod network)
+# New services connect to them via external network
+# =============================================================================
+
+services:
+  # --- n8n (Automation) ---
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: ventia-prod-n8n
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: chatbot-prod-postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: ${POSTGRES_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: ${N8N_USER}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_PASSWORD}
+      N8N_PROXY_HOPS: 1
+      WEBHOOK_URL: ${N8N_WEBHOOK_URL}
+      GENERIC_TIMEZONE: ${TIMEZONE:-America/Lima}
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    networks:
+      - chatbot-network
+
+  # --- Ventia Backend (FastAPI) ---
+  backend:
+    image: ${BACKEND_IMAGE:-equipoventia/ventia-backend:latest}
+    container_name: ventia-prod-backend
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@chatbot-prod-postgres:5432/ventia_db
+      ENVIRONMENT: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      CORS_ORIGINS: ${CORS_ORIGINS:-["https://ventia-latam.com"]}
+      # Auth0
+      AUTH0_DOMAIN: ${AUTH0_DOMAIN}
+      AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
+      AUTH0_ISSUER: ${AUTH0_ISSUER}
+      AUTH0_ALGORITHM: ${AUTH0_ALGORITHM:-RS256}
+      AUTH0_CONNECTION: ${AUTH0_CONNECTION:-Username-Password-Authentication}
+      AUTH0_MANAGEMENT_CLIENT_ID: ${AUTH0_MANAGEMENT_CLIENT_ID}
+      AUTH0_MANAGEMENT_CLIENT_SECRET: ${AUTH0_MANAGEMENT_CLIENT_SECRET}
+      AUTH0_MANAGEMENT_AUDIENCE: ${AUTH0_MANAGEMENT_AUDIENCE}
+      # Webhooks
+      WEBHOOK_BASE_URL: ${WEBHOOK_BASE_URL}
+      # Messaging service connection
+      MESSAGING_SERVICE_URL: http://ventia-prod-messaging:3001
+      MESSAGING_SERVICE_API_KEY: ${MESSAGING_SERVICE_API_KEY}
+      # n8n (reminders)
+      N8N_BASE_URL: http://ventia-prod-n8n:5678
+      N8N_API_KEY: ${N8N_API_KEY:-}
+      # eFact
+      EFACT_BASE_URL: ${EFACT_BASE_URL:-}
+      EFACT_RUC_VENTIA: ${EFACT_RUC_VENTIA:-}
+      EFACT_PASSWORD_REST: ${EFACT_PASSWORD_REST:-}
+      # Resend
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-}
+      # Sentry
+      SENTRY_DSN: ${SENTRY_BACKEND_DSN:-}
+    ports:
+      - "127.0.0.1:8001:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    networks:
+      - chatbot-network
+
+  # --- Messaging (Rails — replaces Chatwoot) ---
+  messaging:
+    image: ${MESSAGING_IMAGE:-equipoventia/ventia-messaging:1.0.0}
+    container_name: ventia-prod-messaging
+    command: sh -c "bundle exec rails db:prepare && bundle exec rails server -b 0.0.0.0 -p 3001"
+    environment:
+      RAILS_ENV: production
+      RAILS_LOG_TO_STDOUT: "true"
+      RAILS_SERVE_STATIC_FILES: "true"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      POSTGRES_HOST: chatbot-prod-postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DATABASE: messaging_db
+      POSTGRES_USERNAME: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@chatbot-prod-redis:6379/1
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:?Set SECRET_KEY_BASE in .env}
+      CORS_ORIGINS: ${MESSAGING_CORS_ORIGINS:-https://ventia-latam.com}
+      MESSAGING_SERVICE_URL: ${MESSAGING_SERVICE_URL:-https://ws.ventia-latam.com}
+      FRONTEND_URL: ${FRONTEND_URL:-https://ventia-latam.com}
+      # WhatsApp / Meta
+      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
+      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET:-}
+      WHATSAPP_CLOUD_BASE_URL: ${WHATSAPP_CLOUD_BASE_URL:-https://graph.facebook.com}
+      WHATSAPP_API_VERSION: ${WHATSAPP_API_VERSION:-v22.0}
+      # Active Storage
+      ACTIVE_STORAGE_SERVICE: local
+      # Firebase Admin (push notifications)
+      FIREBASE_ADMIN_PROJECT_ID: ${FIREBASE_ADMIN_PROJECT_ID:-}
+      FIREBASE_ADMIN_CLIENT_EMAIL: ${FIREBASE_ADMIN_CLIENT_EMAIL:-}
+      FIREBASE_ADMIN_PRIVATE_KEY: ${FIREBASE_ADMIN_PRIVATE_KEY:-}
+      # Sentry
+      SENTRY_DSN: ${SENTRY_MESSAGING_DSN:-}
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - messaging_storage:/app/storage
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - chatbot-network
+
+  # --- Messaging Sidekiq (Background Jobs) ---
+  messaging-sidekiq:
+    image: ${MESSAGING_IMAGE:-equipoventia/ventia-messaging:1.0.0}
+    container_name: ventia-prod-sidekiq
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    environment:
+      RAILS_ENV: production
+      RAILS_LOG_TO_STDOUT: "true"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      POSTGRES_HOST: chatbot-prod-postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DATABASE: messaging_db
+      POSTGRES_USERNAME: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@chatbot-prod-redis:6379/1
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      MESSAGING_SERVICE_URL: ${MESSAGING_SERVICE_URL:-https://ws.ventia-latam.com}
+      FRONTEND_URL: ${FRONTEND_URL:-https://ventia-latam.com}
+      # WhatsApp / Meta
+      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
+      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET:-}
+      WHATSAPP_CLOUD_BASE_URL: ${WHATSAPP_CLOUD_BASE_URL:-https://graph.facebook.com}
+      WHATSAPP_API_VERSION: ${WHATSAPP_API_VERSION:-v22.0}
+      # Active Storage
+      ACTIVE_STORAGE_SERVICE: local
+      # Firebase Admin (push notifications)
+      FIREBASE_ADMIN_PROJECT_ID: ${FIREBASE_ADMIN_PROJECT_ID:-}
+      FIREBASE_ADMIN_CLIENT_EMAIL: ${FIREBASE_ADMIN_CLIENT_EMAIL:-}
+      FIREBASE_ADMIN_PRIVATE_KEY: ${FIREBASE_ADMIN_PRIVATE_KEY:-}
+      # Sentry
+      SENTRY_DSN: ${SENTRY_MESSAGING_DSN:-}
+    volumes:
+      - messaging_storage:/app/storage
+    healthcheck:
+      test: ["CMD-SHELL", "ps aux | grep -v grep | grep sidekiq || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - chatbot-network
+
+networks:
+  chatbot-network:
+    external: true
+    name: chatbot-prod_chatbot-network
+
+volumes:
+  n8n_data:
+    external: true
+    name: chatbot-prod_n8n_data
+  messaging_storage:
+    driver: local

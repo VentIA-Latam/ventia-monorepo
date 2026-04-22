@@ -6,6 +6,7 @@ import warnings
 from contextvars import ContextVar
 from typing import Callable
 
+import sentry_sdk
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
@@ -76,6 +77,12 @@ async def get_current_user(
 
         # Update last login
         user_service.update_last_login(db, user)
+
+        # Set Sentry context
+        if sentry_sdk.is_initialized():
+            sentry_sdk.set_user({"id": str(user.id), "email": user.email})
+            sentry_sdk.set_tag("tenant_id", str(user.tenant_id))
+            sentry_sdk.set_tag("auth_method", "jwt")
 
         return user
 
@@ -149,6 +156,12 @@ async def get_current_user_or_api_key(
             # Update last login
             user_service.update_last_login(db, user)
 
+            # Set Sentry context
+            if sentry_sdk.is_initialized():
+                sentry_sdk.set_user({"id": str(user.id), "email": user.email})
+                sentry_sdk.set_tag("tenant_id", str(user.tenant_id))
+                sentry_sdk.set_tag("auth_method", "jwt")
+
             return user
 
         except HTTPException:
@@ -189,6 +202,13 @@ async def get_current_user_or_api_key(
         # Store API key info in request state for logging
         request.state.api_key_id = api_key.id
         request.state.auth_method = "api_key"
+
+        # Set Sentry context
+        if sentry_sdk.is_initialized():
+            sentry_sdk.set_user({"id": f"api_key_{api_key.id}"})
+            sentry_sdk.set_tag("tenant_id", str(api_key.tenant_id))
+            sentry_sdk.set_tag("auth_method", "api_key")
+            sentry_sdk.set_tag("api_key_name", api_key.name)
 
         return virtual_user
 
