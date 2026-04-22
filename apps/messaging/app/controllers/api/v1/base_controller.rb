@@ -1,6 +1,7 @@
 class Api::V1::BaseController < ApplicationController
   before_action :set_current_account
   before_action :set_current_user
+  before_action :set_sentry_context
 
   private
 
@@ -57,5 +58,12 @@ class Api::V1::BaseController < ApplicationController
       total_pages: collection.total_pages,
       total_count: collection.total_count
     }
+  end
+
+  def set_sentry_context
+    return unless Sentry.initialized?
+
+    Sentry.set_user(id: @current_user&.id, email: @current_user&.email) if @current_user
+    Sentry.set_tags(tenant_id: @current_account&.ventia_tenant_id) if @current_account
   end
 end
