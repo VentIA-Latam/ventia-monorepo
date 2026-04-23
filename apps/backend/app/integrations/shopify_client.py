@@ -125,9 +125,23 @@ class ShopifyClient:
         }
         """
 
-        # Map VentIA line items to Shopify format
+        # Map VentIA line items to Shopify format, separating DELIVERY to shippingLines
         shopify_line_items = []
+        shipping_lines = []
         for item in line_items:
+            # Separate delivery items to shippingLines
+            if item.get("sku", "").upper() == "DELIVERY":
+                shipping_lines.append({
+                    "title": item.get("product", "Shipping"),
+                    "priceSet": {
+                        "shopMoney": {
+                            "amount": str(item.get("unitPrice", 0)),
+                            "currencyCode": currency,
+                        }
+                    },
+                })
+                continue
+
             variant_id = item.get("variantId")
             if variant_id:
                 # Product exists in Shopify — use variantId (price/title from product)
@@ -148,6 +162,9 @@ class ShopifyClient:
                     },
                 })
 
+        if not shopify_line_items:
+            raise ValueError("At least one non-delivery line item is required")
+
         order_input: dict[str, Any] = {
             "lineItems": shopify_line_items,
             "email": customer_email,
@@ -158,6 +175,9 @@ class ShopifyClient:
         if note:
             order_input["note"] = note
 
+        if shipping_lines:
+            order_input["shippingLines"] = shipping_lines
+
         if shipping_address:
             addr: dict[str, Any] = {}
             if shipping_address.get("address1"):
@@ -165,9 +185,16 @@ class ShopifyClient:
             if shipping_address.get("city"):
                 addr["city"] = shipping_address["city"]
             if shipping_address.get("province"):
-                addr["province"] = shipping_address["province"]
+                addr["provinceCode"] = shipping_address["province"]
             if shipping_address.get("country"):
                 addr["countryCode"] = shipping_address["country"]
+            # Shopify silently discards address without lastName
+            if customer_name:
+                names = customer_name.split(" ", 1)
+                addr["firstName"] = names[0]
+                addr["lastName"] = names[1] if len(names) > 1 else "."
+            else:
+                addr["lastName"] = "."
             if addr:
                 order_input["shippingAddress"] = addr
 
@@ -477,6 +504,50 @@ class ShopifyClient:
             raise ValueError(f"Draft order {draft_order_id} not found")
 
         return draft_order
+
+    async def get_order(self, order_id: str) -> dict[str, Any]:
+        """
+        Get order details using Shopify GraphQL query.
+
+        Args:
+            order_id: Order ID (e.g., 'gid://shopify/Order/123')
+
+        Returns:
+            dict: Order details including customer phone, email, financial status
+
+        Raises:
+            ValueError: If query fails or order not found
+        """
+        query = """
+        query getOrder($id: ID!) {
+            order(id: $id) {
+                id
+                name
+                email
+                phone
+                customer {
+                    phone
+                    email
+                    firstName
+                    lastName
+                }
+                createdAt
+                displayFinancialStatus
+                displayFulfillmentStatus
+            }
+        }
+        """
+
+        variables = {"id": order_id}
+
+        data = await self._execute_query(query, variables)
+
+        order = data.get("data", {}).get("order")
+
+        if not order:
+            raise ValueError(f"Order {order_id} not found")
+
+        return order
 
     async def create_webhook_subscription(
         self,

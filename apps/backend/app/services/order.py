@@ -271,6 +271,8 @@ class OrderService:
         """
         Update order.
 
+        If line_items are provided, recalculates subtotals and total_price.
+
         Args:
             db: Database session
             order_id: Order ID to update
@@ -285,6 +287,14 @@ class OrderService:
         order = order_repository.get(db, order_id)
         if not order:
             raise ValueError(f"Order with ID {order_id} not found")
+
+        if order_in.line_items is not None:
+            line_items_data = [item.model_dump() for item in order_in.line_items]
+            processed_items, calculated_total = self._calculate_line_items_and_total(line_items_data)
+            update_data = order_in.model_dump(exclude_unset=True)
+            update_data["line_items"] = processed_items
+            update_data["total_price"] = calculated_total
+            return order_repository.update(db, db_obj=order, obj_in=update_data)
 
         return order_repository.update(db, db_obj=order, obj_in=order_in)
 

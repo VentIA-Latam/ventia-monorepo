@@ -367,6 +367,56 @@ class TestOrderServiceCRUD:
 
             assert "not found" in str(exc_info.value)
 
+    def test_update_order_with_line_items_recalculates_total(self, order_service, mock_db):
+        """Test: update_order recalculates subtotals and total_price when line_items provided."""
+        from app.schemas.order import OrderUpdate
+
+        existing_order = MagicMock()
+        existing_order.id = 1
+
+        with patch("app.services.order.order_repository") as mock_repo:
+            mock_repo.get.return_value = existing_order
+            mock_repo.update.return_value = existing_order
+
+            update_data = OrderUpdate(
+                line_items=[
+                    LineItemBase(product="Polo", sku="SKU1", quantity=2, unitPrice=49.0),
+                    LineItemBase(product="Bolsa", sku="SKU2", quantity=1, unitPrice=10.0),
+                ]
+            )
+
+            order_service.update_order(mock_db, 1, update_data)
+
+            call_args = mock_repo.update.call_args
+            obj_in = call_args.kwargs.get("obj_in", call_args[1].get("obj_in"))
+
+            # Verify total was recalculated: (2*49) + (1*10) = 108
+            assert obj_in["total_price"] == 108.0
+            # Verify subtotals were added to each item
+            assert obj_in["line_items"][0]["subtotal"] == 98.0
+            assert obj_in["line_items"][1]["subtotal"] == 10.0
+
+    def test_update_order_without_line_items_keeps_original_total(self, order_service, mock_db):
+        """Test: update_order without line_items does NOT recalculate total_price."""
+        from app.schemas.order import OrderUpdate
+
+        existing_order = MagicMock()
+        existing_order.id = 1
+
+        with patch("app.services.order.order_repository") as mock_repo:
+            mock_repo.get.return_value = existing_order
+            mock_repo.update.return_value = existing_order
+
+            update_data = OrderUpdate(customer_name="Updated Name")
+
+            order_service.update_order(mock_db, 1, update_data)
+
+            call_args = mock_repo.update.call_args
+            obj_in = call_args.kwargs.get("obj_in", call_args[1].get("obj_in"))
+
+            # Should pass the OrderUpdate directly, not a dict with total_price
+            assert not isinstance(obj_in, dict) or "total_price" not in obj_in
+
     def test_delete_order_not_found_raises_error(self, order_service, mock_db):
         """Test: delete_order raises ValueError when order not found."""
         with patch("app.services.order.order_repository") as mock_repo:

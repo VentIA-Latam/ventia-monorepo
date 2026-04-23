@@ -776,3 +776,245 @@ class TestShopifyClientCancelOrder:
             variables = payload["variables"]
 
             assert "staffNote" not in variables
+
+
+class TestShopifyClientCreatePaidOrderDelivery:
+    """Tests for DELIVERY SKU separation into shippingLines."""
+
+    @pytest.fixture
+    def shopify_client(self) -> ShopifyClient:
+        return ShopifyClient(
+            store_url="https://test-store.myshopify.com",
+            access_token="shpat_test_token_123",
+            api_version="2024-01",
+        )
+
+    @pytest.mark.asyncio
+    async def test_delivery_item_separated_to_shipping_lines(self, shopify_client):
+        """Test that items with SKU=DELIVERY go to shippingLines, not lineItems."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {
+                "orderCreate": {
+                    "order": {
+                        "id": "gid://shopify/Order/123",
+                        "name": "#1001",
+                        "createdAt": "2024-01-15T10:00:00Z",
+                        "displayFinancialStatus": "PAID",
+                        "displayFulfillmentStatus": "UNFULFILLED",
+                    },
+                    "userErrors": [],
+                }
+            }
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        line_items = [
+            {"variantId": "gid://shopify/ProductVariant/1", "quantity": 1, "unitPrice": 49.0},
+            {"sku": "DELIVERY", "product": "Envio a domicilio", "quantity": 1, "unitPrice": 13.0},
+        ]
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_client.post.return_value = mock_response
+            mock_client_class.return_value = mock_client
+
+            await shopify_client.create_paid_order(
+                line_items=line_items,
+                customer_email="test@example.com",
+                currency="PEN",
+            )
+
+            call_kwargs = mock_client.post.call_args
+            payload = call_kwargs.kwargs.get("json", call_kwargs[1].get("json"))
+            order_input = payload["variables"]["order"]
+
+            # DELIVERY should be in shippingLines, not lineItems
+            assert len(order_input["lineItems"]) == 1
+            assert "shippingLines" in order_input
+            assert order_input["shippingLines"][0]["title"] == "Envio a domicilio"
+            assert order_input["shippingLines"][0]["priceSet"]["shopMoney"]["amount"] == "13.0"
+
+    @pytest.mark.asyncio
+    async def test_only_delivery_items_raises_error(self, shopify_client):
+        """Test that having only DELIVERY items raises ValueError."""
+        line_items = [
+            {"sku": "DELIVERY", "product": "Envio", "quantity": 1, "unitPrice": 10.0},
+        ]
+
+        with pytest.raises(ValueError, match="At least one non-delivery line item"):
+            await shopify_client.create_paid_order(
+                line_items=line_items,
+                customer_email="test@example.com",
+            )
+
+
+class TestShopifyClientCreatePaidOrderShippingAddress:
+    """Tests for shipping address formatting in create_paid_order."""
+
+    @pytest.fixture
+    def shopify_client(self) -> ShopifyClient:
+        return ShopifyClient(
+            store_url="https://test-store.myshopify.com",
+            access_token="shpat_test_token_123",
+            api_version="2024-01",
+        )
+
+    @pytest.mark.asyncio
+    async def test_shipping_address_includes_customer_name(self, shopify_client):
+        """Test that shipping address gets firstName/lastName from customer_name."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {
+                "orderCreate": {
+                    "order": {
+                        "id": "gid://shopify/Order/123",
+                        "name": "#1001",
+                        "createdAt": "2024-01-15T10:00:00Z",
+                        "displayFinancialStatus": "PAID",
+                        "displayFulfillmentStatus": "UNFULFILLED",
+                    },
+                    "userErrors": [],
+                }
+            }
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        line_items = [{"variantId": "gid://shopify/ProductVariant/1", "quantity": 1, "unitPrice": 49.0}]
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_client.post.return_value = mock_response
+            mock_client_class.return_value = mock_client
+
+            await shopify_client.create_paid_order(
+                line_items=line_items,
+                customer_email="victor@example.com",
+                customer_name="Victor Toro Alvarez",
+                shipping_address={"address1": "Calle 123", "city": "Lima", "province": "LIM"},
+            )
+
+            call_kwargs = mock_client.post.call_args
+            payload = call_kwargs.kwargs.get("json", call_kwargs[1].get("json"))
+            addr = payload["variables"]["order"]["shippingAddress"]
+
+            assert addr["firstName"] == "Victor"
+            assert addr["lastName"] == "Toro Alvarez"
+            assert addr["provinceCode"] == "LIM"
+
+    @pytest.mark.asyncio
+    async def test_shipping_address_without_name_gets_placeholder(self, shopify_client):
+        """Test that shipping address gets lastName='.' when no customer_name."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {
+                "orderCreate": {
+                    "order": {
+                        "id": "gid://shopify/Order/123",
+                        "name": "#1001",
+                        "createdAt": "2024-01-15T10:00:00Z",
+                        "displayFinancialStatus": "PAID",
+                        "displayFulfillmentStatus": "UNFULFILLED",
+                    },
+                    "userErrors": [],
+                }
+            }
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        line_items = [{"variantId": "gid://shopify/ProductVariant/1", "quantity": 1, "unitPrice": 49.0}]
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_client.post.return_value = mock_response
+            mock_client_class.return_value = mock_client
+
+            await shopify_client.create_paid_order(
+                line_items=line_items,
+                customer_email="test@example.com",
+                shipping_address={"address1": "Calle 123"},
+            )
+
+            call_kwargs = mock_client.post.call_args
+            payload = call_kwargs.kwargs.get("json", call_kwargs[1].get("json"))
+            addr = payload["variables"]["order"]["shippingAddress"]
+
+            assert addr["lastName"] == "."
+
+
+class TestShopifyClientGetOrder:
+    """Tests for get_order method."""
+
+    @pytest.fixture
+    def shopify_client(self) -> ShopifyClient:
+        return ShopifyClient(
+            store_url="https://test-store.myshopify.com",
+            access_token="shpat_test_token_123",
+            api_version="2024-01",
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_order_success(self, shopify_client):
+        """Test successful order retrieval."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": {
+                "order": {
+                    "id": "gid://shopify/Order/456",
+                    "name": "#1001",
+                    "email": "test@example.com",
+                    "phone": "+51987654321",
+                    "customer": {
+                        "phone": "+51987654321",
+                        "email": "test@example.com",
+                        "firstName": "Victor",
+                        "lastName": "Toro",
+                    },
+                    "createdAt": "2024-01-15T10:00:00Z",
+                    "displayFinancialStatus": "PAID",
+                    "displayFulfillmentStatus": "UNFULFILLED",
+                }
+            }
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_client.post.return_value = mock_response
+            mock_client_class.return_value = mock_client
+
+            result = await shopify_client.get_order("gid://shopify/Order/456")
+
+            assert result["id"] == "gid://shopify/Order/456"
+            assert result["name"] == "#1001"
+            assert result["customer"]["firstName"] == "Victor"
+
+    @pytest.mark.asyncio
+    async def test_get_order_not_found_raises_error(self, shopify_client):
+        """Test that missing order raises ValueError."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"data": {"order": None}}
+        mock_response.raise_for_status = MagicMock()
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            mock_client.post.return_value = mock_response
+            mock_client_class.return_value = mock_client
+
+            with pytest.raises(ValueError, match="not found"):
+                await shopify_client.get_order("gid://shopify/Order/999")

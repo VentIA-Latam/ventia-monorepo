@@ -161,11 +161,7 @@ class TenantService:
 
         # Generate initial access token for Shopify if OAuth credentials provided
         if tenant_in.ecommerce_platform == "shopify" and tenant_in.shopify_client_id:
-            import logging
-
             from app.integrations.shopify_token_manager import shopify_token_manager
-
-            logger = logging.getLogger(__name__)
 
             try:
                 # This will generate and store the first access token

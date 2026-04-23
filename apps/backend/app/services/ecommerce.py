@@ -431,8 +431,8 @@ class EcommerceService:
             f"sync_enabled={sync_enabled}, order_platform={order.source_platform}"
         )
 
-        # Sync to e-commerce platform if configured
-        if settings.has_ecommerce and sync_enabled:
+        # Sync to e-commerce platform if configured (skip for native VentIA orders)
+        if settings.has_ecommerce and sync_enabled and order.source_platform == platform:
             if platform == "shopify":
                 if not order.validado:
                     await self._cancel_shopify_draft(db, order, settings.ecommerce.shopify)
