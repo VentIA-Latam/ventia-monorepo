@@ -203,6 +203,83 @@ class TestShopifyDraftOrderCreate:
             assert mock_webhook_event.processed is True
             assert mock_webhook_event.error is None
 
+    def test_create_draft_order_customer_null_last_name(
+        self, mock_db, mock_tenant, mock_webhook_event
+    ):
+        """Test that null last_name in customer does not produce 'FirstName None'."""
+        from app.services.webhook_service import process_shopify_draft_order_create
+
+        payload = {
+            "id": 123456789,
+            "name": "#D1001",
+            "email": "fernando@example.com",
+            "customer": {
+                "first_name": "Fernando",
+                "last_name": None,
+                "email": "fernando@example.com",
+            },
+            "shipping_address": {
+                "first_name": "Fernando",
+                "last_name": "Toro",
+            },
+            "total_price": "98.00",
+            "currency": "PEN",
+            "line_items": [],
+        }
+
+        with patch("app.services.webhook_service.order_repository") as mock_repo:
+            mock_repo.get_by_shopify_draft_id.return_value = None
+            created_order = MagicMock(spec=Order)
+            created_order.id = 10
+            mock_repo.create.return_value = created_order
+
+            process_shopify_draft_order_create(
+                db=mock_db, webhook_event=mock_webhook_event, payload=payload, tenant=mock_tenant
+            )
+
+            call_args = mock_repo.create.call_args
+            order_create = call_args.kwargs["obj_in"]
+            assert order_create.customer_name == "Fernando"
+            assert "None" not in order_create.customer_name
+
+    def test_create_draft_order_customer_null_names_fallback_shipping(
+        self, mock_db, mock_tenant, mock_webhook_event
+    ):
+        """Test fallback to shipping_address when customer names are null."""
+        from app.services.webhook_service import process_shopify_draft_order_create
+
+        payload = {
+            "id": 123456789,
+            "name": "#D1001",
+            "email": "victor@example.com",
+            "customer": {
+                "first_name": None,
+                "last_name": None,
+                "email": "victor@example.com",
+            },
+            "shipping_address": {
+                "first_name": "Victor",
+                "last_name": "Toro Alvarez",
+            },
+            "total_price": "98.00",
+            "currency": "PEN",
+            "line_items": [],
+        }
+
+        with patch("app.services.webhook_service.order_repository") as mock_repo:
+            mock_repo.get_by_shopify_draft_id.return_value = None
+            created_order = MagicMock(spec=Order)
+            created_order.id = 10
+            mock_repo.create.return_value = created_order
+
+            process_shopify_draft_order_create(
+                db=mock_db, webhook_event=mock_webhook_event, payload=payload, tenant=mock_tenant
+            )
+
+            call_args = mock_repo.create.call_args
+            order_create = call_args.kwargs["obj_in"]
+            assert order_create.customer_name == "Victor Toro Alvarez"
+
     def test_create_draft_order_with_line_items(
         self, mock_db, mock_tenant, mock_webhook_event, draft_order_payload
     ):
