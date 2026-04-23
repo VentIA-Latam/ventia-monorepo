@@ -203,7 +203,7 @@ const CarouselPrevious = React.forwardRef<
       ref={ref}
       type="button"
       className={cn(
-        "inline-flex items-center justify-center h-10 w-10 rounded-full border border-gray-300 text-[#111827] hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed",
+        "inline-flex items-center justify-center h-10 w-10 rounded-full border border-border text-foreground hover:bg-muted transition disabled:opacity-50 disabled:cursor-not-allowed",
         className
       )}
       disabled={!canScrollPrev}
@@ -228,7 +228,7 @@ const CarouselNext = React.forwardRef<
       ref={ref}
       type="button"
       className={cn(
-        "inline-flex items-center justify-center h-10 w-10 rounded-full border border-gray-300 text-[#111827] hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed",
+        "inline-flex items-center justify-center h-10 w-10 rounded-full border border-border text-foreground hover:bg-muted transition disabled:opacity-50 disabled:cursor-not-allowed",
         className
       )}
       disabled={!canScrollNext}

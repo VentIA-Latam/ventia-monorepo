@@ -9,6 +9,7 @@ import {
   LogOut,
   Bell,
   Moon,
+  Sun,
   ChevronRight,
   CreditCard,
   Users,
@@ -22,6 +23,7 @@ import {
   Clock,
 } from "lucide-react"
 import { usePathname, useSearchParams } from "next/navigation"
+import { useTheme } from "next-themes"
 import { getConversationCounts } from "@/lib/api-client/messaging"
 import { useMessagingEvent } from "@/components/conversations/messaging-provider"
 import type { ConversationCounts } from "@/lib/types/messaging"
@@ -226,6 +228,7 @@ const ConversationsNav = memo(function ConversationsNav({ pathname }: { pathname
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { user, isUserLoading, isSuperAdmin } = useAuth()
+  const { theme, setTheme } = useTheme()
   const [notifDialogOpen, setNotifDialogOpen] = useState(false)
 
   const isActive = (url: string) => {
@@ -415,6 +418,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 >
                   <Bell className="mr-2 h-4 w-4" />
                   Notificaciones
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  className="cursor-pointer"
+                >
+                  {theme === "dark" ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
+                  {theme === "dark" ? "Modo claro" : "Modo oscuro"}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-sidebar-border" />
                 <DropdownMenuItem

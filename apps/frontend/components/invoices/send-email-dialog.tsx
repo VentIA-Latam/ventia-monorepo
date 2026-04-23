@@ -100,7 +100,7 @@ export function SendEmailDialog({
                 disabled={loading}
                 autoComplete="email"
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 El comprobante será enviado a esta dirección de email
               </p>
             </div>
@@ -120,24 +120,24 @@ export function SendEmailDialog({
                 >
                   Incluir archivo XML firmado
                 </Label>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Adjuntar el XML electrónico validado por SUNAT (opcional)
                 </p>
               </div>
             </div>
 
             {/* Información del comprobante */}
-            <div className="rounded-lg bg-gray-50 p-4 space-y-2">
+            <div className="rounded-lg bg-muted p-4 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Comprobante:</span>
+                <span className="text-muted-foreground">Comprobante:</span>
                 <span className="font-medium">{invoice.full_number}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Cliente:</span>
+                <span className="text-muted-foreground">Cliente:</span>
                 <span className="font-medium">{invoice.cliente_razon_social}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Total:</span>
+                <span className="text-muted-foreground">Total:</span>
                 <span className="font-medium">
                   {invoice.currency} {invoice.total.toFixed(2)}
                 </span>

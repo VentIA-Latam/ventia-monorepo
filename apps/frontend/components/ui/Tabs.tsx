@@ -58,7 +58,7 @@ const TabsList = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "flex h-12 items-center justify-center w-full bg-gray-100 text-gray-500 rounded-t-lg",
+      "flex h-12 items-center justify-center w-full bg-muted text-muted-foreground rounded-t-lg",
       className
     )}
     {...props}
@@ -85,8 +85,8 @@ const TabsTrigger = React.forwardRef<
       className={cn(
         "flex-1 inline-flex items-center justify-center whitespace-nowrap px-6 py-3 text-sm font-medium transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
         isActive
-          ? "bg-white text-ventia-blue border-b-2 border-[#5ACAF0]"
-          : "text-gray-500 hover:text-gray-700",
+          ? "bg-card text-ventia-blue border-b-2 border-[#5ACAF0]"
+          : "text-muted-foreground hover:text-foreground",
         className
       )}
       {...props}

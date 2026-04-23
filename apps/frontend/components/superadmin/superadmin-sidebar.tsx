@@ -7,6 +7,8 @@ import {
   ChevronsUpDown,
   LogOut,
   Bell,
+  Moon,
+  Sun,
   LayoutDashboard,
   Users,
   Building2,
@@ -20,6 +22,7 @@ import {
   ChevronRight,
 } from "lucide-react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useTheme } from "next-themes"
 import Image from "next/image"
 import Link from "next/link"
 import { useAuth } from "@/hooks/use-auth"
@@ -229,6 +232,7 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
   const pathname = usePathname()
   const router = useRouter()
   const { user, isLoading } = useAuth()
+  const { theme, setTheme } = useTheme()
   const { selectedTenantId, setSelectedTenantId, tenants } = useTenant()
 
   const isActive = (url: string) => {
@@ -457,6 +461,14 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
                     </div>
                   </div>
                 </DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-border" />
+                <DropdownMenuItem
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  className="cursor-pointer"
+                >
+                  {theme === "dark" ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
+                  {theme === "dark" ? "Modo claro" : "Modo oscuro"}
+                </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-border" />
                 <DropdownMenuItem
                   onClick={handleLogout}

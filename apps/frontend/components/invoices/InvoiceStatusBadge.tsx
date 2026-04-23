@@ -23,7 +23,7 @@ export function InvoiceStatusBadge({ status }: InvoiceStatusBadgeProps) {
   } as const;
 
   const colorMap = {
-    pending: "bg-gray-100 text-gray-700 hover:bg-gray-100",
+    pending: "bg-muted text-muted-foreground hover:bg-muted",
     processing: "bg-yellow-100 text-yellow-700 hover:bg-yellow-100",
     success: "bg-green-100 text-green-700 hover:bg-green-100",
     error: "bg-red-100 text-red-700 hover:bg-red-100",

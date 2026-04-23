@@ -182,7 +182,7 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Tabla */}
-      <div className="border rounded-lg bg-white shadow-sm overflow-hidden">
+      <div className="border rounded-lg bg-card shadow-sm overflow-hidden">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -235,7 +235,7 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Info de paginación */}
-      <div className="flex justify-end text-xs text-slate-500">
+      <div className="flex justify-end text-xs text-muted-foreground">
         Página {table.getState().pagination.pageIndex + 1} de{" "}
         {table.getPageCount() || 1}
       </div>

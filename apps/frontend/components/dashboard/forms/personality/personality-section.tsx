@@ -59,7 +59,7 @@ export default function PersonalitySection({
   };
 
   return (
-    <div className="bg-white rounded-lg p-6 shadow-sm border border-border">
+    <div className="bg-card rounded-lg p-6 shadow-sm border border-border">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-6 h-6 rounded-full border-2 border-aqua flex items-center justify-center">
@@ -225,7 +225,7 @@ export default function PersonalitySection({
 
               {/* Emoji picker superpuesto - aparece hacia arriba */}
               <div className="absolute right-0 bottom-full mb-2 z-50">
-                <div className="border border-border rounded-lg overflow-hidden shadow-2xl bg-white">
+                <div className="border border-border rounded-lg overflow-hidden shadow-2xl bg-card">
                   <EmojiPicker
                     onEmojiClick={handleEmojiClick}
                     width={350}

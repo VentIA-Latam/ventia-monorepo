@@ -44,10 +44,10 @@ export function RecentActivityTable({ orders }: RecentActivityTableProps) {
         </Button>
       </div>
 
-      <div className="border rounded-xl bg-white shadow-sm overflow-hidden">
+      <div className="border rounded-xl bg-card shadow-sm overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50/60">
+            <TableRow className="bg-muted/60">
               <TableHead className="text-xs font-semibold uppercase pl-5">ID Pedido</TableHead>
               <TableHead className="text-xs font-semibold uppercase">Cliente</TableHead>
               <TableHead className="text-xs font-semibold uppercase">Fecha</TableHead>
@@ -65,7 +65,7 @@ export function RecentActivityTable({ orders }: RecentActivityTableProps) {
               </TableRow>
             ) : (
               orders.map((order) => (
-                <TableRow key={order.id} className="hover:bg-slate-50/60">
+                <TableRow key={order.id} className="hover:bg-muted/60">
                   <TableCell className="font-medium text-sm pl-5">
                     {getEcommerceOrderId(order)}
                   </TableCell>

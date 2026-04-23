@@ -48,7 +48,7 @@ function getWindowShortLabel(label: string): string {
 }
 
 function getTempColor(temperature: string): string {
-  return TEMP_COLORS[temperature] || "bg-gray-100 text-gray-700 border-gray-200";
+  return TEMP_COLORS[temperature] || "bg-muted text-muted-foreground border-border";
 }
 
 function getTempDisplay(temperature: string): string {
