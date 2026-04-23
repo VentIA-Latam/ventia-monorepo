@@ -471,19 +471,25 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
       {/* Messages — WhatsApp style with chat wallpaper */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 min-w-0 overscroll-y-contain relative"
+        className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-16 py-3 min-h-0 min-w-0 overscroll-y-contain"
         style={{ backgroundColor: resolvedTheme === "dark" ? "#09090b" : "#f5f0e9" }}
       >
         <div
-          className="absolute inset-0 bg-repeat pointer-events-none"
+          aria-hidden
+          className="pointer-events-none"
           style={{
+            position: "sticky",
+            top: 0,
+            height: "100%",
+            marginBottom: "-100%",
+            zIndex: 0,
             backgroundImage: "url('/images/fondo-wts.webp')",
+            backgroundRepeat: "repeat",
             filter: resolvedTheme === "dark" ? "brightness(0.15)" : "invert(1) brightness(1.85)",
             opacity: resolvedTheme === "dark" ? 0.6 : 0.1,
           }}
         />
-        <div className="relative z-[1] px-4 md:px-16 py-3">
-        <div ref={contentRef} className="space-y-1 max-w-full">
+        <div ref={contentRef} className="space-y-1 max-w-full relative z-[1]">
           {!hasMore && !loading && messages.length > 0 && (
             <div className="flex justify-center py-4">
               <p className="text-xs text-muted-foreground/60">
@@ -540,7 +546,6 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
 
           {/* Scroll anchor */}
           <div ref={bottomRef} className="h-px" />
-        </div>
         </div>
       </div>
 
