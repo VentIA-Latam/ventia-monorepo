@@ -22,6 +22,7 @@ import { useMessagingEvent } from "./messaging-provider";
 import { getMessages, sendMessage, updateConversation, markConversationRead } from "@/lib/api-client/messaging";
 import type { Conversation, Message, MessageType, MessageStatus, MessageContentAttributes, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
 import { getInitials, getDateSeparatorLabel, parseTimestamp } from "@/lib/utils/messaging";
+import { useTheme } from "next-themes";
 
 function mapWebSocketAttachments(raw: unknown): AttachmentBrief[] {
   if (!Array.isArray(raw)) return [];
@@ -62,6 +63,7 @@ interface MessageViewProps {
 
 export const MessageView = memo(function MessageView({ conversation, tenantId, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
   const lastEvent = useMessagingEvent();
+  const { resolvedTheme } = useTheme();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -470,7 +472,10 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-16 py-3 min-h-0 min-w-0 overscroll-y-contain"
-        style={{ backgroundImage: "url('/images/fondo-wts.webp')", backgroundRepeat: "repeat", backgroundColor: "#f5f0e9" }}
+        style={resolvedTheme === "dark"
+          ? { backgroundImage: "url('/images/fondo-conversacion.png')", backgroundRepeat: "repeat", backgroundColor: "#09090b", backgroundBlendMode: "soft-light", opacity: 1 }
+          : { backgroundImage: "url('/images/fondo-wts.webp')", backgroundRepeat: "repeat", backgroundColor: "#f5f0e9" }
+        }
       >
         <div ref={contentRef} className="space-y-1 max-w-full">
           {!hasMore && !loading && messages.length > 0 && (
