@@ -102,7 +102,8 @@ html {
   --info-bg: var(--cielo);
 
   /* Chat tokens */
-  --chat-wallpaper-filter: brightness(0.85) contrast(1.5);
+  --chat-wallpaper-filter: invert(1) brightness(1.85);
+  --chat-wallpaper-opacity: 0.1;
   --chat-outgoing: var(--cielo);
   --platform-badge: var(--marino);
 
@@ -187,7 +188,8 @@ html {
   --info-bg: oklch(0.22 0.04 230);
 
   /* Chat tokens — dark overrides */
-  --chat-wallpaper-filter: invert(1) brightness(0.15);
+  --chat-wallpaper-filter: brightness(0.15);
+  --chat-wallpaper-opacity: 0.6;
   --chat-outgoing: oklch(0.25 0.06 260);
   --platform-badge: var(--luma);
 }
@@ -201,25 +203,27 @@ html {
   }
 }
 
-@layer base {
-  .chat-wallpaper {
-    position: relative;
-    background-color: var(--background);
-  }
-  .chat-wallpaper::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image: url('/images/fondo-wts.webp');
-    background-repeat: repeat;
-    filter: var(--chat-wallpaper-filter);
-    pointer-events: none;
-    z-index: 0;
-  }
-  .chat-wallpaper > * {
-    position: relative;
-    z-index: 1;
-  }
+.chat-wallpaper {
+  position: relative;
+  background-color: #f5f0e9;
+}
+:is(.dark *).chat-wallpaper {
+  background-color: var(--background);
+}
+.chat-wallpaper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url('/images/fondo-wts.webp');
+  background-repeat: repeat;
+  filter: var(--chat-wallpaper-filter);
+  opacity: var(--chat-wallpaper-opacity);
+  pointer-events: none;
+  z-index: 0;
+}
+.chat-wallpaper > * {
+  position: relative;
+  z-index: 1;
 }
 
 @keyframes fadeIn {
