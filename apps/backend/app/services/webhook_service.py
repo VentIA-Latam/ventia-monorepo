@@ -163,9 +163,6 @@ def process_shopify_draft_order_create(
     if not customer_name:
         customer_name = payload.get("name")
 
-    # Extract customer phone
-    customer_phone = customer.get("phone") if customer else None
-
     # Extract total price
     total_price = payload.get("total_price")
     if total_price is not None:
@@ -232,7 +229,6 @@ def process_shopify_draft_order_create(
             shopify_draft_order_id=shopify_draft_order_id,
             customer_email=customer_email,
             customer_name=customer_name,
-            customer_phone=customer_phone,
             total_price=total_price,
             currency=currency,
             line_items=line_items if line_items else None,
@@ -1300,7 +1296,6 @@ def process_shopify_order_updated(
 
     # 4. Extract updated data
     customer_email = payload.get("email") or payload.get("customer", {}).get("email")
-    customer_phone = payload.get("customer", {}).get("phone")
 
     total_price_str = payload.get("total_price", str(order.total_price))
     try:
@@ -1379,9 +1374,6 @@ def process_shopify_order_updated(
         needs_update = True
     if line_items and order.line_items != line_items:
         needs_update = True
-    if customer_phone is not None and order.customer_phone != (customer_phone or None):
-        needs_update = True
-
     if not needs_update:
         logger.info(
             f"Order update skipped (no changes): tenant={tenant.id}, "
@@ -1411,9 +1403,6 @@ def process_shopify_order_updated(
 
         if payment_method:
             order.payment_method = payment_method
-
-        if customer_phone is not None:
-            order.customer_phone = customer_phone or None
 
         # Update line items and recalculated total
         if line_items:
