@@ -203,10 +203,12 @@ html {
   }
 }
 
-@utility bg-chat-wallpaper {
-  position: relative;
-  background-color: var(--background);
-  &::before {
+@layer components {
+  .chat-wallpaper {
+    position: relative;
+    background-color: var(--background);
+  }
+  .chat-wallpaper::before {
     content: "";
     position: absolute;
     inset: 0;
@@ -216,7 +218,7 @@ html {
     pointer-events: none;
     z-index: 0;
   }
-  & > * {
+  .chat-wallpaper > * {
     position: relative;
     z-index: 1;
   }
