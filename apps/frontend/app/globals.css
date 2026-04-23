@@ -187,7 +187,7 @@ html {
   --info-bg: oklch(0.22 0.04 230);
 
   /* Chat tokens — dark overrides */
-  --chat-wallpaper-filter: brightness(0.15) invert(1);
+  --chat-wallpaper-filter: invert(1) brightness(0.15);
   --chat-outgoing: oklch(0.25 0.06 260);
   --platform-badge: var(--luma);
 }
@@ -201,23 +201,25 @@ html {
   }
 }
 
-.chat-wallpaper {
-  position: relative;
-  background-color: var(--background);
-}
-.chat-wallpaper::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: url('/images/fondo-wts.webp');
-  background-repeat: repeat;
-  filter: var(--chat-wallpaper-filter);
-  pointer-events: none;
-  z-index: 0;
-}
-.chat-wallpaper > * {
-  position: relative;
-  z-index: 1;
+@layer base {
+  .chat-wallpaper {
+    position: relative;
+    background-color: var(--background);
+  }
+  .chat-wallpaper::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url('/images/fondo-wts.webp');
+    background-repeat: repeat;
+    filter: var(--chat-wallpaper-filter);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .chat-wallpaper > * {
+    position: relative;
+    z-index: 1;
+  }
 }
 
 @keyframes fadeIn {
