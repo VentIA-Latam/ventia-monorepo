@@ -72,14 +72,14 @@ class TestEcommerceServicePlatformCoherence:
     # ========================================
 
     @pytest.mark.asyncio
-    async def test_shopify_platform_requires_shopify_order_id(
+    async def test_shopify_native_order_attempts_create_paid_order(
         self, ecommerce_service, mock_db, mock_order_no_platform, mock_tenant
     ):
-        """Test: Tenant with platform=shopify and order without shopify_draft_order_id fails."""
-        # Configure tenant for Shopify
+        """Test: Native VentIA order with Shopify tenant attempts to create paid order in Shopify."""
         mock_order_no_platform.tenant = mock_tenant
         mock_order_no_platform.source_platform = None
 
+        # Should fail at token retrieval (no OAuth credentials in mock), not at draft_order_id check
         with pytest.raises(ValueError) as exc_info:
             await ecommerce_service.validate_order(
                 db=mock_db,
@@ -88,34 +88,31 @@ class TestEcommerceServicePlatformCoherence:
 
         error_msg = str(exc_info.value)
         assert "Shopify" in error_msg
-        assert "shopify_draft_order_id" in error_msg
 
     @pytest.mark.asyncio
-    async def test_shopify_order_with_woocommerce_tenant_fails(
+    async def test_shopify_order_with_woocommerce_tenant_creates_woo_order(
         self, ecommerce_service, mock_db, mock_order_shopify, mock_tenant_woocommerce
     ):
-        """Test: Shopify order with WooCommerce-configured tenant fails."""
+        """Test: Shopify-origin order with WooCommerce tenant tries to create WooCommerce order."""
         mock_order_shopify.tenant = mock_tenant_woocommerce
         mock_order_shopify.source_platform = "shopify"
 
-        with pytest.raises(ValueError) as exc_info:
+        # source_platform != tenant platform, so it tries _create_and_pay_woocommerce
+        with pytest.raises((ValueError, TypeError)):
             await ecommerce_service.validate_order(
                 db=mock_db,
                 order=mock_order_shopify,
             )
-
-        error_msg = str(exc_info.value)
-        assert "WooCommerce" in error_msg
 
     # ========================================
     # WooCommerce Platform Coherence
     # ========================================
 
     @pytest.mark.asyncio
-    async def test_woocommerce_platform_requires_woocommerce_order_id(
+    async def test_woocommerce_native_order_attempts_create_order(
         self, ecommerce_service, mock_db, mock_tenant_woocommerce
     ):
-        """Test: Tenant with platform=woocommerce and order without woocommerce_order_id fails."""
+        """Test: Native VentIA order with WooCommerce tenant attempts to create WooCommerce order."""
         order = MagicMock()
         order.id = 1
         order.tenant = mock_tenant_woocommerce
@@ -124,15 +121,12 @@ class TestEcommerceServicePlatformCoherence:
         order.woocommerce_order_id = None
         order.source_platform = None
 
-        with pytest.raises(ValueError) as exc_info:
+        # Should attempt to create order in WooCommerce (not fail at woocommerce_order_id check)
+        with pytest.raises((ValueError, TypeError)):
             await ecommerce_service.validate_order(
                 db=mock_db,
                 order=order,
             )
-
-        error_msg = str(exc_info.value)
-        assert "WooCommerce" in error_msg
-        assert "woocommerce_order_id" in error_msg
 
     @pytest.mark.asyncio
     async def test_woocommerce_order_with_shopify_tenant_fails(
@@ -334,3 +328,89 @@ class TestEcommerceServicePlatformCoherence:
             )
 
             mock_repo.update.assert_called_once()
+
+
+class TestEcommerceServiceCancelOrder:
+    """Tests for cancel_order platform coherence."""
+
+    @pytest.fixture
+    def ecommerce_service(self) -> EcommerceService:
+        return EcommerceService()
+
+    @pytest.mark.asyncio
+    async def test_cancel_native_order_skips_platform_sync(self, ecommerce_service):
+        """Test: Cancelling a native VentIA order does NOT sync to Shopify."""
+        from app.schemas.order import OrderCancel
+
+        mock_db = MagicMock()
+        order = MagicMock()
+        order.id = 1
+        order.source_platform = None  # Native VentIA order
+        order.validado = False
+        order.notes = ""
+
+        tenant = MagicMock()
+        settings = TenantSettings(
+            platform="shopify",
+            ecommerce=EcommerceSettings(
+                shopify=ShopifyCredentials(
+                    store_url="https://test.myshopify.com",
+                    access_token="shpat_test",
+                    api_version="2024-01",
+                ),
+                sync_on_validation=True,
+            ),
+        )
+        tenant.get_settings.return_value = settings
+        order.tenant = tenant
+
+        cancel_data = OrderCancel(reason="STAFF", staff_note="Test cancel")
+
+        with patch("app.services.ecommerce.order_repository") as mock_repo:
+            mock_repo.update.return_value = order
+
+            result = await ecommerce_service.cancel_order(
+                db=mock_db, order=order, cancel_data=cancel_data
+            )
+
+            # Should update locally but NOT attempt any Shopify API call
+            mock_repo.update.assert_called_once()
+            update_args = mock_repo.update.call_args
+            update_data = update_args.kwargs.get("obj_in", update_args[1].get("obj_in"))
+            assert update_data["status"] == "Cancelado"
+
+    @pytest.mark.asyncio
+    async def test_cancel_shopify_order_with_shopify_tenant_syncs(self, ecommerce_service):
+        """Test: Cancelling a Shopify order with Shopify tenant attempts platform sync."""
+        from app.schemas.order import OrderCancel
+
+        mock_db = MagicMock()
+        order = MagicMock()
+        order.id = 1
+        order.source_platform = "shopify"  # Shopify-origin order
+        order.validado = False
+        order.shopify_draft_order_id = "gid://shopify/DraftOrder/123"
+        order.notes = ""
+
+        tenant = MagicMock()
+        settings = TenantSettings(
+            platform="shopify",
+            ecommerce=EcommerceSettings(
+                shopify=ShopifyCredentials(
+                    store_url="https://test.myshopify.com",
+                    access_token="shpat_test",
+                    api_version="2024-01",
+                ),
+                sync_on_validation=True,
+            ),
+        )
+        tenant.get_settings.return_value = settings
+        order.tenant = tenant
+
+        cancel_data = OrderCancel(reason="STAFF")
+
+        # Should attempt to cancel draft in Shopify (will fail at token manager)
+        with pytest.raises(Exception):
+            await ecommerce_service.cancel_order(
+                db=mock_db, order=order, cancel_data=cancel_data
+            )

@@ -139,14 +139,21 @@ export const ConversationItem = memo(function ConversationItem({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <p
-              className={cn(
-                "text-[15px] truncate",
-                hasUnread ? "font-semibold" : "font-medium"
+            <div className="flex items-center gap-1.5 min-w-0">
+              <p
+                className={cn(
+                  "text-[15px] truncate",
+                  hasUnread ? "font-semibold" : "font-medium"
+                )}
+              >
+                {contact?.name || contact?.phone_number || "Sin nombre"}
+              </p>
+              {conversation.stage === "sale" && (
+                <span className="inline-flex items-center shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold leading-none bg-success-bg text-success border border-success/30">
+                  Venta
+                </span>
               )}
-            >
-              {contact?.name || contact?.phone_number || "Sin nombre"}
-            </p>
+            </div>
             <span
               suppressHydrationWarning
               className={cn(
