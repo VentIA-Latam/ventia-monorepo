@@ -203,32 +203,6 @@ html {
   }
 }
 
-.chat-wallpaper {
-  position: relative;
-  background-color: #f5f0e9;
-}
-:is(.dark *).chat-wallpaper {
-  background-color: var(--background);
-}
-.chat-wallpaper::before {
-  content: "";
-  position: sticky;
-  top: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-  margin-bottom: -100%;
-  background-image: url('/images/fondo-wts.webp');
-  background-repeat: repeat;
-  filter: var(--chat-wallpaper-filter);
-  opacity: var(--chat-wallpaper-opacity);
-  pointer-events: none;
-  z-index: 0;
-}
-.chat-wallpaper > * {
-  position: relative;
-  z-index: 1;
-}
 
 @keyframes fadeIn {
   from { opacity: 0; }
