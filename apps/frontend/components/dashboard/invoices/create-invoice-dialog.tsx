@@ -73,7 +73,8 @@ export function CreateInvoiceDialog({
       });
       if (!response.ok) throw new Error("Error al cargar series");
 
-      const allSeries: InvoiceSerie[] = await response.json();
+      const data = await response.json();
+      const allSeries: InvoiceSerie[] = data.items ?? data;
 
       // Filtrar series activas del tipo seleccionado
       const filteredSeries = allSeries.filter(
