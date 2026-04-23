@@ -272,7 +272,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               src="/images/logo-ventia-sidebar.png"
               alt="VentIA"
               fill
-              className="object-contain"
+              className="object-contain dark:hidden"
+            />
+            <Image
+              src="/images/logo-ventia-header.png"
+              alt="VentIA"
+              fill
+              className="object-contain hidden dark:block"
             />
           </div>
         </div>

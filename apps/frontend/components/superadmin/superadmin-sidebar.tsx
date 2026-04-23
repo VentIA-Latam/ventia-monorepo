@@ -280,7 +280,13 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
                 src="/images/logo-ventia-sidebar.png"
                 alt="VentIA SuperAdmin"
                 fill
-                className="object-contain"
+                className="object-contain dark:hidden"
+              />
+              <Image
+                src="/images/logo-ventia-header.png"
+                alt="VentIA SuperAdmin"
+                fill
+                className="object-contain hidden dark:block"
               />
             </div>
             <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-luma/15 border border-luma/30">
