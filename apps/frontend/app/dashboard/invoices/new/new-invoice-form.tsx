@@ -165,7 +165,8 @@ export function NewInvoiceForm({ order, existingInvoices, basePath = '/dashboard
           throw new Error("Error al cargar las series");
         }
 
-        const allSeries: InvoiceSerie[] = await response.json();
+        const data = await response.json();
+        const allSeries: InvoiceSerie[] = data.items ?? data;
 
         // Filtrar por tipo y activas
         const filtered = allSeries.filter(
