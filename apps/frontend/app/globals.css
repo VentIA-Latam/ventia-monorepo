@@ -102,7 +102,6 @@ html {
   --info-bg: var(--cielo);
 
   /* Chat tokens */
-  --chat-wallpaper: url('/images/fondo-wts.webp');
   --chat-wallpaper-filter: none;
   --chat-outgoing: var(--cielo);
   --platform-badge: var(--marino);
@@ -188,7 +187,6 @@ html {
   --info-bg: oklch(0.22 0.04 230);
 
   /* Chat tokens — dark overrides */
-  --chat-wallpaper: url('/images/fondo-wts.webp');
   --chat-wallpaper-filter: brightness(0.15) invert(1);
   --chat-outgoing: oklch(0.25 0.06 260);
   --platform-badge: var(--luma);
@@ -212,7 +210,7 @@ html {
     content: "";
     position: absolute;
     inset: 0;
-    background-image: var(--chat-wallpaper);
+    background-image: url('/images/fondo-wts.webp');
     background-repeat: repeat;
     filter: var(--chat-wallpaper-filter);
     pointer-events: none;
