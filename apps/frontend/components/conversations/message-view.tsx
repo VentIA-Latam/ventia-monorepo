@@ -485,6 +485,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
             zIndex: 0,
             backgroundImage: "url('/images/fondo-wts.webp')",
             backgroundRepeat: "repeat",
+            backgroundSize: "500px auto",
             filter: resolvedTheme === "dark" ? "brightness(0.15)" : "invert(1) brightness(1.85)",
             opacity: resolvedTheme === "dark" ? 0.6 : 0.1,
           }}
