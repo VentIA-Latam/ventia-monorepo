@@ -264,7 +264,7 @@ export function TenantsClient({ initialTenants }: { initialTenants: Tenant[] }) 
                       </TableCell>
                       <TableCell>
                         {tenant.is_platform ? (
-                          <Badge variant="secondary" className="bg-luma/15 text-marino border-0 hover:bg-luma/15 rounded-md px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs">
+                          <Badge variant="secondary" className="bg-luma/15 text-platform-badge border-0 hover:bg-luma/15 rounded-md px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs">
                             Plataforma
                           </Badge>
                         ) : (

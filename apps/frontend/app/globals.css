@@ -75,6 +75,9 @@ html {
   --color-danger-bg: var(--danger-bg);
   --color-info: var(--info);
   --color-info-bg: var(--info-bg);
+  /* Chat tokens */
+  --color-chat-outgoing: var(--chat-outgoing);
+  --color-platform-badge: var(--platform-badge);
 }
 
 :root {
@@ -97,6 +100,11 @@ html {
   --danger-bg: oklch(0.98 0.02 20);
   --info: var(--aqua);
   --info-bg: var(--cielo);
+
+  /* Chat tokens */
+  --chat-wallpaper: url('/images/fondo-wts.webp');
+  --chat-outgoing: var(--cielo);
+  --platform-badge: var(--marino);
 
   /* Core tokens — mapped to brand */
   --background: oklch(1 0 0);
@@ -177,6 +185,11 @@ html {
   --warning-bg: oklch(0.22 0.04 90);
   --danger-bg: oklch(0.22 0.04 20);
   --info-bg: oklch(0.22 0.04 230);
+
+  /* Chat tokens — dark overrides */
+  --chat-wallpaper: none;
+  --chat-outgoing: oklch(0.25 0.06 260);
+  --platform-badge: var(--luma);
 }
 
 @layer base {
@@ -186,6 +199,11 @@ html {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@utility bg-chat-wallpaper {
+  background-image: var(--chat-wallpaper);
+  background-color: var(--background);
 }
 
 @keyframes fadeIn {
