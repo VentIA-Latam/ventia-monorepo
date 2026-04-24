@@ -64,6 +64,9 @@ interface MessageViewProps {
 export const MessageView = memo(function MessageView({ conversation, tenantId, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
   const lastEvent = useMessagingEvent();
   const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === "dark";
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -471,19 +474,21 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
       {/* Messages — WhatsApp style with chat wallpaper */}
       <div
         className="flex-1 relative min-h-0 min-w-0"
-        style={{ backgroundColor: resolvedTheme === "dark" ? "#09090b" : "#f5f0e9" }}
+        style={{ backgroundColor: isDark ? "#09090b" : "#f5f0e9" }}
       >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            zIndex: 0,
-            backgroundImage: "url('/images/fondo-wts.webp')",
-            backgroundRepeat: "repeat",
-            filter: resolvedTheme === "dark" ? "brightness(0.15)" : "invert(1) brightness(1.85)",
-            opacity: resolvedTheme === "dark" ? 0.6 : 0.1,
-          }}
-        />
+        {mounted && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{
+              zIndex: 0,
+              backgroundImage: "url('/images/fondo-wts.webp')",
+              backgroundRepeat: "repeat",
+              filter: isDark ? "brightness(0.15)" : "invert(1) brightness(1.85)",
+              opacity: isDark ? 0.6 : 0.1,
+            }}
+          />
+        )}
         <div
           ref={scrollContainerRef}
           className="relative z-[1] h-full overflow-y-auto overflow-x-hidden overscroll-y-contain"
