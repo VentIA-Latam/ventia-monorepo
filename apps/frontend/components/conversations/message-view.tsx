@@ -467,7 +467,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
       </div>
 
       {/* Messages — WhatsApp style with chat wallpaper */}
-      <div className="flex-1 relative min-h-0 min-w-0 bg-[#f5f0e9] dark:bg-[#09090b]">
+      <div className="flex-1 relative min-h-0 min-w-0 bg-[#f0f0f0] dark:bg-[#09090b]">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-10 dark:hidden"
@@ -475,7 +475,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
             zIndex: 0,
             backgroundImage: "url('/images/fondo-wts.webp')",
             backgroundRepeat: "repeat",
-            filter: "invert(1) brightness(1.85)",
+            filter: "invert(1) brightness(1.5)",
           }}
         />
         <div
