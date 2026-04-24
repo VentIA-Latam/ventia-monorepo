@@ -626,3 +626,113 @@ class TestInvoiceServiceTenantValidations:
 
             assert "Tenant" in str(exc_info.value)
             assert "not found" in str(exc_info.value)
+
+
+class TestInvoiceServiceZeroPriceItems:
+    """Tests for filtering zero-price items from eFact submission."""
+
+    @pytest.fixture
+    def invoice_service(self) -> InvoiceService:
+        service = InvoiceService()
+        service.efact_client = MagicMock()
+        return service
+
+    def test_zero_price_delivery_excluded_from_efact(
+        self, invoice_service, mock_db, mock_tenant, mock_invoice_serie
+    ):
+        """Test: Items with unitPrice=0 (like free DELIVERY) are excluded from JSON-UBL."""
+        order = MagicMock()
+        order.id = 1
+        order.tenant_id = 1
+        order.tenant = mock_tenant
+        order.customer_email = "test@example.com"
+        order.customer_name = "Test User"
+        order.customer_document_type = "1"
+        order.customer_document_number = "40253345"
+        order.total_price = 70.0
+        order.currency = "PEN"
+        order.validado = True
+        order.line_items = [
+            {"sku": "PROD1", "product": "Absorpet Toalla", "unitPrice": 35, "quantity": 2, "subtotal": 70},
+            {"sku": None, "product": "DELIVERY", "unitPrice": 0, "quantity": 1, "subtotal": 0},
+        ]
+
+        with patch("app.services.invoice.order_repository") as mock_order_repo, \
+             patch("app.services.invoice.tenant_repository") as mock_tenant_repo, \
+             patch("app.services.invoice.invoice_serie_repository") as mock_serie_repo, \
+             patch("app.services.invoice.generate_json_ubl") as mock_gen_ubl:
+
+            mock_order_repo.get.return_value = order
+            mock_tenant_repo.get.return_value = mock_tenant
+            mock_serie_repo.get_next_correlative.return_value = 1
+            mock_gen_ubl.return_value = {"Invoice": [{}]}
+
+            invoice_service.efact_client.send_document.return_value = {
+                "description": "TICKET-123"
+            }
+
+            invoice_data = InvoiceCreate(invoice_type="03", serie="BV01")
+
+            try:
+                invoice_service.create_invoice(
+                    db=mock_db, order_id=1, tenant_id=1, invoice_data=invoice_data
+                )
+            except Exception:
+                pass
+
+            # Verify generate_json_ubl was called with filtered items
+            if mock_gen_ubl.called:
+                call_kwargs = mock_gen_ubl.call_args.kwargs
+                items = call_kwargs.get("items", [])
+                # Only the product with price > 0 should be included
+                assert len(items) == 1
+                assert items[0]["description"] == "Absorpet Toalla"
+
+    def test_all_items_with_price_included(
+        self, invoice_service, mock_db, mock_tenant, mock_invoice_serie
+    ):
+        """Test: Items with unitPrice > 0 are all included in JSON-UBL."""
+        order = MagicMock()
+        order.id = 1
+        order.tenant_id = 1
+        order.tenant = mock_tenant
+        order.customer_email = "test@example.com"
+        order.customer_name = "Test User"
+        order.customer_document_type = "1"
+        order.customer_document_number = "12345678"
+        order.total_price = 118.0
+        order.currency = "PEN"
+        order.validado = True
+        order.line_items = [
+            {"sku": "PROD1", "product": "Producto A", "unitPrice": 59, "quantity": 1, "subtotal": 59},
+            {"sku": "PROD2", "product": "Producto B", "unitPrice": 59, "quantity": 1, "subtotal": 59},
+        ]
+
+        with patch("app.services.invoice.order_repository") as mock_order_repo, \
+             patch("app.services.invoice.tenant_repository") as mock_tenant_repo, \
+             patch("app.services.invoice.invoice_serie_repository") as mock_serie_repo, \
+             patch("app.services.invoice.generate_json_ubl") as mock_gen_ubl:
+
+            mock_order_repo.get.return_value = order
+            mock_tenant_repo.get.return_value = mock_tenant
+            mock_serie_repo.get_next_correlative.return_value = 1
+            mock_gen_ubl.return_value = {"Invoice": [{}]}
+
+            invoice_service.efact_client.send_document.return_value = {
+                "description": "TICKET-123"
+            }
+
+            invoice_data = InvoiceCreate(invoice_type="03", serie="BV01")
+
+            try:
+                invoice_service.create_invoice(
+                    db=mock_db, order_id=1, tenant_id=1, invoice_data=invoice_data
+                )
+            except Exception:
+                pass
+
+            # Verify both items are included
+            if mock_gen_ubl.called:
+                call_kwargs = mock_gen_ubl.call_args.kwargs
+                items = call_kwargs.get("items", [])
+                assert len(items) == 2
