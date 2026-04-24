@@ -22,7 +22,6 @@ import { useMessagingEvent } from "./messaging-provider";
 import { getMessages, sendMessage, updateConversation, markConversationRead } from "@/lib/api-client/messaging";
 import type { Conversation, Message, MessageType, MessageStatus, MessageContentAttributes, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
 import { getInitials, getDateSeparatorLabel, parseTimestamp } from "@/lib/utils/messaging";
-import { useTheme } from "next-themes";
 
 function mapWebSocketAttachments(raw: unknown): AttachmentBrief[] {
   if (!Array.isArray(raw)) return [];
@@ -63,10 +62,6 @@ interface MessageViewProps {
 
 export const MessageView = memo(function MessageView({ conversation, tenantId, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
   const lastEvent = useMessagingEvent();
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted && resolvedTheme === "dark";
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -472,23 +467,27 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
       </div>
 
       {/* Messages — WhatsApp style with chat wallpaper */}
-      <div
-        className="flex-1 relative min-h-0 min-w-0"
-        style={{ backgroundColor: isDark ? "#09090b" : "#f5f0e9" }}
-      >
-        {mounted && (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0"
-            style={{
-              zIndex: 0,
-              backgroundImage: "url('/images/fondo-wts.webp')",
-              backgroundRepeat: "repeat",
-              filter: isDark ? "brightness(0.15)" : "invert(1) brightness(1.85)",
-              opacity: isDark ? 0.6 : 0.1,
-            }}
-          />
-        )}
+      <div className="flex-1 relative min-h-0 min-w-0 bg-[#f5f0e9] dark:bg-[#09090b]">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-10 dark:hidden"
+          style={{
+            zIndex: 0,
+            backgroundImage: "url('/images/fondo-wts.webp')",
+            backgroundRepeat: "repeat",
+            filter: "invert(1) brightness(1.85)",
+          }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-60 hidden dark:block"
+          style={{
+            zIndex: 0,
+            backgroundImage: "url('/images/fondo-wts.webp')",
+            backgroundRepeat: "repeat",
+            filter: "brightness(0.15)",
+          }}
+        />
         <div
           ref={scrollContainerRef}
           className="relative z-[1] h-full overflow-y-auto overflow-x-hidden overscroll-y-contain"
