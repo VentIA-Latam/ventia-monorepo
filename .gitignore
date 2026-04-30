@@ -101,3 +101,4 @@ Thumbs.db
 # TEMPO
 /TEMPORALES
 AGENTS.md
+apps/backend/uv.lock
