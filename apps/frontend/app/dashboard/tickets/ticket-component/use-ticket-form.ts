@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useMemo } from "react"
+import type { DragEvent, ChangeEvent } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
 import { getConversations } from "@/lib/api-client/messaging"
@@ -21,12 +22,15 @@ export function useTicketForm() {
   const [touched, setTouched] = useState({ type: false, description: false, conversation: false })
   const [submitting, setSubmitting] = useState(false)
   const [serverError, setServerError] = useState(false)
+  const [files, setFiles] = useState<File[]>([])
+  const [dragOver, setDragOver] = useState(false)
 
   const convDropdownRef = useRef<HTMLDivElement>(null)
   const convTriggerRef = useRef<HTMLButtonElement>(null)
   const typeRef = useRef<HTMLDivElement>(null)
   const descRef = useRef<HTMLDivElement>(null)
   const convRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (type !== "critical_incident") return
@@ -83,6 +87,7 @@ export function useTicketForm() {
     setConvSearch("")
     setTouched({ type: false, description: false, conversation: false })
     setServerError(false)
+    setFiles([])
   }
 
   const handleSubmit = async () => {
@@ -96,32 +101,6 @@ export function useTicketForm() {
 
     if (!userDetails) return
 
-    const payload: Record<string, unknown> = {
-      type,
-      description: description.trim(),
-      user: {
-        email: userDetails.email,
-        name: userDetails.name,
-        tenant_id: userDetails.tenant_id,
-      },
-    }
-
-    if (type === "critical_incident" && selectedConversation) {
-      payload.conversation_id = selectedConversation.id
-      payload.contact = {
-        id: selectedConversation.contact?.id,
-        name: selectedConversation.contact?.name,
-        phone_number: selectedConversation.contact?.phone_number,
-        email: selectedConversation.contact?.email,
-        last_activity_at: selectedConversation.contact?.last_activity_at,
-      }
-      payload.inbox = {
-        id: selectedConversation.inbox?.id,
-        name: selectedConversation.inbox?.name,
-        channel_type: selectedConversation.inbox?.channel_type,
-      }
-    }
-
     setSubmitting(true)
     setServerError(false)
 
@@ -129,12 +108,55 @@ export function useTicketForm() {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 10_000)
 
-      const res = await fetch(N8N_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      })
+      let res: Response
+
+      if (type === "critical_incident" && selectedConversation) {
+        const formData = new FormData()
+        formData.append("type", type)
+        formData.append("description", description.trim())
+        formData.append("user", JSON.stringify({
+          email: userDetails.email,
+          name: userDetails.name,
+          tenant_id: userDetails.tenant_id,
+        }))
+        formData.append("conversation_id", String(selectedConversation.id))
+        formData.append("contact", JSON.stringify({
+          id: selectedConversation.contact?.id,
+          name: selectedConversation.contact?.name,
+          phone_number: selectedConversation.contact?.phone_number,
+          email: selectedConversation.contact?.email,
+          last_activity_at: selectedConversation.contact?.last_activity_at,
+        }))
+        formData.append("inbox", JSON.stringify({
+          id: selectedConversation.inbox?.id,
+          name: selectedConversation.inbox?.name,
+          channel_type: selectedConversation.inbox?.channel_type,
+        }))
+        files.forEach((file) => formData.append("attachments[]", file))
+
+        res = await fetch(N8N_WEBHOOK_URL, {
+          method: "POST",
+          body: formData,
+          signal: controller.signal,
+        })
+      } else {
+        const payload: Record<string, unknown> = {
+          type,
+          description: description.trim(),
+          user: {
+            email: userDetails.email,
+            name: userDetails.name,
+            tenant_id: userDetails.tenant_id,
+          },
+        }
+
+        res = await fetch(N8N_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        })
+      }
 
       clearTimeout(timeoutId)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -146,6 +168,72 @@ export function useTicketForm() {
       toast({ variant: "destructive", description: "Error al enviar el ticket. Intenta nuevamente." })
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const validateAndAddFiles = (newFiles: File[]) => {
+    const ALLOWED = ["image/jpeg", "image/png", "application/pdf"]
+    const IMG_LIMIT = 2 * 1024 * 1024
+    const PDF_LIMIT = 10 * 1024 * 1024
+
+    const valid: File[] = []
+    let typeError = false
+    let sizeErrorMsg = ""
+
+    for (const file of newFiles) {
+      if (!ALLOWED.includes(file.type)) {
+        typeError = true
+        continue
+      }
+      const isImage = file.type.startsWith("image/")
+      const limit = isImage ? IMG_LIMIT : PDF_LIMIT
+      if (file.size > limit) {
+        sizeErrorMsg = `${isImage ? "Las imágenes" : "Los PDFs"} no pueden exceder ${isImage ? 2 : 10}MB`
+        continue
+      }
+      valid.push(file)
+    }
+
+    if (typeError) toast({ variant: "destructive", description: "Solo se aceptan JPG, JPEG, PNG y PDF" })
+    if (sizeErrorMsg) toast({ variant: "destructive", description: sizeErrorMsg })
+    if (!valid.length) return
+
+    const remaining = 5 - files.length
+    if (remaining <= 0) {
+      toast({ description: "Límite de 5 archivos alcanzado" })
+      return
+    }
+    if (valid.length > remaining) toast({ description: "Límite de 5 archivos alcanzado" })
+    setFiles((prev) => [...prev, ...valid.slice(0, remaining)])
+  }
+
+  const removeFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOver(true)
+  }
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOver(false)
+  }
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOver(false)
+    validateAndAddFiles(Array.from(e.dataTransfer.files))
+  }
+
+  const handleFileInput = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      validateAndAddFiles(Array.from(e.target.files))
+      e.target.value = ""
     }
   }
 
@@ -195,12 +283,15 @@ export function useTicketForm() {
     submitting,
     serverError,
     touched,
-    // Refs (attached to DOM elements in the orchestrator or sub-components)
+    files,
+    dragOver,
+    // Refs
     convDropdownRef,
     convTriggerRef,
     typeRef,
     descRef,
     convRef,
+    fileInputRef,
     // Derived
     errors,
     isValid,
@@ -215,6 +306,12 @@ export function useTicketForm() {
     handleConvTriggerClick,
     handleConversationSelect,
     touchDescription,
+    validateAndAddFiles,
+    removeFile,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+    handleFileInput,
     // From child hooks
     isUserLoading,
   }

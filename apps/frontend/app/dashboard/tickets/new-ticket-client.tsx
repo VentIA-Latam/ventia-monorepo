@@ -7,6 +7,7 @@ import { TicketTypeSelector } from "./ticket-component/ticket-type-selector"
 import { DescriptionField } from "./ticket-component/description-field"
 import { ConversationSelector } from "./ticket-component/conversation-selector"
 import { TicketSidebar } from "./ticket-component/ticket-sidebar"
+import { FileUploadZone } from "./ticket-component/file-upload-zone"
 
 function FieldLabel({ step, label, required }: { step: number; label: string; required?: boolean }) {
   return (
@@ -43,11 +44,14 @@ export function NewTicketClient() {
     submitting,
     serverError,
     touched,
+    files,
+    dragOver,
     convDropdownRef,
     convTriggerRef,
     typeRef,
     descRef,
     convRef,
+    fileInputRef,
     errors,
     isValid,
     charCount,
@@ -59,6 +63,11 @@ export function NewTicketClient() {
     handleConvTriggerClick,
     handleConversationSelect,
     touchDescription,
+    removeFile,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+    handleFileInput,
     isUserLoading,
   } = useTicketForm()
 
@@ -129,6 +138,26 @@ export function NewTicketClient() {
                 triggerRef={convTriggerRef}
               />
               {touched.conversation && errors.conversation && <FieldError message={errors.conversation} />}
+            </div>
+          )}
+
+          {/* Field 4: File upload (only for critical incidents) */}
+          {showConvField && (
+            <div>
+              <FieldLabel step={4} label="Archivos adjuntos" />
+              <p className="text-xs text-muted-foreground mt-1 mb-2">
+                Adjunta capturas de pantalla o documentos que ayuden a entender el problema. Opcional.
+              </p>
+              <FileUploadZone
+                files={files}
+                dragOver={dragOver}
+                fileInputRef={fileInputRef}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onFileInput={handleFileInput}
+                onRemoveFile={removeFile}
+              />
             </div>
           )}
 
