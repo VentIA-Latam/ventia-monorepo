@@ -3,6 +3,8 @@ import {
   fetchDashboardMetrics,
   fetchTopProducts,
   fetchOrdersByCity,
+  fetchConversionRate,
+  ConversionRate,
   PeriodType,
 } from "@/lib/services/metrics-service";
 import { fetchOrders } from "@/lib/services/order-service";
@@ -36,14 +38,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   let recentOrders;
   let topProducts;
   let ordersByCity;
+  let conversionRate: ConversionRate | undefined;
   let error: Error | null = null;
 
   try {
-    [metrics, recentOrders, topProducts, ordersByCity] = await Promise.all([
+    [metrics, recentOrders, topProducts, ordersByCity, conversionRate] = await Promise.all([
       fetchDashboardMetrics(accessToken, { period }),
       fetchOrders(accessToken, { limit: 5, skip: 0, sortBy: 'updated_at', sortOrder: 'desc' }),
       fetchTopProducts(accessToken, { period }),
       fetchOrdersByCity(accessToken, { period }),
+      fetchConversionRate(accessToken, { period }),
     ]);
   } catch (err) {
     console.error('Error loading dashboard data:', err);
@@ -70,6 +74,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         recentOrders={recentOrders?.items || []}
         topProducts={topProducts?.data || []}
         ordersByCity={ordersByCity?.data || []}
+        initialConversionRate={conversionRate!}
       />
     </>
   );
