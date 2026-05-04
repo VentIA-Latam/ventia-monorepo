@@ -17,13 +17,13 @@ module Api
                                  .created_in_range(start_date, end_date)
                                  .count
 
-          render_success(
+          render_success({
             total: total,
             period: {
               start_date: start_date.iso8601,
               end_date: end_date.iso8601
             }
-          )
+          })
         end
 
         private
