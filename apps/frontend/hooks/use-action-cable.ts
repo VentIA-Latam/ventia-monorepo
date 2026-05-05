@@ -14,6 +14,7 @@ interface UseActionCableOptions {
   pubsubToken: string;
   accountId: string;
   onEvent: (event: ActionCableEvent) => void;
+  onReconnect?: () => void;
   enabled?: boolean;
 }
 
@@ -33,6 +34,7 @@ export function useActionCable({
   pubsubToken,
   accountId,
   onEvent,
+  onReconnect,
   enabled = true,
 }: UseActionCableOptions) {
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
@@ -41,6 +43,10 @@ export function useActionCable({
   const reconnectAttempts = useRef(0);
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
+  const onReconnectRef = useRef(onReconnect);
+  onReconnectRef.current = onReconnect;
+  // True after the first disconnect — used to distinguish reconnects from initial connect
+  const wasDisconnectedRef = useRef(false);
 
   const MAX_RECONNECT_DELAY = 30000;
 
@@ -79,6 +85,10 @@ export function useActionCable({
 
             case "confirm_subscription":
               setStatus("connected");
+              if (wasDisconnectedRef.current) {
+                wasDisconnectedRef.current = false;
+                onReconnectRef.current?.();
+              }
               break;
 
             case "ping":
@@ -103,6 +113,7 @@ export function useActionCable({
 
       ws.onclose = () => {
         setStatus("disconnected");
+        wasDisconnectedRef.current = true;
         wsRef.current = null;
 
         // Reconnect with exponential backoff

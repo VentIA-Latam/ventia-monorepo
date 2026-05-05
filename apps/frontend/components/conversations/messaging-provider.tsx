@@ -16,6 +16,9 @@ import { getWsToken, syncUser } from "@/lib/api-client/messaging";
 const MessagingStatusContext = createContext<ConnectionStatus>("disconnected");
 const MessagingEventContext = createContext<ActionCableEvent | null>(null);
 const MessagingEmitContext = createContext<(event: ActionCableEvent) => void>(() => {});
+// Timestamp (ms) of the most recent WebSocket reconnection; null until the first reconnect.
+// Components use this to trigger a data refresh after connection loss (e.g. sleep/wake).
+const MessagingReconnectContext = createContext<number | null>(null);
 
 /** Subscribe to both status and events (backward compat) */
 export function useMessaging() {
@@ -40,6 +43,11 @@ export function useMessagingEmit() {
   return useContext(MessagingEmitContext);
 }
 
+/** Returns a timestamp (ms) that updates on each WebSocket reconnection. Use to trigger data refreshes after sleep/wake. */
+export function useMessagingReconnect() {
+  return useContext(MessagingReconnectContext);
+}
+
 const WS_URL = process.env.NEXT_PUBLIC_MESSAGING_WS_URL || "ws://localhost:3001/cable";
 
 interface MessagingProviderProps {
@@ -54,6 +62,7 @@ export function MessagingProvider({ children, tenantId }: MessagingProviderProps
     user_id: string;
   } | null>(null);
   const [lastEvent, setLastEvent] = useState<ActionCableEvent | null>(null);
+  const [reconnectedAt, setReconnectedAt] = useState<number | null>(null);
 
   // Fetch WS token on mount or when tenantId changes
   useEffect(() => {
@@ -85,11 +94,16 @@ export function MessagingProvider({ children, tenantId }: MessagingProviderProps
     setLastEvent(event);
   }, []);
 
+  const handleReconnect = useCallback(() => {
+    setReconnectedAt(Date.now());
+  }, []);
+
   const { status } = useActionCable({
     url: WS_URL,
     pubsubToken: token?.pubsub_token ?? "",
     accountId: token?.account_id ?? "",
     onEvent: emitEvent,
+    onReconnect: handleReconnect,
     enabled: !!token,
   });
 
@@ -97,7 +111,9 @@ export function MessagingProvider({ children, tenantId }: MessagingProviderProps
     <MessagingStatusContext.Provider value={status}>
       <MessagingEventContext.Provider value={lastEvent}>
         <MessagingEmitContext.Provider value={emitEvent}>
-          {children}
+          <MessagingReconnectContext.Provider value={reconnectedAt}>
+            {children}
+          </MessagingReconnectContext.Provider>
         </MessagingEmitContext.Provider>
       </MessagingEventContext.Provider>
     </MessagingStatusContext.Provider>
