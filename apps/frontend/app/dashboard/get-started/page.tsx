@@ -41,14 +41,30 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   let conversionRate: ConversionRate | undefined;
   let error: Error | null = null;
 
+  const conversionRateFallback: ConversionRate = {
+    conversion_rate: null, conversions: 0, total_conversations: 0,
+    period, start_date: '', end_date: '',
+  };
+
   try {
-    [metrics, recentOrders, topProducts, ordersByCity, conversionRate] = await Promise.all([
+    const [metricsRes, ordersRes, topProductsRes, ordersByCityRes, conversionRateRes] = await Promise.allSettled([
       fetchDashboardMetrics(accessToken, { period }),
       fetchOrders(accessToken, { limit: 5, skip: 0, sortBy: 'updated_at', sortOrder: 'desc' }),
       fetchTopProducts(accessToken, { period }),
       fetchOrdersByCity(accessToken, { period }),
       fetchConversionRate(accessToken, { period }),
     ]);
+
+    if (metricsRes.status === 'rejected') throw metricsRes.reason;
+    metrics = metricsRes.value;
+    recentOrders = ordersRes.status === 'fulfilled' ? ordersRes.value : undefined;
+    topProducts = topProductsRes.status === 'fulfilled' ? topProductsRes.value : undefined;
+    ordersByCity = ordersByCityRes.status === 'fulfilled' ? ordersByCityRes.value : undefined;
+    conversionRate = conversionRateRes.status === 'fulfilled' ? conversionRateRes.value : conversionRateFallback;
+
+    if (conversionRateRes.status === 'rejected') {
+      console.error('Error loading conversion rate:', conversionRateRes.reason);
+    }
   } catch (err) {
     console.error('Error loading dashboard data:', err);
     error = err instanceof Error ? err : new Error('Error desconocido');
