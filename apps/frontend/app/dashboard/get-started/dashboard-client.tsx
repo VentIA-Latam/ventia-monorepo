@@ -384,7 +384,7 @@ export function DashboardClient({ initialMetrics, recentOrders, topProducts, ord
           </CardHeader>
           <CardContent className="flex-1 pt-0">
             <div className="h-[450px] rounded-lg overflow-hidden">
-              <SalesMap data={ordersByCity} />
+              <SalesMap key={selectedPeriod} data={ordersByCity} />
             </div>
           </CardContent>
         </Card>
