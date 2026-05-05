@@ -88,7 +88,7 @@ function AnimatedNumber({ value }: { value: string }) {
     return <span ref={ref}>{value}</span>
   }
 
-  return <span ref={ref}>{prefix}0{suffix}</span>
+  return <span ref={ref}>{`${prefix}0${suffix}`}</span>
 }
 
 export function StatsCard({
