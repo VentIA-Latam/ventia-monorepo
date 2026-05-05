@@ -259,7 +259,6 @@ export function DashboardClient({ initialMetrics, recentOrders, topProducts, ord
   const handlePeriodChange = (newPeriod: PeriodType) => {
     setSelectedPeriod(newPeriod);
     router.push(`/dashboard/get-started?period=${newPeriod}`);
-    router.refresh();
   };
 
   // Quick status summary
