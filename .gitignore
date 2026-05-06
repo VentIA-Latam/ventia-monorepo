@@ -98,5 +98,8 @@ docker-compose.override.yml
 # Alembic
 apps/backend/alembic/versions/*.pyc
 
+# Scripts locales / backfill
+apps/backend/scripts/backfill_*.ipynb
+
 # OS
 Thumbs.db
