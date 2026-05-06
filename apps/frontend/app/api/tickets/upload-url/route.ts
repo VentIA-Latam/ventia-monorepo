@@ -3,7 +3,7 @@ import { getAccessToken } from '@/lib/auth0'
 import { getCurrentUser } from '@/lib/services/user-service'
 import { generateSignedUrl } from '@/lib/gcs/storage'
 
-const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'application/pdf'])
+const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'application/pdf', 'video/mp4'])
 
 export async function GET(request: Request) {
   // Iniciar token fetch inmediatamente (async-api-routes: no waterfall)
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   }
 
   if (!ALLOWED_TYPES.has(contentType)) {
-    return NextResponse.json({ error: 'Tipo de archivo no permitido. Solo JPG, PNG y PDF.' }, { status: 400 })
+    return NextResponse.json({ error: 'Tipo de archivo no permitido. Solo JPG, PNG, PDF y MP4.' }, { status: 400 })
   }
 
   if (isNaN(Number(contactId))) {

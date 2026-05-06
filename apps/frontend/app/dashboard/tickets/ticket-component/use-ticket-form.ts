@@ -110,27 +110,27 @@ export function useTicketForm() {
     setServerError(false)
 
     try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10_000)
-
-      let res: Response
-
       const user = {
         email: userDetails.email,
         name: userDetails.name,
         tenant_id: userDetails.tenant_id,
       }
 
-      if (type === "critical_incident" && selectedConversation) {
-        // bundle-conditional: upload-client solo se carga cuando hay incidencia crítica con archivos
-        let attachmentUrls: string[] = []
-        if (files.length > 0) {
-          const contactId = selectedConversation.contact?.id
-          if (!contactId) throw new Error("Contact ID no disponible")
-          const { uploadFilesToGCS } = await import("@/lib/gcs/upload-client")
-          attachmentUrls = await uploadFilesToGCS(files, contactId)
-        }
+      // Las subidas a GCS pueden tardar (videos grandes) — el timeout solo aplica al webhook
+      let attachmentUrls: string[] = []
+      if (type === "critical_incident" && selectedConversation && files.length > 0) {
+        const contactId = selectedConversation.contact?.id
+        if (!contactId) throw new Error("Contact ID no disponible")
+        const { uploadFilesToGCS } = await import("@/lib/gcs/upload-client")
+        attachmentUrls = await uploadFilesToGCS(files, contactId)
+      }
 
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10_000)
+
+      let res: Response
+
+      if (type === "critical_incident" && selectedConversation) {
         const payload: Record<string, unknown> = {
           type,
           title: title.trim(),
@@ -181,9 +181,10 @@ export function useTicketForm() {
   }
 
   const validateAndAddFiles = (newFiles: File[]) => {
-    const ALLOWED = ["image/jpeg", "image/png", "application/pdf"]
-    const IMG_LIMIT = 2 * 1024 * 1024
-    const PDF_LIMIT = 10 * 1024 * 1024
+    const ALLOWED = ["image/jpeg", "image/png", "application/pdf", "video/mp4"]
+    const IMG_LIMIT = 10 * 1024 * 1024
+    const PDF_LIMIT = 20 * 1024 * 1024
+    const MP4_LIMIT = 150 * 1024 * 1024
 
     const valid: File[] = []
     let typeError = false
@@ -195,29 +196,29 @@ export function useTicketForm() {
         continue
       }
       const isImage = file.type.startsWith("image/")
-      const limit = isImage ? IMG_LIMIT : PDF_LIMIT
+      const isPdf = file.type === "application/pdf"
+      const limit = isImage ? IMG_LIMIT : isPdf ? PDF_LIMIT : MP4_LIMIT
       if (file.size > limit) {
-        sizeErrorMsg = `${isImage ? "Las imágenes" : "Los PDFs"} no pueden exceder ${isImage ? 2 : 10}MB`
+        if (isImage) sizeErrorMsg = "Las imágenes no pueden exceder 10MB"
+        else if (isPdf) sizeErrorMsg = "Los PDFs no pueden exceder 20MB"
+        else sizeErrorMsg = "Los videos MP4 no pueden exceder 150MB"
         continue
       }
       valid.push(file)
     }
 
-    if (typeError) toast({ variant: "destructive", description: "Solo se aceptan JPG, JPEG, PNG y PDF" })
+    if (typeError) toast({ variant: "destructive", description: "Solo se aceptan JPG, JPEG, PNG, PDF y MP4" })
     if (sizeErrorMsg) toast({ variant: "destructive", description: sizeErrorMsg })
     if (!valid.length) return
 
-    // rerender-functional-setstate: remaining se calcula dentro del setter
-    // para evitar leer files.length del closure (potencial valor stale)
-    setFiles((prev) => {
-      const remaining = 5 - prev.length
-      if (remaining <= 0) {
-        toast({ description: "Límite de 5 archivos alcanzado" })
-        return prev
-      }
-      if (valid.length > remaining) toast({ description: "Límite de 5 archivos alcanzado" })
-      return [...prev, ...valid.slice(0, remaining)]
-    })
+    // toast fuera del setter — los updaters deben ser puros (sin side effects)
+    const remaining = 10 - files.length
+    if (remaining <= 0) {
+      toast({ description: "Límite de 10 archivos alcanzado" })
+      return
+    }
+    if (valid.length > remaining) toast({ description: "Límite de 10 archivos alcanzado" })
+    setFiles((prev) => [...prev, ...valid.slice(0, remaining)])
   }
 
   const removeFile = (index: number) => {

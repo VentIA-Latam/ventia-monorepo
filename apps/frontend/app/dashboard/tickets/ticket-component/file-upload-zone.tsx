@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, type DragEvent, type ChangeEvent } from "react"
-import { FileText, Plus, Upload, X } from "lucide-react"
+import { FileText, Plus, Upload, Video, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface FileUploadZoneProps {
@@ -75,12 +75,12 @@ export function FileUploadZone({
             <p className="text-sm font-medium text-muted-foreground">Arrastra archivos aquí</p>
             <p className="text-xs text-muted-foreground/70">o haz clic para seleccionar</p>
           </div>
-          <p className="text-xs text-muted-foreground/60">JPG, JPEG, PNG hasta 2MB · PDF hasta 10MB</p>
+          <p className="text-xs text-muted-foreground/60">JPG/PNG hasta 10MB · PDF hasta 20MB · MP4 hasta 150MB</p>
         </div>
         <input
           type="file"
           multiple
-          accept=".jpg,.jpeg,.png,.pdf"
+          accept=".jpg,.jpeg,.png,.pdf,.mp4"
           className="hidden"
           ref={fileInputRef}
           onChange={onFileInput}
@@ -95,9 +95,9 @@ export function FileUploadZone({
         "flex flex-col gap-2 p-3 rounded-xl border-2 border-dashed transition-colors",
         dragOver ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20" : "border-border bg-muted/20"
       )}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
       <div className="flex items-center gap-2 flex-wrap">
         {files.map((file, index) => (
@@ -109,6 +109,13 @@ export function FileUploadZone({
                 title={file.name}
                 className="w-11 h-11 rounded-lg object-cover"
               />
+            ) : file.type === "video/mp4" ? (
+              <div
+                className="w-11 h-11 rounded-lg bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center"
+                title={file.name}
+              >
+                <Video className="w-5 h-5 text-blue-500" />
+              </div>
             ) : (
               <div
                 className="w-11 h-11 rounded-lg bg-red-50 dark:bg-red-950/20 flex items-center justify-center"
@@ -128,7 +135,7 @@ export function FileUploadZone({
           </div>
         ))}
 
-        {files.length < 5 && (
+        {files.length < 10 && (
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -141,13 +148,13 @@ export function FileUploadZone({
       </div>
 
       <p className="text-[11px] text-muted-foreground">
-        {files.length}/5 archivos · arrastra más aquí
+        {files.length}/10 archivos · arrastra más aquí
       </p>
 
       <input
         type="file"
         multiple
-        accept=".jpg,.jpeg,.png,.pdf"
+        accept=".jpg,.jpeg,.png,.pdf,.mp4"
         className="hidden"
         ref={fileInputRef}
         onChange={onFileInput}
