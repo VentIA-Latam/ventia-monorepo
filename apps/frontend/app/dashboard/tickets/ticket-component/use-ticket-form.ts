@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useMemo } from "react"
-import type { DragEvent, ChangeEvent } from "react"
+import type { ChangeEvent } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
 import { getConversations } from "@/lib/api-client/messaging"
@@ -13,21 +13,22 @@ export function useTicketForm() {
   const { toast } = useToast()
 
   const [type, setType] = useState<TicketType | null>(null)
+  const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [convSearch, setConvSearch] = useState("")
   const [loadingConvs, setLoadingConvs] = useState(false)
   const [convOpen, setConvOpen] = useState(false)
-  const [touched, setTouched] = useState({ type: false, description: false, conversation: false })
+  const [touched, setTouched] = useState({ type: false, title: false, description: false, conversation: false })
   const [submitting, setSubmitting] = useState(false)
   const [serverError, setServerError] = useState(false)
   const [files, setFiles] = useState<File[]>([])
-  const [dragOver, setDragOver] = useState(false)
 
   const convDropdownRef = useRef<HTMLDivElement>(null)
   const convTriggerRef = useRef<HTMLButtonElement>(null)
   const typeRef = useRef<HTMLDivElement>(null)
+  const titleRef = useRef<HTMLDivElement>(null)
   const descRef = useRef<HTMLDivElement>(null)
   const convRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -67,14 +68,16 @@ export function useTicketForm() {
   }, [convOpen])
 
   const errors = useMemo(() => {
-    const e: Partial<Record<"type" | "description" | "conversation", string>> = {}
+    const e: Partial<Record<"type" | "title" | "description" | "conversation", string>> = {}
     if (!type) e.type = "Selecciona un tipo de ticket"
+    if (!title.trim()) e.title = "El título es requerido"
+    else if (title.length > 100) e.title = "Máximo 100 caracteres"
     if (!description.trim()) e.description = "La descripción es requerida"
     else if (description.trim().length < 10) e.description = "Mínimo 10 caracteres"
     else if (description.length > 5000) e.description = "Máximo 5000 caracteres"
     if (type === "critical_incident" && !selectedConversation) e.conversation = "Selecciona una conversación"
     return e
-  }, [type, description, selectedConversation])
+  }, [type, title, description, selectedConversation])
 
   const isValid = Object.keys(errors).length === 0
   const charCount = description.length
@@ -82,18 +85,20 @@ export function useTicketForm() {
 
   const resetForm = () => {
     setType(null)
+    setTitle("")
     setDescription("")
     setSelectedConversation(null)
     setConvSearch("")
-    setTouched({ type: false, description: false, conversation: false })
+    setTouched({ type: false, title: false, description: false, conversation: false })
     setServerError(false)
     setFiles([])
   }
 
   const handleSubmit = async () => {
-    setTouched({ type: true, description: true, conversation: true })
+    setTouched({ type: true, title: true, description: true, conversation: true })
     if (!isValid) {
       if (errors.type) typeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
+      else if (errors.title) titleRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
       else if (errors.description) descRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
       else if (errors.conversation) convRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
       return
@@ -110,50 +115,54 @@ export function useTicketForm() {
 
       let res: Response
 
-      if (type === "critical_incident" && selectedConversation) {
-        const formData = new FormData()
-        formData.append("type", type)
-        formData.append("description", description.trim())
-        formData.append("user", JSON.stringify({
-          email: userDetails.email,
-          name: userDetails.name,
-          tenant_id: userDetails.tenant_id,
-        }))
-        formData.append("conversation_id", String(selectedConversation.id))
-        formData.append("contact", JSON.stringify({
-          id: selectedConversation.contact?.id,
-          name: selectedConversation.contact?.name,
-          phone_number: selectedConversation.contact?.phone_number,
-          email: selectedConversation.contact?.email,
-          last_activity_at: selectedConversation.contact?.last_activity_at,
-        }))
-        formData.append("inbox", JSON.stringify({
-          id: selectedConversation.inbox?.id,
-          name: selectedConversation.inbox?.name,
-          channel_type: selectedConversation.inbox?.channel_type,
-        }))
-        files.forEach((file) => formData.append("attachments[]", file))
+      const user = {
+        email: userDetails.email,
+        name: userDetails.name,
+        tenant_id: userDetails.tenant_id,
+      }
 
-        res = await fetch(N8N_WEBHOOK_URL, {
-          method: "POST",
-          body: formData,
-          signal: controller.signal,
-        })
-      } else {
+      if (type === "critical_incident" && selectedConversation) {
+        // bundle-conditional: upload-client solo se carga cuando hay incidencia crítica con archivos
+        let attachmentUrls: string[] = []
+        if (files.length > 0) {
+          const contactId = selectedConversation.contact?.id
+          if (!contactId) throw new Error("Contact ID no disponible")
+          const { uploadFilesToGCS } = await import("@/lib/gcs/upload-client")
+          attachmentUrls = await uploadFilesToGCS(files, contactId)
+        }
+
         const payload: Record<string, unknown> = {
           type,
+          title: title.trim(),
           description: description.trim(),
-          user: {
-            email: userDetails.email,
-            name: userDetails.name,
-            tenant_id: userDetails.tenant_id,
+          user,
+          conversation_id: String(selectedConversation.id),
+          contact: {
+            id: selectedConversation.contact?.id,
+            name: selectedConversation.contact?.name,
+            phone_number: selectedConversation.contact?.phone_number,
+            email: selectedConversation.contact?.email,
+            last_activity_at: selectedConversation.contact?.last_activity_at,
           },
+          inbox: {
+            id: selectedConversation.inbox?.id,
+            name: selectedConversation.inbox?.name,
+            channel_type: selectedConversation.inbox?.channel_type,
+          },
+          ...(attachmentUrls.length > 0 && { attachments: attachmentUrls }),
         }
 
         res = await fetch(N8N_WEBHOOK_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
+          signal: controller.signal,
+        })
+      } else {
+        res = await fetch(N8N_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type, title: title.trim(), description: description.trim(), user }),
           signal: controller.signal,
         })
       }
@@ -198,36 +207,21 @@ export function useTicketForm() {
     if (sizeErrorMsg) toast({ variant: "destructive", description: sizeErrorMsg })
     if (!valid.length) return
 
-    const remaining = 5 - files.length
-    if (remaining <= 0) {
-      toast({ description: "Límite de 5 archivos alcanzado" })
-      return
-    }
-    if (valid.length > remaining) toast({ description: "Límite de 5 archivos alcanzado" })
-    setFiles((prev) => [...prev, ...valid.slice(0, remaining)])
+    // rerender-functional-setstate: remaining se calcula dentro del setter
+    // para evitar leer files.length del closure (potencial valor stale)
+    setFiles((prev) => {
+      const remaining = 5 - prev.length
+      if (remaining <= 0) {
+        toast({ description: "Límite de 5 archivos alcanzado" })
+        return prev
+      }
+      if (valid.length > remaining) toast({ description: "Límite de 5 archivos alcanzado" })
+      return [...prev, ...valid.slice(0, remaining)]
+    })
   }
 
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index))
-  }
-
-  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragOver(true)
-  }
-
-  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragOver(false)
-  }
-
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragOver(false)
-    validateAndAddFiles(Array.from(e.dataTransfer.files))
   }
 
   const handleFileInput = (e: ChangeEvent<HTMLInputElement>) => {
@@ -258,6 +252,7 @@ export function useTicketForm() {
     setTouched((p) => ({ ...p, conversation: true }))
   }
 
+  const touchTitle = () => setTouched((p) => ({ ...p, title: true }))
   const touchDescription = () => setTouched((p) => ({ ...p, description: true }))
 
   const getConvLabel = (conv: Conversation) => {
@@ -272,6 +267,8 @@ export function useTicketForm() {
   return {
     // State
     type,
+    title,
+    setTitle,
     description,
     setDescription,
     selectedConversation,
@@ -284,11 +281,11 @@ export function useTicketForm() {
     serverError,
     touched,
     files,
-    dragOver,
     // Refs
     convDropdownRef,
     convTriggerRef,
     typeRef,
+    titleRef,
     descRef,
     convRef,
     fileInputRef,
@@ -305,12 +302,10 @@ export function useTicketForm() {
     getConvLabel,
     handleConvTriggerClick,
     handleConversationSelect,
+    touchTitle,
     touchDescription,
     validateAndAddFiles,
     removeFile,
-    handleDragOver,
-    handleDragLeave,
-    handleDrop,
     handleFileInput,
     // From child hooks
     isUserLoading,

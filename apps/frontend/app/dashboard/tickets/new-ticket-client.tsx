@@ -2,6 +2,7 @@
 
 import { AlertTriangle, Send, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { useTicketForm } from "./ticket-component/use-ticket-form"
 import { TicketTypeSelector } from "./ticket-component/ticket-type-selector"
 import { DescriptionField } from "./ticket-component/description-field"
@@ -33,6 +34,8 @@ function FieldError({ message }: { message: string }) {
 export function NewTicketClient() {
   const {
     type,
+    title,
+    setTitle,
     description,
     setDescription,
     selectedConversation,
@@ -45,10 +48,10 @@ export function NewTicketClient() {
     serverError,
     touched,
     files,
-    dragOver,
     convDropdownRef,
     convTriggerRef,
     typeRef,
+    titleRef,
     descRef,
     convRef,
     fileInputRef,
@@ -62,11 +65,10 @@ export function NewTicketClient() {
     getConvLabel,
     handleConvTriggerClick,
     handleConversationSelect,
+    touchTitle,
     touchDescription,
     removeFile,
-    handleDragOver,
-    handleDragLeave,
-    handleDrop,
+    validateAndAddFiles,
     handleFileInput,
     isUserLoading,
   } = useTicketForm()
@@ -100,9 +102,32 @@ export function NewTicketClient() {
             {touched.type && errors.type && <FieldError message={errors.type} />}
           </div>
 
-          {/* Field 2: Description */}
+          {/* Field 2: Title */}
+          <div ref={titleRef}>
+            <FieldLabel step={2} label="Título" required />
+            <p className="text-xs text-muted-foreground mt-1 mb-2">
+              Resume el problema en una frase corta. Máximo 100 caracteres.
+            </p>
+            <div className="relative">
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onBlur={touchTitle}
+                placeholder="Ej: El agente no responde preguntas sobre envíos"
+                maxLength={100}
+                disabled={submitting}
+                className={touched.title && errors.title ? "border-destructive focus-visible:ring-destructive" : ""}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground pointer-events-none">
+                {title.length}/100
+              </span>
+            </div>
+            {touched.title && errors.title && <FieldError message={errors.title} />}
+          </div>
+
+          {/* Field 3: Description */}
           <div ref={descRef}>
-            <FieldLabel step={2} label="Descripción" required />
+            <FieldLabel step={3} label="Descripción" required />
             <p className="text-xs text-muted-foreground mt-1 mb-2">
               Describe qué ocurrió, cuándo y qué esperabas. Mínimo 10 caracteres.
             </p>
@@ -116,10 +141,10 @@ export function NewTicketClient() {
             {touched.description && errors.description && <FieldError message={errors.description} />}
           </div>
 
-          {/* Field 3: Conversation selector (only for critical incidents) */}
+          {/* Field 4: Conversation selector (only for critical incidents) */}
           {showConvField && (
             <div ref={convRef}>
-              <FieldLabel step={3} label="Chat asociado" required />
+              <FieldLabel step={4} label="Chat asociado" required />
               <p className="text-xs text-muted-foreground mt-1 mb-2">
                 Selecciona la conversación donde ocurrió el problema.
               </p>
@@ -141,20 +166,17 @@ export function NewTicketClient() {
             </div>
           )}
 
-          {/* Field 4: File upload (only for critical incidents) */}
+          {/* Field 5: File upload (only for critical incidents) */}
           {showConvField && (
             <div>
-              <FieldLabel step={4} label="Archivos adjuntos" />
+              <FieldLabel step={5} label="Archivos adjuntos" />
               <p className="text-xs text-muted-foreground mt-1 mb-2">
                 Adjunta capturas de pantalla o documentos que ayuden a entender el problema. Opcional.
               </p>
               <FileUploadZone
                 files={files}
-                dragOver={dragOver}
                 fileInputRef={fileInputRef}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
+                onValidateFiles={validateAndAddFiles}
                 onFileInput={handleFileInput}
                 onRemoveFile={removeFile}
               />

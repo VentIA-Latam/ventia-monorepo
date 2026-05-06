@@ -21,6 +21,40 @@ function SummaryRow({ label, children }: { label: string; children: ReactNode })
   )
 }
 
+// rendering-hoist-jsx: estos dos cards son completamente estáticos — se extraen
+// para evitar recrearlos en cada render (charCount cambia con cada keystroke)
+const tipsCard = (
+  <Card className="shadow-none hover:shadow-none hover:translate-y-0">
+    <CardContent className="p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+        Cómo redactar mejor
+      </p>
+      <ul className="flex flex-col gap-2">
+        {TICKET_TIPS.map((tip, i) => (
+          <li key={i} className="flex gap-2 text-xs text-muted-foreground leading-relaxed">
+            <span className="w-1 h-1 rounded-full bg-volt mt-1.5 shrink-0" />
+            {tip}
+          </li>
+        ))}
+      </ul>
+    </CardContent>
+  </Card>
+)
+
+const responseTimeCard = (
+  <Card className="border-cielo/20 bg-cielo/5 shadow-none hover:shadow-none hover:translate-y-0">
+    <CardContent className="p-4">
+      <div className="flex items-center gap-2 mb-2">
+        <Clock className="w-4 h-4 text-cielo" />
+        <p className="text-xs font-semibold text-cielo">Tiempo de respuesta</p>
+      </div>
+      <p className="text-xs text-muted-foreground leading-relaxed">
+        Críticos &lt; 2 h · Ajustes &lt; 24 h · Desarrollos &lt; 5 días.
+      </p>
+    </CardContent>
+  </Card>
+)
+
 export function TicketSidebar({ type, charCount, selectedConversation, showConvField }: TicketSidebarProps) {
   const selectedTypeMeta = TICKET_TYPES.find((t) => t.id === type)
 
@@ -63,33 +97,8 @@ export function TicketSidebar({ type, charCount, selectedConversation, showConvF
         </CardContent>
       </Card>
 
-      <Card className="shadow-none hover:shadow-none hover:translate-y-0">
-        <CardContent className="p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-            Cómo redactar mejor
-          </p>
-          <ul className="flex flex-col gap-2">
-            {TICKET_TIPS.map((tip, i) => (
-              <li key={i} className="flex gap-2 text-xs text-muted-foreground leading-relaxed">
-                <span className="w-1 h-1 rounded-full bg-volt mt-1.5 shrink-0" />
-                {tip}
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
-
-      <Card className="border-cielo/20 bg-cielo/5 shadow-none hover:shadow-none hover:translate-y-0">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Clock className="w-4 h-4 text-cielo" />
-            <p className="text-xs font-semibold text-cielo">Tiempo de respuesta</p>
-          </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Críticos &lt; 2 h · Ajustes &lt; 24 h · Desarrollos &lt; 5 días.
-          </p>
-        </CardContent>
-      </Card>
+      {tipsCard}
+      {responseTimeCard}
 
     </aside>
   )

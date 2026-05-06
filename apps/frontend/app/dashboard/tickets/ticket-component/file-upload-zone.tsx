@@ -6,25 +6,41 @@ import { cn } from "@/lib/utils"
 
 interface FileUploadZoneProps {
   files: File[]
-  dragOver: boolean
   fileInputRef: React.RefObject<HTMLInputElement | null>
-  onDragOver: (e: DragEvent<HTMLDivElement>) => void
-  onDragLeave: (e: DragEvent<HTMLDivElement>) => void
-  onDrop: (e: DragEvent<HTMLDivElement>) => void
+  onValidateFiles: (files: File[]) => void
   onFileInput: (e: ChangeEvent<HTMLInputElement>) => void
   onRemoveFile: (index: number) => void
 }
 
 export function FileUploadZone({
   files,
-  dragOver,
   fileInputRef,
-  onDragOver,
-  onDragLeave,
-  onDrop,
+  onValidateFiles,
   onFileInput,
   onRemoveFile,
 }: FileUploadZoneProps) {
+  // rerender-use-ref-transient-values: dragOver solo afecta estilos visuales,
+  // se maneja localmente para no propagar re-renders al hook padre
+  const [dragOver, setDragOver] = useState(false)
+
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOver(true)
+  }
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOver(false)
+  }
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOver(false)
+    onValidateFiles(Array.from(e.dataTransfer.files))
+  }
   const [previews, setPreviews] = useState<(string | null)[]>([])
 
   useEffect(() => {
@@ -49,9 +65,9 @@ export function FileUploadZone({
               ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20"
               : "border-border bg-muted/30 hover:border-muted-foreground/40 hover:bg-muted/50"
           )}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
-          onDrop={onDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
         >
           <Upload className={cn("w-7 h-7 transition-colors", dragOver ? "text-blue-500" : "text-muted-foreground")} />
