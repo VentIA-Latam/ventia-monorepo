@@ -222,6 +222,7 @@ export function ConversationList({
           } as Conversation["last_message"],
           last_message_at: createdAt as string | number,
           unread_count: msgType === "incoming" ? (c.unread_count ?? 0) + 1 : c.unread_count,
+          can_reply: msgType === "incoming" ? true : c.can_reply,
         } : c).sort((a, b) => {
           const aTime = a.last_message_at ? new Date(typeof a.last_message_at === "number" ? a.last_message_at * 1000 : a.last_message_at).getTime() : 0;
           const bTime = b.last_message_at ? new Date(typeof b.last_message_at === "number" ? b.last_message_at * 1000 : b.last_message_at).getTime() : 0;
