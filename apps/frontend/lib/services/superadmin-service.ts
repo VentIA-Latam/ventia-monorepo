@@ -13,7 +13,7 @@ import type { User } from "@/lib/types/user";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
-async function fetchWithAuth<T>(endpoint: string, params?: Record<string, string | number>): Promise<T> {
+async function fetchWithAuth<T>(endpoint: string, params?: Record<string, string | number | boolean>): Promise<T> {
   const accessToken = await getAccessToken();
   if (!accessToken) {
     throw new Error("Not authenticated");
@@ -82,10 +82,11 @@ export async function fetchRecentActivity(limit: number = 10): Promise<RecentAct
 export async function fetchTenants(params?: {
   skip?: number;
   limit?: number;
+  is_active?: boolean;
 }): Promise<{ items: Tenant[]; total: number }> {
   return fetchWithAuth<{ items: Tenant[]; total: number }>(
     "/tenants",
-    params as Record<string, number>
+    params as Record<string, string | number | boolean>
   );
 }
 

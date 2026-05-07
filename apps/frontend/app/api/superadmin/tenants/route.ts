@@ -26,9 +26,15 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const skip = searchParams.get('skip') || '0';
     const limit = searchParams.get('limit') || '100';
+    const isActive = searchParams.get('is_active');
+
+    const backendUrl = new URL(`${API_URL}/tenants`);
+    backendUrl.searchParams.set('skip', skip);
+    backendUrl.searchParams.set('limit', limit);
+    if (isActive !== null) backendUrl.searchParams.set('is_active', isActive);
 
     // Call backend /tenants endpoint
-    const response = await fetch(`${API_URL}/tenants?skip=${skip}&limit=${limit}`, {
+    const response = await fetch(backendUrl.toString(), {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',

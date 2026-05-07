@@ -32,12 +32,14 @@ import {
 } from "@/components/ui/select";
 import { Tenant, TenantFilters, EcommercePlatform } from "@/lib/types/tenant";
 import { useRouter } from "next/navigation";
+import { useTenant } from "@/lib/context/tenant-context";
 import { CreateTenantDialog } from "@/components/superadmin/create-tenant-dialog";
 import { EditTenantDialog } from "@/components/superadmin/edit-tenant-dialog";
 import { ToggleTenantStatusDialog } from "@/components/superadmin/toggle-tenant-status-dialog";
 
 export function TenantsClient({ initialTenants }: { initialTenants: Tenant[] }) {
   const router = useRouter();
+  const { refreshTenants: refreshGlobalTenants } = useTenant();
   const [tenants, setTenants] = useState<Tenant[]>(initialTenants);
   const [filters, setFilters] = useState<TenantFilters>({
     search: "",
@@ -96,6 +98,7 @@ export function TenantsClient({ initialTenants }: { initialTenants: Tenant[] }) 
     try {
       const data = await getTenants({ limit: 100 });
       setTenants(data.items || []);
+      await refreshGlobalTenants();
     } catch (error) {
       console.error('Error fetching tenants:', error);
     }
