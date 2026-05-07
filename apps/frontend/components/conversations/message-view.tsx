@@ -18,7 +18,7 @@ import { ArrowLeft, MessageSquare, Loader2, Bot, AlertTriangle, MoreVertical, Us
 import { MessageBubble } from "./message-bubble";
 import { MessageComposer } from "./message-composer";
 import { TemplatePicker } from "./template-picker";
-import { useMessagingEvent } from "./messaging-provider";
+import { useMessagingEvent, useMessagingReconnect } from "./messaging-provider";
 import { getMessages, sendMessage, updateConversation, markConversationRead } from "@/lib/api-client/messaging";
 import type { Conversation, Message, MessageType, MessageStatus, MessageContentAttributes, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
 import { getInitials, getDateSeparatorLabel, parseTimestamp } from "@/lib/utils/messaging";
@@ -62,6 +62,11 @@ interface MessageViewProps {
 
 export const MessageView = memo(function MessageView({ conversation, tenantId, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
   const lastEvent = useMessagingEvent();
+  const reconnectedAt = useMessagingReconnect();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === "dark";
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -117,6 +122,25 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
       cancelled = true;
     };
   }, [conversation?.id]);
+
+  // Refresh messages when WebSocket reconnects (e.g. after sleep/wake)
+  useEffect(() => {
+    if (!reconnectedAt || !conversation) return;
+
+    let cancelled = false;
+    getMessages(conversation.id, { tenantId })
+      .then((data) => {
+        if (cancelled) return;
+        const msgs = data.data ?? [];
+        messageIdsRef.current = new Set(msgs.map((m) => String(m.id)));
+        scrollBehaviorRef.current = "instant";
+        setMessages(msgs);
+        setHasMore(Boolean(data.meta?.has_more));
+      })
+      .catch((err) => console.error("[reconnect] Error refreshing messages:", err));
+
+    return () => { cancelled = true; };
+  }, [reconnectedAt, conversation?.id, tenantId]);
 
   // Append new messages from WebSocket events
   useEffect(() => {

@@ -103,3 +103,8 @@ apps/backend/scripts/backfill_*.ipynb
 
 # OS
 Thumbs.db
+
+# TEMPO
+/TEMPORALES
+AGENTS.md
+apps/backend/uv.lock

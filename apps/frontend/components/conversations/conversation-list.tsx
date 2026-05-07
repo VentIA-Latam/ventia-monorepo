@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Search, MessageSquare, Loader2 } from "lucide-react";
 import { ConversationItem } from "./conversation-item";
 import { ConversationFilters, type ActiveFilters } from "./conversation-filters";
-import { useMessagingEvent, useMessagingEmit } from "./messaging-provider";
+import { useMessagingEvent, useMessagingEmit, useMessagingReconnect } from "./messaging-provider";
 import {
   getConversations,
   deleteConversation,
@@ -46,6 +46,7 @@ export function ConversationList({
 }: ConversationListProps) {
   const lastEvent = useMessagingEvent();
   const emitEvent = useMessagingEmit();
+  const reconnectedAt = useMessagingReconnect();
   const sectionFilter = (section === "sale" || section === "unattended" ? section : "all") as SectionValue;
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const [searchQuery, setSearchQuery] = useState("");
@@ -265,6 +266,12 @@ export function ConversationList({
       if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
     };
   }, [lastEvent, onConversationsChange, debouncedRefetch]);
+
+  // Refresh conversation list when WebSocket reconnects (e.g. after sleep/wake)
+  useEffect(() => {
+    if (!reconnectedAt) return;
+    debouncedRefetch();
+  }, [reconnectedAt, debouncedRefetch]);
 
   // Scroll detection for infinite scroll (client-passive-event-listeners)
   useEffect(() => {

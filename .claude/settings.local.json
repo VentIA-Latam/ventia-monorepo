@@ -5,7 +5,8 @@
       "Bash(pnpm build:*)",
       "Bash(find:*)",
       "Bash(xargs:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(pnpm lint *)"
     ]
   }
 }

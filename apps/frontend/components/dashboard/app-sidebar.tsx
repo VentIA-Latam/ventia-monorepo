@@ -21,6 +21,7 @@ import {
   Receipt,
   MessageSquare,
   Clock,
+  Ticket,
 } from "lucide-react"
 import { usePathname, useSearchParams } from "next/navigation"
 import { useTheme } from "next-themes"
@@ -227,7 +228,7 @@ const ConversationsNav = memo(function ConversationsNav({ pathname }: { pathname
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
-  const { user, isUserLoading, isSuperAdmin } = useAuth()
+  const { user, isUserLoading, isSuperAdmin, isAdmin } = useAuth()
   const { theme, setTheme } = useTheme()
   const [notifDialogOpen, setNotifDialogOpen] = useState(false)
 
@@ -337,6 +338,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+
+              {isAdmin && (
+                <SidebarMenuItem className="mb-1">
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive("/dashboard/tickets")}
+                    tooltip="Tickets"
+                    className={`
+                        w-full justify-between h-10 px-3 rounded-lg transition-all duration-200
+                        ${isActive("/dashboard/tickets")
+                          ? "bg-gradient-to-r from-volt/10 to-aqua/5 border-l-2 border-l-volt shadow-sm"
+                          : "hover:bg-muted/60"
+                        }
+                    `}
+                  >
+                    <Link href="/dashboard/tickets" className="flex items-center w-full">
+                      <Ticket className="w-5 h-5 mr-3 shrink-0" />
+                      <span className="flex-1 truncate">Tickets</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
