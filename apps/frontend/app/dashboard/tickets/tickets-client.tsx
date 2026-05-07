@@ -3,12 +3,12 @@
 import { AlertTriangle, Send, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useTicketForm } from "./ticket-component/use-ticket-form"
-import { TicketTypeSelector } from "./ticket-component/ticket-type-selector"
-import { DescriptionField } from "./ticket-component/description-field"
-import { ConversationSelector } from "./ticket-component/conversation-selector"
-import { TicketSidebar } from "./ticket-component/ticket-sidebar"
-import { FileUploadZone } from "./ticket-component/file-upload-zone"
+import { useTicketForm } from "@/hooks/use-ticket-form"
+import { TicketTypeSelector } from "@/components/tickets/ticket-type-selector"
+import { DescriptionField } from "@/components/tickets/description-field"
+import { ConversationSelector } from "@/components/tickets/conversation-selector"
+import { TicketSidebar } from "@/components/tickets/ticket-sidebar"
+import { FileUploadZone } from "@/components/tickets/file-upload-zone"
 
 function FieldLabel({ step, label, required }: { step: number; label: string; required?: boolean }) {
   return (
@@ -31,7 +31,7 @@ function FieldError({ message }: { message: string }) {
   )
 }
 
-export function NewTicketClient() {
+export function TicketsClient() {
   const {
     type,
     title,
@@ -74,7 +74,7 @@ export function NewTicketClient() {
   } = useTicketForm()
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 pb-8">
 
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">
@@ -116,7 +116,7 @@ export function NewTicketClient() {
                 placeholder="Ej: El agente no responde preguntas sobre envíos"
                 maxLength={100}
                 disabled={submitting}
-                className={touched.title && errors.title ? "border-destructive focus-visible:ring-destructive" : ""}
+                aria-invalid={touched.title && !!errors.title}
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground pointer-events-none">
                 {title.length}/100

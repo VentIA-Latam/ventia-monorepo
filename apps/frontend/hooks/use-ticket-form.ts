@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect, useRef, useMemo } from "react"
+import { useState, useEffect, useRef, useMemo, useTransition } from "react"
 import type { ChangeEvent } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
 import { getConversations } from "@/lib/api-client/messaging"
 import type { Conversation } from "@/lib/types/messaging"
-import { TICKET_TYPES, N8N_WEBHOOK_URL, type TicketType } from "./ticket-constants"
+import { TICKET_TYPE_MAP, N8N_WEBHOOK_URL, type TicketType } from "@/lib/constants/tickets"
 
 export function useTicketForm() {
   const { userDetails, isUserLoading } = useAuth()
@@ -21,7 +21,7 @@ export function useTicketForm() {
   const [loadingConvs, setLoadingConvs] = useState(false)
   const [convOpen, setConvOpen] = useState(false)
   const [touched, setTouched] = useState({ type: false, title: false, description: false, conversation: false })
-  const [submitting, setSubmitting] = useState(false)
+  const [isPending, startTransition] = useTransition()
   const [serverError, setServerError] = useState(false)
   const [files, setFiles] = useState<File[]>([])
 
@@ -63,7 +63,7 @@ export function useTicketForm() {
         setConvOpen(false)
       }
     }
-    document.addEventListener("mousedown", handler)
+    document.addEventListener("mousedown", handler, { passive: true })
     return () => document.removeEventListener("mousedown", handler)
   }, [convOpen])
 
@@ -94,7 +94,7 @@ export function useTicketForm() {
     setFiles([])
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     setTouched({ type: true, title: true, description: true, conversation: true })
     if (!isValid) {
       if (errors.type) typeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
@@ -106,78 +106,81 @@ export function useTicketForm() {
 
     if (!userDetails) return
 
-    setSubmitting(true)
     setServerError(false)
 
-    try {
-      const user = {
-        email: userDetails.email,
-        name: userDetails.name,
-        tenant_id: userDetails.tenant_id,
-      }
-
-      // Las subidas a GCS pueden tardar (videos grandes) — el timeout solo aplica al webhook
-      let attachmentUrls: string[] = []
-      if (type === "critical_incident" && selectedConversation && files.length > 0) {
-        const contactId = selectedConversation.contact?.id
-        if (!contactId) throw new Error("Contact ID no disponible")
-        const { uploadFilesToGCS } = await import("@/lib/gcs/upload-client")
-        attachmentUrls = await uploadFilesToGCS(files, contactId)
-      }
-
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10_000)
-
-      let res: Response
-
-      if (type === "critical_incident" && selectedConversation) {
-        const payload: Record<string, unknown> = {
-          type,
-          title: title.trim(),
-          description: description.trim(),
-          user,
-          conversation_id: String(selectedConversation.id),
-          contact: {
-            id: selectedConversation.contact?.id,
-            name: selectedConversation.contact?.name,
-            phone_number: selectedConversation.contact?.phone_number,
-            email: selectedConversation.contact?.email,
-            last_activity_at: selectedConversation.contact?.last_activity_at,
-          },
-          inbox: {
-            id: selectedConversation.inbox?.id,
-            name: selectedConversation.inbox?.name,
-            channel_type: selectedConversation.inbox?.channel_type,
-          },
-          ...(attachmentUrls.length > 0 && { attachments: attachmentUrls }),
+    startTransition(async () => {
+      try {
+        const user = {
+          email: userDetails.email,
+          name: userDetails.name,
+          tenant_id: userDetails.tenant_id,
         }
 
-        res = await fetch(N8N_WEBHOOK_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-          signal: controller.signal,
-        })
-      } else {
-        res = await fetch(N8N_WEBHOOK_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type, title: title.trim(), description: description.trim(), user }),
-          signal: controller.signal,
-        })
+        // Las subidas a GCS pueden tardar (videos grandes) — el timeout solo aplica al webhook
+        let attachmentUrls: string[] = []
+        if (type === "critical_incident" && selectedConversation && files.length > 0) {
+          const contactId = selectedConversation.contact?.id
+          if (!contactId) throw new Error("Contact ID no disponible")
+          const { uploadFilesToGCS } = await import("@/lib/gcs/upload-client")
+          attachmentUrls = await uploadFilesToGCS(files, contactId)
+        }
+
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 10_000)
+
+        let res: Response
+
+        if (type === "critical_incident" && selectedConversation) {
+          const payload: Record<string, unknown> = {
+            type,
+            title: title.trim(),
+            description: description.trim(),
+            user,
+            conversation_id: String(selectedConversation.id),
+            contact: {
+              id: selectedConversation.contact?.id,
+              name: selectedConversation.contact?.name,
+              phone_number: selectedConversation.contact?.phone_number,
+              email: selectedConversation.contact?.email,
+              last_activity_at: selectedConversation.contact?.last_activity_at,
+            },
+            inbox: {
+              id: selectedConversation.inbox?.id,
+              name: selectedConversation.inbox?.name,
+              channel_type: selectedConversation.inbox?.channel_type,
+            },
+            ...(attachmentUrls.length > 0 && { attachments: attachmentUrls }),
+          }
+
+          res = await fetch(N8N_WEBHOOK_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            signal: controller.signal,
+          })
+        } else {
+          res = await fetch(N8N_WEBHOOK_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type, title: title.trim(), description: description.trim(), user }),
+            signal: controller.signal,
+          })
+        }
+
+        clearTimeout(timeoutId)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+        toast({ description: "✓ Ticket enviado. El equipo de soporte te contactará pronto." })
+        resetForm()
+      } catch (err) {
+        setServerError(true)
+        if (err instanceof Error && err.name === "AbortError") {
+          toast({ variant: "destructive", description: "Tiempo de espera agotado. Intenta con archivos más pequeños." })
+        } else {
+          toast({ variant: "destructive", description: "Error al enviar el ticket. Intenta nuevamente." })
+        }
       }
-
-      clearTimeout(timeoutId)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-      toast({ description: "✓ Ticket enviado. El equipo de soporte te contactará pronto." })
-      resetForm()
-    } catch {
-      setServerError(true)
-      toast({ variant: "destructive", description: "Error al enviar el ticket. Intenta nuevamente." })
-    } finally {
-      setSubmitting(false)
-    }
+    })
   }
 
   const validateAndAddFiles = (newFiles: File[]) => {
@@ -238,6 +241,9 @@ export function useTicketForm() {
     if (t !== "critical_incident") {
       setSelectedConversation(null)
       setConvSearch("")
+    } else {
+      // bundle-preload: precarga el módulo GCS para que esté cacheado al hacer submit
+      import("@/lib/gcs/upload-client")
     }
   }
 
@@ -263,7 +269,7 @@ export function useTicketForm() {
   }
 
   // Derived — computed here so sidebar can receive them without re-deriving from type
-  const selectedTypeMeta = TICKET_TYPES.find((t) => t.id === type)
+  const selectedTypeMeta = type ? TICKET_TYPE_MAP.get(type) : undefined
 
   return {
     // State
@@ -278,7 +284,7 @@ export function useTicketForm() {
     setConvSearch,
     loadingConvs,
     convOpen,
-    submitting,
+    submitting: isPending,
     serverError,
     touched,
     files,

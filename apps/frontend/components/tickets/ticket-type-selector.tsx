@@ -1,7 +1,8 @@
 "use client"
 
+import { memo, useCallback } from "react"
 import { cn } from "@/lib/utils"
-import { TICKET_TYPES, type TicketType } from "./ticket-constants"
+import { TICKET_TYPES, type TicketType } from "@/lib/constants/tickets"
 
 interface TicketTypeSelectorProps {
   value: TicketType | null
@@ -9,8 +10,14 @@ interface TicketTypeSelectorProps {
   touched: boolean
 }
 
-export function TicketTypeSelector({ value, onChange, touched }: TicketTypeSelectorProps) {
+export const TicketTypeSelector = memo(function TicketTypeSelector({
+  value,
+  onChange,
+  touched,
+}: TicketTypeSelectorProps) {
   const errored = touched && !value
+
+  const handleChange = useCallback((id: TicketType) => () => onChange(id), [onChange])
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
@@ -22,7 +29,7 @@ export function TicketTypeSelector({ value, onChange, touched }: TicketTypeSelec
             type="button"
             role="radio"
             aria-checked={selected}
-            onClick={() => onChange(id)}
+            onClick={handleChange(id)}
             className={cn(
               "flex flex-col gap-3 p-4 rounded-xl border-2 text-left transition-all duration-150 min-h-[130px] outline-none focus-visible:ring-2 focus-visible:ring-ring",
               selected
@@ -50,4 +57,4 @@ export function TicketTypeSelector({ value, onChange, touched }: TicketTypeSelec
       })}
     </div>
   )
-}
+})

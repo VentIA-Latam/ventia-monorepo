@@ -1,6 +1,6 @@
 "use client"
 
-import type { RefObject } from "react"
+import { memo, useCallback, type ChangeEvent, type RefObject } from "react"
 import { MessageSquare, ChevronDown, Search, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Conversation } from "@/lib/types/messaging"
@@ -20,7 +20,7 @@ interface ConversationSelectorProps {
   triggerRef: RefObject<HTMLButtonElement | null>
 }
 
-export function ConversationSelector({
+export const ConversationSelector = memo(function ConversationSelector({
   open,
   onTriggerClick,
   conversations,
@@ -34,6 +34,16 @@ export function ConversationSelector({
   dropdownRef,
   triggerRef,
 }: ConversationSelectorProps) {
+  const handleSearchChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => onSearchChange(e.target.value),
+    [onSearchChange]
+  )
+
+  const handleSelect = useCallback(
+    (conv: Conversation) => () => onSelect(conv),
+    [onSelect]
+  )
+
   return (
     <div className="relative">
       <button
@@ -72,7 +82,7 @@ export function ConversationSelector({
             <input
               autoFocus
               value={search}
-              onChange={(e) => onSearchChange(e.target.value)}
+              onChange={handleSearchChange}
               placeholder="Buscar por nombre o teléfono..."
               className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground"
             />
@@ -98,7 +108,7 @@ export function ConversationSelector({
                     type="button"
                     role="option"
                     aria-selected={isSelected}
-                    onClick={() => onSelect(conv)}
+                    onClick={handleSelect(conv)}
                     className={cn(
                       "w-full flex items-center gap-3 px-4 py-3 text-left text-sm border-b border-border/50 last:border-0 transition-colors",
                       isSelected ? "bg-cielo/10" : "hover:bg-muted/50"
@@ -121,4 +131,4 @@ export function ConversationSelector({
       )}
     </div>
   )
-}
+})

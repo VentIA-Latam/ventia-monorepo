@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation"
 import { getAccessToken } from "@/lib/auth0"
 import { getCurrentUser } from "@/lib/services/user-service"
-import { NewTicketClient } from "./new-ticket-client"
+import { TicketsClient } from "./tickets-client"
 
 export const dynamic = "force-dynamic"
 
@@ -16,5 +16,5 @@ export default async function TicketsPage() {
     redirect("/dashboard/get-started")
   }
 
-  return <NewTicketClient />
+  return <TicketsClient />
 }

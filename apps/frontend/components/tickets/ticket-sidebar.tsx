@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 import { Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Card, CardContent } from "@/components/ui/card"
-import { TICKET_TIPS, TICKET_TYPES, type TicketType } from "./ticket-constants"
+import { TICKET_TIPS, TICKET_TYPE_MAP, type TicketType } from "@/lib/constants/tickets"
 import type { Conversation } from "@/lib/types/messaging"
 
 interface TicketSidebarProps {
@@ -42,13 +42,13 @@ const tipsCard = (
 )
 
 const responseTimeCard = (
-  <Card className="border-cielo/20 bg-cielo/5 shadow-none hover:shadow-none hover:translate-y-0">
+  <Card className="border-info/30 bg-info-bg shadow-none hover:shadow-none hover:translate-y-0">
     <CardContent className="p-4">
       <div className="flex items-center gap-2 mb-2">
-        <Clock className="w-4 h-4 text-cielo" />
-        <p className="text-xs font-semibold text-cielo">Tiempo de respuesta</p>
+        <Clock className="w-4 h-4 text-info" />
+        <p className="text-xs font-semibold text-info">Tiempo de respuesta</p>
       </div>
-      <p className="text-xs text-muted-foreground leading-relaxed">
+      <p className="text-xs text-marino leading-relaxed">
         Críticos &lt; 2 h · Ajustes &lt; 24 h · Desarrollos &lt; 5 días.
       </p>
     </CardContent>
@@ -56,7 +56,7 @@ const responseTimeCard = (
 )
 
 export function TicketSidebar({ type, charCount, selectedConversation, showConvField }: TicketSidebarProps) {
-  const selectedTypeMeta = TICKET_TYPES.find((t) => t.id === type)
+  const selectedTypeMeta = type ? TICKET_TYPE_MAP.get(type) : undefined
 
   return (
     <aside className="lg:sticky lg:top-6 flex flex-col gap-4">
@@ -79,7 +79,7 @@ export function TicketSidebar({ type, charCount, selectedConversation, showConvF
             <SummaryRow label="Descripción">
               <span className={cn(
                 "text-xs tabular-nums",
-                charCount >= 10 ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
+                charCount >= 10 ? "text-success" : "text-muted-foreground"
               )}>
                 {charCount} car. {charCount >= 10 ? "✓" : "· mín. 10"}
               </span>

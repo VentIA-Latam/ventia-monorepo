@@ -20,32 +20,36 @@ export const TICKET_TYPES: TicketTypeMeta[] = [
     label: "Incidencia Crítica",
     description: "Errores o fallas del agente que afectan operación inmediata",
     Icon: AlertTriangle,
-    colorClass: "text-red-500",
-    bgClass: "bg-red-50 dark:bg-red-950/20",
-    borderClass: "border-red-400 dark:border-red-600",
-    iconBgClass: "bg-red-100 dark:bg-red-900/30",
+    colorClass: "text-danger",
+    bgClass: "bg-danger-bg",
+    borderClass: "border-danger/40",
+    iconBgClass: "bg-danger/10",
   },
   {
     id: "agent_adjustment",
     label: "Ajuste al Agente",
     description: "Cambios menores de comportamiento o contenido",
     Icon: Sliders,
-    colorClass: "text-cielo",
-    bgClass: "bg-cielo/5",
-    borderClass: "border-cielo/60",
-    iconBgClass: "bg-cielo/10",
+    colorClass: "text-aqua",
+    bgClass: "bg-aqua/10",
+    borderClass: "border-aqua/60",
+    iconBgClass: "bg-aqua/20",
   },
   {
     id: "additional_development",
     label: "Desarrollo Adicional",
     description: "Mejoras o cambios estructurales profundos",
     Icon: Sparkles,
-    colorClass: "text-violet-500",
-    bgClass: "bg-violet-50 dark:bg-violet-950/20",
-    borderClass: "border-violet-400 dark:border-violet-600",
-    iconBgClass: "bg-violet-100 dark:bg-violet-900/30",
+    colorClass: "text-luma",
+    bgClass: "bg-luma/20",
+    borderClass: "border-luma",
+    iconBgClass: "bg-luma/30",
   },
 ]
+
+export const TICKET_TYPE_MAP = new Map<TicketType, TicketTypeMeta>(
+  TICKET_TYPES.map((t) => [t.id, t])
+)
 
 export const N8N_WEBHOOK_URL = "https://n8n.ventia-latam.com/webhook/clickup-test"
 
