@@ -108,3 +108,4 @@ Thumbs.db
 /TEMPORALES
 AGENTS.md
 apps/backend/uv.lock
+.superpowers/
