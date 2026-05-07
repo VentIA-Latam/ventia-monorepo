@@ -16,8 +16,9 @@ import {
   CheckCircle2,
   Calendar,
   MapPin,
+  TrendingUp,
 } from "lucide-react";
-import { DashboardMetrics, PeriodType } from "@/lib/services/metrics-service";
+import { DashboardMetrics, PeriodType, ConversionRate } from "@/lib/services/metrics-service";
 import type { TopProduct, CityOrderCount } from "@/lib/services/metrics-service";
 import type { Order } from "@/lib/services/order-service";
 import { formatDate, getEcommerceOrderId, getCurrencySymbol, cn } from "@/lib/utils";
@@ -49,6 +50,7 @@ interface DashboardClientProps {
   recentOrders: Order[];
   topProducts: TopProduct[];
   ordersByCity: CityOrderCount[];
+  initialConversionRate: ConversionRate;
 }
 
 const PERIOD_LABELS: Record<PeriodType, string> = {
@@ -240,7 +242,7 @@ function TopProductsRanking({ products }: { products: TopProduct[] }) {
 
 // --- Main Dashboard ---
 
-export function DashboardClient({ initialMetrics, recentOrders, topProducts, ordersByCity }: DashboardClientProps) {
+export function DashboardClient({ initialMetrics, recentOrders, topProducts, ordersByCity, initialConversionRate }: DashboardClientProps) {
   const router = useRouter();
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>(initialMetrics.period);
 
@@ -251,10 +253,12 @@ export function DashboardClient({ initialMetrics, recentOrders, topProducts, ord
     return `${symbols[currency] || currency}${amount.toFixed(2)}`;
   };
 
+  const formatRate = (r: number | null) =>
+    r === null ? '—' : `${r.toLocaleString('es-PE', { maximumFractionDigits: 1 })}%`;
+
   const handlePeriodChange = (newPeriod: PeriodType) => {
     setSelectedPeriod(newPeriod);
     router.push(`/dashboard/get-started?period=${newPeriod}`);
-    router.refresh();
   };
 
   // Quick status summary
@@ -325,6 +329,15 @@ export function DashboardClient({ initialMetrics, recentOrders, topProducts, ord
             icon: <DollarSign className="w-5 h-5" />,
             comparison: "solo órdenes validadas",
             accentColor: "success" as const,
+          },
+          {
+            title: "Tasa de Conversión",
+            value: formatRate(initialConversionRate.conversion_rate),
+            icon: <TrendingUp className="w-5 h-5" />,
+            accentColor: "aqua" as const,
+            comparison: initialConversionRate.conversion_rate !== null
+              ? `${initialConversionRate.conversions.toLocaleString('es-PE')} conv. de ${initialConversionRate.total_conversations.toLocaleString('es-PE')}`
+              : undefined,
           },
         ].map((card, i) => (
           <motion.div key={i} variants={fadeUp}>

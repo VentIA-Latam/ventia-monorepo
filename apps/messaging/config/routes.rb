@@ -85,6 +85,7 @@ Rails.application.routes.draw do
         collection do
           post :search
           post :import
+          get :find_by_phone
         end
       end
 
@@ -147,6 +148,11 @@ Rails.application.routes.draw do
         post 'embedded_signup', to: 'embedded_signup#create'
         get 'embedded_signup/status', to: 'embedded_signup#status'
         get 'health/:inbox_id', to: 'embedded_signup#health'
+      end
+
+      # Analytics (KPIs agregados por periodo)
+      namespace :analytics do
+        get 'conversations_count', to: 'conversations#count'
       end
 
       # Reports

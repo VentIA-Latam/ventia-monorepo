@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
+ActiveRecord::Schema[7.2].define(version: 2026_04_08_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -37,6 +37,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "notify_ai_messages", default: false, null: false
+    t.jsonb "temperature_config", default: []
     t.index ["status"], name: "index_accounts_on_status"
     t.index ["ventia_tenant_id"], name: "index_accounts_on_ventia_tenant_id", unique: true
   end
@@ -233,8 +234,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_24_200001) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "ai_agent_enabled", default: true, null: false
-    t.integer "temperature"
     t.integer "stage", default: 0, null: false
+    t.string "temperature"
     t.index ["account_id"], name: "index_conversations_on_account_id"
     t.index ["assignee_id"], name: "index_conversations_on_assignee_id"
     t.index ["campaign_id"], name: "index_conversations_on_campaign_id"

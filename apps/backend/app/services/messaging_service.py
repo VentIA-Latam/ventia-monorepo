@@ -181,6 +181,39 @@ class MessagingService:
             "GET", "/api/v1/conversations/counts", tenant_id, params=params
         )
 
+    async def get_conversations_count_by_period(
+        self,
+        tenant_id: int,
+        start_date: str,
+        end_date: str,
+        user_id: Optional[str] = None,
+    ) -> Optional[dict]:
+        """Get total conversations count for a tenant in a date range.
+
+        Calls the Rails analytics endpoint that filters by `created_at`. The
+        result is the denominator for the conversion rate metric (US-CONV-004).
+
+        Args:
+            tenant_id: Tenant id propagated to messaging via X-Tenant-Id.
+            start_date: ISO 8601 timestamp (UTC recommended).
+            end_date: ISO 8601 timestamp (UTC recommended).
+            user_id: Optional Ventia user id, propagated as X-User-Id.
+
+        Returns:
+            On success: dict shaped `{"success": True, "data": {"total": int,
+                "period": {"start_date": str, "end_date": str}}}`.
+            On HTTP / network failure: None (logged in `_request`).
+            Note: callers should treat any payload without `data.total` as a
+            failure (e.g. unexpected Rails 200 with `success=False`).
+        """
+        return await self._request(
+            "GET",
+            "/api/v1/analytics/conversations_count",
+            tenant_id,
+            user_id=user_id,
+            params={"start_date": start_date, "end_date": end_date},
+        )
+
     async def update_conversation_stage(
         self, tenant_id: int, conversation_id: str, stage: str
     ) -> Optional[dict]:
@@ -530,7 +563,6 @@ class MessagingService:
             user_id=user_id,
             json_data={"notification_settings": payload},
         )
-
 
 # Global service instance
 messaging_service = MessagingService()

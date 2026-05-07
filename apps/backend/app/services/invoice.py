@@ -335,6 +335,8 @@ class InvoiceService:
                 cliente_numero_doc=invoice.cliente_numero_documento,
                 cliente_razon_social=invoice.cliente_razon_social,
                 currency=invoice.currency,
+                # Skip items with price 0 (e.g. free DELIVERY) — SUNAT rejects
+                # lines without IGV tribute (error 3105)
                 items=[
                     {
                         "sku": item.get("sku", f"ITEM{idx+1:03d}"),
@@ -343,11 +345,12 @@ class InvoiceService:
                         # IMPORTANT: Prices in line_items include IGV, but generate_json_ubl
                         # expects prices WITHOUT IGV (it calculates IGV internally)
                         "unit_price": round(
-                            float(item.get("price") or item.get("unitPrice") or 0) / 1.18, 2
+                            float(item.get("unitPrice") or item.get("price") or 0) / 1.18, 2
                         ),
                         "unit": "NIU",
                     }
                     for idx, item in enumerate(invoice.items)
+                    if float(item.get("unitPrice") or item.get("price") or 0) > 0
                 ],
                 subtotal=invoice.subtotal,
                 igv=invoice.igv,

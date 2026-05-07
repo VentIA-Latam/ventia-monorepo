@@ -5,8 +5,7 @@ Metrics schemas - Pydantic models for metrics endpoints.
 from datetime import date
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
-
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 PeriodType = Literal[
     "today",
@@ -92,3 +91,19 @@ class DashboardMetrics(BaseModel):
             }
         }
     }
+
+
+class ConversionRateResponse(BaseModel):
+    """Tasa de conversión del agente IA (US-CONV-004)."""
+
+    conversion_rate: Optional[float] = Field(
+        None,
+        description="Porcentaje 0-100. None si no hay conversaciones en el periodo.",
+    )
+    conversions: int = Field(..., description="Conversaciones distintas con ≥1 venta validada en el periodo")
+    total_conversations: int = Field(..., description="Total conversaciones creadas en el periodo")
+    period: PeriodType
+    start_date: date
+    end_date: date
+
+    model_config = ConfigDict(from_attributes=True)
