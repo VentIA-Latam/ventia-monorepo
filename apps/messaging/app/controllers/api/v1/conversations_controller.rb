@@ -182,11 +182,14 @@ class Api::V1::ConversationsController < Api::V1::BaseController
 
   # Sincroniza la etiqueta soporte-humano con el estado del agente IA.
   # Inversa de labels_controller.rb (que sincroniza IA cuando se añade/quita la etiqueta).
+  # Importante: destruir el ConversationLabel directamente (no usar labels.delete)
+  # para disparar after_destroy_commit → activity message + broadcast en tiempo real.
   def sync_soporte_humano_label
     if @conversation.ai_agent_enabled
       # IA reactivada → quitar soporte-humano si estaba
       label = current_account.labels.find_by(title: 'soporte-humano')
-      @conversation.labels.delete(label) if label && @conversation.labels.exists?(label.id)
+      join = label && @conversation.conversation_labels.find_by(label_id: label.id)
+      join&.destroy!
     else
       # IA desactivada → añadir soporte-humano si no estaba
       label = Label.find_or_create_by!(account_id: current_account.id, title: 'soporte-humano') do |l|
