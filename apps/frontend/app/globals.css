@@ -147,39 +147,46 @@ html {
 }
 
 .dark {
-  /* VentIA Dark — Slate Noir palette */
-  --background: oklch(0.141 0.004 286);
-  --foreground: oklch(0.947 0.004 286);
-  --card: oklch(0.170 0.006 286);
-  --card-foreground: oklch(0.947 0.004 286);
-  --popover: oklch(0.170 0.006 286);
-  --popover-foreground: oklch(0.947 0.004 286);
-  --primary: oklch(0.58 0.19 260);
+  /* VentIA Dark — Soft Neutral Gray (US-UX-004) */
+  --background: oklch(0.17 0.001 0);
+  --foreground: oklch(0.92 0 0);
+  --card: oklch(0.21 0.001 0);
+  --card-foreground: oklch(0.92 0 0);
+  --popover: oklch(0.21 0.001 0);
+  --popover-foreground: oklch(0.92 0 0);
+  --primary: oklch(0.54 0.19 260);
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.211 0.008 286);
-  --secondary-foreground: oklch(0.947 0.004 286);
-  --muted: oklch(0.211 0.008 286);
-  --muted-foreground: oklch(0.548 0.012 286);
-  --accent: oklch(0.211 0.008 286);
-  --accent-foreground: oklch(0.947 0.004 286);
+  --secondary: oklch(0.25 0.001 0);
+  --secondary-foreground: oklch(0.92 0 0);
+  --muted: oklch(0.25 0.001 0);
+  --muted-foreground: oklch(0.65 0 0);
+  --accent: oklch(0.25 0.001 0);
+  --accent-foreground: oklch(0.92 0 0);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.279 0.011 286);
-  --input: oklch(0.211 0.008 286);
+  --border: oklch(0.30 0.001 0);
+  --input: oklch(0.30 0.001 0);
   --ring: oklch(0.58 0.19 260);
   --chart-1: oklch(0.58 0.19 260);
   --chart-2: oklch(0.78 0.11 220);
   --chart-3: oklch(0.78 0.08 255);
   --chart-4: oklch(0.33 0.10 255);
   --chart-5: oklch(0.93 0.04 230);
-  --sidebar: oklch(0.170 0.006 286);
-  --sidebar-foreground: oklch(0.947 0.004 286);
+  --sidebar: oklch(0.19 0.001 0);
+  --sidebar-foreground: oklch(0.92 0 0);
   --sidebar-primary: oklch(0.58 0.19 260);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.211 0.008 286);
-  --sidebar-accent-foreground: oklch(0.947 0.004 286);
-  --sidebar-border: oklch(0.279 0.011 286);
+  --sidebar-accent: oklch(0.26 0.001 0);
+  --sidebar-accent-foreground: oklch(0.92 0 0);
+  --sidebar-border: oklch(0.26 0.001 0);
   --sidebar-ring: oklch(0.58 0.19 260);
+
+  /* Brand foreground tokens — lightened for AA contrast on dark bg */
+  --marino: oklch(0.82 0.08 255);
+  --success: oklch(0.78 0.16 145);
+  --warning: oklch(0.82 0.15 90);
+  --danger: oklch(0.78 0.16 27);
+  --info: oklch(0.78 0.14 230);
 
   /* Status backgrounds — dark overrides */
   --success-bg: oklch(0.22 0.04 150);
@@ -192,6 +199,45 @@ html {
   --chat-wallpaper-opacity: 0.6;
   --chat-outgoing: oklch(0.25 0.06 260);
   --platform-badge: var(--luma);
+
+}
+
+/* react-day-picker — overrides minimalistas (rdp css importado arriba define defaults grandes) */
+.rdp-root {
+  --rdp-accent-color: var(--primary);
+  --rdp-accent-background-color: oklch(0.97 0.012 260);
+  --rdp-range_middle-background-color: oklch(0.97 0.012 260);
+  --rdp-day_button-border-radius: 6px;
+  --rdp-day-width: 2rem;
+  --rdp-day-height: 2rem;
+  --rdp-day_button-width: 2rem;
+  --rdp-day_button-height: 2rem;
+  --rdp-day_button-border: 0;
+  --rdp-nav_button-width: 2rem;
+  --rdp-nav_button-height: 2rem;
+  --rdp-nav-height: 2.25rem;
+}
+
+/* rdp css sets `font: inherit` resetting font props — fix size/weight explicitly */
+.rdp-day_button {
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.rdp-weekday {
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: lowercase;
+}
+
+.rdp-caption_label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.dark .rdp-root {
+  --rdp-accent-background-color: oklch(0.21 0.001 0);
+  --rdp-range_middle-background-color: oklch(0.21 0.001 0);
 }
 
 @layer base {

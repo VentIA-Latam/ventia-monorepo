@@ -8,7 +8,9 @@
     "dev2": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "audit:dark": "tsx scripts/audit-dark-mode.ts",
+    "audit:dark:login": "tsx scripts/audit-dark-mode.ts --login"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.14.0",
@@ -59,11 +61,14 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.22",
+    "axe-core": "^4.11.4",
     "eslint": "^9",
     "eslint-config-next": "16.0.1",
     "postcss": "^8.5.6",
+    "puppeteer": "^24.43.0",
     "tailwindcss": "^4",
     "tailwindscss": "^0.3.0",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

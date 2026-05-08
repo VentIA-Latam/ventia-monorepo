@@ -412,7 +412,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
   // No conversation selected
   if (!conversation) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-muted/20">
+      <div className="flex-1 flex items-center justify-center bg-background">
         <EmptyState
           icon={<MessageSquare className="h-8 w-8" />}
           title="Selecciona una conversación"

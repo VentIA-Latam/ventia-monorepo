@@ -21,7 +21,9 @@
     "build:frontend": "pnpm --filter frontend build",
     "build:backend": "echo 'Backend builds in Docker'",
     "lint": "pnpm run --parallel lint",
-    "test": "pnpm run --parallel test"
+    "test": "pnpm run --parallel test",
+    "audit:dark": "pnpm --filter frontend audit:dark",
+    "audit:dark:login": "pnpm --filter frontend audit:dark:login"
   },
   "keywords": [
     "monorepo",

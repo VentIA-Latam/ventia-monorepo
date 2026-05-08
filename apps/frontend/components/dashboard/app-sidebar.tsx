@@ -10,6 +10,7 @@ import {
   Bell,
   Moon,
   Sun,
+  Monitor,
   ChevronRight,
   CreditCard,
   Users,
@@ -62,6 +63,8 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
@@ -448,13 +451,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <Bell className="mr-2 h-4 w-4" />
                   Notificaciones
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                  className="cursor-pointer"
-                >
-                  {theme === "dark" ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
-                  {theme === "dark" ? "Modo claro" : "Modo oscuro"}
-                </DropdownMenuItem>
+                <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1 font-normal">
+                  Apariencia
+                </DropdownMenuLabel>
+                <DropdownMenuRadioGroup value={theme ?? "system"} onValueChange={setTheme}>
+                  <DropdownMenuRadioItem value="light" className="cursor-pointer">
+                    <Sun className="mr-2 h-4 w-4" /> Claro
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="system" className="cursor-pointer">
+                    <Monitor className="mr-2 h-4 w-4" /> Sistema
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="dark" className="cursor-pointer">
+                    <Moon className="mr-2 h-4 w-4" /> Oscuro
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
                 <DropdownMenuSeparator className="bg-sidebar-border" />
                 <DropdownMenuItem
                   onClick={handleLogout}
