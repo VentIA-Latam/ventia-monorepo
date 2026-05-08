@@ -254,9 +254,30 @@ export function ConversationList({
       onConversationsChange(
         current.map((c) => c.id === convId ? { ...c, labels } : c)
       );
+    } else if (event === "conversation.updated") {
+      // webhook_data del backend trae los campos actualizados (ai_agent_enabled,
+      // stage, status, temperature, assignee_id, team_id). Update in-place del
+      // item para reflejar cambios al instante (ej: quitar soporte-humano
+      // re-activa la IA y debe pintar el robot verde sin esperar refetch).
+      const convId = Number(data.id ?? data.conversation_id);
+      if (!Number.isNaN(convId) && current.some((c) => c.id === convId)) {
+        onConversationsChange(
+          current.map((c) => {
+            if (c.id !== convId) return c;
+            const next = { ...c };
+            if (typeof data.ai_agent_enabled === "boolean") next.ai_agent_enabled = data.ai_agent_enabled;
+            if (data.stage !== undefined) next.stage = data.stage as Conversation["stage"];
+            if (data.status !== undefined) next.status = data.status as Conversation["status"];
+            if (data.temperature !== undefined) next.temperature = data.temperature as Conversation["temperature"];
+            return next;
+          })
+        );
+      } else {
+        // Conversación no está en la lista actual (filtros/paginación) — refetch
+        debouncedRefetch();
+      }
     } else if (
       event === "conversation.created" ||
-      event === "conversation.updated" ||
       event === "conversation.status_changed"
     ) {
       debouncedRefetch();
