@@ -80,8 +80,10 @@ class Api::V1::ConversationsController < Api::V1::BaseController
   end
 
   def update
+    ai_was_enabled = @conversation.ai_agent_enabled
     if @conversation.update(conversation_params)
-      render_success(conversation_json(@conversation), message: 'Conversation updated')
+      sync_soporte_humano_label if conversation_params.key?(:ai_agent_enabled) && ai_was_enabled != @conversation.ai_agent_enabled
+      render_success(conversation_json(@conversation.reload), message: 'Conversation updated')
     else
       render_error('Failed to update conversation', errors: @conversation.errors.full_messages)
     end
@@ -176,6 +178,24 @@ class Api::V1::ConversationsController < Api::V1::BaseController
 
   def conversation_params
     params.require(:conversation).permit(:status, :stage, :priority, :temperature, :ai_agent_enabled, custom_attributes: {})
+  end
+
+  # Sincroniza la etiqueta soporte-humano con el estado del agente IA.
+  # Inversa de labels_controller.rb (que sincroniza IA cuando se añade/quita la etiqueta).
+  def sync_soporte_humano_label
+    if @conversation.ai_agent_enabled
+      # IA reactivada → quitar soporte-humano si estaba
+      label = current_account.labels.find_by(title: 'soporte-humano')
+      @conversation.labels.delete(label) if label && @conversation.labels.exists?(label.id)
+    else
+      # IA desactivada → añadir soporte-humano si no estaba
+      label = Label.find_or_create_by!(account_id: current_account.id, title: 'soporte-humano') do |l|
+        l.color = '#EF4444'
+        l.system = true
+        l.show_on_sidebar = true
+      end
+      @conversation.labels << label unless @conversation.labels.exists?(label.id)
+    end
   end
 
   def conversation_json(conversation)
