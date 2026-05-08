@@ -27,6 +27,7 @@ import {
   MapPin,
   Paperclip,
   User,
+  Bot,
 } from "lucide-react";
 import { TEMPERATURE_ICON_MAP } from "@/lib/utils/temperature-icons";
 import type { Conversation, TemperatureDefinition, MessageStatus } from "@/lib/types/messaging";
@@ -131,11 +132,33 @@ export const ConversationItem = memo(function ConversationItem({
         )}
         onClick={onClick}
       >
-        <Avatar className="h-12 w-12 shrink-0">
-          <AvatarFallback className="text-sm font-medium bg-muted">
-            {getInitials(contact?.name)}
-          </AvatarFallback>
-        </Avatar>
+        <div className="relative shrink-0">
+          <Avatar className="h-12 w-12">
+            <AvatarFallback className="text-sm font-medium bg-muted">
+              {getInitials(contact?.name)}
+            </AvatarFallback>
+          </Avatar>
+          <span
+            aria-label={
+              conversation.ai_agent_enabled
+                ? "Agente IA activo"
+                : "Agente IA pausado"
+            }
+            title={
+              conversation.ai_agent_enabled
+                ? "Agente IA activo"
+                : "Agente IA pausado"
+            }
+            className={cn(
+              "absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-background transition-colors",
+              conversation.ai_agent_enabled
+                ? "bg-success text-background shadow-[0_0_6px_-1px_oklch(0.59_0.18_145/0.5)]"
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            <Bot className="h-3 w-3" strokeWidth={2.5} />
+          </span>
+        </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
