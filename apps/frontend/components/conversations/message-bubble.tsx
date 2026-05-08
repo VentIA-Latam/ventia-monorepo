@@ -3,13 +3,13 @@
 import { memo, useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
-import { FileDown, Check, CheckCheck, AlertCircle, X, Download, ExternalLink } from "lucide-react";
+import { FileDown, Check, CheckCheck, AlertCircle, X, Download, ExternalLink, Bot } from "lucide-react";
 import type { MessageStatus } from "@/lib/types/messaging";
 import { LocationBubble } from "./location-bubble";
 import { ContactBubble } from "./contact-bubble";
 import type { Message, AttachmentBrief, CtaUrlData, ReferralData } from "@/lib/types/messaging";
 import { ReferralBubble } from "./referral-bubble";
-import { formatTime } from "@/lib/utils/messaging";
+import { formatTime, getSenderRole, getInitials } from "@/lib/utils/messaging";
 import dynamic from "next/dynamic";
 
 const AudioPlayer = dynamic(
@@ -131,10 +131,12 @@ function StatusIcon({ status }: { status?: MessageStatus }) {
 
 interface MessageBubbleProps {
   message: Message;
+  showAvatar?: boolean;
 }
 
 export const MessageBubble = memo(function MessageBubble({
   message,
+  showAvatar = true,
 }: MessageBubbleProps) {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const closeLightbox = useCallback(() => setLightboxSrc(null), []);
@@ -180,11 +182,20 @@ export const MessageBubble = memo(function MessageBubble({
   }
 
   const hasReferral = !isOutgoing && !!message.content_attributes?.referral;
+  const senderRole = getSenderRole(message);
+  const operatorName =
+    message.sender && "name" in message.sender ? message.sender.name : null;
+  const avatarTitle =
+    senderRole === "ai"
+      ? "Mensaje de IA"
+      : senderRole === "operator"
+        ? `Mensaje de ${operatorName ?? "operador"}`
+        : "";
 
   return (
     <div
       className={cn(
-        "flex max-w-[min(65%,500px)]",
+        "flex max-w-[min(65%,500px)] items-end gap-1.5",
         isOutgoing ? "ml-auto justify-end" : "mr-auto"
       )}
     >
@@ -342,6 +353,30 @@ export const MessageBubble = memo(function MessageBubble({
         <span className="block w-full text-[10px] text-muted-foreground/70 mt-0.5 text-right pr-1 italic">
           Mensaje automático
         </span>
+      )}
+
+      {/* Avatar lateral solo en outgoing — visible en último de cluster, spacer cuando no */}
+      {isOutgoing && (
+        showAvatar ? (
+          <div
+            aria-label={avatarTitle}
+            title={avatarTitle}
+            className={cn(
+              "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold transition-opacity duration-150 hover:opacity-90",
+              senderRole === "ai"
+                ? "bg-success-bg text-success border border-success/30"
+                : "bg-cielo text-marino"
+            )}
+          >
+            {senderRole === "ai" ? (
+              <Bot className="h-3.5 w-3.5" strokeWidth={2.5} />
+            ) : (
+              getInitials(operatorName)
+            )}
+          </div>
+        ) : (
+          <div aria-hidden className="h-7 w-7 shrink-0" />
+        )
       )}
     </div>
   );

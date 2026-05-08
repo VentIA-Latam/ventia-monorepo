@@ -22,7 +22,7 @@ import { TemplatePicker } from "./template-picker";
 import { useMessagingEvent, useMessagingReconnect } from "./messaging-provider";
 import { getMessages, sendMessage, updateConversation, markConversationRead } from "@/lib/api-client/messaging";
 import type { Conversation, Message, MessageType, MessageStatus, MessageContentAttributes, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
-import { getInitials, getDateSeparatorLabel, parseTimestamp } from "@/lib/utils/messaging";
+import { getInitials, getDateSeparatorLabel, parseTimestamp, getSenderKey } from "@/lib/utils/messaging";
 
 function mapWebSocketAttachments(raw: unknown): AttachmentBrief[] {
   if (!Array.isArray(raw)) return [];
@@ -555,6 +555,13 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
                 msgDate.getDate() !== prevDate.getDate()
               );
 
+              // Avatar lateral solo en el último de un cluster del mismo sender (estilo iMessage)
+              const next = arr[i + 1];
+              const isLastInCluster =
+                !next ||
+                next.message_type === "activity" ||
+                getSenderKey(next) !== getSenderKey(msg);
+
               return (
                 <div key={msg.id} data-msg-id={msg.id}>
                   {showSeparator ? (
@@ -565,7 +572,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
                     </div>
                   ) : null}
                   <div style={MESSAGE_ITEM_STYLE}>
-                    <MessageBubble message={msg} />
+                    <MessageBubble message={msg} showAvatar={isLastInCluster} />
                   </div>
                 </div>
               );
