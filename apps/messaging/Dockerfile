@@ -26,8 +26,8 @@ RUN bundle install --jobs 4 --retry 3
 # Copy application code
 COPY . .
 
-# Fix Windows CRLF line endings in bin/ scripts
-RUN sed -i 's/\r$//' bin/*
+# Fix Windows CRLF line endings + ensure bin/ scripts are executable
+RUN sed -i 's/\r$//' bin/* && chmod +x bin/*
 
 # Precompile bootsnap code for faster boot times
 RUN bundle exec bootsnap precompile --gemfile app/ lib/
