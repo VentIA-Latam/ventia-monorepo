@@ -10,6 +10,7 @@ import { ContactBubble } from "./contact-bubble";
 import type { Message, AttachmentBrief, CtaUrlData, ReferralData } from "@/lib/types/messaging";
 import { ReferralBubble } from "./referral-bubble";
 import { formatTime, getSenderRole, getInitials } from "@/lib/utils/messaging";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import dynamic from "next/dynamic";
 
 const AudioPlayer = dynamic(
@@ -185,17 +186,15 @@ export const MessageBubble = memo(function MessageBubble({
   const senderRole = getSenderRole(message);
   const operatorName =
     message.sender && "name" in message.sender ? message.sender.name : null;
-  const avatarTitle =
+  const avatarTooltip =
     senderRole === "ai"
-      ? "Mensaje de IA"
-      : senderRole === "operator"
-        ? `Mensaje de ${operatorName ?? "operador"}`
-        : "";
+      ? "Enviado por: IA"
+      : `Enviado por: ${operatorName ?? "operador"}`;
 
   return (
     <div
       className={cn(
-        "flex max-w-[min(65%,500px)] items-end gap-1.5",
+        "relative flex max-w-[min(65%,500px)]",
         isOutgoing ? "ml-auto justify-end" : "mr-auto"
       )}
     >
@@ -355,28 +354,30 @@ export const MessageBubble = memo(function MessageBubble({
         </span>
       )}
 
-      {/* Avatar lateral solo en outgoing — visible en último de cluster, spacer cuando no */}
-      {isOutgoing && (
-        showAvatar ? (
-          <div
-            aria-label={avatarTitle}
-            title={avatarTitle}
-            className={cn(
-              "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold transition-opacity duration-150 hover:opacity-90",
-              senderRole === "ai"
-                ? "bg-success-bg text-success border border-success/30"
-                : "bg-cielo text-marino"
-            )}
-          >
-            {senderRole === "ai" ? (
-              <Bot className="h-3.5 w-3.5" strokeWidth={2.5} />
-            ) : (
-              getInitials(operatorName)
-            )}
-          </div>
-        ) : (
-          <div aria-hidden className="h-7 w-7 shrink-0" />
-        )
+      {/* Avatar lateral en outgoing — absolute para no robarle ancho al bubble */}
+      {isOutgoing && showAvatar && (
+        <Tooltip delayDuration={150}>
+          <TooltipTrigger asChild>
+            <div
+              aria-label={avatarTooltip}
+              className={cn(
+                "absolute bottom-0 -right-7 flex h-6 w-6 cursor-default items-center justify-center rounded-full text-[9px] font-bold transition-opacity duration-150 hover:opacity-90",
+                senderRole === "ai"
+                  ? "bg-success-bg text-success border border-success/30"
+                  : "bg-cielo text-marino dark:bg-info-bg dark:text-info dark:border dark:border-info/30"
+              )}
+            >
+              {senderRole === "ai" ? (
+                <Bot className="h-3 w-3" strokeWidth={2.5} />
+              ) : (
+                getInitials(operatorName)
+              )}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="left" sideOffset={4}>
+            {avatarTooltip}
+          </TooltipContent>
+        </Tooltip>
       )}
     </div>
   );
