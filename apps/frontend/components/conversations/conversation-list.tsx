@@ -211,6 +211,11 @@ export function ConversationList({
       const attachments = Array.isArray(data.attachments) && data.attachments.length > 0
         ? data.attachments[0] : null;
 
+      // Activity messages (etiquetas, IA toggle, asignaciones) son eventos
+      // del sistema — no deben aparecer como preview en la lista ni mover
+      // la conversación arriba.
+      if (msgType === "activity") return;
+
       onConversationsChange(
         current.map((c) => c.id === convId ? {
           ...c,
