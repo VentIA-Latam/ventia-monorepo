@@ -385,6 +385,7 @@ export function ConversationList({
                   conversation={conversation}
                   isSelected={selectedId === conversation.id}
                   temperatureConfig={temperatureConfig}
+                  tenantId={tenantId}
                   onClick={() => onSelect(conversation.id)}
                   onDelete={handleDelete}
                 />

@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -13,6 +13,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import {
   Trash2,
@@ -28,15 +42,23 @@ import {
   Paperclip,
   User,
   Bot,
+  MoreHorizontal,
+  TrendingUp,
+  Headset,
 } from "lucide-react";
 import { TEMPERATURE_ICON_MAP } from "@/lib/utils/temperature-icons";
 import type { Conversation, TemperatureDefinition, MessageStatus } from "@/lib/types/messaging";
 import { getInitials, getWhatsAppTime } from "@/lib/utils/messaging";
+import {
+  updateConversationStage,
+  escalateConversation,
+} from "@/lib/api-client/messaging";
 
 interface ConversationItemProps {
   conversation: Conversation;
   isSelected: boolean;
   temperatureConfig?: TemperatureDefinition[];
+  tenantId?: number;
   onClick: () => void;
   onDelete?: (id: number) => void;
 }
@@ -113,16 +135,43 @@ export const ConversationItem = memo(function ConversationItem({
   conversation,
   isSelected,
   temperatureConfig = [],
+  tenantId,
   onClick,
   onDelete,
 }: ConversationItemProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const contact = conversation.contact;
+
+  const isPreSale = conversation.stage === "pre_sale";
+  const newStage = isPreSale ? "sale" : "pre_sale";
+  const stageLabel = isPreSale ? "Mover a Venta" : "Mover a Pre-venta";
+
+  const handleChangeStage = useCallback(async () => {
+    try {
+      await updateConversationStage(conversation.id, newStage, tenantId);
+    } catch (err) {
+      console.error("Error changing stage:", err);
+    }
+  }, [conversation.id, newStage, tenantId]);
+
+  const handleEscalate = useCallback(async () => {
+    try {
+      await escalateConversation(conversation.id, tenantId);
+    } catch (err) {
+      console.error("Error escalating conversation:", err);
+    }
+  }, [conversation.id, tenantId]);
+
+  const handleDeleteClick = useCallback(() => {
+    setShowDeleteDialog(true);
+  }, []);
   const unreadCount = conversation.unread_count ?? 0;
   const hasUnread = unreadCount > 0;
 
   return (
     <>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
       <div
         className={cn(
           "group w-full flex items-center gap-3 py-3 px-4 text-left transition-colors cursor-pointer border-b border-border/30",
@@ -243,20 +292,66 @@ export const ConversationItem = memo(function ConversationItem({
           )}
         </div>
 
-        {onDelete && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowDeleteDialog(true);
-            }}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Más acciones"
+              className="h-7 w-7 shrink-0 text-muted-foreground transition-opacity opacity-100 md:opacity-0 md:group-hover:opacity-100 data-[state=open]:opacity-100"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            onClick={(e) => e.stopPropagation()}
           >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        )}
+            <DropdownMenuItem onSelect={handleChangeStage}>
+              <TrendingUp className="h-4 w-4 mr-2" />
+              {stageLabel}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={handleEscalate}>
+              <Headset className="h-4 w-4 mr-2" />
+              Escalar a soporte humano
+            </DropdownMenuItem>
+            {onDelete && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={handleDeleteClick}
+                  className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar conversación
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem onSelect={handleChangeStage}>
+            <TrendingUp className="h-4 w-4 mr-2" />
+            {stageLabel}
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={handleEscalate}>
+            <Headset className="h-4 w-4 mr-2" />
+            Escalar a soporte humano
+          </ContextMenuItem>
+          {onDelete && (
+            <>
+              <ContextMenuSeparator />
+              <ContextMenuItem variant="destructive" onSelect={handleDeleteClick}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Eliminar conversación
+              </ContextMenuItem>
+            </>
+          )}
+        </ContextMenuContent>
+      </ContextMenu>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>

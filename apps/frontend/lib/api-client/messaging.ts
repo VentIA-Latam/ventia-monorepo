@@ -70,6 +70,14 @@ export async function updateConversationStage(
   return apiPost(`/api/messaging/conversations/${id}/stage${qs}`, { stage });
 }
 
+export async function escalateConversation(
+  id: number | string,
+  tenantId?: number
+): Promise<unknown> {
+  const qs = tenantId ? `?tenant_id=${tenantId}` : "";
+  return apiPost(`/api/messaging/conversations/${id}/escalate${qs}`, {});
+}
+
 export async function markConversationRead(conversationId: number | string, tenantId?: number): Promise<unknown> {
   const qs = tenantId ? `?tenant_id=${tenantId}` : "";
   return apiPost(`/api/messaging/conversations/${conversationId}/read${qs}`);
