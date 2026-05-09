@@ -23,6 +23,7 @@ import { useMessagingEvent, useMessagingReconnect } from "./messaging-provider";
 import { getMessages, sendMessage, updateConversation, markConversationRead } from "@/lib/api-client/messaging";
 import type { Conversation, Message, MessageType, MessageStatus, MessageContentAttributes, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
 import { getInitials, getDateSeparatorLabel, parseTimestamp, getSenderKey } from "@/lib/utils/messaging";
+import { useAuth } from "@/hooks/use-auth";
 
 function mapWebSocketAttachments(raw: unknown): AttachmentBrief[] {
   if (!Array.isArray(raw)) return [];
@@ -64,6 +65,7 @@ interface MessageViewProps {
 export const MessageView = memo(function MessageView({ conversation, tenantId, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
   const lastEvent = useMessagingEvent();
   const reconnectedAt = useMessagingReconnect();
+  const { userDetails } = useAuth();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -363,7 +365,9 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
         id: `temp-${Date.now()}`,
         content,
         message_type: "outgoing",
-        sender: null,
+        sender: userDetails
+          ? { id: userDetails.id, name: userDetails.name, email: userDetails.email }
+          : null,
         attachments: tempAttachments,
         created_at: new Date().toISOString(),
       };
@@ -389,7 +393,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
         if (previewUrl) URL.revokeObjectURL(previewUrl);
       }
     },
-    [conversation?.id, tenantId]
+    [conversation?.id, tenantId, userDetails]
   );
 
   // Toggle AI agent

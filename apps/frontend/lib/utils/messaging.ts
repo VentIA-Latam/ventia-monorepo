@@ -10,13 +10,12 @@ export type SenderRole = "customer" | "operator" | "ai";
 /**
  * Identifica quién envió el mensaje:
  * - "customer": mensaje incoming del cliente (Contact)
- * - "operator": outgoing con sender User (operador humano via header X-User-Id)
+ * - "operator": outgoing con sender (operador humano via header X-User-Id)
  * - "ai": outgoing sin sender (n8n llama API solo con tenant header)
  */
 export function getSenderRole(message: Message): SenderRole {
   if (message.message_type === "incoming") return "customer";
-  if (message.sender && "type" in message.sender && message.sender.type === "user") return "operator";
-  return "ai";
+  return message.sender ? "operator" : "ai";
 }
 
 /**
