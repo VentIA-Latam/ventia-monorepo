@@ -30,14 +30,14 @@ class TemperatureConfigResponse(BaseModel):
 # --- Nested models ---
 
 class ContactBrief(BaseModel):
-    id: str
+    id: int
     name: Optional[str] = None
     phone_number: Optional[str] = None
     email: Optional[str] = None
 
 
 class UserBrief(BaseModel):
-    id: str
+    id: int
     name: Optional[str] = None
     email: Optional[str] = None
 
