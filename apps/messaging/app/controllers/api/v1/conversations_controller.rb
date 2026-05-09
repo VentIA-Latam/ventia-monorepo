@@ -132,10 +132,12 @@ class Api::V1::ConversationsController < Api::V1::BaseController
   def resolve_escalation
     @conversation.update!(ai_agent_enabled: true)
 
+    # Destruir el ConversationLabel directamente para disparar after_destroy_commit
+    # → activity message "Etiqueta removida" + broadcast conversation.labels_updated.
+    # Mismo patrón que sync_soporte_humano_label (labels.delete() omite callbacks).
     label = current_account.labels.find_by(title: 'soporte-humano')
-    if label && @conversation.labels.exists?(label.id)
-      @conversation.labels.delete(label)
-    end
+    join = label && @conversation.conversation_labels.find_by(label_id: label.id)
+    join&.destroy!
 
     render_success(conversation_json(@conversation.reload), message: 'Escalation resolved, AI agent re-enabled')
   end
