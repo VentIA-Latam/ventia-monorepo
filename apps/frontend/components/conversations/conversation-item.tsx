@@ -52,6 +52,7 @@ import { getInitials, getWhatsAppTime } from "@/lib/utils/messaging";
 import {
   updateConversationStage,
   escalateConversation,
+  resolveEscalationConversation,
 } from "@/lib/api-client/messaging";
 
 interface ConversationItemProps {
@@ -159,6 +160,14 @@ export const ConversationItem = memo(function ConversationItem({
       await escalateConversation(conversation.id, tenantId);
     } catch (err) {
       console.error("Error escalating conversation:", err);
+    }
+  }, [conversation.id, tenantId]);
+
+  const handleResolveEscalation = useCallback(async () => {
+    try {
+      await resolveEscalationConversation(conversation.id, tenantId);
+    } catch (err) {
+      console.error("Error resolving escalation:", err);
     }
   }, [conversation.id, tenantId]);
 
@@ -312,10 +321,20 @@ export const ConversationItem = memo(function ConversationItem({
               <TrendingUp className="h-4 w-4 mr-2" />
               {stageLabel}
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={handleEscalate}>
-              <Headset className="h-4 w-4 mr-2" />
-              Escalar
-            </DropdownMenuItem>
+            {conversation.ai_agent_enabled ? (
+              <DropdownMenuItem onSelect={handleEscalate}>
+                <Headset className="h-4 w-4 mr-2" />
+                Escalar
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                onSelect={handleResolveEscalation}
+                className="text-success focus:text-success focus:bg-success-bg"
+              >
+                <Bot className="h-4 w-4 mr-2" />
+                Activar agente IA
+              </DropdownMenuItem>
+            )}
             {onDelete && (
               <>
                 <DropdownMenuSeparator />
@@ -337,10 +356,20 @@ export const ConversationItem = memo(function ConversationItem({
             <TrendingUp className="h-4 w-4 mr-2" />
             {stageLabel}
           </ContextMenuItem>
-          <ContextMenuItem onSelect={handleEscalate}>
-            <Headset className="h-4 w-4 mr-2" />
-            Escalar
-          </ContextMenuItem>
+          {conversation.ai_agent_enabled ? (
+            <ContextMenuItem onSelect={handleEscalate}>
+              <Headset className="h-4 w-4 mr-2" />
+              Escalar
+            </ContextMenuItem>
+          ) : (
+            <ContextMenuItem
+              onSelect={handleResolveEscalation}
+              className="text-success focus:text-success focus:bg-success-bg"
+            >
+              <Bot className="h-4 w-4 mr-2" />
+              Activar agente IA
+            </ContextMenuItem>
+          )}
           {onDelete && (
             <>
               <ContextMenuSeparator />
