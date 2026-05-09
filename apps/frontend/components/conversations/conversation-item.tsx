@@ -42,7 +42,7 @@ import {
   Paperclip,
   User,
   Bot,
-  MoreHorizontal,
+  MoreVertical,
   TrendingUp,
   Headset,
 } from "lucide-react";
@@ -298,10 +298,10 @@ export const ConversationItem = memo(function ConversationItem({
               variant="ghost"
               size="icon"
               aria-label="Más acciones"
-              className="h-7 w-7 shrink-0 text-muted-foreground transition-opacity opacity-100 md:opacity-0 md:group-hover:opacity-100 data-[state=open]:opacity-100"
+              className="h-8 w-8 shrink-0 text-muted-foreground transition-opacity opacity-100 [@media(hover:hover)]:md:opacity-0 [@media(hover:hover)]:md:group-hover:opacity-100 data-[state=open]:opacity-100"
               onClick={(e) => e.stopPropagation()}
             >
-              <MoreHorizontal className="h-4 w-4" />
+              <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -314,7 +314,7 @@ export const ConversationItem = memo(function ConversationItem({
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={handleEscalate}>
               <Headset className="h-4 w-4 mr-2" />
-              Escalar a soporte humano
+              Escalar
             </DropdownMenuItem>
             {onDelete && (
               <>
@@ -339,7 +339,7 @@ export const ConversationItem = memo(function ConversationItem({
           </ContextMenuItem>
           <ContextMenuItem onSelect={handleEscalate}>
             <Headset className="h-4 w-4 mr-2" />
-            Escalar a soporte humano
+            Escalar
           </ContextMenuItem>
           {onDelete && (
             <>
