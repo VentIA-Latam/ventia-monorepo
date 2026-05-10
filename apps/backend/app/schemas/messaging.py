@@ -31,6 +31,7 @@ class TemperatureConfigResponse(BaseModel):
 
 class ContactBrief(BaseModel):
     id: int
+    type: Optional[str] = None
     name: Optional[str] = None
     phone_number: Optional[str] = None
     email: Optional[str] = None
@@ -39,6 +40,7 @@ class ContactBrief(BaseModel):
 
 class UserBrief(BaseModel):
     id: int
+    type: Optional[str] = None
     name: Optional[str] = None
     email: Optional[str] = None
 
@@ -127,6 +129,7 @@ class ConversationListItem(BaseModel):
     messages_count: Optional[int] = None
     unread_count: Optional[int] = None
     contact: Optional[ContactBrief] = None
+    inbox_id: Optional[int] = None
     inbox: Optional[InboxBrief] = None
     assignee: Optional[UserBrief] = None
     team: Optional[TeamBrief] = None
