@@ -34,6 +34,7 @@ class ContactBrief(BaseModel):
     name: Optional[str] = None
     phone_number: Optional[str] = None
     email: Optional[str] = None
+    last_activity_at: Optional[datetime] = None
 
 
 class UserBrief(BaseModel):
@@ -51,7 +52,13 @@ class AttachmentBrief(BaseModel):
     id: int
     file_type: Optional[str] = None
     file_url: Optional[str] = None
+    data_url: Optional[str] = None
     filename: Optional[str] = None
+    file_size: Optional[int] = None
+    extension: Optional[str] = None
+    coordinates_lat: Optional[float] = None
+    coordinates_long: Optional[float] = None
+    meta: Optional[dict] = None
 
 
 # --- Response models ---
@@ -108,12 +115,22 @@ class ConversationListItem(BaseModel):
     status: str
     stage: str
     priority: str
+    ai_agent_enabled: Optional[bool] = None
+    can_reply: Optional[bool] = None
+    temperature: Optional[str] = None
     last_activity_at: Optional[datetime] = None
+    last_message_at: Optional[datetime] = None
+    agent_last_seen_at: Optional[datetime] = None
+    waiting_since: Optional[int] = None
+    first_reply_created_at: Optional[int] = None
     created_at: Optional[datetime] = None
     messages_count: Optional[int] = None
     unread_count: Optional[int] = None
     contact: Optional[ContactBrief] = None
     inbox: Optional[InboxBrief] = None
+    assignee: Optional[UserBrief] = None
+    team: Optional[TeamBrief] = None
+    labels: list[LabelBrief] = []
     last_message: Optional[LastMessageBrief] = None
 
     class Config:
@@ -170,6 +187,9 @@ class MessageResponse(BaseModel):
     id: int
     content: Optional[str] = None
     message_type: Optional[str] = None
+    content_type: Optional[str] = None
+    content_attributes: Optional[dict] = None
+    status: Optional[str] = None
     sender: Optional[UserBrief | ContactBrief] = None
     attachments: list[AttachmentBrief] = []
     created_at: Optional[datetime] = None
