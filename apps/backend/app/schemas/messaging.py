@@ -43,12 +43,12 @@ class UserBrief(BaseModel):
 
 
 class TeamBrief(BaseModel):
-    id: str
+    id: int
     name: str
 
 
 class AttachmentBrief(BaseModel):
-    id: str
+    id: int
     file_type: Optional[str] = None
     file_url: Optional[str] = None
     filename: Optional[str] = None
@@ -152,9 +152,9 @@ class ConversationDetailResponse(BaseModel):
 
 
 class ConversationResponse(BaseModel):
-    id: str
+    id: int
     status: str
-    inbox_id: Optional[str] = None
+    inbox_id: Optional[int] = None
     contact: Optional[ContactBrief] = None
     assignee: Optional[UserBrief] = None
     team: Optional[TeamBrief] = None
@@ -167,7 +167,7 @@ class ConversationResponse(BaseModel):
 
 
 class MessageResponse(BaseModel):
-    id: str
+    id: int
     content: Optional[str] = None
     message_type: Optional[str] = None
     sender: Optional[UserBrief | ContactBrief] = None
@@ -185,13 +185,13 @@ class MessageListResponse(BaseModel):
 
 
 class InboxResponse(BaseModel):
-    id: str
+    id: int
     name: Optional[str] = None
     channel_type: Optional[str] = None
 
 
 class CannedResponseResponse(BaseModel):
-    id: str
+    id: int
     short_code: str
     content: str
 
@@ -202,24 +202,24 @@ class CannedResponsesListResponse(BaseModel):
 
 
 class TeamResponse(BaseModel):
-    id: str
+    id: int
     name: str
     members_count: Optional[int] = None
 
 
 class NotificationResponse(BaseModel):
-    id: str
+    id: int
     notification_type: Optional[str] = None
     primary_actor_type: Optional[str] = None
-    primary_actor_id: Optional[str] = None
+    primary_actor_id: Optional[int] = None
     read_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
 
 
 class WebSocketTokenResponse(BaseModel):
     pubsub_token: str
-    account_id: str
-    user_id: str
+    account_id: int
+    user_id: int
 
 
 # --- Request models ---
@@ -250,7 +250,7 @@ class AssignConversationRequest(BaseModel):
 class UserSyncRequest(BaseModel):
     name: str
     email: str
-    ventia_user_id: str
+    ventia_user_id: int
     role: str = "agent"
 
 
@@ -287,9 +287,9 @@ class UserSyncResponse(BaseModel):
 
 
 class AccountResponse(BaseModel):
-    id: str
+    id: int
     name: str
-    ventia_tenant_id: str
+    ventia_tenant_id: int
     status: Optional[str] = None
 
 
@@ -469,10 +469,10 @@ class WhatsAppHealthResponse(BaseModel):
 # --- Notifications Response ---
 
 class NotificationItem(BaseModel):
-    id: str
+    id: int
     notification_type: Optional[str] = None
     primary_actor_type: Optional[str] = None
-    primary_actor_id: Optional[str] = None
+    primary_actor_id: Optional[int] = None
     read_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
 
