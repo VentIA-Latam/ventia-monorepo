@@ -7,6 +7,7 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
 } from "react";
 import { useActionCable, type ConnectionStatus, type ActionCableEvent } from "@/hooks/use-action-cable";
 import { getWsToken, syncUser } from "@/lib/api-client/messaging";
@@ -69,6 +70,7 @@ export function useInboxFilter() {
 }
 
 const WS_URL = process.env.NEXT_PUBLIC_MESSAGING_WS_URL || "ws://localhost:3001/cable";
+const STALE_THRESHOLD_MS = 3 * 60 * 60 * 1000; // 3 horas
 
 interface MessagingProviderProps {
   children: React.ReactNode;
@@ -91,6 +93,24 @@ export function MessagingProvider({ children, tenantId }: MessagingProviderProps
     () => ({ inboxIds: inboxFilterIds, setInboxIds }),
     [inboxFilterIds, setInboxIds]
   );
+  const hiddenAtRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        hiddenAtRef.current = Date.now();
+      } else if (hiddenAtRef.current !== null) {
+        const elapsed = Date.now() - hiddenAtRef.current;
+        hiddenAtRef.current = null;
+        if (elapsed > STALE_THRESHOLD_MS) {
+          window.location.reload();
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
 
   // Fetch WS token on mount or when tenantId changes
   useEffect(() => {
