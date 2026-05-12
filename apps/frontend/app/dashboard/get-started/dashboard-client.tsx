@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   ShoppingBag,
   AlertCircle,
@@ -14,22 +17,15 @@ import {
   Package,
   Clock,
   CheckCircle2,
-  Calendar,
   MapPin,
   TrendingUp,
+  RotateCcw,
 } from "lucide-react";
-import { DashboardMetrics, PeriodType, ConversionRate } from "@/lib/services/metrics-service";
+import { DashboardMetrics, ConversionRate } from "@/lib/services/metrics-service";
 import type { TopProduct, CityOrderCount } from "@/lib/services/metrics-service";
 import type { Order } from "@/lib/services/order-service";
 import { formatDate, getEcommerceOrderId, getCurrencySymbol, cn } from "@/lib/utils";
-import { motion } from "framer-motion";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Dynamic import for Leaflet map (heavy client-only lib)
 const SalesMap = dynamic(
@@ -51,17 +47,9 @@ interface DashboardClientProps {
   topProducts: TopProduct[];
   ordersByCity: CityOrderCount[];
   initialConversionRate: ConversionRate;
+  startDate: string;
+  endDate: string;
 }
-
-const PERIOD_LABELS: Record<PeriodType, string> = {
-  'today': 'Hoy',
-  'yesterday': 'Ayer',
-  'last_7_days': 'Últimos 7 días',
-  'last_30_days': 'Últimos 30 días',
-  'this_month': 'Este mes',
-  'last_month': 'Mes pasado',
-  'custom': 'Personalizado',
-};
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -79,6 +67,10 @@ const fadeUp = {
   hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.35 } },
 };
+
+function toLocalDateStr(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 // --- Sub-components ---
 
@@ -242,9 +234,60 @@ function TopProductsRanking({ products }: { products: TopProduct[] }) {
 
 // --- Main Dashboard ---
 
-export function DashboardClient({ initialMetrics, recentOrders, topProducts, ordersByCity, initialConversionRate }: DashboardClientProps) {
+export function DashboardClient({ initialMetrics, recentOrders, topProducts, ordersByCity, initialConversionRate, startDate, endDate }: DashboardClientProps) {
   const router = useRouter();
-  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>(initialMetrics.period);
+  const [isPending, startTransition] = useTransition();
+  const [fromDate, setFromDate] = useState<Date | undefined>(new Date(startDate + 'T00:00:00'));
+  const [toDate, setToDate] = useState<Date | undefined>(new Date(endDate + 'T00:00:00'));
+  // Fijado al primer render — evita que cambie espontáneamente a medianoche
+  const today = useMemo(() => new Date(), []);
+
+  // Detectar si el rango actual difiere del default (últimos 7 días)
+  const { defaultStart, defaultEnd } = useMemo(() => {
+    const end = toLocalDateStr(today);
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - 7);
+    return { defaultStart: toLocalDateStr(startDate), defaultEnd: end };
+  }, [today]);
+
+  const isModified =
+    fromDate !== undefined &&
+    toDate !== undefined &&
+    (toLocalDateStr(fromDate) !== defaultStart ||
+     toLocalDateStr(toDate) !== defaultEnd);
+
+  const handleReset = () => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - 7);
+    setFromDate(start);
+    setToDate(end);
+    startTransition(() => {
+      router.push('/dashboard/get-started');
+    });
+  };
+
+  const navigateWithDates = (from: Date | undefined, to: Date | undefined) => {
+    if (from && to) {
+      startTransition(() => {
+        router.push(`/dashboard/get-started?start_date=${toLocalDateStr(from)}&end_date=${toLocalDateStr(to)}`);
+      });
+    }
+  };
+
+  const handleFromChange = (date: Date | undefined) => {
+    setFromDate(date);
+    if (date && toDate && date > toDate) {
+      setToDate(undefined);
+    } else {
+      navigateWithDates(date, toDate);
+    }
+  };
+
+  const handleToChange = (date: Date | undefined) => {
+    setToDate(date);
+    navigateWithDates(fromDate, date);
+  };
 
   const formatCurrency = (amount: number, currency: string) => {
     const symbols: Record<string, string> = {
@@ -255,11 +298,6 @@ export function DashboardClient({ initialMetrics, recentOrders, topProducts, ord
 
   const formatRate = (r: number | null) =>
     r === null ? '—' : `${r.toLocaleString('es-PE', { maximumFractionDigits: 1 })}%`;
-
-  const handlePeriodChange = (newPeriod: PeriodType) => {
-    setSelectedPeriod(newPeriod);
-    router.push(`/dashboard/get-started?period=${newPeriod}`);
-  };
 
   // Quick status summary
   const paidOrders = recentOrders.filter(o => o.status === "Pagado").length;
@@ -279,29 +317,47 @@ export function DashboardClient({ initialMetrics, recentOrders, topProducts, ord
             {getGreeting()}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Resumen de operación · {PERIOD_LABELS[selectedPeriod]}
+            Resumen de operación
+            {fromDate && toDate && (
+              <> · del {format(fromDate, "dd/MM/yyyy", { locale: es })} al {format(toDate, "dd/MM/yyyy", { locale: es })}</>
+            )}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-muted-foreground hidden sm:block" />
-          <Select
-            value={selectedPeriod}
-            onValueChange={(value) => handlePeriodChange(value as PeriodType)}
-          >
-            <SelectTrigger className="w-auto sm:min-w-[170px] h-9 text-sm font-medium">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(PERIOD_LABELS).map(([value, label]) => (
-                value !== 'custom' && (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                )
-              ))}
-            </SelectContent>
-          </Select>
+        <div className={cn("flex items-center gap-2", isPending && "opacity-60 pointer-events-none")}>
+          <DatePicker
+            date={fromDate}
+            onDateChange={handleFromChange}
+            label="Desde"
+            placeholder="Inicio"
+            toDate={today}
+          />
+          <span className="text-muted-foreground text-sm mt-4">—</span>
+          <DatePicker
+            date={toDate}
+            onDateChange={handleToChange}
+            label="Hasta"
+            placeholder="Fin"
+            toDate={today}
+            fromDate={fromDate}
+            disabled={fromDate ? { before: fromDate } : undefined}
+          />
+          <AnimatePresence>
+            {isModified && (
+              <motion.button
+                key="reset"
+                initial={{ opacity: 0, x: 10, scale: 0.85 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 10, scale: 0.85 }}
+                transition={{ type: "spring", stiffness: 500, damping: 28 }}
+                onClick={handleReset}
+                className="group self-end flex h-9 items-center gap-1.5 rounded-md border border-volt/35 bg-volt/10 px-3 text-xs font-medium text-volt transition-colors hover:border-volt/60 hover:bg-volt/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-volt/50"
+              >
+                <RotateCcw className="h-3 w-3 transition-transform duration-500 group-hover:-rotate-180" />
+                Restablecer
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
 
@@ -324,7 +380,7 @@ export function DashboardClient({ initialMetrics, recentOrders, topProducts, ord
             accentColor: "warning" as const,
           },
           {
-            title: `Ventas (${PERIOD_LABELS[selectedPeriod]})`,
+            title: "Ventas (período seleccionado)",
             value: formatCurrency(initialMetrics.total_sales, initialMetrics.currency),
             icon: <DollarSign className="w-5 h-5" />,
             comparison: "solo órdenes validadas",

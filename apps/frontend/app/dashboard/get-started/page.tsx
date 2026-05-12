@@ -5,7 +5,6 @@ import {
   fetchOrdersByCity,
   fetchConversionRate,
   ConversionRate,
-  PeriodType,
 } from "@/lib/services/metrics-service";
 import { fetchOrders } from "@/lib/services/order-service";
 import { DashboardClient } from "./dashboard-client";
@@ -13,13 +12,27 @@ import { AutoRefresh } from "./auto-refresh";
 
 interface DashboardPageProps {
   searchParams: Promise<{
-    period?: string;
+    start_date?: string;
+    end_date?: string;
   }>;
+}
+
+function toLocalDateStr(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function getDefaultDates() {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - 7);
+  return { start: toLocalDateStr(start), end: toLocalDateStr(end) };
 }
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const params = await searchParams;
-  const period = (params.period || 'today') as PeriodType;
+  const defaults = getDefaultDates();
+  const startDate = params.start_date || defaults.start;
+  const endDate = params.end_date || defaults.end;
 
   const accessToken = await getAccessToken();
 
@@ -43,16 +56,18 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   const conversionRateFallback: ConversionRate = {
     conversion_rate: null, conversions: 0, total_conversations: 0,
-    period, start_date: '', end_date: '',
+    period: 'custom', start_date: startDate, end_date: endDate,
   };
+
+  const query = { period: 'custom' as const, start_date: startDate, end_date: endDate };
 
   try {
     const [metricsRes, ordersRes, topProductsRes, ordersByCityRes, conversionRateRes] = await Promise.allSettled([
-      fetchDashboardMetrics(accessToken, { period }),
+      fetchDashboardMetrics(accessToken, query),
       fetchOrders(accessToken, { limit: 5, skip: 0, sortBy: 'updated_at', sortOrder: 'desc' }),
-      fetchTopProducts(accessToken, { period }),
-      fetchOrdersByCity(accessToken, { period }),
-      fetchConversionRate(accessToken, { period }),
+      fetchTopProducts(accessToken, query),
+      fetchOrdersByCity(accessToken, query),
+      fetchConversionRate(accessToken, query),
     ]);
 
     if (metricsRes.status === 'rejected') throw metricsRes.reason;
@@ -91,6 +106,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         topProducts={topProducts?.data || []}
         ordersByCity={ordersByCity?.data || []}
         initialConversionRate={conversionRate!}
+        startDate={startDate}
+        endDate={endDate}
       />
     </>
   );
