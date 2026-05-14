@@ -325,7 +325,7 @@ class Whatsapp::IncomingMessageService
     return if profile_name.blank?
     return if @contact.name == profile_name
 
-    default_name = @contact.phone_number || @contact.identifier
+    default_name = @contact.phone_number || @contact_inbox&.whatsapp_bsuid
     return unless @contact.name == default_name || @contact.name == default_name&.gsub('+', '')
 
     @contact.update(name: profile_name)

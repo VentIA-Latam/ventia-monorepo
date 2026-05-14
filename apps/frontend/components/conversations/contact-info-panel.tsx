@@ -109,7 +109,7 @@ export const ContactInfoPanel = memo(function ContactInfoPanel({
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Contacto
           </p>
-          {(contact?.phone_number || contact?.identifier) ? (
+          {(contact?.phone_number || contact?.whatsapp_bsuid) ? (
             <div className="flex items-center gap-3 text-sm">
               {contact.phone_number ? (
                 <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -117,7 +117,7 @@ export const ContactInfoPanel = memo(function ContactInfoPanel({
                 <Fingerprint className="h-4 w-4 text-muted-foreground shrink-0" />
               )}
               <span className={contact.phone_number ? "" : "font-mono text-xs tracking-wide"}>
-                {contact.phone_number ?? contact.identifier}
+                {contact.phone_number ?? contact.whatsapp_bsuid}
               </span>
             </div>
           ) : null}

@@ -92,7 +92,7 @@ function getMessagePreview(conversation: Conversation): React.ReactNode {
   const { last_message, contact } = conversation;
 
   if (!last_message) {
-    return contact?.phone_number || contact?.identifier || contact?.email || "";
+    return contact?.phone_number || contact?.whatsapp_bsuid || contact?.email || "";
   }
 
   // Attachment message
@@ -129,7 +129,7 @@ function getMessagePreview(conversation: Conversation): React.ReactNode {
     );
   }
 
-  return contact?.phone_number || contact?.identifier || contact?.email || "";
+  return contact?.phone_number || contact?.whatsapp_bsuid || contact?.email || "";
 }
 
 export const ConversationItem = memo(function ConversationItem({
@@ -227,7 +227,7 @@ export const ConversationItem = memo(function ConversationItem({
                   hasUnread ? "font-semibold" : "font-medium"
                 )}
               >
-                {contact?.name || contact?.phone_number || contact?.identifier || "Sin nombre"}
+                {contact?.name || contact?.phone_number || contact?.whatsapp_bsuid || "Sin nombre"}
               </p>
               {conversation.stage === "sale" && (
                 <span className="inline-flex items-center shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold leading-none bg-success-bg text-success border border-success/30">

@@ -224,6 +224,7 @@ class Api::V1::ConversationsController < Api::V1::BaseController
         phone_number:     conversation.contact.phone_number,
         email:            conversation.contact.email,
         identifier:       conversation.contact.identifier,
+        whatsapp_bsuid:   conversation.contact_inbox&.whatsapp_bsuid,
         last_activity_at: conversation.contact.last_activity_at
       },
       assignee: conversation.assignee ? {

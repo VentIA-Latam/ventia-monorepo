@@ -35,6 +35,7 @@ class ContactBrief(BaseModel):
     name: Optional[str] = None
     phone_number: Optional[str] = None
     identifier: Optional[str] = None
+    whatsapp_bsuid: Optional[str] = None
     email: Optional[str] = None
     last_activity_at: Optional[datetime] = None
 
@@ -91,6 +92,7 @@ class ContactDetails(BaseModel):
     name: Optional[str] = None
     phone_number: Optional[str] = None
     identifier: Optional[str] = None
+    whatsapp_bsuid: Optional[str] = None
     email: Optional[str] = None
     last_activity_at: Optional[datetime] = None
 

@@ -2,23 +2,32 @@ module Whatsapp::ContactResolution
   def find_or_create_contact(phone, bsuid, contact_info)
     name = contact_info.dig('profile', 'name') || contact_info.dig(:profile, :name)
 
-    contact = find_existing_contact(phone, bsuid)
-    if contact
-      enrich_contact_identifiers(contact, phone, bsuid)
-      return contact
+    # Prioridad 1: contact_inbox por BSUID (scoped al inbox, alineado con Chatwoot upstream)
+    if bsuid.present?
+      ci = ContactInbox.find_by(inbox: @inbox, whatsapp_bsuid: bsuid)
+      if ci
+        enrich_contact_phone(ci.contact, phone)
+        return ci.contact
+      end
     end
 
+    # Prioridad 2: contacto por teléfono (fallback legacy)
+    if phone.present?
+      contact = Contact.find_by(account: @inbox.account, phone_number: "+#{phone}")
+      return contact if contact
+    end
+
+    # Prioridad 3: crear nuevo contacto (sin tocar contacts.identifier — es campo CRM)
     Contact.create!(
       account:      @inbox.account,
       name:         name || bsuid || phone,
-      phone_number: phone.present? ? "+#{phone}" : nil,
-      identifier:   bsuid.presence
+      phone_number: phone.present? ? "+#{phone}" : nil
     )
   end
 
   def find_or_create_contact_inbox(contact, phone, bsuid)
     if bsuid.present?
-      ci = ContactInbox.find_by(inbox: @inbox, user_id: bsuid)
+      ci = ContactInbox.find_by(inbox: @inbox, whatsapp_bsuid: bsuid)
       return ci if ci
     end
 
@@ -28,8 +37,10 @@ module Whatsapp::ContactResolution
       inbox:     @inbox,
       source_id: source
     ) do |ci|
-      ci.user_id = bsuid if bsuid.present?
+      ci.whatsapp_bsuid = bsuid if bsuid.present?
     end
+  rescue ActiveRecord::RecordNotUnique
+    ContactInbox.find_by!(inbox: @inbox, whatsapp_bsuid: bsuid)
   end
 
   def find_or_create_conversation(contact, contact_inbox)
@@ -52,24 +63,8 @@ module Whatsapp::ContactResolution
 
   private
 
-  def find_existing_contact(phone, bsuid)
-    if bsuid.present?
-      found = Contact.find_by(account: @inbox.account, identifier: bsuid)
-      return found if found
-    end
-
-    if phone.present?
-      found = Contact.find_by(account: @inbox.account, phone_number: "+#{phone}")
-      return found if found
-    end
-
-    nil
-  end
-
-  def enrich_contact_identifiers(contact, phone, bsuid)
-    updates = {}
-    updates[:phone_number] = "+#{phone}" if phone.present? && contact.phone_number.blank?
-    updates[:identifier]   = bsuid       if bsuid.present? && contact.identifier.blank?
-    contact.update!(updates) if updates.any?
+  def enrich_contact_phone(contact, phone)
+    return if phone.blank? || contact.phone_number.present?
+    contact.update!(phone_number: "+#{phone}")
   end
 end

@@ -18,7 +18,21 @@
       "WebFetch(domain:www.ycloud.com)",
       "WebFetch(domain:gallabox.com)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Dovamul\\\\Documents\\\\GitHub\\\\ventia-monorepo\\\\apps\\\\messaging\\\\db\\\\migrate\" -Filter \"*contact_inboxes*\" -ErrorAction SilentlyContinue)",
-      "Bash(Select-Object -First 5)"
+      "Bash(Select-Object -First 5)",
+      "Bash(gh issue *)",
+      "WebFetch(domain:www.chatwoot.com)",
+      "WebFetch(domain:developers.chatwoot.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:business.whatsapp.com)",
+      "WebFetch(domain:scontent.whatsapp.net)",
+      "WebFetch(domain:whatsapp.github.io)",
+      "WebFetch(domain:www.postman.com)",
+      "WebFetch(domain:web.facebook.com)",
+      "WebFetch(domain:www.facebook.com)",
+      "WebFetch(domain:stackoverflow.com)",
+      "WebFetch(domain:chatwoot.com)",
+      "WebFetch(domain:chatwhisper.io)",
+      "WebFetch(domain:www.hubtype.com)"
     ]
   }
 }
