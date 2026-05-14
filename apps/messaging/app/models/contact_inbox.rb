@@ -21,6 +21,7 @@ class ContactInbox < ApplicationRecord
   validates :contact_id, presence: true
   validates :source_id, presence: true
   validates :source_id, uniqueness: { scope: [:inbox_id] }
+  validates :user_id, uniqueness: { scope: [:inbox_id] }, allow_nil: true
 
   belongs_to :contact
   belongs_to :inbox

@@ -34,6 +34,7 @@ class ContactBrief(BaseModel):
     type: Optional[str] = None
     name: Optional[str] = None
     phone_number: Optional[str] = None
+    identifier: Optional[str] = None
     email: Optional[str] = None
     last_activity_at: Optional[datetime] = None
 
@@ -89,6 +90,7 @@ class ContactDetails(BaseModel):
     id: Optional[int] = None
     name: Optional[str] = None
     phone_number: Optional[str] = None
+    identifier: Optional[str] = None
     email: Optional[str] = None
     last_activity_at: Optional[datetime] = None
 

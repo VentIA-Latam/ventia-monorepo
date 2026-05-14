@@ -6,7 +6,19 @@
       "Bash(find:*)",
       "Bash(xargs:*)",
       "Bash(grep:*)",
-      "Bash(pnpm lint *)"
+      "Bash(pnpm lint *)",
+      "Bash(git log *)",
+      "WebFetch(domain:developers.facebook.com)",
+      "WebSearch",
+      "WebFetch(domain:www.twilio.com)",
+      "WebFetch(domain:api.support.vonage.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:dualhook.com)",
+      "WebFetch(domain:www.ycloud.com)",
+      "WebFetch(domain:gallabox.com)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Dovamul\\\\Documents\\\\GitHub\\\\ventia-monorepo\\\\apps\\\\messaging\\\\db\\\\migrate\" -Filter \"*contact_inboxes*\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object -First 5)"
     ]
   }
 }

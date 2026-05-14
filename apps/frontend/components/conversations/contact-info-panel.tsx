@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Phone, Mail, X, ChevronDown, Check } from "lucide-react";
+import { Phone, Mail, Fingerprint, X, ChevronDown, Check } from "lucide-react";
 import { TemperatureSelector } from "./temperature-selector";
 import { LabelManager } from "./label-manager";
 import { updateConversation, updateConversationStage } from "@/lib/api-client/messaging";
@@ -109,12 +109,18 @@ export const ContactInfoPanel = memo(function ContactInfoPanel({
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Contacto
           </p>
-          {contact?.phone_number && (
+          {(contact?.phone_number || contact?.identifier) ? (
             <div className="flex items-center gap-3 text-sm">
-              <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span>{contact.phone_number}</span>
+              {contact.phone_number ? (
+                <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+              ) : (
+                <Fingerprint className="h-4 w-4 text-muted-foreground shrink-0" />
+              )}
+              <span className={contact.phone_number ? "" : "font-mono text-xs tracking-wide"}>
+                {contact.phone_number ?? contact.identifier}
+              </span>
             </div>
-          )}
+          ) : null}
           {contact?.email && (
             <div className="flex items-center gap-3 text-sm">
               <Mail className="h-4 w-4 text-muted-foreground shrink-0" />

@@ -22,17 +22,20 @@ class Campaigns::TriggerService
   end
 
   def audience_contacts
-    # If audience is specified, use it. Otherwise, send to all contacts
+    # If audience is specified, use it. Otherwise, send to all contacts with phone OR BSUID
     if @campaign.audience.present?
       filter_audience_contacts
     else
-      @campaign.account.contacts.where.not(phone_number: nil)
+      base = @campaign.account.contacts
+      base.where.not(phone_number: nil).or(base.where.not(identifier: nil))
     end
   end
 
   def filter_audience_contacts
     # Audience format: [{ "filter_operator": "equal_to", "attribute_key": "phone_number", "values": ["+123..."] }]
-    base_scope = @campaign.account.contacts.where.not(phone_number: nil)
+    base_scope = @campaign.account.contacts
+                          .where.not(phone_number: nil)
+                          .or(@campaign.account.contacts.where.not(identifier: nil))
 
     @campaign.audience.reduce(base_scope) do |scope, filter|
       apply_filter(scope, filter)
@@ -57,12 +60,16 @@ class Campaigns::TriggerService
   end
 
   def create_campaign_conversation(contact)
-    # Find or create contact_inbox
+    # BSUID si hay, teléfono como fallback (solo dígitos para Meta API)
+    source_id = contact.identifier.presence || contact.phone_number&.gsub(/[^\d]/, '')
+
     contact_inbox = ContactInbox.find_or_create_by!(
-      contact: contact,
-      inbox: @campaign.inbox,
-      source_id: contact.phone_number.gsub(/[^\d]/, '')
-    )
+      contact:   contact,
+      inbox:     @campaign.inbox,
+      source_id: source_id
+    ) do |ci|
+      ci.user_id = contact.identifier if contact.identifier.present?
+    end
 
     # Create conversation
     conversation = Conversation.create!(
@@ -91,6 +98,6 @@ class Campaigns::TriggerService
     ).perform
 
   rescue StandardError => e
-    Rails.logger.error "[Campaign] Failed to send to #{contact.phone_number}: #{e.message}"
+    Rails.logger.error "[Campaign] Failed to send to #{contact.phone_number || contact.identifier}: #{e.message}"
   end
 end
