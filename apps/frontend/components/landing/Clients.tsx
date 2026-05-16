@@ -19,6 +19,10 @@ const clients = [
   { name: "Nuve", image: "/images/logo-nuve.avif" },
   { name: "GlobalTPA", image: "/images/logo-globaltpa.avif" },
   { name: "La Detoxería", image: "/images/logo-ladetoxeria.avif" },
+  { name: "BOSS", image: "/images/logo-BOSS.webp" },
+  { name: "Friend Pablo", image: "/images/logo-friend_Pablo.webp" },
+  { name: "Inkacel", image: "/images/logo-inkacel.webp" },
+  { name: "Luxury Brands", image: "/images/logo-luxury_brands.webp" },
 ];
 
 export default function Clients() {
