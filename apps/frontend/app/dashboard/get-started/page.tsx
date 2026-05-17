@@ -9,16 +9,13 @@ import {
 import { fetchOrders } from "@/lib/services/order-service";
 import { DashboardClient } from "./dashboard-client";
 import { AutoRefresh } from "./auto-refresh";
+import { toLocalDateStr } from "@/lib/utils";
 
 interface DashboardPageProps {
   searchParams: Promise<{
     start_date?: string;
     end_date?: string;
   }>;
-}
-
-function toLocalDateStr(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function getDefaultDates() {

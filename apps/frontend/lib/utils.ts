@@ -133,6 +133,10 @@ export function getEcommerceOrderId(order: {
  * @param order - Objeto de orden con shopify_order_id o woocommerce_order_id
  * @returns El ID de la orden completada
  */
+export function toLocalDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export function getCompletedOrderId(order: {
   shopify_order_id: string | null;
   woocommerce_order_id: number | null;

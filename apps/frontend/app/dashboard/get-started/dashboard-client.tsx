@@ -24,7 +24,7 @@ import {
 import { DashboardMetrics, ConversionRate } from "@/lib/services/metrics-service";
 import type { TopProduct, CityOrderCount } from "@/lib/services/metrics-service";
 import type { Order } from "@/lib/services/order-service";
-import { formatDate, getEcommerceOrderId, getCurrencySymbol, cn } from "@/lib/utils";
+import { formatDate, getEcommerceOrderId, getCurrencySymbol, cn, toLocalDateStr } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Dynamic import for Leaflet map (heavy client-only lib)
@@ -68,8 +68,14 @@ const fadeUp = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.35 } },
 };
 
-function toLocalDateStr(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const CURRENCY_SYMBOLS: Record<string, string> = { USD: '$', EUR: '€', GBP: '£', PEN: 'S/' };
+
+function formatDashboardCurrency(amount: number, currency: string): string {
+  return `${CURRENCY_SYMBOLS[currency] || currency}${amount.toFixed(2)}`;
+}
+
+function formatRate(r: number | null): string {
+  return r === null ? '—' : `${r.toLocaleString('es-PE', { maximumFractionDigits: 1 })}%`;
 }
 
 // --- Sub-components ---
@@ -289,16 +295,6 @@ export function DashboardClient({ initialMetrics, recentOrders, topProducts, ord
     navigateWithDates(fromDate, date);
   };
 
-  const formatCurrency = (amount: number, currency: string) => {
-    const symbols: Record<string, string> = {
-      'USD': '$', 'EUR': '€', 'GBP': '£', 'PEN': 'S/',
-    };
-    return `${symbols[currency] || currency}${amount.toFixed(2)}`;
-  };
-
-  const formatRate = (r: number | null) =>
-    r === null ? '—' : `${r.toLocaleString('es-PE', { maximumFractionDigits: 1 })}%`;
-
   // Quick status summary
   const paidOrders = recentOrders.filter(o => o.status === "Pagado").length;
   const pendingOrders = recentOrders.filter(o => o.status === "Pendiente").length;
@@ -381,7 +377,7 @@ export function DashboardClient({ initialMetrics, recentOrders, topProducts, ord
           },
           {
             title: "Ventas (período seleccionado)",
-            value: formatCurrency(initialMetrics.total_sales, initialMetrics.currency),
+            value: formatDashboardCurrency(initialMetrics.total_sales, initialMetrics.currency),
             icon: <DollarSign className="w-5 h-5" />,
             comparison: "solo órdenes validadas",
             accentColor: "success" as const,
