@@ -38,7 +38,10 @@
       "mcp__claude_ai_ClickUp__clickup_search",
       "mcp__claude_ai_ClickUp__clickup_get_task",
       "Skill(brainstorming)",
-      "Bash(Get-ChildItem *)"
+      "Skill(fastapi-python)",
+      "Bash(Get-ChildItem *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Dovamul\\\\Documents\\\\GitHub\\\\ventia-monorepo\\\\apps\\\\messaging\\\\db\\\\migrate\" -Filter \"*no_purchase*\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object Name, FullName)"
     ]
   }
 }

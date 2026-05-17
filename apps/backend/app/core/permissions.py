@@ -84,6 +84,10 @@ PERMISSIONS: Dict[Tuple[str, str], List[Role]] = {
     ("PATCH", "/messaging/*"): [Role.SUPERADMIN, Role.ADMIN],
     ("PUT", "/messaging/*"): [Role.SUPERADMIN, Role.ADMIN],
     ("DELETE", "/messaging/*"): [Role.SUPERADMIN, Role.ADMIN],
+
+    # METRICS
+    ("GET", "/metrics/*"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("POST", "/metrics/*"): [Role.SUPERADMIN, Role.ADMIN],
 }
 
 

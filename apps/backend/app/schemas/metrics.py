@@ -107,3 +107,7 @@ class ConversionRateResponse(BaseModel):
     end_date: date
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SetNoPurchaseReasonRequest(BaseModel):
+    reason: str = Field(..., min_length=1, description="Motivo de no compra (string libre, no vacío).")

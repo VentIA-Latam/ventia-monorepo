@@ -7,7 +7,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_database
+from app.api.deps import get_current_user, get_database, require_permission_dual
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.schemas.metrics import (
@@ -16,11 +16,19 @@ from app.schemas.metrics import (
     MetricsQuery,
     OrdersByCityResponse,
     PeriodType,
+    SetNoPurchaseReasonRequest,
     TopProductsResponse,
 )
+from app.services.messaging_service import messaging_service
 from app.services.metrics import metrics_service
 
 router = APIRouter()
+
+
+def _resolve_tenant_id(current_user: User) -> int:
+    if not current_user.tenant_id:
+        raise HTTPException(status_code=400, detail="User has no tenant assigned")
+    return current_user.tenant_id
 
 
 def _get_tenant_timezone(db: Session, tenant_id: int) -> str:
@@ -172,3 +180,52 @@ async def get_conversion_rate(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve conversion rate: {e}",
         )
+
+
+@router.post(
+    "/conversations/{conversation_id}/no-purchase-reason",
+    summary="Registrar motivo de no compra (n8n)",
+    status_code=200,
+    tags=["metrics"],
+)
+async def set_no_purchase_reason(
+    conversation_id: int,
+    body: SetNoPurchaseReasonRequest,
+    current_user: User = Depends(require_permission_dual("POST", "/metrics/*")),
+) -> dict:
+    tenant_id = _resolve_tenant_id(current_user)
+    data, status_code = await messaging_service.set_no_purchase_reason(
+        tenant_id=tenant_id,
+        conversation_id=conversation_id,
+        reason=body.reason,
+    )
+    if status_code == 0:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    if status_code == 404:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    if status_code == 422:
+        raise HTTPException(status_code=422, detail="Invalid reason")
+    return data
+
+
+@router.get(
+    "/no-purchase-reasons",
+    summary="KPI motivos de no compra por rango de fechas",
+    tags=["metrics"],
+)
+async def get_no_purchase_reasons(
+    start_date: str = Query(..., description="Fecha inicio ISO 8601 (YYYY-MM-DD)"),
+    end_date: str = Query(..., description="Fecha fin ISO 8601 (YYYY-MM-DD)"),
+    current_user: User = Depends(require_permission_dual("GET", "/metrics/*")),
+) -> dict:
+    tenant_id = _resolve_tenant_id(current_user)
+    data, status_code = await messaging_service.get_no_purchase_reasons(
+        tenant_id=tenant_id,
+        start_date=start_date,
+        end_date=end_date,
+    )
+    if status_code == 0:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    if status_code not in (200, 201):
+        raise HTTPException(status_code=status_code, detail="Error fetching data")
+    return data
