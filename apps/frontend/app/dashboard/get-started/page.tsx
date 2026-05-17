@@ -7,9 +7,10 @@ import {
   ConversionRate,
 } from "@/lib/services/metrics-service";
 import { fetchOrders } from "@/lib/services/order-service";
+import { getCurrentUser } from "@/lib/services/user-service";
 import { DashboardClient } from "./dashboard-client";
 import { AutoRefresh } from "./auto-refresh";
-import { toLocalDateStr } from "@/lib/utils";
+import { getDefaultDateRangeInTz } from "@/lib/utils";
 
 interface DashboardPageProps {
   searchParams: Promise<{
@@ -18,19 +19,8 @@ interface DashboardPageProps {
   }>;
 }
 
-function getDefaultDates() {
-  const end = new Date();
-  const start = new Date();
-  start.setDate(start.getDate() - 7);
-  return { start: toLocalDateStr(start), end: toLocalDateStr(end) };
-}
-
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const params = await searchParams;
-  const defaults = getDefaultDates();
-  const startDate = params.start_date || defaults.start;
-  const endDate = params.end_date || defaults.end;
-
   const accessToken = await getAccessToken();
 
   if (!accessToken) {
@@ -43,6 +33,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       </div>
     );
   }
+
+  const user = await getCurrentUser(accessToken);
+  const timezone = user.tenant?.timezone || "America/Lima";
+  const defaults = getDefaultDateRangeInTz(timezone, 7);
+  const startDate = params.start_date || defaults.start;
+  const endDate = params.end_date || defaults.end;
 
   let metrics;
   let recentOrders;
@@ -105,6 +101,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         initialConversionRate={conversionRate!}
         startDate={startDate}
         endDate={endDate}
+        defaultStartDate={defaults.start}
+        defaultEndDate={defaults.end}
       />
     </>
   );

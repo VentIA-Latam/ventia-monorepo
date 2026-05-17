@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { format } from "date-fns";
@@ -49,6 +49,8 @@ interface DashboardClientProps {
   initialConversionRate: ConversionRate;
   startDate: string;
   endDate: string;
+  defaultStartDate: string;
+  defaultEndDate: string;
 }
 
 function getGreeting(): string {
@@ -240,34 +242,24 @@ function TopProductsRanking({ products }: { products: TopProduct[] }) {
 
 // --- Main Dashboard ---
 
-export function DashboardClient({ initialMetrics, recentOrders, topProducts, ordersByCity, initialConversionRate, startDate, endDate }: DashboardClientProps) {
+export function DashboardClient({ initialMetrics, recentOrders, topProducts, ordersByCity, initialConversionRate, startDate, endDate, defaultStartDate, defaultEndDate }: DashboardClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [fromDate, setFromDate] = useState<Date | undefined>(new Date(startDate + 'T00:00:00'));
   const [toDate, setToDate] = useState<Date | undefined>(new Date(endDate + 'T00:00:00'));
-  // Fijado al primer render — evita que cambie espontáneamente a medianoche
-  const today = useMemo(() => new Date(), []);
-
-  // Detectar si el rango actual difiere del default (últimos 7 días)
-  const { defaultStart, defaultEnd } = useMemo(() => {
-    const end = toLocalDateStr(today);
-    const startDate = new Date(today);
-    startDate.setDate(startDate.getDate() - 7);
-    return { defaultStart: toLocalDateStr(startDate), defaultEnd: end };
-  }, [today]);
 
   const isModified =
     fromDate !== undefined &&
     toDate !== undefined &&
-    (toLocalDateStr(fromDate) !== defaultStart ||
-     toLocalDateStr(toDate) !== defaultEnd);
+    (toLocalDateStr(fromDate) !== defaultStartDate ||
+     toLocalDateStr(toDate) !== defaultEndDate);
+
+  // "Hoy" según el tenant (computado por el servidor) — usado como límite superior en pickers
+  const today = new Date(defaultEndDate + 'T00:00:00');
 
   const handleReset = () => {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - 7);
-    setFromDate(start);
-    setToDate(end);
+    setFromDate(new Date(defaultStartDate + 'T00:00:00'));
+    setToDate(new Date(defaultEndDate + 'T00:00:00'));
     startTransition(() => {
       router.push('/dashboard/get-started');
     });
@@ -342,15 +334,15 @@ export function DashboardClient({ initialMetrics, recentOrders, topProducts, ord
             {isModified && (
               <motion.button
                 key="reset"
-                initial={{ opacity: 0, x: 10, scale: 0.85 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: 10, scale: 0.85 }}
+                initial={{ opacity: 0, scale: 0.6 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.6 }}
                 transition={{ type: "spring", stiffness: 500, damping: 28 }}
                 onClick={handleReset}
-                className="group self-end flex h-9 items-center gap-1.5 rounded-md border border-volt/35 bg-volt/10 px-3 text-xs font-medium text-volt transition-colors hover:border-volt/60 hover:bg-volt/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-volt/50"
+                aria-label="Restablecer fechas"
+                className="group self-end flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground/50 transition-colors duration-200 hover:text-volt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-volt/50"
               >
-                <RotateCcw className="h-3 w-3 transition-transform duration-500 group-hover:-rotate-180" />
-                Restablecer
+                <RotateCcw className="h-4 w-4 transition-transform duration-500 group-hover:-rotate-180" />
               </motion.button>
             )}
           </AnimatePresence>

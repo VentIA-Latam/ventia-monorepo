@@ -137,6 +137,32 @@ export function toLocalDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/**
+ * Format a Date as YYYY-MM-DD in the given IANA timezone.
+ * Independent of server/client timezone.
+ */
+export function formatDateInTz(date: Date, timezone: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+/**
+ * Default date range (last N days) computed in the given IANA timezone.
+ * Returns { start, end } as YYYY-MM-DD strings.
+ */
+export function getDefaultDateRangeInTz(timezone: string, daysBack: number = 7): { start: string; end: string } {
+  const now = new Date();
+  const past = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
+  return {
+    start: formatDateInTz(past, timezone),
+    end: formatDateInTz(now, timezone),
+  };
+}
+
 export function getCompletedOrderId(order: {
   shopify_order_id: string | null;
   woocommerce_order_id: number | null;

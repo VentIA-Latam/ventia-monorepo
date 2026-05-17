@@ -3,6 +3,7 @@
 import * as React from "react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
+import type { Matcher } from "react-day-picker"
 import { CalendarIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -20,7 +21,7 @@ interface DatePickerProps {
   placeholder?: string
   label?: string
   /** Fechas adicionales a deshabilitar (ej: { before: startDate }) */
-  disabled?: { before?: Date; after?: Date }
+  disabled?: Matcher
   /** Límite superior: deshabilita días posteriores a esta fecha */
   toDate?: Date
   fromDate?: Date
@@ -38,7 +39,7 @@ export function DatePicker({
   className,
 }: DatePickerProps) {
   // Combina el disabled externo con el bloqueo de fechas futuras (toDate)
-  const disabledMatchers = [
+  const disabledMatchers: Matcher[] = [
     ...(disabled ? [disabled] : []),
     ...(toDate ? [{ after: toDate }] : []),
   ]
