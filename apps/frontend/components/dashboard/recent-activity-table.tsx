@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn, formatDate, getEcommerceOrderId } from "@/lib/utils"
 import { Order } from "@/lib/services/order-service"
 import { useRouter } from "next/navigation"
+import { useTenantTimezone } from "@/lib/context/timezone-context"
 
 interface RecentActivityTableProps {
   orders: Order[];
@@ -13,6 +14,7 @@ interface RecentActivityTableProps {
 
 export function RecentActivityTable({ orders }: RecentActivityTableProps) {
   const router = useRouter();
+  const tz = useTenantTimezone();
 
   const getEstadoColor = (estado: string) => {
     switch (estado) {
@@ -73,7 +75,7 @@ export function RecentActivityTable({ orders }: RecentActivityTableProps) {
                     {order.customer_name || 'Sin nombre'}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {formatDate(order.created_at)}
+                    {formatDate(order.created_at, tz)}
                   </TableCell>
                   <TableCell className="text-sm font-semibold">
                     {order.currency} {order.total_price.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

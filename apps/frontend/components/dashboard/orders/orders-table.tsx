@@ -23,6 +23,7 @@ import { Order } from "@/lib/services/order-service";
 import { INVOICE_STATUS_COLORS } from "@/lib/types/invoice";
 import { getEcommerceOrderId, extractShopifyOrderId, formatDateTime, getCurrencySymbol, cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { useTenantTimezone } from "@/lib/context/timezone-context";
 import { FileText, MoreVertical, Eye, Ban, Bot, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import Image from "next/image";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -160,6 +161,7 @@ function InvoiceBadge({ invoices }: { invoices: Order["invoices"] }) {
 
 export function OrdersTable({ orders, basePath = '/dashboard', onCancelled }: OrdersTableProps) {
   const router = useRouter();
+  const tz = useTenantTimezone();
 
   const handleOrderClick = (orderId: number) => {
     router.push(`${basePath}/orders/${orderId}`);
@@ -212,7 +214,7 @@ export function OrdersTable({ orders, basePath = '/dashboard', onCancelled }: Or
                       })}
                     </div>
                     <div className="text-xs text-muted-foreground mt-0.5">
-                      {formatDateTime(order.created_at)}
+                      {formatDateTime(order.created_at, tz)}
                     </div>
                   </div>
                 </TableCell>
@@ -224,7 +226,7 @@ export function OrdersTable({ orders, basePath = '/dashboard', onCancelled }: Or
                       </div>
                       {order.validated_at && (
                         <div className="text-xs text-muted-foreground mt-0.5">
-                          {formatDateTime(order.validated_at)}
+                          {formatDateTime(order.validated_at, tz)}
                         </div>
                       )}
                     </div>

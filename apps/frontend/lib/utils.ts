@@ -42,24 +42,22 @@ export function getCurrencySymbol(currency: string): string {
  * @param isoDate - Fecha en formato ISO string
  * @returns String formateado "15/01/2024"
  */
-export function formatDate(isoDate: string): string {
-  // Pure date strings (e.g. "2026-02-01") from metrics date ranges
-  // Parse directly to avoid timezone shift (UTC midnight → previous day in Lima)
+export function formatDate(isoDate: string, timezone: string = 'America/Lima'): string {
+  // Pure date strings (e.g. "2026-02-01") from metrics date ranges — no tz conversion
   if (/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
     const [year, month, day] = isoDate.split('-');
     return `${day}/${month}/${year}`;
   }
 
-  // Timestamps (e.g. "2026-02-06 00:34:06") → convert from UTC to Lima
+  // Timestamps (e.g. "2026-02-06 00:34:06") → convert from UTC to target timezone
   const utcDate = new Date(isoDate + 'Z');
-
-  const peruDate = new Date(
-    utcDate.toLocaleString('en-US', { timeZone: 'America/Lima' })
+  const localDate = new Date(
+    utcDate.toLocaleString('en-US', { timeZone: timezone })
   );
 
-  const day = String(peruDate.getDate()).padStart(2, '0');
-  const month = String(peruDate.getMonth() + 1).padStart(2, '0');
-  const year = peruDate.getFullYear();
+  const day = String(localDate.getDate()).padStart(2, '0');
+  const month = String(localDate.getMonth() + 1).padStart(2, '0');
+  const year = localDate.getFullYear();
 
   return `${day}/${month}/${year}`;
 }
@@ -69,22 +67,21 @@ export function formatDate(isoDate: string): string {
  * @param isoDate - Fecha en formato ISO string
  * @returns String formateado "15/01/2024 14:30"
  */
-export function formatDateTime(isoDate: string): string {
+export function formatDateTime(isoDate: string, timezone: string = 'America/Lima'): string {
   const utcDate = new Date(isoDate + 'Z');
-
-  const peruDate = new Date(
-    utcDate.toLocaleString('en-US', { timeZone: 'America/Lima' })
+  const localDate = new Date(
+    utcDate.toLocaleString('en-US', { timeZone: timezone })
   );
 
-  const day = String(peruDate.getDate()).padStart(2, '0');
-  const month = String(peruDate.getMonth() + 1).padStart(2, '0');
-  const year = peruDate.getFullYear();
+  const day = String(localDate.getDate()).padStart(2, '0');
+  const month = String(localDate.getMonth() + 1).padStart(2, '0');
+  const year = localDate.getFullYear();
 
-  let hours = peruDate.getHours();
-  const minutes = String(peruDate.getMinutes()).padStart(2, '0');
+  let hours = localDate.getHours();
+  const minutes = String(localDate.getMinutes()).padStart(2, '0');
 
   const period = hours >= 12 ? 'pm' : 'am';
-  hours = hours % 12 || 12; // convierte 0 → 12
+  hours = hours % 12 || 12;
 
   const formattedHours = String(hours).padStart(2, '0');
 
@@ -133,6 +130,36 @@ export function getEcommerceOrderId(order: {
  * @param order - Objeto de orden con shopify_order_id o woocommerce_order_id
  * @returns El ID de la orden completada
  */
+export function toLocalDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Format a Date as YYYY-MM-DD in the given IANA timezone.
+ * Independent of server/client timezone.
+ */
+export function formatDateInTz(date: Date, timezone: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+/**
+ * Default date range (last N days) computed in the given IANA timezone.
+ * Returns { start, end } as YYYY-MM-DD strings.
+ */
+export function getDefaultDateRangeInTz(timezone: string, daysBack: number = 7): { start: string; end: string } {
+  const now = new Date();
+  const past = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
+  return {
+    start: formatDateInTz(past, timezone),
+    end: formatDateInTz(now, timezone),
+  };
+}
+
 export function getCompletedOrderId(order: {
   shopify_order_id: string | null;
   woocommerce_order_id: number | null;
