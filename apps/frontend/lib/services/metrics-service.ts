@@ -210,3 +210,30 @@ export async function fetchConversionRate(
 
   return response.json();
 }
+
+// --- Conversation Count ---
+
+export async function fetchConversationCount(
+  accessToken: string,
+  query: { start_date: string; end_date: string },
+): Promise<number> {
+  const params = new URLSearchParams({
+    created_after: query.start_date,
+    created_before: query.end_date,
+  });
+
+  const url = `${API_URL}/messaging/conversations?${params.toString()}`;
+
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) return 0;
+
+  const json = await response.json().catch(() => null);
+  return json?.meta?.total_count ?? 0;
+}

@@ -12,7 +12,8 @@
       "mcp__claude_ai_ClickUp__clickup_search",
       "mcp__claude_ai_ClickUp__clickup_get_task",
       "Skill(brainstorming)",
-      "Bash(Get-ChildItem *)"
+      "Bash(Get-ChildItem *)",
+      "Bash(dir \"C:\\\\Users\\\\Dovamul\\\\Documents\\\\GitHub\\\\ventia-monorepo\\\\apps\\\\frontend\\\\app\\\\dashboard\")"
     ]
   }
 }

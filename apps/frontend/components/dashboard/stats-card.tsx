@@ -16,7 +16,7 @@ interface StatsCardProps {
   change?: string
   changeType?: "positive" | "negative"
   comparison?: string
-  accentColor?: "volt" | "success" | "warning" | "marino" | "aqua"
+  accentColor?: "volt" | "success" | "warning" | "marino" | "aqua" | "cielo"
 }
 
 const accentStyles: Record<string, { border: string; iconBg: string; iconText: string }> = {
@@ -44,6 +44,11 @@ const accentStyles: Record<string, { border: string; iconBg: string; iconText: s
     border: "border-l-aqua",
     iconBg: "bg-aqua/10",
     iconText: "text-aqua",
+  },
+  cielo: {
+    border: "border-l-cielo",
+    iconBg: "bg-cielo/10",
+    iconText: "text-cielo",
   },
 }
 
