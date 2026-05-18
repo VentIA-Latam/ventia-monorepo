@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { redirect } from "next/navigation"
 import { getAccessToken } from "@/lib/auth0"
 import { getCurrentUser } from "@/lib/services/user-service"
@@ -16,5 +17,9 @@ export default async function TicketsPage() {
     redirect("/dashboard/get-started")
   }
 
-  return <TicketsClient />
+  return (
+    <Suspense>
+      <TicketsClient />
+    </Suspense>
+  )
 }

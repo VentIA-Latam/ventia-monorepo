@@ -40,7 +40,11 @@ export async function getConversations(
 }
 
 export async function getConversation(id: number | string, tenantId?: number): Promise<Conversation> {
-  return apiGet(`/api/messaging/conversations/${id}`, tenantId ? { tenant_id: tenantId } : undefined);
+  const resp = await apiGet<{ success: boolean; data: Conversation }>(
+    `/api/messaging/conversations/${id}`,
+    tenantId ? { tenant_id: tenantId } : undefined,
+  );
+  return resp.data;
 }
 
 export async function updateConversation(

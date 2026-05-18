@@ -28,9 +28,6 @@ export async function GET(request: Request) {
   }
 
   const user = await getCurrentUser(token)
-  if (user.role?.toUpperCase() !== 'ADMIN') {
-    return NextResponse.json({ error: 'Solo administradores pueden adjuntar archivos' }, { status: 403 })
-  }
 
   try {
     const result = generateSignedUrl(filename, user.tenant_id, contactId)

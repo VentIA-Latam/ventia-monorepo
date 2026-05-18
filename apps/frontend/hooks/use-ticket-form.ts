@@ -2,15 +2,17 @@
 
 import { useState, useEffect, useRef, useMemo, useTransition } from "react"
 import type { ChangeEvent } from "react"
+import { useSearchParams } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
-import { getConversations } from "@/lib/api-client/messaging"
+import { getConversations, getConversation } from "@/lib/api-client/messaging"
 import type { Conversation } from "@/lib/types/messaging"
 import { TICKET_TYPE_MAP, N8N_WEBHOOK_URL, type TicketType } from "@/lib/constants/tickets"
 
 export function useTicketForm() {
   const { userDetails, isUserLoading } = useAuth()
   const { toast } = useToast()
+  const searchParams = useSearchParams()
 
   const [type, setType] = useState<TicketType | null>(null)
   const [title, setTitle] = useState("")
@@ -32,6 +34,35 @@ export function useTicketForm() {
   const descRef = useRef<HTMLDivElement>(null)
   const convRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Pre-rellena el formulario desde URL params (ej: botón "Reportar" en panel de conversación)
+  useEffect(() => {
+    const typeParam = searchParams.get("type") as TicketType | null
+    const convIdParam = searchParams.get("conversationId")
+    if (!typeParam && !convIdParam) return
+
+    let cancelled = false
+
+    if (typeParam && TICKET_TYPE_MAP.has(typeParam)) {
+      setType(typeParam)
+      setTouched((p) => ({ ...p, type: true }))
+      import("@/lib/gcs/upload-client")
+    }
+    if (convIdParam) {
+      getConversation(convIdParam)
+        .then((conv) => {
+          if (!cancelled) {
+            setSelectedConversation(conv)
+            setTouched((p) => ({ ...p, conversation: true }))
+          }
+        })
+        .catch(() => { /* silencioso — el usuario puede seleccionar manualmente */ })
+    }
+    // Limpia los params de la URL sin re-renderizar la página
+    window.history.replaceState({}, "", "/dashboard/tickets")
+
+    return () => { cancelled = true }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!type) return
@@ -252,9 +283,6 @@ export function useTicketForm() {
     return phone ? `${name} - ${phone}` : name
   }
 
-  // Derived — computed here so sidebar can receive them without re-deriving from type
-  const selectedTypeMeta = type ? TICKET_TYPE_MAP.get(type) : undefined
-
   return {
     // State
     type,
@@ -285,7 +313,6 @@ export function useTicketForm() {
     isValid,
     charCount,
     showConvField,
-    selectedTypeMeta,
     // Handlers
     handleSubmit,
     handleTypeSelect,
