@@ -34,7 +34,7 @@ export function useTicketForm() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (type !== "critical_incident") return
+    if (!type) return
     const controller = new AbortController()
     const load = async () => {
       setLoadingConvs(true)
@@ -81,7 +81,7 @@ export function useTicketForm() {
 
   const isValid = Object.keys(errors).length === 0
   const charCount = description.length
-  const showConvField = type === "critical_incident"
+  const showConvField = !!type
 
   const resetForm = () => {
     setType(null)
@@ -118,24 +118,20 @@ export function useTicketForm() {
 
         // Las subidas a GCS pueden tardar (videos grandes) — el timeout solo aplica al webhook
         let attachmentUrls: string[] = []
-        if (type === "critical_incident" && selectedConversation && files.length > 0) {
-          const contactId = selectedConversation.contact?.id
-          if (!contactId) throw new Error("Contact ID no disponible")
+        if (files.length > 0) {
           const { uploadFilesToGCS } = await import("@/lib/gcs/upload-client")
-          attachmentUrls = await uploadFilesToGCS(files, contactId)
+          attachmentUrls = await uploadFilesToGCS(files, selectedConversation?.contact?.id)
         }
 
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 10_000)
 
-        let res: Response
-
-        if (type === "critical_incident" && selectedConversation) {
-          const payload: Record<string, unknown> = {
-            type,
-            title: title.trim(),
-            description: description.trim(),
-            user,
+        const payload: Record<string, unknown> = {
+          type,
+          title: title.trim(),
+          description: description.trim(),
+          user,
+          ...(selectedConversation && {
             conversation_id: String(selectedConversation.id),
             contact: {
               id: selectedConversation.contact?.id,
@@ -149,23 +145,16 @@ export function useTicketForm() {
               name: selectedConversation.inbox?.name,
               channel_type: selectedConversation.inbox?.channel_type,
             },
-            ...(attachmentUrls.length > 0 && { attachments: attachmentUrls }),
-          }
-
-          res = await fetch(N8N_WEBHOOK_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-            signal: controller.signal,
-          })
-        } else {
-          res = await fetch(N8N_WEBHOOK_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ type, title: title.trim(), description: description.trim(), user }),
-            signal: controller.signal,
-          })
+          }),
+          ...(attachmentUrls.length > 0 && { attachments: attachmentUrls }),
         }
+
+        const res = await fetch(N8N_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        })
 
         clearTimeout(timeoutId)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -238,13 +227,8 @@ export function useTicketForm() {
   const handleTypeSelect = (t: TicketType) => {
     setType(t)
     setTouched((p) => ({ ...p, type: true }))
-    if (t !== "critical_incident") {
-      setSelectedConversation(null)
-      setConvSearch("")
-    } else {
-      // bundle-preload: precarga el módulo GCS para que esté cacheado al hacer submit
-      import("@/lib/gcs/upload-client")
-    }
+    // bundle-preload: precarga el módulo GCS para que esté cacheado al hacer submit
+    import("@/lib/gcs/upload-client")
   }
 
   const handleConvTriggerClick = () => {

@@ -85,7 +85,7 @@ export function TicketSidebar({ type, charCount, selectedConversation, showConvF
               </span>
             </SummaryRow>
             {showConvField && (
-              <SummaryRow label="Chat">
+              <SummaryRow label={type === "critical_incident" ? "Chat" : "Ref. chat"}>
                 {selectedConversation ? (
                   <span className="text-xs font-mono text-foreground">#{selectedConversation.id}</span>
                 ) : (
