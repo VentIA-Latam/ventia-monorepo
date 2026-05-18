@@ -19,9 +19,8 @@ export function TenantTimezoneProvider({
 }
 
 export function useTenantTimezone(): string {
-  const tz = useContext(TenantTimezoneContext);
-  if (tz === null) {
-    throw new Error("useTenantTimezone must be used within a TenantTimezoneProvider");
-  }
-  return tz;
+  // Fallback to "America/Lima" when no provider is present (e.g., superadmin views
+  // reusing dashboard components). Superadmin operates across multiple tenants and
+  // doesn't have a single timezone to provide.
+  return useContext(TenantTimezoneContext) ?? "America/Lima";
 }
