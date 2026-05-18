@@ -389,6 +389,31 @@ class MessagingService:
             "POST", "/api/v1/contacts/search", tenant_id, json_data={"query": query}
         )
 
+    async def find_contact_by_phone(
+        self, tenant_id: int, phone: str
+    ) -> Optional[dict]:
+        """Find a contact by exact phone_number match and return its latest conversation.
+
+        Used by webhook auto-linking (try_link_conversation) to associate Shopify/WooCommerce
+        orders with their messaging conversation. The Rails endpoint returns the most recent
+        conversation per contact, which is the one we link to the order.
+
+        Args:
+            tenant_id: Tenant id propagated to messaging via X-Tenant-Id.
+            phone: Phone in E.164 format (e.g. "+51999888777").
+
+        Returns:
+            On success: dict shaped `{"success": True, "data": {"contact_id": int,
+            "phone_number": str, "name": str, "conversation": {"id": int, "created_at": str} | None}}`.
+            Returns None on transport/HTTP error.
+        """
+        return await self._request(
+            "GET",
+            "/api/v1/contacts/find_by_phone",
+            tenant_id,
+            params={"phone": phone},
+        )
+
     # --- Canned Responses ---
 
     async def get_canned_responses(self, tenant_id: int) -> Optional[dict]:
