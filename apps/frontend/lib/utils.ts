@@ -42,24 +42,22 @@ export function getCurrencySymbol(currency: string): string {
  * @param isoDate - Fecha en formato ISO string
  * @returns String formateado "15/01/2024"
  */
-export function formatDate(isoDate: string): string {
-  // Pure date strings (e.g. "2026-02-01") from metrics date ranges
-  // Parse directly to avoid timezone shift (UTC midnight → previous day in Lima)
+export function formatDate(isoDate: string, timezone: string = 'America/Lima'): string {
+  // Pure date strings (e.g. "2026-02-01") from metrics date ranges — no tz conversion
   if (/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
     const [year, month, day] = isoDate.split('-');
     return `${day}/${month}/${year}`;
   }
 
-  // Timestamps (e.g. "2026-02-06 00:34:06") → convert from UTC to Lima
+  // Timestamps (e.g. "2026-02-06 00:34:06") → convert from UTC to target timezone
   const utcDate = new Date(isoDate + 'Z');
-
-  const peruDate = new Date(
-    utcDate.toLocaleString('en-US', { timeZone: 'America/Lima' })
+  const localDate = new Date(
+    utcDate.toLocaleString('en-US', { timeZone: timezone })
   );
 
-  const day = String(peruDate.getDate()).padStart(2, '0');
-  const month = String(peruDate.getMonth() + 1).padStart(2, '0');
-  const year = peruDate.getFullYear();
+  const day = String(localDate.getDate()).padStart(2, '0');
+  const month = String(localDate.getMonth() + 1).padStart(2, '0');
+  const year = localDate.getFullYear();
 
   return `${day}/${month}/${year}`;
 }
@@ -69,22 +67,21 @@ export function formatDate(isoDate: string): string {
  * @param isoDate - Fecha en formato ISO string
  * @returns String formateado "15/01/2024 14:30"
  */
-export function formatDateTime(isoDate: string): string {
+export function formatDateTime(isoDate: string, timezone: string = 'America/Lima'): string {
   const utcDate = new Date(isoDate + 'Z');
-
-  const peruDate = new Date(
-    utcDate.toLocaleString('en-US', { timeZone: 'America/Lima' })
+  const localDate = new Date(
+    utcDate.toLocaleString('en-US', { timeZone: timezone })
   );
 
-  const day = String(peruDate.getDate()).padStart(2, '0');
-  const month = String(peruDate.getMonth() + 1).padStart(2, '0');
-  const year = peruDate.getFullYear();
+  const day = String(localDate.getDate()).padStart(2, '0');
+  const month = String(localDate.getMonth() + 1).padStart(2, '0');
+  const year = localDate.getFullYear();
 
-  let hours = peruDate.getHours();
-  const minutes = String(peruDate.getMinutes()).padStart(2, '0');
+  let hours = localDate.getHours();
+  const minutes = String(localDate.getMinutes()).padStart(2, '0');
 
   const period = hours >= 12 ? 'pm' : 'am';
-  hours = hours % 12 || 12; // convierte 0 → 12
+  hours = hours % 12 || 12;
 
   const formattedHours = String(hours).padStart(2, '0');
 

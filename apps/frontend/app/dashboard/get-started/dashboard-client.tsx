@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTenantTimezone } from "@/lib/context/timezone-context";
 import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -82,7 +83,7 @@ function formatRate(r: number | null): string {
 
 // --- Sub-components ---
 
-function RecentOrdersCard({ orders }: { orders: Order[] }) {
+function RecentOrdersCard({ orders, timezone }: { orders: Order[]; timezone: string }) {
   const router = useRouter();
 
   const getStatusStyle = (status: string) => {
@@ -148,7 +149,7 @@ function RecentOrdersCard({ orders }: { orders: Order[] }) {
                     </span>
                     <span className="text-xs text-muted-foreground/50">·</span>
                     <span className="text-xs text-muted-foreground">
-                      {formatDate(order.created_at)}
+                      {formatDate(order.created_at, timezone)}
                     </span>
                   </div>
                 </div>
@@ -244,6 +245,7 @@ function TopProductsRanking({ products }: { products: TopProduct[] }) {
 
 export function DashboardClient({ initialMetrics, recentOrders, topProducts, ordersByCity, initialConversionRate, startDate, endDate, defaultStartDate, defaultEndDate }: DashboardClientProps) {
   const router = useRouter();
+  const timezone = useTenantTimezone();
   const [isPending, startTransition] = useTransition();
   const [fromDate, setFromDate] = useState<Date | undefined>(new Date(startDate + 'T00:00:00'));
   const [toDate, setToDate] = useState<Date | undefined>(new Date(endDate + 'T00:00:00'));
@@ -356,7 +358,7 @@ export function DashboardClient({ initialMetrics, recentOrders, topProducts, ord
             title: "Total Pedidos",
             value: initialMetrics.total_orders.toLocaleString('es-PE'),
             icon: <ShoppingBag className="w-5 h-5" />,
-            comparison: `del ${formatDate(initialMetrics.start_date)} al ${formatDate(initialMetrics.end_date)}`,
+            comparison: `del ${formatDate(initialMetrics.start_date, timezone)} al ${formatDate(initialMetrics.end_date, timezone)}`,
             accentColor: "volt" as const,
           },
           {
@@ -409,7 +411,7 @@ export function DashboardClient({ initialMetrics, recentOrders, topProducts, ord
       {/* Two-column: Recent Orders + Top Products Ranking */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <motion.div variants={fadeUp} className="flex">
-          <RecentOrdersCard orders={recentOrders} />
+          <RecentOrdersCard orders={recentOrders} timezone={timezone} />
         </motion.div>
         <motion.div variants={fadeUp} className="flex">
           <TopProductsRanking products={topProducts} />

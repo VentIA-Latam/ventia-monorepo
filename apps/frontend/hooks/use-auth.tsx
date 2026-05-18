@@ -12,12 +12,20 @@ import { createContext, useContext, useEffect, useState } from 'react';
 
 type UserRole = 'superadmin' | 'admin' | 'logistica' | null;
 
+interface TenantInfo {
+  id: number;
+  name: string;
+  slug: string;
+  timezone: string;
+}
+
 interface UserWithRole {
   id: number;
   email: string;
   name: string;
   role: UserRole;
   tenant_id: number | null;
+  tenant?: TenantInfo;
 }
 
 interface AuthContextValue {
