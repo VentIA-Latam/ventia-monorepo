@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Loader2 } from "lucide-react";
 import {
@@ -18,9 +19,11 @@ import type { Conversation, Label, TemperatureDefinition } from "@/lib/types/mes
 interface SuperAdminConversationsClientProps {
   tenantId: number;
   section?: string;
+  initialConversationId?: number;
 }
 
-export function SuperAdminConversationsClient({ tenantId, section = "all" }: SuperAdminConversationsClientProps) {
+export function SuperAdminConversationsClient({ tenantId, section = "all", initialConversationId }: SuperAdminConversationsClientProps) {
+  const router = useRouter();
   const isMobile = useIsMobile();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [allLabels, setAllLabels] = useState<Label[]>([]);
@@ -28,6 +31,9 @@ export function SuperAdminConversationsClient({ tenantId, section = "all" }: Sup
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const [loading, setLoading] = useState(true);
+  const initialApplied = useRef(false);
+  // Capturado al montar — no reacciona a cambios del prop (evita re-aplicación en cada click)
+  const initialIdRef = useRef(initialConversationId);
 
   // Fetch data when tenantId changes
   const prevTenantId = useRef(tenantId);
@@ -92,6 +98,15 @@ export function SuperAdminConversationsClient({ tenantId, section = "all" }: Sup
     return () => { cancelled = true; };
   }, [tenantId]);
 
+  // Al cargar desde un link compartido, abrir la conversación indicada en la URL
+  useEffect(() => {
+    if (!loading && !initialApplied.current && initialIdRef.current) {
+      initialApplied.current = true;
+      const exists = conversations.some((c) => c.id === initialIdRef.current);
+      if (exists) setSelectedId(initialIdRef.current!);
+    }
+  }, [loading, conversations]);
+
   const selectedConversation = useMemo(
     () => conversations.find((c) => c.id === selectedId) ?? null,
     [conversations, selectedId]
@@ -103,7 +118,12 @@ export function SuperAdminConversationsClient({ tenantId, section = "all" }: Sup
     setConversations((prev) =>
       prev.map((c) => (c.id === id ? { ...c, unread_count: 0 } : c))
     );
-  }, []);
+    // Actualiza la URL para que sea compartible con otros superadmins
+    router.replace(
+      `/superadmin/conversations?section=${section}&id=${id}&tenant_id=${tenantId}`,
+      { scroll: false }
+    );
+  }, [router, section, tenantId]);
 
   const handleBack = useCallback(() => {
     setSelectedId(null);
