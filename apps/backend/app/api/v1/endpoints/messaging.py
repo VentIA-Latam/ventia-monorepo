@@ -822,6 +822,31 @@ async def list_messages(
     return result
 
 
+@router.get(
+    "/conversations/{conversation_id}/messages/search",
+    summary="Search messages by content in a conversation",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def search_messages(
+    conversation_id: str,
+    q: str = Query(..., description="Search query term"),
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    """
+    Searches message content within a specific conversation using full-text search.
+    Returns matching messages with highlighted snippets (HTML with <mark> tags).
+    """
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.search_messages(tenant_id, conversation_id, q)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
 @router.post(
     "/conversations/{conversation_id}/messages",
     response_model=SendMessageResponse,

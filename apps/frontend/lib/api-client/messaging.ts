@@ -4,6 +4,7 @@ import type {
   ConversationCounts,
   Conversation,
   MessageListResponse,
+  MessageSearchResponse,
   WebSocketToken,
   Inbox,
   Label,
@@ -107,6 +108,16 @@ export async function getMessages(
     `/api/messaging/conversations/${conversationId}/messages`,
     Object.keys(params).length > 0 ? params : undefined
   );
+}
+
+export async function searchMessages(
+  conversationId: number | string,
+  query: string,
+  tenantId?: number
+): Promise<MessageSearchResponse> {
+  const params: Record<string, string | number> = { q: query };
+  if (tenantId) params.tenant_id = tenantId;
+  return apiGet(`/api/messaging/conversations/${conversationId}/messages/search`, params);
 }
 
 export async function sendMessage(

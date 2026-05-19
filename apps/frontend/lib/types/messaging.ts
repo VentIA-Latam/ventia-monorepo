@@ -90,6 +90,7 @@ export interface Conversation {
   last_message_at: string | number | null;
   last_message: LastMessageBrief | null;
   created_at: string | number | null;
+  message_snippet?: string | null;
 }
 
 export interface ConversationCounts {
@@ -152,6 +153,18 @@ export interface MessageListResponse {
   success: boolean;
   data: Message[];
   meta: Record<string, unknown> | null;
+}
+
+export interface MessageSearchResult {
+  id: number | string;
+  snippet: string | null;
+  created_at: string | number;
+  message_type: MessageType;
+}
+
+export interface MessageSearchResponse {
+  success: boolean;
+  data: MessageSearchResult[];
 }
 
 // --- Inbox ---

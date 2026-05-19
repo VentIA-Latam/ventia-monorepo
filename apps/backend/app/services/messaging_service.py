@@ -268,6 +268,17 @@ class MessagingService:
             params=params,
         )
 
+    async def search_messages(
+        self, tenant_id: int, conversation_id: str, query: str
+    ) -> Optional[dict]:
+        """Search messages by content using full-text search."""
+        return await self._request(
+            "GET",
+            f"/api/v1/conversations/{conversation_id}/messages/search",
+            tenant_id,
+            params={"q": query},
+        )
+
     async def send_message(
         self, tenant_id: int, conversation_id: str, payload: dict, user_id: Optional[str] = None
     ) -> Optional[dict]:

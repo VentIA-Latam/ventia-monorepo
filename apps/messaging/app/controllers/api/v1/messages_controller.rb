@@ -22,6 +22,38 @@ class Api::V1::MessagesController < Api::V1::BaseController
     }
   end
 
+  def search
+    query = params[:q].to_s.strip
+    return render json: { success: true, data: [] } if query.blank?
+
+    matching = @conversation.messages
+      .where.not(message_type: :activity)
+      .fulltext_search(query)
+      .order(created_at: :asc)
+
+    results = matching.map do |msg|
+      next unless msg.processed_message_content.present?
+
+      row = ActiveRecord::Base.connection.execute(
+        ActiveRecord::Base.sanitize_sql_array([
+          "SELECT ts_headline('spanish', ?, plainto_tsquery('spanish', ?), " \
+          "'MaxWords=15, MinWords=8, StartSel=<mark>, StopSel=</mark>') AS snippet",
+          msg.processed_message_content,
+          query
+        ])
+      ).first
+
+      {
+        id: msg.id,
+        snippet: row&.dig('snippet'),
+        created_at: msg.created_at,
+        message_type: msg.message_type
+      }
+    end.compact
+
+    render json: { success: true, data: results }
+  end
+
   def create
     message = @conversation.messages.new(message_params)
     message.account = current_account

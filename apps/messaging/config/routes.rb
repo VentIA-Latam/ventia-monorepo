@@ -76,7 +76,11 @@ Rails.application.routes.draw do
           patch :assign, controller: 'conversation_assignments'
           post :unassign, controller: 'conversation_assignments'
         end
-        resources :messages, only: [:index, :create]
+        resources :messages, only: [:index, :create] do
+          collection do
+            get :search
+          end
+        end
         resources :labels, only: [:index, :create, :destroy], controller: 'conversations/labels'
       end
 

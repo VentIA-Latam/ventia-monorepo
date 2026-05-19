@@ -388,6 +388,7 @@ export function ConversationList({
                   tenantId={tenantId}
                   onClick={() => onSelect(conversation.id)}
                   onDelete={handleDelete}
+                  searchQuery={searchQuery}
                 />
               </div>
             ))}

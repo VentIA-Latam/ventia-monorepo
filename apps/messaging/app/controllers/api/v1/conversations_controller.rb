@@ -29,14 +29,21 @@ class Api::V1::ConversationsController < Api::V1::BaseController
     # Filter by AI agent enabled status
     conversations = conversations.where(ai_agent_enabled: ActiveModel::Type::Boolean.new.cast(params[:ai_agent_enabled])) if params[:ai_agent_enabled].present?
 
-    # Search by contact name, phone number or email
-    # Use references(:contact) instead of joins(:contact) so it works with the
-    # existing eager-loaded :contact (avoids INNER JOIN duplication).
+    # Search by contact name/phone/email OR message content (FTS)
     if params[:search].present?
       term = "%#{ActiveRecord::Base.sanitize_sql_like(params[:search])}%"
       conversations = conversations.references(:contact).where(
-        'contacts.name ILIKE :q OR contacts.phone_number ILIKE :q OR contacts.email ILIKE :q',
-        q: term
+        "contacts.name ILIKE :q
+         OR contacts.phone_number ILIKE :q
+         OR contacts.email ILIKE :q
+         OR conversations.id IN (
+           SELECT DISTINCT conversation_id FROM messages
+           WHERE message_search_ts @@ plainto_tsquery('spanish', :raw_term)
+             AND messages.account_id = :account_id
+         )",
+        q: term,
+        raw_term: params[:search],
+        account_id: current_account.id
       )
     end
 
@@ -54,9 +61,11 @@ class Api::V1::ConversationsController < Api::V1::BaseController
       )
     end
 
+    search_term = params[:search].presence
+
     render json: {
       success: true,
-      data: conversations.map { |c| conversation_json(c) },
+      data: conversations.map { |c| conversation_json(c, search_term: search_term) },
       meta: pagination_meta(conversations)
     }
   end
@@ -203,8 +212,10 @@ class Api::V1::ConversationsController < Api::V1::BaseController
     end
   end
 
-  def conversation_json(conversation)
+  def conversation_json(conversation, search_term: nil)
     last_msg = conversation.messages.where.not(message_type: :activity).order(created_at: :desc).first
+
+    message_snippet = build_message_snippet(conversation, search_term)
 
     {
       id: conversation.id,
@@ -252,7 +263,30 @@ class Api::V1::ConversationsController < Api::V1::BaseController
         status: last_msg.status,
         attachment_type: last_msg.attachments.any? ? last_msg.attachments.first.file_type : nil,
         created_at: last_msg.created_at
-      } : nil
+      } : nil,
+      message_snippet: message_snippet
     }
+  end
+
+  def build_message_snippet(conversation, search_term)
+    return nil if search_term.blank?
+
+    matching_msg = conversation.messages
+      .where.not(message_type: :activity)
+      .fulltext_search(search_term)
+      .order(created_at: :desc)
+      .first
+
+    return nil unless matching_msg&.processed_message_content.present?
+
+    result = ActiveRecord::Base.connection.execute(
+      ActiveRecord::Base.sanitize_sql_array([
+        "SELECT ts_headline('spanish', ?, plainto_tsquery('spanish', ?), " \
+        "'MaxWords=12, MinWords=6, StartSel=<mark>, StopSel=</mark>') AS snippet",
+        matching_msg.processed_message_content,
+        search_term
+      ])
+    )
+    result.first&.dig('snippet')
   end
 end

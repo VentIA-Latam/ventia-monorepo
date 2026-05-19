@@ -62,6 +62,7 @@ interface ConversationItemProps {
   tenantId?: number;
   onClick: () => void;
   onDelete?: (id: number) => void;
+  searchQuery?: string;
 }
 
 function ListStatusIcon({ status }: { status?: MessageStatus }) {
@@ -139,6 +140,7 @@ export const ConversationItem = memo(function ConversationItem({
   tenantId,
   onClick,
   onDelete,
+  searchQuery,
 }: ConversationItemProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const contact = conversation.contact;
@@ -247,14 +249,21 @@ export const ConversationItem = memo(function ConversationItem({
           </div>
           <div className="flex items-center justify-between gap-2 mt-0.5">
             <div className="flex items-center gap-1.5 min-w-0">
-              <p
-                className={cn(
-                  "text-[13px] truncate",
-                  hasUnread ? "text-foreground font-medium" : "text-muted-foreground"
-                )}
-              >
-                {getMessagePreview(conversation)}
-              </p>
+              {searchQuery && conversation.message_snippet ? (
+                <p
+                  className="text-[13px] text-muted-foreground truncate [&_mark]:bg-volt/30 [&_mark]:text-foreground [&_mark]:rounded-[2px] [&_mark]:px-px"
+                  dangerouslySetInnerHTML={{ __html: conversation.message_snippet }}
+                />
+              ) : (
+                <p
+                  className={cn(
+                    "text-[13px] truncate",
+                    hasUnread ? "text-foreground font-medium" : "text-muted-foreground"
+                  )}
+                >
+                  {getMessagePreview(conversation)}
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-1 shrink-0">
               {/* Temperature icon */}

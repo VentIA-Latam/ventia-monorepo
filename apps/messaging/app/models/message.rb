@@ -90,6 +90,11 @@ class Message < ApplicationRecord
   scope :chat, -> { where.not(message_type: :activity).where(private: false) }
   scope :unread, -> { where.not(status: :read) }
   scope :recent, -> { order(created_at: :desc) }
+  scope :fulltext_search, ->(query) {
+    sanitized = query.to_s.strip
+    return none if sanitized.blank?
+    where("message_search_ts @@ plainto_tsquery('spanish', ?)", sanitized)
+  }
 
   def inbound?
     incoming? || template?
