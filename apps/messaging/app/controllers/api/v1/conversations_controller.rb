@@ -38,8 +38,9 @@ class Api::V1::ConversationsController < Api::V1::BaseController
          OR contacts.email ILIKE :q
          OR conversations.id IN (
            SELECT DISTINCT conversation_id FROM messages
-           WHERE message_search_ts @@ plainto_tsquery('spanish', :raw_term)
+           WHERE (message_search_ts @@ plainto_tsquery('simple', :raw_term) OR COALESCE(processed_message_content, content) ILIKE :q)
              AND messages.account_id = :account_id
+             AND messages.message_type != 2
          )",
         q: term,
         raw_term: params[:search],
@@ -215,7 +216,9 @@ class Api::V1::ConversationsController < Api::V1::BaseController
   def conversation_json(conversation, search_term: nil)
     last_msg = conversation.messages.where.not(message_type: :activity).order(created_at: :desc).first
 
-    message_snippet = build_message_snippet(conversation, search_term)
+    snippet_data      = build_message_snippet(conversation, search_term)
+    message_snippet   = snippet_data&.dig(:snippet)
+    matched_message_id = snippet_data&.dig(:message_id)
 
     {
       id: conversation.id,
@@ -264,29 +267,53 @@ class Api::V1::ConversationsController < Api::V1::BaseController
         attachment_type: last_msg.attachments.any? ? last_msg.attachments.first.file_type : nil,
         created_at: last_msg.created_at
       } : nil,
-      message_snippet: message_snippet
+      message_snippet: message_snippet,
+      matched_message_id: matched_message_id
     }
+  end
+
+  def build_snippet_tsquery(query)
+    terms = query.to_s.strip.split.map { |t| "'#{t.gsub("'", "''")}':*" }
+    terms.empty? ? "'':*" : terms.join(" & ")
   end
 
   def build_message_snippet(conversation, search_term)
     return nil if search_term.blank?
 
-    matching_msg = conversation.messages
-      .where.not(message_type: :activity)
-      .fulltext_search(search_term)
-      .order(created_at: :desc)
-      .first
-
-    return nil unless matching_msg&.processed_message_content.present?
+    sanitized  = search_term.to_s.strip
+    ilike_term = "%#{ActiveRecord::Base.sanitize_sql_like(sanitized)}%"
+    tsquery    = build_snippet_tsquery(sanitized)
 
     result = ActiveRecord::Base.connection.execute(
       ActiveRecord::Base.sanitize_sql_array([
-        "SELECT ts_headline('spanish', ?, plainto_tsquery('spanish', ?), " \
-        "'MaxWords=12, MinWords=6, StartSel=<mark>, StopSel=</mark>') AS snippet",
-        matching_msg.processed_message_content,
-        search_term
+        <<~SQL,
+          SELECT id, ts_headline(
+            'simple',
+            COALESCE(processed_message_content, content),
+            to_tsquery('simple', ?),
+            'MaxWords=12, MinWords=6, StartSel=<mark>, StopSel=</mark>'
+          ) AS snippet
+          FROM messages
+          WHERE conversation_id = ?
+            AND message_type != 2
+            AND COALESCE(processed_message_content, content) IS NOT NULL
+            AND (
+              message_search_ts @@ plainto_tsquery('simple', ?)
+              OR COALESCE(processed_message_content, content) ILIKE ?
+            )
+          ORDER BY created_at DESC
+          LIMIT 1
+        SQL
+        tsquery,
+        conversation.id,
+        sanitized,
+        ilike_term
       ])
     )
-    result.first&.dig('snippet')
+    row = result.first
+    return nil if row.nil?
+    snippet = row['snippet'].presence
+    return nil if snippet.nil?
+    { snippet: snippet, message_id: row['id'].to_i }
   end
 end

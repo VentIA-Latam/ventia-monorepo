@@ -91,6 +91,7 @@ export interface Conversation {
   last_message: LastMessageBrief | null;
   created_at: string | number | null;
   message_snippet?: string | null;
+  matched_message_id?: number | null;
 }
 
 export interface ConversationCounts {

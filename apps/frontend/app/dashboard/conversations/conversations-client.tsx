@@ -35,6 +35,7 @@ export function ConversationsClient({
     initialConversations as Conversation[]
   );
   const [selectedId, setSelectedId] = useState<number | null>(initialConversationId ?? null);
+  const [targetMessageId, setTargetMessageId] = useState<number | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const [allLabels, setAllLabels] = useState<Label[]>(initialLabels as Label[]);
   const [temperatureConfig] = useState<TemperatureDefinition[]>(initialTemperatureConfig as TemperatureDefinition[]);
@@ -58,8 +59,9 @@ export function ConversationsClient({
     [conversations, selectedId]
   );
 
-  const handleSelect = useCallback((id: number) => {
+  const handleSelect = useCallback((id: number, msgId?: number) => {
     setSelectedId(id);
+    setTargetMessageId(msgId ?? null);
     setShowInfo(false);
     // Optimistic: clear unread badge immediately
     setConversations((prev) =>
@@ -123,6 +125,7 @@ export function ConversationsClient({
           <div className="h-full overflow-hidden">
             <MessageView
               conversation={selectedConversation}
+              targetMessageId={targetMessageId}
               onBack={handleBack}
               onOpenInfo={handleOpenInfo}
               onConversationUpdate={handleConversationUpdate}
@@ -174,6 +177,7 @@ export function ConversationsClient({
       <div className="flex-1 min-w-0">
         <MessageView
           conversation={selectedConversation}
+          targetMessageId={targetMessageId}
           onOpenInfo={handleOpenInfo}
           onConversationUpdate={handleConversationUpdate}
         />

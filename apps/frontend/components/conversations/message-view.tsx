@@ -15,13 +15,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, MessageSquare, Loader2, Bot, AlertTriangle, MoreVertical, User, Search, ChevronUp, ChevronDown, X } from "lucide-react";
+import { ArrowLeft, MessageSquare, Loader2, Bot, AlertTriangle, MoreVertical, User, Search } from "lucide-react";
 import { MessageBubble } from "./message-bubble";
 import { MessageComposer } from "./message-composer";
 import { TemplatePicker } from "./template-picker";
 import { useMessagingEvent, useMessagingReconnect } from "./messaging-provider";
-import { getMessages, sendMessage, updateConversation, markConversationRead, searchMessages } from "@/lib/api-client/messaging";
-import type { Conversation, Message, MessageType, MessageStatus, MessageContentAttributes, AttachmentBrief, ContactBrief, AgentBrief, MessageSearchResult } from "@/lib/types/messaging";
+import { getMessages, sendMessage, updateConversation, markConversationRead } from "@/lib/api-client/messaging";
+import type { Conversation, Message, MessageType, MessageStatus, MessageContentAttributes, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
+import { MessageSearchPanel } from "./message-search-panel";
 import { getInitials, getDateSeparatorLabel, parseTimestamp, getSenderKey } from "@/lib/utils/messaging";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -57,12 +58,13 @@ const MESSAGE_ITEM_STYLE = {};
 interface MessageViewProps {
   conversation: Conversation | null;
   tenantId?: number;
+  targetMessageId?: number | null;
   onBack?: () => void;
   onOpenInfo?: () => void;
   onConversationUpdate?: (updated: Conversation) => void;
 }
 
-export const MessageView = memo(function MessageView({ conversation, tenantId, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
+export const MessageView = memo(function MessageView({ conversation, tenantId, targetMessageId, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
   const lastEvent = useMessagingEvent();
   const reconnectedAt = useMessagingReconnect();
   const { userDetails } = useAuth();
@@ -81,11 +83,8 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [showActivityMessages, setShowActivityMessages] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [chatSearchQuery, setChatSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<MessageSearchResult[]>([]);
-  const [currentResultIndex, setCurrentResultIndex] = useState(0);
-  const [isSearching, setIsSearching] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const [jumpHighlightId, setJumpHighlightId] = useState<string | null>(null);
   const isLoadingPreviousRef = useRef(false);
   // Track if we should stay pinned to the bottom
   const isPinnedToBottomRef = useRef(true);
@@ -419,75 +418,64 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
     [conversation, onConversationUpdate, tenantId]
   );
 
-  // Reset search when conversation changes
-  useEffect(() => {
-    setIsSearchOpen(false);
-    setChatSearchQuery("");
-    setSearchResults([]);
-    setCurrentResultIndex(0);
-  }, [conversation?.id]);
+  // Ref guard: evita re-scroll cuando messages cambia por mensajes nuevos vía WS
+  const scrolledTargetRef = useRef<string | null>(null);
 
-  // Debounced in-chat search
+  // Scroll to a specific message when selected from search results.
+  // Depende de `messages` para garantizar que el DOM tiene los elementos.
+  // Si el mensaje no está cargado aún, llama loadOlderRef para cargar páginas
+  // anteriores automáticamente hasta encontrarlo (igual que scroll manual hacia arriba).
   useEffect(() => {
-    if (!chatSearchQuery.trim() || !conversation?.id) {
-      setSearchResults([]);
-      setCurrentResultIndex(0);
+    if (!targetMessageId || messages.length === 0) return;
+
+    const key = `${conversation?.id}-${targetMessageId}`;
+    if (scrolledTargetRef.current === key) return;
+
+    const id = String(targetMessageId);
+    const el = document.querySelector(`[data-msg-id="${id}"]`);
+
+    if (!el) {
+      // Mensaje no está en el DOM — cargar más mensajes anteriores si hay
+      if (!isLoadingPreviousRef.current) {
+        loadOlderRef.current();
+      }
       return;
     }
 
-    let cancelled = false;
-
-    const timer = setTimeout(async () => {
-      setIsSearching(true);
-      try {
-        const res = await searchMessages(conversation.id, chatSearchQuery, tenantId);
-        if (!cancelled) {
-          setSearchResults(res.data ?? []);
-          setCurrentResultIndex(0);
-          if (res.data?.length > 0) {
-            scrollToMessage(res.data[0].id);
-          }
-        }
-      } catch {
-        if (!cancelled) setSearchResults([]);
-      } finally {
-        if (!cancelled) setIsSearching(false);
-      }
-    }, 400);
-
+    scrolledTargetRef.current = key;
+    let timerId: ReturnType<typeof setTimeout> | undefined;
+    const frame = requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      setJumpHighlightId(id);
+      timerId = setTimeout(() => setJumpHighlightId(null), 1500);
+    });
     return () => {
-      cancelled = true;
-      clearTimeout(timer);
+      cancelAnimationFrame(frame);
+      if (timerId) clearTimeout(timerId);
     };
-  }, [chatSearchQuery, conversation?.id, tenantId]);
+  }, [targetMessageId, messages, conversation?.id]);
+
+  // Reset search when conversation changes
+  useEffect(() => {
+    setIsSearchOpen(false);
+    setHighlightedMessageId(null);
+    setJumpHighlightId(null);
+    scrolledTargetRef.current = null;
+  }, [conversation?.id]);
 
   const scrollToMessage = useCallback((messageId: number | string) => {
     const el = document.querySelector(`[data-msg-id="${messageId}"]`);
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, []);
 
-  const goToNextResult = useCallback(() => {
-    if (searchResults.length === 0) return;
-    const next = (currentResultIndex + 1) % searchResults.length;
-    setCurrentResultIndex(next);
-    scrollToMessage(searchResults[next].id);
-  }, [searchResults, currentResultIndex, scrollToMessage]);
-
-  const goToPrevResult = useCallback(() => {
-    if (searchResults.length === 0) return;
-    const prev = (currentResultIndex - 1 + searchResults.length) % searchResults.length;
-    setCurrentResultIndex(prev);
-    scrollToMessage(searchResults[prev].id);
-  }, [searchResults, currentResultIndex, scrollToMessage]);
+  const handleResultClick = useCallback((messageId: number | string) => {
+    setHighlightedMessageId(String(messageId));
+    scrollToMessage(messageId);
+  }, [scrollToMessage]);
 
   const handleToggleSearch = useCallback(() => {
     setIsSearchOpen((prev) => {
-      if (prev) {
-        setChatSearchQuery("");
-        setSearchResults([]);
-      } else {
-        setTimeout(() => searchInputRef.current?.focus(), 50);
-      }
+      if (prev) setHighlightedMessageId(null);
       return !prev;
     });
   }, []);
@@ -508,7 +496,8 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
   const contact = conversation.contact;
 
   return (
-    <div className="flex-1 flex flex-col h-full min-h-0 min-w-0 overflow-hidden">
+    <div className="flex-1 flex h-full min-h-0 min-w-0 overflow-hidden relative">
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
       {/* Header — WhatsApp style with bg-muted/30 */}
       <div className="px-4 py-2.5 bg-muted/30 flex items-center gap-3 shrink-0 border-b border-border/30">
         {onBack && (
@@ -578,46 +567,6 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
-      {/* Search bar inline */}
-      {isSearchOpen && (
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-border/30 bg-background shrink-0">
-          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-          <input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Buscar en esta conversación..."
-            value={chatSearchQuery}
-            onChange={(e) => setChatSearchQuery(e.target.value)}
-            className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") goToNextResult();
-              if (e.key === "Escape") handleToggleSearch();
-            }}
-          />
-          {isSearching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
-          {!isSearching && chatSearchQuery && (
-            <span className="text-xs text-muted-foreground shrink-0">
-              {searchResults.length === 0
-                ? "Sin resultados"
-                : `${currentResultIndex + 1} / ${searchResults.length}`}
-            </span>
-          )}
-          {searchResults.length > 1 && (
-            <>
-              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={goToPrevResult} aria-label="Resultado anterior">
-                <ChevronUp className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={goToNextResult} aria-label="Resultado siguiente">
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </>
-          )}
-          <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={handleToggleSearch} aria-label="Cerrar búsqueda">
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
 
       {/* Messages — WhatsApp style with chat wallpaper */}
       <div className="flex-1 relative min-h-0 min-w-0 bg-[#f0f0f0] dark:bg-[#09090b]">
@@ -690,8 +639,9 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
                 next.message_type === "activity" ||
                 getSenderKey(next) !== getSenderKey(msg);
 
-              const isHighlighted = chatSearchQuery.trim() !== "" &&
-                String(searchResults[currentResultIndex]?.id) === String(msg.id);
+              const isHighlighted =
+                (isSearchOpen && highlightedMessageId !== null && String(highlightedMessageId) === String(msg.id)) ||
+                (jumpHighlightId !== null && String(jumpHighlightId) === String(msg.id));
 
               return (
                 <div
@@ -756,6 +706,16 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
               setMessages(msgs);
             }).catch((err) => console.error("Error refreshing messages:", err));
           }}
+        />
+      )}
+      </div>
+
+      {isSearchOpen && (
+        <MessageSearchPanel
+          conversationId={conversation.id}
+          tenantId={tenantId}
+          onClose={handleToggleSearch}
+          onResultClick={handleResultClick}
         />
       )}
     </div>

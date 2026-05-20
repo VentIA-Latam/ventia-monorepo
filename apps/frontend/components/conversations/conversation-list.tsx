@@ -22,7 +22,7 @@ interface ConversationListProps {
   temperatureConfig?: TemperatureDefinition[];
   section?: string;
   tenantId?: number;
-  onSelect: (id: number) => void;
+  onSelect: (id: number, targetMessageId?: number) => void;
   onConversationsChange: (conversations: Conversation[]) => void;
   onDeleteConversation?: (id: number) => void;
   onLabelCreated?: (label: Label) => void;
@@ -377,28 +377,44 @@ export function ConversationList({
                     : "No hay conversaciones."
             }
           />
-        ) : (
-          <>
-            {conversations.map((conversation) => (
-              <div key={conversation.id} style={{ contentVisibility: "auto", containIntrinsicSize: "auto 72px" }}>
-                <ConversationItem
-                  conversation={conversation}
-                  isSelected={selectedId === conversation.id}
-                  temperatureConfig={temperatureConfig}
-                  tenantId={tenantId}
-                  onClick={() => onSelect(conversation.id)}
-                  onDelete={handleDelete}
-                  searchQuery={searchQuery}
-                />
-              </div>
-            ))}
-            {loadingMore && (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              </div>
-            )}
-          </>
-        )}
+        ) : (() => {
+          const trimmed = searchQuery.trim();
+          const contactMatches = trimmed ? conversations.filter((c) => !c.message_snippet) : conversations;
+          const messageMatches = trimmed ? conversations.filter((c) => !!c.message_snippet) : [];
+
+          const renderItem = (conversation: Conversation, targetMessageId?: number) => (
+            <div key={conversation.id} style={{ contentVisibility: "auto", containIntrinsicSize: "auto 72px" }}>
+              <ConversationItem
+                conversation={conversation}
+                isSelected={selectedId === conversation.id}
+                temperatureConfig={temperatureConfig}
+                tenantId={tenantId}
+                onClick={() => onSelect(conversation.id, targetMessageId)}
+                onDelete={handleDelete}
+                searchQuery={searchQuery}
+              />
+            </div>
+          );
+
+          return (
+            <>
+              {contactMatches.map((c) => renderItem(c))}
+              {messageMatches.length > 0 && (
+                <>
+                  <div className="px-4 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider bg-muted/20 border-y border-border/30">
+                    Mensajes
+                  </div>
+                  {messageMatches.map((c) => renderItem(c, c.matched_message_id ?? undefined))}
+                </>
+              )}
+              {loadingMore && (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
     </div>
   );

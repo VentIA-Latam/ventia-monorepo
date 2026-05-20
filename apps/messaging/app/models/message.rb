@@ -93,7 +93,11 @@ class Message < ApplicationRecord
   scope :fulltext_search, ->(query) {
     sanitized = query.to_s.strip
     return none if sanitized.blank?
-    where("message_search_ts @@ plainto_tsquery('spanish', ?)", sanitized)
+    ilike_term = "%#{sanitize_sql_like(sanitized)}%"
+    where(
+      "(message_search_ts @@ plainto_tsquery('simple', :q) OR COALESCE(processed_message_content, content) ILIKE :ilike)",
+      q: sanitized, ilike: ilike_term
+    )
   }
 
   def inbound?
