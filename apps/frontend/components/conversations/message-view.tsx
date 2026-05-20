@@ -85,6 +85,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [jumpHighlightId, setJumpHighlightId] = useState<string | null>(null);
+  const [localTargetId, setLocalTargetId] = useState<number | null>(null);
   const isLoadingPreviousRef = useRef(false);
   // Track if we should stay pinned to the bottom
   const isPinnedToBottomRef = useRef(true);
@@ -101,6 +102,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
     }
 
     let cancelled = false;
+    setMessages([]);
     setLoading(true);
     setHasMore(true);
     messageIdsRef.current = new Set<string>();
@@ -306,6 +308,10 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
         // DOM is now updated — restore scroll position immediately (Chatwoot pattern)
         const heightDifference = container.scrollHeight - savedHeight;
         container.scrollTop = savedScrollTop + heightDifference;
+
+        // Loading older content means we are NOT at the bottom — unpin unconditionally
+        // so ResizeObserver doesn't fight scrollIntoView when seeking a target message
+        isPinnedToBottomRef.current = false;
       }
     } catch (err) {
       console.error("Error loading older messages:", err);
@@ -426,12 +432,13 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
   // Si el mensaje no está cargado aún, llama loadOlderRef para cargar páginas
   // anteriores automáticamente hasta encontrarlo (igual que scroll manual hacia arriba).
   useEffect(() => {
-    if (!targetMessageId || messages.length === 0) return;
+    const effectiveId = localTargetId ?? targetMessageId;
+    if (!effectiveId || messages.length === 0) return;
 
-    const key = `${conversation?.id}-${targetMessageId}`;
+    const key = `${conversation?.id}-${effectiveId}`;
     if (scrolledTargetRef.current === key) return;
 
-    const id = String(targetMessageId);
+    const id = String(effectiveId);
     const el = document.querySelector(`[data-msg-id="${id}"]`);
 
     if (!el) {
@@ -443,35 +450,27 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
     }
 
     scrolledTargetRef.current = key;
-    let timerId: ReturnType<typeof setTimeout> | undefined;
-    const frame = requestAnimationFrame(() => {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-      setJumpHighlightId(id);
-      timerId = setTimeout(() => setJumpHighlightId(null), 1500);
-    });
-    return () => {
-      cancelAnimationFrame(frame);
-      if (timerId) clearTimeout(timerId);
-    };
-  }, [targetMessageId, messages, conversation?.id]);
+    isPinnedToBottomRef.current = false;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    setJumpHighlightId(id);
+    const timerId = setTimeout(() => setJumpHighlightId(null), 1500);
+    return () => clearTimeout(timerId);
+  }, [localTargetId, targetMessageId, messages, conversation?.id]);
 
   // Reset search when conversation changes
   useEffect(() => {
     setIsSearchOpen(false);
     setHighlightedMessageId(null);
     setJumpHighlightId(null);
+    setLocalTargetId(null);
     scrolledTargetRef.current = null;
   }, [conversation?.id]);
 
-  const scrollToMessage = useCallback((messageId: number | string) => {
-    const el = document.querySelector(`[data-msg-id="${messageId}"]`);
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, []);
-
   const handleResultClick = useCallback((messageId: number | string) => {
+    scrolledTargetRef.current = null;
     setHighlightedMessageId(String(messageId));
-    scrollToMessage(messageId);
-  }, [scrollToMessage]);
+    setLocalTargetId(Number(messageId));
+  }, []);
 
   const handleToggleSearch = useCallback(() => {
     setIsSearchOpen((prev) => {

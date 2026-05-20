@@ -27,6 +27,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import {
   Trash2,
@@ -63,6 +64,9 @@ interface ConversationItemProps {
   onClick: () => void;
   onDelete?: (id: number) => void;
   searchQuery?: string;
+  isSelectMode?: boolean;
+  isChecked?: boolean;
+  onToggleSelect?: (id: number) => void;
 }
 
 function ListStatusIcon({ status }: { status?: MessageStatus }) {
@@ -141,6 +145,9 @@ export const ConversationItem = memo(function ConversationItem({
   onClick,
   onDelete,
   searchQuery,
+  isSelectMode = false,
+  isChecked = false,
+  onToggleSelect,
 }: ConversationItemProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const contact = conversation.contact;
@@ -186,38 +193,54 @@ export const ConversationItem = memo(function ConversationItem({
       <div
         className={cn(
           "group w-full flex items-center gap-3 py-3 px-4 text-left transition-colors cursor-pointer border-b border-border/30",
-          isSelected
-            ? "bg-primary/10 border-l-4 border-l-primary"
-            : "hover:bg-muted/30"
+          isSelectMode && isChecked
+            ? "bg-primary/10"
+            : isSelected && !isSelectMode
+              ? "bg-primary/10 border-l-4 border-l-primary"
+              : "hover:bg-muted/30"
         )}
-        onClick={onClick}
+        onClick={isSelectMode ? () => onToggleSelect?.(conversation.id) : onClick}
       >
-        <div className="relative shrink-0">
-          <Avatar className="h-12 w-12">
-            <AvatarFallback className="text-sm font-medium bg-muted">
-              {getInitials(contact?.name)}
-            </AvatarFallback>
-          </Avatar>
-          <span
-            aria-label={
-              conversation.ai_agent_enabled
-                ? "Agente IA activo"
-                : "Agente IA pausado"
-            }
-            title={
-              conversation.ai_agent_enabled
-                ? "Agente IA activo"
-                : "Agente IA pausado"
-            }
-            className={cn(
-              "absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-background transition-colors",
-              conversation.ai_agent_enabled
-                ? "bg-success text-background shadow-[0_0_6px_-1px_oklch(0.59_0.18_145/0.5)]"
-                : "bg-muted text-muted-foreground"
-            )}
-          >
-            <Bot className="h-3 w-3" strokeWidth={2.5} />
-          </span>
+        <div className="relative shrink-0 flex items-center justify-center">
+          {isSelectMode ? (
+            <div className="h-12 w-12 flex items-center justify-center">
+              <Checkbox
+                checked={isChecked}
+                onCheckedChange={() => onToggleSelect?.(conversation.id)}
+                onClick={(e) => e.stopPropagation()}
+                className="h-5 w-5"
+                aria-label="Seleccionar conversación"
+              />
+            </div>
+          ) : (
+            <>
+              <Avatar className="h-12 w-12">
+                <AvatarFallback className="text-sm font-medium bg-muted">
+                  {getInitials(contact?.name)}
+                </AvatarFallback>
+              </Avatar>
+              <span
+                aria-label={
+                  conversation.ai_agent_enabled
+                    ? "Agente IA activo"
+                    : "Agente IA pausado"
+                }
+                title={
+                  conversation.ai_agent_enabled
+                    ? "Agente IA activo"
+                    : "Agente IA pausado"
+                }
+                className={cn(
+                  "absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-background transition-colors",
+                  conversation.ai_agent_enabled
+                    ? "bg-success text-background shadow-[0_0_6px_-1px_oklch(0.59_0.18_145/0.5)]"
+                    : "bg-muted text-muted-foreground"
+                )}
+              >
+                <Bot className="h-3 w-3" strokeWidth={2.5} />
+              </span>
+            </>
+          )}
         </div>
 
         <div className="flex-1 min-w-0">
@@ -310,7 +333,7 @@ export const ConversationItem = memo(function ConversationItem({
           )}
         </div>
 
-        <DropdownMenu>
+        {!isSelectMode && <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
@@ -357,10 +380,10 @@ export const ConversationItem = memo(function ConversationItem({
               </>
             )}
           </DropdownMenuContent>
-        </DropdownMenu>
+        </DropdownMenu>}
       </div>
         </ContextMenuTrigger>
-        <ContextMenuContent>
+        {!isSelectMode && <ContextMenuContent>
           <ContextMenuItem onSelect={handleChangeStage}>
             <TrendingUp className="h-4 w-4 mr-2" />
             {stageLabel}
@@ -388,7 +411,7 @@ export const ConversationItem = memo(function ConversationItem({
               </ContextMenuItem>
             </>
           )}
-        </ContextMenuContent>
+        </ContextMenuContent>}
       </ContextMenu>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

@@ -2,10 +2,12 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Search, MessageSquare, Loader2 } from "lucide-react";
+import { Search, MessageSquare, Loader2, CheckSquare, Download, X } from "lucide-react";
 import { ConversationItem } from "./conversation-item";
+import { exportToCsv } from "@/lib/utils/messaging";
 import { ConversationFilters, type ActiveFilters } from "./conversation-filters";
 import { useMessagingEvent, useMessagingEmit, useMessagingReconnect } from "./messaging-provider";
 import {
@@ -51,6 +53,8 @@ export function ConversationList({
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [loadingMore, setLoadingMore] = useState(false);
   // Refs for transient pagination state (rerender-use-ref-transient-values)
   const loadingMoreRef = useRef(false);
@@ -314,11 +318,71 @@ export function ConversationList({
     return () => el.removeEventListener("scroll", handleScroll);
   }, [loadMoreConversations]);
 
+  const toggleSelectMode = useCallback(() => {
+    setIsSelectMode((prev) => {
+      if (prev) setSelectedIds(new Set());
+      return !prev;
+    });
+  }, []);
+
+  const toggleSelect = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const selectAll = useCallback(() => {
+    setSelectedIds(new Set(conversations.map((c) => c.id)));
+  }, [conversations]);
+
+  const handleExportCsv = useCallback(() => {
+    const selected = conversations.filter((c) => selectedIds.has(c.id));
+    exportToCsv(selected);
+    setIsSelectMode(false);
+    setSelectedIds(new Set());
+  }, [conversations, selectedIds]);
+
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <div className="px-4 pt-4 pb-2">
-        <h2 className="text-xl font-bold">Chats</h2>
+        {isSelectMode ? (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-foreground">
+                {selectedIds.size} seleccionados
+              </span>
+              <Button variant="ghost" size="icon" onClick={toggleSelectMode} className="h-7 w-7 -mr-1">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-1 -ml-1.5">
+              <Button variant="ghost" size="sm" onClick={selectAll} className="h-7 text-xs px-2">
+                Seleccionar todos
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleExportCsv}
+                disabled={selectedIds.size === 0}
+                className="h-7 text-xs px-2 gap-1"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Exportar CSV
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold">Chats</h2>
+            <Button variant="ghost" size="icon" onClick={toggleSelectMode} className="h-8 w-8 text-muted-foreground" aria-label="Seleccionar conversaciones">
+              <CheckSquare className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Search */}
@@ -392,6 +456,9 @@ export function ConversationList({
                 onClick={() => onSelect(conversation.id, targetMessageId)}
                 onDelete={handleDelete}
                 searchQuery={searchQuery}
+                isSelectMode={isSelectMode}
+                isChecked={selectedIds.has(conversation.id)}
+                onToggleSelect={toggleSelect}
               />
             </div>
           );

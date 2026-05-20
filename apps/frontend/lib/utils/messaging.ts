@@ -3,7 +3,7 @@
  * Extracted from conversation-item, message-bubble, message-view, contact-info-panel.
  */
 
-import type { Message } from "@/lib/types/messaging";
+import type { Conversation, Message } from "@/lib/types/messaging";
 
 export type SenderRole = "customer" | "operator" | "ai";
 
@@ -79,6 +79,35 @@ export function getDateSeparatorLabel(dateStr: string | number | null): string {
   if (diffDays < 7) return DAY_NAMES[msgDay.getDay()];
 
   return date.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+export function exportToCsv(conversations: Conversation[]): void {
+  const escape = (val: string | null | undefined): string => {
+    const str = val ?? "";
+    if (str.includes(";") || str.includes('"') || str.includes("\n")) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const rows = [
+    ["Nombre", "Teléfono"],
+    ...conversations.map((c) => [
+      escape(c.contact?.name),
+      escape(c.contact?.phone_number),
+    ]),
+  ];
+
+  const csv = rows.map((row) => row.join(";")).join("\n");
+  // BOM para que Excel abra correctamente UTF-8
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const date = new Date().toISOString().slice(0, 10);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `conversaciones-${date}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export function getWhatsAppTime(dateStr: string | number | null): string {
