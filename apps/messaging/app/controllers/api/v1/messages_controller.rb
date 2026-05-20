@@ -29,17 +29,19 @@ class Api::V1::MessagesController < Api::V1::BaseController
     matching = @conversation.messages
       .where.not(message_type: :activity)
       .fulltext_search(query)
-      .order(created_at: :asc)
+      .order(created_at: :desc)
+
+    tsquery = build_snippet_tsquery(query)
 
     results = matching.map do |msg|
       next unless msg.processed_message_content.present?
 
       row = ActiveRecord::Base.connection.execute(
         ActiveRecord::Base.sanitize_sql_array([
-          "SELECT ts_headline('spanish', ?, plainto_tsquery('spanish', ?), " \
+          "SELECT ts_headline('simple', ?, to_tsquery('simple', ?), " \
           "'MaxWords=15, MinWords=8, StartSel=<mark>, StopSel=</mark>') AS snippet",
           msg.processed_message_content,
-          query
+          tsquery
         ])
       ).first
 
@@ -115,6 +117,11 @@ class Api::V1::MessagesController < Api::V1::BaseController
 
   def set_conversation
     @conversation = current_account.conversations.find(params[:conversation_id])
+  end
+
+  def build_snippet_tsquery(query)
+    terms = query.to_s.strip.split.map { |t| "'#{t.gsub("'", "''")}':*" }
+    terms.empty? ? "'':*" : terms.join(" & ")
   end
 
   def message_params
