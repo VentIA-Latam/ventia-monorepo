@@ -3,7 +3,16 @@ require 'rails_helper'
 RSpec.describe 'Api::V1::Analytics::Conversations Count', type: :request do
   let(:account) { create(:account) }
   let(:other_account) { create(:account) }
-  let(:headers) { { 'X-Tenant-Id' => account.ventia_tenant_id.to_s } }
+  let(:api_key) { 'test-messaging-service-api-key-abc123' }
+  let(:headers) do
+    {
+      'X-Tenant-Id' => account.ventia_tenant_id.to_s,
+      'X-API-Key' => api_key
+    }
+  end
+
+  before { ENV['MESSAGING_SERVICE_API_KEY'] = api_key }
+  after  { ENV.delete('MESSAGING_SERVICE_API_KEY') }
 
   before do
     create_list(:conversation, 3, account: account, created_at: 5.days.ago)
@@ -37,7 +46,8 @@ RSpec.describe 'Api::V1::Analytics::Conversations Count', type: :request do
 
     context 'sin X-Tenant-Id' do
       it 'devuelve 401' do
-        get '/api/v1/analytics/conversations_count'
+        get '/api/v1/analytics/conversations_count',
+            headers: { 'X-API-Key' => api_key }
         expect(response).to have_http_status(:unauthorized)
       end
     end
@@ -45,7 +55,7 @@ RSpec.describe 'Api::V1::Analytics::Conversations Count', type: :request do
     context 'con tenant inexistente' do
       it 'devuelve 404' do
         get '/api/v1/analytics/conversations_count',
-            headers: { 'X-Tenant-Id' => '999999' }
+            headers: { 'X-Tenant-Id' => '999999', 'X-API-Key' => api_key }
 
         expect(response).to have_http_status(:not_found)
       end
