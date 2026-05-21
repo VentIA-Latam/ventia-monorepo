@@ -49,6 +49,7 @@ import {
 import { TEMPERATURE_ICON_MAP } from "@/lib/utils/temperature-icons";
 import type { Conversation, TemperatureDefinition, MessageStatus } from "@/lib/types/messaging";
 import { getInitials, getWhatsAppTime } from "@/lib/utils/messaging";
+import { formatWhatsAppText } from "@/lib/utils/whatsapp-format";
 import {
   updateConversationStage,
   escalateConversation,
@@ -124,7 +125,7 @@ function getMessagePreview(conversation: Conversation): React.ReactNode {
         {last_message.message_type === "outgoing" && (
           <ListStatusIcon status={last_message.status} />
         )}
-        <span className="truncate">{last_message.content}</span>
+        <span className="truncate">{formatWhatsAppText(last_message.content)}</span>
       </span>
     );
   }
