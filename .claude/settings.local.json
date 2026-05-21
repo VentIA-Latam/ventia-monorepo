@@ -32,7 +32,13 @@
       "WebFetch(domain:stackoverflow.com)",
       "WebFetch(domain:chatwoot.com)",
       "WebFetch(domain:chatwhisper.io)",
-      "WebFetch(domain:www.hubtype.com)"
+      "WebFetch(domain:www.hubtype.com)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Dovamul\\\\Documents\\\\GitHub\\\\ventia-monorepo\" -Directory)",
+      "Bash(Select-Object Name)",
+      "mcp__claude_ai_ClickUp__clickup_search",
+      "mcp__claude_ai_ClickUp__clickup_get_task",
+      "Skill(brainstorming)",
+      "Bash(Get-ChildItem *)"
     ]
   }
 }

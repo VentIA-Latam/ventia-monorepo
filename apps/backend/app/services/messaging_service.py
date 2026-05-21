@@ -12,6 +12,20 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
+class MessagingClientError(Exception):
+    """Raised when the messaging service returns a 4xx response with usable detail.
+
+    A global FastAPI exception handler converts this into an HTTP response with the
+    original status code so the operator sees the real error (e.g. template not found)
+    instead of a generic 503.
+    """
+
+    def __init__(self, status_code: int, detail: str):
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(f"{status_code}: {detail}")
+
+
 class MessagingService:
     """Service for communicating with the standalone messaging module."""
 
@@ -60,17 +74,47 @@ class MessagingService:
 
                 if response.status_code in (200, 201):
                     return response.json()
-                elif response.status_code == 204:
+                if response.status_code == 204:
                     return {"success": True}
-                else:
-                    logger.error(
-                        f"Messaging API error: {method} {path} -> {response.status_code} - {response.text[:500]}"
+
+                # 4xx: Rails rejected the request with a usable reason. Propagate so the
+                # operator sees the real error instead of a generic 503.
+                if 400 <= response.status_code < 500:
+                    detail = self._extract_error_detail(response)
+                    logger.warning(
+                        f"Messaging API client error: {method} {path} -> {response.status_code} - {detail}"
                     )
-                    return None
+                    raise MessagingClientError(response.status_code, detail)
+
+                # 5xx: service-level failure. Keep "service unavailable" semantics.
+                logger.error(
+                    f"Messaging API server error: {method} {path} -> {response.status_code} - {response.text[:500]}"
+                )
+                return None
 
         except httpx.RequestError as e:
             logger.error(f"Messaging service request failed: {method} {path} -> {e}")
             return None
+
+    @staticmethod
+    def _extract_error_detail(response: httpx.Response) -> str:
+        """Best-effort extraction of a user-facing error message from a 4xx response."""
+        try:
+            body = response.json()
+        except Exception:
+            return (response.text or response.reason_phrase)[:500]
+
+        if isinstance(body, dict):
+            # Rails messaging response shape (base_controller.rb:48 render_error)
+            if body.get("error"):
+                return str(body["error"])
+            # FastAPI/Pydantic style
+            if body.get("detail"):
+                return str(body["detail"])
+            if body.get("message"):
+                return str(body["message"])
+
+        return (response.text or response.reason_phrase)[:500]
 
     # --- Account provisioning ---
 
@@ -387,6 +431,31 @@ class MessagingService:
         """Search contacts by name, email, or phone."""
         return await self._request(
             "POST", "/api/v1/contacts/search", tenant_id, json_data={"query": query}
+        )
+
+    async def find_contact_by_phone(
+        self, tenant_id: int, phone: str
+    ) -> Optional[dict]:
+        """Find a contact by exact phone_number match and return its latest conversation.
+
+        Used by webhook auto-linking (try_link_conversation) to associate Shopify/WooCommerce
+        orders with their messaging conversation. The Rails endpoint returns the most recent
+        conversation per contact, which is the one we link to the order.
+
+        Args:
+            tenant_id: Tenant id propagated to messaging via X-Tenant-Id.
+            phone: Phone in E.164 format (e.g. "+51999888777").
+
+        Returns:
+            On success: dict shaped `{"success": True, "data": {"contact_id": int,
+            "phone_number": str, "name": str, "conversation": {"id": int, "created_at": str} | None}}`.
+            Returns None on transport/HTTP error.
+        """
+        return await self._request(
+            "GET",
+            "/api/v1/contacts/find_by_phone",
+            tenant_id,
+            params={"phone": phone},
         )
 
     # --- Canned Responses ---

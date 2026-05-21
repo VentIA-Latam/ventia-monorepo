@@ -20,6 +20,7 @@ interface DateRangePickerProps {
   onDateRangeChange: (range: DateRange | undefined) => void
   placeholder?: string
   className?: string
+  toDate?: Date
 }
 
 export function DateRangePicker({
@@ -27,6 +28,7 @@ export function DateRangePicker({
   onDateRangeChange,
   placeholder = "Seleccionar fechas",
   className,
+  toDate,
 }: DateRangePickerProps) {
   return (
     <div className={cn("grid gap-2", className)}>
@@ -70,6 +72,7 @@ export function DateRangePicker({
             selected={dateRange}
             onSelect={onDateRangeChange}
             numberOfMonths={2}
+            toDate={toDate}
           />
         </PopoverContent>
       </Popover>

@@ -141,12 +141,18 @@ export function TicketsClient() {
             {touched.description && errors.description && <FieldError message={errors.description} />}
           </div>
 
-          {/* Field 4: Conversation selector (only for critical incidents) */}
+          {/* Field 4: Conversation selector (required for critical incidents, optional for others) */}
           {showConvField && (
             <div ref={convRef}>
-              <FieldLabel step={4} label="Chat asociado" required />
+              <FieldLabel
+                step={4}
+                label={type === "critical_incident" ? "Chat asociado" : "Conversación de referencia"}
+                required={type === "critical_incident"}
+              />
               <p className="text-xs text-muted-foreground mt-1 mb-2">
-                Selecciona la conversación donde ocurrió el problema.
+                {type === "critical_incident"
+                  ? "Selecciona la conversación donde ocurrió el problema."
+                  : "Si hay un chat relacionado, puedes adjuntarlo como contexto. Opcional."}
               </p>
               <ConversationSelector
                 open={convOpen}
@@ -166,7 +172,7 @@ export function TicketsClient() {
             </div>
           )}
 
-          {/* Field 5: File upload (only for critical incidents) */}
+          {/* Field 5: File upload (optional for all types) */}
           {showConvField && (
             <div>
               <FieldLabel step={5} label="Archivos adjuntos" />

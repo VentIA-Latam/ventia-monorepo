@@ -2,15 +2,17 @@
 
 import { useState, useEffect, useRef, useMemo, useTransition } from "react"
 import type { ChangeEvent } from "react"
+import { useSearchParams } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
-import { getConversations } from "@/lib/api-client/messaging"
+import { getConversations, getConversation } from "@/lib/api-client/messaging"
 import type { Conversation } from "@/lib/types/messaging"
 import { TICKET_TYPE_MAP, N8N_WEBHOOK_URL, type TicketType } from "@/lib/constants/tickets"
 
 export function useTicketForm() {
   const { userDetails, isUserLoading } = useAuth()
   const { toast } = useToast()
+  const searchParams = useSearchParams()
 
   const [type, setType] = useState<TicketType | null>(null)
   const [title, setTitle] = useState("")
@@ -33,8 +35,37 @@ export function useTicketForm() {
   const convRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Pre-rellena el formulario desde URL params (ej: botón "Reportar" en panel de conversación)
   useEffect(() => {
-    if (type !== "critical_incident") return
+    const typeParam = searchParams.get("type") as TicketType | null
+    const convIdParam = searchParams.get("conversationId")
+    if (!typeParam && !convIdParam) return
+
+    let cancelled = false
+
+    if (typeParam && TICKET_TYPE_MAP.has(typeParam)) {
+      setType(typeParam)
+      setTouched((p) => ({ ...p, type: true }))
+      import("@/lib/gcs/upload-client")
+    }
+    if (convIdParam) {
+      getConversation(convIdParam)
+        .then((conv) => {
+          if (!cancelled) {
+            setSelectedConversation(conv)
+            setTouched((p) => ({ ...p, conversation: true }))
+          }
+        })
+        .catch(() => { /* silencioso — el usuario puede seleccionar manualmente */ })
+    }
+    // Limpia los params de la URL sin re-renderizar la página
+    window.history.replaceState({}, "", "/dashboard/tickets")
+
+    return () => { cancelled = true }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!type) return
     const controller = new AbortController()
     const load = async () => {
       setLoadingConvs(true)
@@ -81,7 +112,7 @@ export function useTicketForm() {
 
   const isValid = Object.keys(errors).length === 0
   const charCount = description.length
-  const showConvField = type === "critical_incident"
+  const showConvField = !!type
 
   const resetForm = () => {
     setType(null)
@@ -118,24 +149,20 @@ export function useTicketForm() {
 
         // Las subidas a GCS pueden tardar (videos grandes) — el timeout solo aplica al webhook
         let attachmentUrls: string[] = []
-        if (type === "critical_incident" && selectedConversation && files.length > 0) {
-          const contactId = selectedConversation.contact?.id
-          if (!contactId) throw new Error("Contact ID no disponible")
+        if (files.length > 0) {
           const { uploadFilesToGCS } = await import("@/lib/gcs/upload-client")
-          attachmentUrls = await uploadFilesToGCS(files, contactId)
+          attachmentUrls = await uploadFilesToGCS(files, selectedConversation?.contact?.id)
         }
 
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 10_000)
 
-        let res: Response
-
-        if (type === "critical_incident" && selectedConversation) {
-          const payload: Record<string, unknown> = {
-            type,
-            title: title.trim(),
-            description: description.trim(),
-            user,
+        const payload: Record<string, unknown> = {
+          type,
+          title: title.trim(),
+          description: description.trim(),
+          user,
+          ...(selectedConversation && {
             conversation_id: String(selectedConversation.id),
             contact: {
               id: selectedConversation.contact?.id,
@@ -149,23 +176,16 @@ export function useTicketForm() {
               name: selectedConversation.inbox?.name,
               channel_type: selectedConversation.inbox?.channel_type,
             },
-            ...(attachmentUrls.length > 0 && { attachments: attachmentUrls }),
-          }
-
-          res = await fetch(N8N_WEBHOOK_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-            signal: controller.signal,
-          })
-        } else {
-          res = await fetch(N8N_WEBHOOK_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ type, title: title.trim(), description: description.trim(), user }),
-            signal: controller.signal,
-          })
+          }),
+          ...(attachmentUrls.length > 0 && { attachments: attachmentUrls }),
         }
+
+        const res = await fetch(N8N_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        })
 
         clearTimeout(timeoutId)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -238,13 +258,8 @@ export function useTicketForm() {
   const handleTypeSelect = (t: TicketType) => {
     setType(t)
     setTouched((p) => ({ ...p, type: true }))
-    if (t !== "critical_incident") {
-      setSelectedConversation(null)
-      setConvSearch("")
-    } else {
-      // bundle-preload: precarga el módulo GCS para que esté cacheado al hacer submit
-      import("@/lib/gcs/upload-client")
-    }
+    // bundle-preload: precarga el módulo GCS para que esté cacheado al hacer submit
+    import("@/lib/gcs/upload-client")
   }
 
   const handleConvTriggerClick = () => {
@@ -267,9 +282,6 @@ export function useTicketForm() {
     const phone = conv.contact?.phone_number
     return phone ? `${name} - ${phone}` : name
   }
-
-  // Derived — computed here so sidebar can receive them without re-deriving from type
-  const selectedTypeMeta = type ? TICKET_TYPE_MAP.get(type) : undefined
 
   return {
     // State
@@ -301,7 +313,6 @@ export function useTicketForm() {
     isValid,
     charCount,
     showConvField,
-    selectedTypeMeta,
     // Handlers
     handleSubmit,
     handleTypeSelect,

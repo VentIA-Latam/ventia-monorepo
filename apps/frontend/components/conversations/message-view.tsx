@@ -21,7 +21,7 @@ import { MessageComposer } from "./message-composer";
 import { TemplatePicker } from "./template-picker";
 import { useMessagingEvent, useMessagingReconnect } from "./messaging-provider";
 import { getMessages, sendMessage, updateConversation, markConversationRead } from "@/lib/api-client/messaging";
-import type { Conversation, Message, MessageType, MessageStatus, MessageContentAttributes, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
+import type { Conversation, Message, MessageType, MessageStatus, MessageContentAttributes, MessageAdditionalAttributes, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
 import { getInitials, getDateSeparatorLabel, parseTimestamp, getSenderKey } from "@/lib/utils/messaging";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -168,8 +168,11 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
     const wsAttachments = mapWebSocketAttachments(msgData.attachments);
     const wsSender = mapWebSocketSender(msgData.sender);
 
+    const wsAdditionalAttributes =
+      (msgData.additional_attributes as MessageAdditionalAttributes | undefined) ?? null;
+
     setMessages((prev) => {
-      if (msgType === "outgoing") {
+      if (msgType === "outgoing" || msgType === "template") {
         const lastTempIdx = prev.findLastIndex((m) => String(m.id).startsWith("temp-"));
         if (lastTempIdx >= 0) {
           const tempMsg = prev[lastTempIdx];
@@ -180,6 +183,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
             message_type: msgType as MessageType,
             status: (msgData.status as MessageStatus) ?? undefined,
             content_attributes: (msgData.content_attributes as MessageContentAttributes) ?? undefined,
+            additional_attributes: wsAdditionalAttributes ?? tempMsg.additional_attributes ?? null,
             sender: wsSender,
             attachments: wsAttachments.length > 0 ? wsAttachments : tempMsg.attachments,
             created_at: createdAt,
@@ -194,6 +198,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
         message_type: msgType as MessageType,
         status: (msgData.status as MessageStatus) ?? undefined,
         content_attributes: (msgData.content_attributes as MessageContentAttributes) ?? undefined,
+        additional_attributes: wsAdditionalAttributes,
         sender: wsSender,
         attachments: wsAttachments,
         created_at: createdAt,

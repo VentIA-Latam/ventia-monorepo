@@ -1590,7 +1590,7 @@ async def try_link_conversation(
                 f"conversation_id={conv_id}, phone={normalized}"
             )
     except Exception as e:
-        logger.warning(
+        logger.error(
             f"auto_link_conversation_failed: order_id={order.id}, error={e}",
             exc_info=True,
         )

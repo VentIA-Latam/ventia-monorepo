@@ -15,6 +15,9 @@ export function generateSignedUrl(
   tenantId: string | number,
   contactId: string | number
 ): SignedUrlResult {
+  if (!BUCKET || !CLIENT_EMAIL || !PRIVATE_KEY) {
+    throw new Error('GCS no configurado: faltan GCS_BUCKET_NAME, GCS_CLIENT_EMAIL o GCS_PRIVATE_KEY')
+  }
   const key = PRIVATE_KEY.replace(/\\n/g, '\n')
   const now = new Date()
   const datestamp = now.toISOString().slice(0, 10).replace(/-/g, '')

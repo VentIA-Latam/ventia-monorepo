@@ -12,18 +12,14 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const filename = searchParams.get('filename')
   const contentType = searchParams.get('contentType')
-  const contactId = searchParams.get('contactId')
+  const contactId = searchParams.get('contactId') ?? 'general'
 
-  if (!filename || !contentType || !contactId) {
-    return NextResponse.json({ error: 'Parámetros requeridos: filename, contentType, contactId' }, { status: 400 })
+  if (!filename || !contentType) {
+    return NextResponse.json({ error: 'Parámetros requeridos: filename, contentType' }, { status: 400 })
   }
 
   if (!ALLOWED_TYPES.has(contentType)) {
     return NextResponse.json({ error: 'Tipo de archivo no permitido. Solo JPG, PNG, PDF y MP4.' }, { status: 400 })
-  }
-
-  if (isNaN(Number(contactId))) {
-    return NextResponse.json({ error: 'contactId debe ser numérico' }, { status: 400 })
   }
 
   const token = await tokenPromise
@@ -32,9 +28,6 @@ export async function GET(request: Request) {
   }
 
   const user = await getCurrentUser(token)
-  if (user.role?.toUpperCase() !== 'ADMIN') {
-    return NextResponse.json({ error: 'Solo administradores pueden adjuntar archivos' }, { status: 403 })
-  }
 
   try {
     const result = generateSignedUrl(filename, user.tenant_id, contactId)

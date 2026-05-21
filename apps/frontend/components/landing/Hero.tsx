@@ -11,10 +11,10 @@ export default function Hero() {
     >
       <div className="w-full max-w-[100%] mx-auto px-5 sm:px-8 md:px-10 lg:px-16 xl:px-20">
 
-        <div className="flex flex-col lg:flex-row items-center lg:items-start lg:justify-between gap-10 md:gap-14 py-6 md:py-8 lg:py-12">
+        <div className="flex flex-col lg:flex-row items-center lg:justify-between gap-10 md:gap-14 py-6 md:py-8 lg:py-12">
 
           {/* Texto */}
-          <div className="w-full lg:flex-1 lg:max-w-[45%] text-center lg:text-left order-1 lg:pt-12 xl:pt-32">
+          <div className="w-full lg:flex-1 lg:max-w-[45%] text-center lg:text-left order-1">
 
             <FadeUp delay={0}>
               <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-[40px] leading-tight lg:leading-[44px] font-bold text-[#182432] font-libre mb-4 md:mb-6 lg:mb-8">
@@ -50,6 +50,52 @@ export default function Hero() {
                 >
                   Ver Planes &rarr;
                 </a>
+              </div>
+            </FadeUp>
+
+            {/* Aliados — trust signal */}
+            <FadeUp delay={0.35}>
+              <div className="mt-10 md:mt-12 lg:mt-14">
+                <p className="text-[11px] md:text-xs font-semibold tracking-[0.22em] uppercase text-[#182432]/50 font-sans mb-6 md:mb-7 text-center lg:text-left">
+                  Aliados que nos respaldan
+                </p>
+                <div className="flex items-center justify-center lg:justify-start gap-4 md:gap-6 flex-wrap">
+                  <div className="flex items-center justify-center h-16 md:h-24">
+                    <Image
+                      src="/images/mbp-dark.png"
+                      alt="Meta Business Partner"
+                      width={400}
+                      height={240}
+                      className="max-h-full w-auto object-contain"
+                    />
+                  </div>
+                  <span
+                    aria-hidden="true"
+                    className="hidden sm:inline-block h-12 w-px bg-[#182432]/15"
+                  />
+                  <div className="flex items-center justify-center h-16 md:h-24">
+                    <Image
+                      src="/images/google-startups.png"
+                      alt="Google for Startups"
+                      width={400}
+                      height={150}
+                      className="max-h-full w-auto object-contain"
+                    />
+                  </div>
+                  <span
+                    aria-hidden="true"
+                    className="hidden sm:inline-block h-12 w-px bg-[#182432]/15"
+                  />
+                  <div className="flex items-center justify-center h-16 md:h-24">
+                    <Image
+                      src="/images/innova-ulima.png"
+                      alt="Innova ULima"
+                      width={400}
+                      height={240}
+                      className="max-h-full w-auto object-contain"
+                    />
+                  </div>
+                </div>
               </div>
             </FadeUp>
 

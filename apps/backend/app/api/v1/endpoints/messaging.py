@@ -1172,7 +1172,6 @@ async def send_template_message(
     tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     message_data = {
-        "content": payload.content,
         "template_params": payload.template_params.model_dump(exclude_none=True),
     }
 

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_database, require_permission_dual
 from app.core.permissions import Role
 from app.models.user import User
-from app.schemas.user import UserCreate, UserResponse, UserUpdate, UsersListResponse, UserUpdateResponse
+from app.schemas.user import UserCreate, UserResponse, UserUpdate, UsersListResponse, UserUpdateResponse, UserWithTenant
 from app.services.user import user_service
 
 router = APIRouter()
@@ -59,23 +59,18 @@ async def list_users(
         )
 
 
-@router.get("/me", response_model=UserResponse, tags=["users"])
+@router.get("/me", response_model=UserWithTenant, tags=["users"])
 async def get_current_user_info(
     current_user: User = Depends(get_current_user),
-) -> UserResponse:
+) -> UserWithTenant:
     """
-    Get current authenticated user information.
+    Get current authenticated user information including tenant info.
 
     Returns the complete user profile including:
     - id, email, name, role
-    - tenant_id (which tenant the user belongs to)
+    - tenant info (id, name, slug, timezone)
     - is_active status
     - created_at, updated_at timestamps
-
-    This endpoint is useful for the frontend to:
-    - Display user info in the UI
-    - Check user role for conditional rendering
-    - Validate tenant membership
     """
     return current_user
 

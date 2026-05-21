@@ -67,3 +67,50 @@ class TestGetConversationsCountByPeriod:
             )
 
         assert mock_req.await_args.kwargs["user_id"] == "user-123"
+
+
+@pytest.mark.asyncio
+class TestFindContactByPhone:
+    """Proxy a GET /api/v1/contacts/find_by_phone (US-CONV-002 webhook auto-linking)."""
+
+    async def test_method_exists_on_service_instance(self):
+        """Regression: method must exist on the live singleton (try_link_conversation swallows AttributeError)."""
+        from app.services.messaging_service import messaging_service
+
+        assert hasattr(messaging_service, "find_contact_by_phone")
+        assert callable(messaging_service.find_contact_by_phone)
+
+    async def test_returns_rails_payload_on_success(self):
+        service = MessagingService()
+        rails_payload = {
+            "success": True,
+            "data": {
+                "contact_id": 42,
+                "phone_number": "+51987654321",
+                "name": "Test User",
+                "conversation": {"id": 7, "created_at": "2026-05-01T12:00:00Z"},
+            },
+        }
+        with patch.object(
+            service, "_request", new=AsyncMock(return_value=rails_payload)
+        ) as mock_req:
+            result = await service.find_contact_by_phone(
+                tenant_id=10, phone="+51987654321"
+            )
+
+        assert result == rails_payload
+        mock_req.assert_awaited_once_with(
+            "GET",
+            "/api/v1/contacts/find_by_phone",
+            10,
+            params={"phone": "+51987654321"},
+        )
+
+    async def test_returns_none_on_request_failure(self):
+        service = MessagingService()
+        with patch.object(service, "_request", new=AsyncMock(return_value=None)):
+            result = await service.find_contact_by_phone(
+                tenant_id=10, phone="+51987654321"
+            )
+
+        assert result is None

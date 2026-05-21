@@ -8,11 +8,11 @@ export default function LandingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    <div className="bg-white text-[oklch(0.20_0.03_250)] min-h-screen">
       <Header />
       {children}
       <WhatsAppButton />
-    </>
+    </div>
   );
 }
 

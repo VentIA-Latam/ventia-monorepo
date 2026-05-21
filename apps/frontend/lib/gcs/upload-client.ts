@@ -3,12 +3,9 @@ interface SignedUrlResponse {
   publicUrl: string
 }
 
-async function getSignedUrl(file: File, contactId: number): Promise<SignedUrlResponse> {
-  const params = new URLSearchParams({
-    filename: file.name,
-    contentType: file.type,
-    contactId: String(contactId),
-  })
+async function getSignedUrl(file: File, contactId?: number): Promise<SignedUrlResponse> {
+  const params = new URLSearchParams({ filename: file.name, contentType: file.type })
+  if (contactId !== undefined) params.set('contactId', String(contactId))
 
   const res = await fetch(`/api/tickets/upload-url?${params}`)
   if (!res.ok) {
@@ -19,7 +16,7 @@ async function getSignedUrl(file: File, contactId: number): Promise<SignedUrlRes
 }
 
 // Importado dinámicamente desde use-ticket-form — no está en el bundle inicial
-export async function uploadFilesToGCS(files: File[], contactId: number): Promise<string[]> {
+export async function uploadFilesToGCS(files: File[], contactId?: number): Promise<string[]> {
   // async-parallel: todos los archivos se suben simultáneamente
   return Promise.all(
     files.map(async (file) => {

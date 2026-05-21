@@ -141,6 +141,10 @@ services:
       AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://staging-api.ventia-latam.com/api/v1}
       NEXT_PUBLIC_MESSAGING_WS_URL: ${NEXT_PUBLIC_MESSAGING_WS_URL:-wss://staging-ws.ventia-latam.com/cable}
+      # GCS (server-side, API routes only)
+      GCS_BUCKET_NAME: ${GCS_BUCKET_NAME:-}
+      GCS_CLIENT_EMAIL: ${GCS_CLIENT_EMAIL:-}
+      GCS_PRIVATE_KEY: ${GCS_PRIVATE_KEY:-}
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:

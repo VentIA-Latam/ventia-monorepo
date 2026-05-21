@@ -4,6 +4,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { AppSidebar } from "@/components/dashboard/app-sidebar"
 import { Separator } from "@/components/ui/separator"
 import { MessagingProvider } from "@/components/conversations/messaging-provider"
+import { TenantTimezoneProvider } from "@/lib/context/timezone-context"
 import { usePathname } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { ChevronRight, Home } from "lucide-react"
@@ -52,8 +53,10 @@ function getPageMeta(pathname: string) {
 }
 
 export default function DashboardLayoutClient({
+  timezone,
   children,
 }: {
+  timezone: string;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -61,6 +64,7 @@ export default function DashboardLayoutClient({
   const { userDetails } = useAuth();
 
   return (
+    <TenantTimezoneProvider timezone={timezone}>
     <MessagingProvider tenantId={userDetails?.tenant_id ?? undefined}>
     <SidebarProvider>
       <AppSidebar />
@@ -112,5 +116,6 @@ export default function DashboardLayoutClient({
       </SidebarInset>
     </SidebarProvider>
     </MessagingProvider>
+    </TenantTimezoneProvider>
   );
 }
