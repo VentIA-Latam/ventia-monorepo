@@ -143,6 +143,7 @@ export interface Message {
   message_type: MessageType | null;
   status?: MessageStatus;
   content_attributes?: MessageContentAttributes | null;
+  additional_attributes?: MessageAdditionalAttributes | null;
   sender: AgentBrief | ContactBrief | null;
   attachments: AttachmentBrief[];
   created_at: string | number | null;
@@ -226,16 +227,49 @@ export interface WhatsAppTemplate {
   components: WhatsAppTemplateComponent[];
 }
 
+export interface TemplateProcessedHeader {
+  media_url?: string;
+  media_type?: "image" | "video" | "document" | string;
+  media_name?: string;
+  [textVar: string]: string | undefined;
+}
+
+export interface TemplateProcessedButton {
+  type: string;
+  parameter: string;
+}
+
+export interface TemplateProcessedParams {
+  header?: TemplateProcessedHeader;
+  body?: Record<string, string>;
+  buttons?: (TemplateProcessedButton | null)[];
+}
+
+export interface TemplateSnapshot {
+  components: WhatsAppTemplateComponent[];
+}
+
 export interface TemplateParams {
   name: string;
   namespace?: string;
   language: string;
-  processed_params: Record<string, unknown>;
+  processed_params: TemplateProcessedParams;
+  template_snapshot?: TemplateSnapshot;
 }
 
+export interface MessageAdditionalAttributes {
+  template_params?: TemplateParams;
+}
+
+// Lo que el FE envía al backend para crear un template.
+// El backend hace lookup del template, interpola el body, y arma el snapshot.
+// Por eso aquí no enviamos `content` ni `template_snapshot`.
 export interface SendTemplatePayload {
-  content: string;
-  template_params: TemplateParams;
+  template_params: {
+    name: string;
+    language: string;
+    processed_params: TemplateProcessedParams;
+  };
 }
 
 // --- WhatsApp Connect ---
