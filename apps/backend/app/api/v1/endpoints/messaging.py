@@ -474,6 +474,56 @@ async def get_conversation_counts(
 
 
 @router.get(
+    "/conversations/export",
+    summary="Export conversations as JSON for CSV download",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def export_conversations(
+    status: str | None = Query(None),
+    stage: str | None = Query(None),
+    conversation_type: str | None = Query(None),
+    label: str | None = Query(None),
+    temperature: str | None = Query(None),
+    created_after: str | None = Query(None),
+    created_before: str | None = Query(None),
+    unread: str | None = Query(None),
+    ai_agent_enabled: bool | None = Query(None),
+    search: str | None = Query(None),
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    params = {}
+    if status:
+        params["status"] = status
+    if stage:
+        params["stage"] = stage
+    if conversation_type:
+        params["conversation_type"] = conversation_type
+    if label:
+        params["label"] = label
+    if temperature:
+        params["temperature"] = temperature
+    if created_after:
+        params["created_after"] = created_after
+    if created_before:
+        params["created_before"] = created_before
+    if unread:
+        params["unread"] = unread
+    if ai_agent_enabled is not None:
+        params["ai_agent_enabled"] = str(ai_agent_enabled).lower()
+    if search:
+        params["search"] = search
+
+    result = await messaging_service.export_conversations(tenant_id, params or None)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.get(
     "/conversations/{conversation_id}",
     response_model=ConversationDetailResponse,
     summary="Get conversation details",

@@ -2,65 +2,11 @@ class Api::V1::ConversationsController < Api::V1::BaseController
   before_action :set_conversation, only: [:show, :update, :toggle_status, :update_stage, :escalate, :resolve_escalation, :mark_payment_review, :update_last_seen, :destroy]
 
   def index
-    conversations = current_account.conversations
-                                   .includes(:contact, :inbox, :labels, :assignee, :team, messages: :attachments)
-                                   .recent
-                                   .page(params[:page] || 1)
-                                   .per(params[:per_page] || 25)
-
-    # Filter by status
-    conversations = conversations.where(status: params[:status]) if params[:status]
-
-    # Filter by stage (pre_sale / sale)
-    conversations = conversations.by_stage(params[:stage]) if params[:stage].present?
-
-    # Filter by conversation type (unattended)
-    conversations = conversations.unattended if params[:conversation_type] == 'unattended'
-
-    # Filter by inbox
-    conversations = conversations.where(inbox_id: params[:inbox_id]) if params[:inbox_id]
-
-    # Filter by label title
-    conversations = conversations.with_label(params[:label]) if params[:label].present?
-
-    # Filter by temperature
-    conversations = conversations.where(temperature: params[:temperature]) if params[:temperature].present?
-
-    # Filter by AI agent enabled status
-    conversations = conversations.where(ai_agent_enabled: ActiveModel::Type::Boolean.new.cast(params[:ai_agent_enabled])) if params[:ai_agent_enabled].present?
-
-    # Search by contact name/phone/email OR message content (FTS)
-    if params[:search].present?
-      term = "%#{ActiveRecord::Base.sanitize_sql_like(params[:search])}%"
-      conversations = conversations.references(:contact).where(
-        "contacts.name ILIKE :q
-         OR contacts.phone_number ILIKE :q
-         OR contacts.email ILIKE :q
-         OR conversations.id IN (
-           SELECT DISTINCT conversation_id FROM messages
-           WHERE (message_search_ts @@ plainto_tsquery('simple', :raw_term) OR COALESCE(processed_message_content, content) ILIKE :q)
-             AND messages.account_id = :account_id
-             AND messages.message_type != 2
-         )",
-        q: term,
-        raw_term: params[:search],
-        account_id: current_account.id
-      )
-    end
-
-    # Filter by date range (last_activity_at)
-    if params[:created_after].present? || params[:created_before].present?
-      from = params[:created_after].present? ? Time.parse(params[:created_after]) : Time.at(0)
-      to = params[:created_before].present? ? Time.parse(params[:created_before]) : Time.current
-      conversations = conversations.in_date_range(from, to)
-    end
-
-    # Filter unread only (timestamp-based: incoming messages after agent_last_seen_at)
-    if params[:unread] == 'true'
-      conversations = conversations.where(
-        "agent_last_seen_at IS NULL OR agent_last_seen_at < (SELECT MAX(created_at) FROM messages WHERE messages.conversation_id = conversations.id AND messages.message_type = 0)"
-      )
-    end
+    conversations = apply_filters(
+      current_account.conversations
+                     .includes(:contact, :inbox, :labels, :assignee, :team, messages: :attachments)
+                     .recent
+    ).page(params[:page] || 1).per(params[:per_page] || 25)
 
     search_term = params[:search].presence
 
@@ -68,6 +14,19 @@ class Api::V1::ConversationsController < Api::V1::BaseController
       success: true,
       data: conversations.map { |c| conversation_json(c, search_term: search_term) },
       meta: pagination_meta(conversations)
+    }
+  end
+
+  def export
+    conversations = apply_filters(
+      current_account.conversations.includes(:contact).recent
+    ).limit(5000)
+
+    render json: {
+      success: true,
+      data: conversations.map { |c|
+        { name: c.contact&.name, phone: c.contact&.phone_number }
+      }
     }
   end
 
@@ -183,6 +142,48 @@ class Api::V1::ConversationsController < Api::V1::BaseController
   end
 
   private
+
+  def apply_filters(base)
+    base = base.where(status: params[:status]) if params[:status]
+    base = base.by_stage(params[:stage]) if params[:stage].present?
+    base = base.unattended if params[:conversation_type] == 'unattended'
+    base = base.where(inbox_id: params[:inbox_id]) if params[:inbox_id]
+    base = base.with_label(params[:label]) if params[:label].present?
+    base = base.where(temperature: params[:temperature]) if params[:temperature].present?
+    base = base.where(ai_agent_enabled: ActiveModel::Type::Boolean.new.cast(params[:ai_agent_enabled])) if params[:ai_agent_enabled].present?
+
+    if params[:search].present?
+      term = "%#{ActiveRecord::Base.sanitize_sql_like(params[:search])}%"
+      base = base.references(:contact).where(
+        "contacts.name ILIKE :q
+         OR contacts.phone_number ILIKE :q
+         OR contacts.email ILIKE :q
+         OR conversations.id IN (
+           SELECT DISTINCT conversation_id FROM messages
+           WHERE (message_search_ts @@ plainto_tsquery('simple', :raw_term) OR COALESCE(processed_message_content, content) ILIKE :q)
+             AND messages.account_id = :account_id
+             AND messages.message_type != 2
+         )",
+        q: term,
+        raw_term: params[:search],
+        account_id: current_account.id
+      )
+    end
+
+    if params[:created_after].present? || params[:created_before].present?
+      from = params[:created_after].present? ? Time.parse(params[:created_after]) : Time.at(0)
+      to   = params[:created_before].present? ? Time.parse(params[:created_before]) : Time.current
+      base = base.in_date_range(from, to)
+    end
+
+    if params[:unread] == 'true'
+      base = base.where(
+        "agent_last_seen_at IS NULL OR agent_last_seen_at < (SELECT MAX(created_at) FROM messages WHERE messages.conversation_id = conversations.id AND messages.message_type = 0)"
+      )
+    end
+
+    base
+  end
 
   def set_conversation
     @conversation = current_account.conversations.find(params[:id])

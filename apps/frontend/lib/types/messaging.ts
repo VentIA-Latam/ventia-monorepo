@@ -161,6 +161,7 @@ export interface MessageSearchResult {
   snippet: string | null;
   created_at: string | number;
   message_type: MessageType;
+  status?: MessageStatus;
 }
 
 export interface MessageSearchResponse {

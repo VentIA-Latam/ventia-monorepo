@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, MessageSquare, Loader2, Bot, AlertTriangle, MoreVertical, User, Search } from "lucide-react";
+import { ArrowLeft, ArrowDown, MessageSquare, Loader2, Bot, AlertTriangle, MoreVertical, User, Search } from "lucide-react";
 import { MessageBubble } from "./message-bubble";
 import { MessageComposer } from "./message-composer";
 import { TemplatePicker } from "./template-picker";
@@ -85,14 +85,21 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [jumpHighlightId, setJumpHighlightId] = useState<string | null>(null);
-  const [localTargetId, setLocalTargetId] = useState<number | null>(null);
+  const [isJumpMode, setIsJumpMode] = useState(false);
+  const [isNavigatingToMessage, setIsNavigatingToMessage] = useState(false);
   const isLoadingPreviousRef = useRef(false);
+  const isLoadingTargetRef = useRef(false);
+  const navigateToMessageRef = useRef<(id: number) => Promise<void>>(async () => {});
   // Track if we should stay pinned to the bottom
   const isPinnedToBottomRef = useRef(true);
   // O(1) dedup for incoming WS messages
   const messageIdsRef = useRef(new Set<string>());
   // Stable ref for loadOlderMessages to avoid scroll listener re-attachment
   const loadOlderRef = useRef<() => void>(() => {});
+  // Guard: prevents re-scroll when messages change due to new WS messages
+  const scrolledTargetRef = useRef<string | null>(null);
+  // Tracks current conversation ID — used to detect stale navigateToMessage calls after await
+  const currentConvIdRef = useRef<number | string | undefined>(conversation?.id);
 
   // Load messages when conversation changes
   useEffect(() => {
@@ -112,7 +119,8 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
         if (!cancelled) {
           const msgs = data.data ?? [];
           messageIdsRef.current = new Set(msgs.map((m) => String(m.id)));
-          scrollBehaviorRef.current = "instant";
+          // Skip auto-scroll when there's a target message — the targetMessageId effect handles navigation
+          scrollBehaviorRef.current = targetMessageId ? false : "instant";
           setMessages(msgs);
           setHasMore(Boolean(data.meta?.has_more));
           setLoading(false);
@@ -291,7 +299,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
 
     try {
       const data = await getMessages(conversation.id, { before: Number(oldestId), tenantId });
-      const olderMessages = data.data ?? [];
+      const olderMessages = (data.data ?? []).filter((m) => !messageIdsRef.current.has(String(m.id)));
 
       olderMessages.forEach((m) => messageIdsRef.current.add(String(m.id)));
 
@@ -301,7 +309,11 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
         // flushSync: commit DOM synchronously (like Vue's nextTick in Chatwoot)
         // This lets us restore scroll in the SAME call stack — no layout effect needed
         flushSync(() => {
-          setMessages((prev) => [...olderMessages, ...prev]);
+          setMessages((prev) =>
+            [...olderMessages, ...prev].sort(
+              (a, b) => new Date(String(a.created_at)).getTime() - new Date(String(b.created_at)).getTime()
+            )
+          );
           setHasMore(Boolean(data.meta?.has_more));
         });
 
@@ -323,6 +335,54 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
 
   // Keep stable ref for scroll handler (avoids re-attaching listener on every render)
   loadOlderRef.current = loadOlderMessages;
+  // Always reflects the current conversation ID — checked in navigateToMessage after await
+  currentConvIdRef.current = conversation?.id;
+
+  // Navigate directly to a target message by loading context around it.
+  // Uses flushSync to commit the DOM synchronously, then scrolls directly —
+  // avoids the timing gap between setMessages → render → useEffect → scroll.
+  const navigateToMessage = useCallback(async (targetId: number) => {
+    if (!conversation || isLoadingTargetRef.current) return;
+    const capturedConvId = conversation.id;
+    isLoadingTargetRef.current = true;
+    setIsNavigatingToMessage(true);
+    try {
+      const [beforeData, afterData] = await Promise.all([
+        getMessages(capturedConvId, { before: targetId + 1, tenantId }),
+        getMessages(capturedConvId, { after: targetId, tenantId }),
+      ]);
+      // Discard result if conversation changed while awaiting
+      if (currentConvIdRef.current !== capturedConvId) return;
+      const beforeMsgs = beforeData.data ?? [];
+      const afterMsgs = afterData.data ?? [];
+      const combined = [...beforeMsgs, ...afterMsgs].sort(
+        (a, b) => new Date(String(a.created_at)).getTime() - new Date(String(b.created_at)).getTime()
+      );
+      if (combined.length === 0) return;
+      messageIdsRef.current = new Set(combined.map((m) => String(m.id)));
+      // flushSync commits DOM synchronously — scrollIntoView runs in the same call stack
+      flushSync(() => {
+        setMessages(combined);
+        setHasMore(Boolean(beforeData.meta?.has_more));
+        setIsJumpMode(true);
+      });
+      const targetEl = document.querySelector(`[data-msg-id="${targetId}"]`);
+      if (targetEl) {
+        scrolledTargetRef.current = `${conversation.id}-${targetId}`;
+        isPinnedToBottomRef.current = false;
+        targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        setJumpHighlightId(String(targetId));
+        setTimeout(() => setJumpHighlightId(null), 1500);
+      }
+    } catch (err) {
+      console.error("[navigate-to-message]", err);
+    } finally {
+      isLoadingTargetRef.current = false;
+      setIsNavigatingToMessage(false);
+    }
+  }, [conversation?.id, tenantId]);
+
+  navigateToMessageRef.current = navigateToMessage;
 
   // Scroll event handler: load older messages on scroll up + track pinned state
   useEffect(() => {
@@ -424,27 +484,20 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
     [conversation, onConversationUpdate, tenantId]
   );
 
-  // Ref guard: evita re-scroll cuando messages cambia por mensajes nuevos vía WS
-  const scrolledTargetRef = useRef<string | null>(null);
-
-  // Scroll to a specific message when selected from search results.
-  // Depende de `messages` para garantizar que el DOM tiene los elementos.
-  // Si el mensaje no está cargado aún, llama loadOlderRef para cargar páginas
-  // anteriores automáticamente hasta encontrarlo (igual que scroll manual hacia arriba).
+  // Navigate to targetMessageId when provided from conversation list search.
+  // For internal search panel clicks, handleResultClick handles scroll directly.
   useEffect(() => {
-    const effectiveId = localTargetId ?? targetMessageId;
-    if (!effectiveId || messages.length === 0) return;
+    if (!targetMessageId || messages.length === 0) return;
 
-    const key = `${conversation?.id}-${effectiveId}`;
+    const key = `${conversation?.id}-${targetMessageId}`;
     if (scrolledTargetRef.current === key) return;
 
-    const id = String(effectiveId);
+    const id = String(targetMessageId);
     const el = document.querySelector(`[data-msg-id="${id}"]`);
 
     if (!el) {
-      // Mensaje no está en el DOM — cargar más mensajes anteriores si hay
-      if (!isLoadingPreviousRef.current) {
-        loadOlderRef.current();
+      if (!isLoadingTargetRef.current) {
+        navigateToMessageRef.current(targetMessageId);
       }
       return;
     }
@@ -455,22 +508,42 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
     setJumpHighlightId(id);
     const timerId = setTimeout(() => setJumpHighlightId(null), 1500);
     return () => clearTimeout(timerId);
-  }, [localTargetId, targetMessageId, messages, conversation?.id]);
+  }, [targetMessageId, messages, conversation?.id]);
 
   // Reset search when conversation changes
   useEffect(() => {
     setIsSearchOpen(false);
     setHighlightedMessageId(null);
     setJumpHighlightId(null);
-    setLocalTargetId(null);
+    setIsJumpMode(false);
+    setIsNavigatingToMessage(false);
     scrolledTargetRef.current = null;
+    isPinnedToBottomRef.current = false;
+    if (jumpTimerRef.current) {
+      clearTimeout(jumpTimerRef.current);
+      jumpTimerRef.current = null;
+    }
   }, [conversation?.id]);
+
+  const jumpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleResultClick = useCallback((messageId: number | string) => {
     scrolledTargetRef.current = null;
     setHighlightedMessageId(String(messageId));
-    setLocalTargetId(Number(messageId));
-  }, []);
+    const targetId = Number(messageId);
+    const el = document.querySelector(`[data-msg-id="${targetId}"]`);
+    if (el) {
+      scrolledTargetRef.current = `${conversation?.id}-${targetId}`;
+      isPinnedToBottomRef.current = false;
+      setIsJumpMode(true);
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      setJumpHighlightId(String(targetId));
+      if (jumpTimerRef.current) clearTimeout(jumpTimerRef.current);
+      jumpTimerRef.current = setTimeout(() => setJumpHighlightId(null), 1500);
+    } else {
+      navigateToMessageRef.current(targetId);
+    }
+  }, [conversation?.id]);
 
   const handleToggleSearch = useCallback(() => {
     setIsSearchOpen((prev) => {
@@ -478,6 +551,25 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
       return !prev;
     });
   }, []);
+
+  const handleBackToBottom = useCallback(() => {
+    if (!conversation) return;
+    setIsJumpMode(false);
+    scrolledTargetRef.current = null;
+    setLoading(true);
+    setHasMore(true);
+    messageIdsRef.current = new Set();
+    getMessages(conversation.id, { tenantId })
+      .then((data) => {
+        const msgs = data.data ?? [];
+        messageIdsRef.current = new Set(msgs.map((m) => String(m.id)));
+        scrollBehaviorRef.current = "instant";
+        setMessages(msgs);
+        setHasMore(Boolean(data.meta?.has_more));
+      })
+      .catch((err) => console.error("[back-to-bottom]", err))
+      .finally(() => setLoading(false));
+  }, [conversation?.id, tenantId]);
 
   // No conversation selected
   if (!conversation) {
@@ -589,6 +681,11 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
             filter: "brightness(0.15)",
           }}
         />
+        {isNavigatingToMessage && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/50 backdrop-blur-[2px]">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        )}
         <div
           ref={scrollContainerRef}
           className="relative z-[1] h-full overflow-y-auto overflow-x-hidden overscroll-y-contain"
@@ -667,6 +764,20 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
           <div ref={bottomRef} className="h-px" />
         </div>
         </div>
+
+        {isJumpMode && (
+          <div className="absolute bottom-4 right-4 z-10">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleBackToBottom}
+              className="shadow-lg gap-1.5 border border-border/50"
+            >
+              <ArrowDown className="h-3.5 w-3.5" />
+              Ir a los más recientes
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* 24-hour window warning */}

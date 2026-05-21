@@ -1,11 +1,24 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, X, Loader2 } from "lucide-react";
+import { Search, X, Loader2, Check, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { searchMessages } from "@/lib/api-client/messaging";
-import type { MessageSearchResult } from "@/lib/types/messaging";
+import type { MessageSearchResult, MessageStatus } from "@/lib/types/messaging";
 import { parseTimestamp } from "@/lib/utils/messaging";
+
+function StatusIcon({ status }: { status?: MessageStatus }) {
+  switch (status) {
+    case "sent":
+      return <Check className="h-3 w-3 text-muted-foreground/60 shrink-0" />;
+    case "delivered":
+      return <CheckCheck className="h-3 w-3 text-muted-foreground/60 shrink-0" />;
+    case "read":
+      return <CheckCheck className="h-3 w-3 text-primary shrink-0" />;
+    default:
+      return null;
+  }
+}
 
 interface MessageSearchPanelProps {
   conversationId: number | string;
@@ -126,10 +139,15 @@ export function MessageSearchPanel({ conversationId, tenantId, onClose, onResult
             <p className="text-xs text-muted-foreground mb-0.5">
               {formatResultDate(result.created_at)}
             </p>
-            <p
-              className="text-sm [&_mark]:bg-transparent [&_mark]:text-primary [&_mark]:font-medium line-clamp-2"
-              dangerouslySetInnerHTML={{ __html: result.snippet ?? "" }}
-            />
+            <div className="flex items-center gap-1">
+              {result.message_type === "outgoing" && (
+                <StatusIcon status={result.status} />
+              )}
+              <p
+                className="text-sm [&_mark]:bg-transparent [&_mark]:text-primary [&_mark]:font-medium line-clamp-2"
+                dangerouslySetInnerHTML={{ __html: result.snippet ?? "" }}
+              />
+            </div>
           </button>
         ))}
       </div>

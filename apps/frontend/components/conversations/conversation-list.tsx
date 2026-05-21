@@ -13,6 +13,7 @@ import { useMessagingEvent, useMessagingEmit, useMessagingReconnect } from "./me
 import {
   getConversations,
   deleteConversation,
+  exportConversations,
   type ConversationFilters as ConversationFilterParams,
 } from "@/lib/api-client/messaging";
 import type { Conversation, Label, TemperatureDefinition } from "@/lib/types/messaging";
@@ -55,6 +56,7 @@ export function ConversationList({
   const [loading, setLoading] = useState(false);
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [isExportingAll, setIsExportingAll] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   // Refs for transient pagination state (rerender-use-ref-transient-values)
   const loadingMoreRef = useRef(false);
@@ -150,7 +152,9 @@ export function ConversationList({
         if (newConversations.length === 0) {
           hasMoreRef.current = false;
         } else {
-          onConversationsChange([...conversationsRef.current, ...newConversations]);
+          const existingIds = new Set(conversationsRef.current.map((c) => c.id));
+          const deduped = newConversations.filter((c) => !existingIds.has(c.id));
+          onConversationsChange([...conversationsRef.current, ...deduped]);
           currentPageRef.current = nextPage;
           hasMoreRef.current = data.meta?.next_page != null;
         }
@@ -334,9 +338,16 @@ export function ConversationList({
     });
   }, []);
 
-  const selectAll = useCallback(() => {
-    setSelectedIds(new Set(conversations.map((c) => c.id)));
-  }, [conversations]);
+  const handleExportAll = useCallback(async () => {
+    setIsExportingAll(true);
+    try {
+      await exportConversations(buildParams(sectionFilterRef.current, activeFiltersRef.current, searchQueryRef.current));
+    } catch (error) {
+      console.error("Error exporting conversations:", error);
+    } finally {
+      setIsExportingAll(false);
+    }
+  }, [buildParams]);
 
   const handleExportCsv = useCallback(() => {
     const selected = conversations.filter((c) => selectedIds.has(c.id));
@@ -360,8 +371,15 @@ export function ConversationList({
               </Button>
             </div>
             <div className="flex items-center gap-1 -ml-1.5">
-              <Button variant="ghost" size="sm" onClick={selectAll} className="h-7 text-xs px-2">
-                Seleccionar todos
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleExportAll}
+                disabled={isExportingAll}
+                className="h-7 text-xs px-2 gap-1"
+              >
+                {isExportingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                Exportar todo
               </Button>
               <Button
                 variant="ghost"
@@ -446,8 +464,8 @@ export function ConversationList({
           const contactMatches = trimmed ? conversations.filter((c) => !c.message_snippet) : conversations;
           const messageMatches = trimmed ? conversations.filter((c) => !!c.message_snippet) : [];
 
-          const renderItem = (conversation: Conversation, targetMessageId?: number) => (
-            <div key={conversation.id} style={{ contentVisibility: "auto", containIntrinsicSize: "auto 72px" }}>
+          const renderItem = (conversation: Conversation, targetMessageId?: number, keyPrefix = "c") => (
+            <div key={`${keyPrefix}-${conversation.id}`} style={{ contentVisibility: "auto", containIntrinsicSize: "auto 72px" }}>
               <ConversationItem
                 conversation={conversation}
                 isSelected={selectedId === conversation.id}
@@ -465,13 +483,13 @@ export function ConversationList({
 
           return (
             <>
-              {contactMatches.map((c) => renderItem(c))}
+              {contactMatches.map((c) => renderItem(c, undefined, "c"))}
               {messageMatches.length > 0 && (
                 <>
                   <div className="px-4 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider bg-muted/20 border-y border-border/30">
                     Mensajes
                   </div>
-                  {messageMatches.map((c) => renderItem(c, c.matched_message_id ?? undefined))}
+                  {messageMatches.map((c) => renderItem(c, c.matched_message_id ?? undefined, "m"))}
                 </>
               )}
               {loadingMore && (

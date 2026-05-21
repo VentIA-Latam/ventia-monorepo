@@ -26,32 +26,29 @@ class Api::V1::MessagesController < Api::V1::BaseController
     query = params[:q].to_s.strip
     return render json: { success: true, data: [] } if query.blank?
 
-    matching = @conversation.messages
+    tsquery = build_snippet_tsquery(query)
+    snippet_expr = ActiveRecord::Base.sanitize_sql_array([
+      "ts_headline('simple', COALESCE(processed_message_content, content), to_tsquery('simple', ?), " \
+      "'MaxWords=15, MinWords=8, StartSel=<mark>, StopSel=</mark>') AS snippet",
+      tsquery
+    ])
+
+    results = @conversation.messages
       .where.not(message_type: :activity)
+      .where("COALESCE(processed_message_content, content) IS NOT NULL")
       .fulltext_search(query)
       .order(created_at: :desc)
-
-    tsquery = build_snippet_tsquery(query)
-
-    results = matching.map do |msg|
-      next unless msg.processed_message_content.present?
-
-      row = ActiveRecord::Base.connection.execute(
-        ActiveRecord::Base.sanitize_sql_array([
-          "SELECT ts_headline('simple', ?, to_tsquery('simple', ?), " \
-          "'MaxWords=15, MinWords=8, StartSel=<mark>, StopSel=</mark>') AS snippet",
-          msg.processed_message_content,
-          tsquery
-        ])
-      ).first
-
-      {
-        id: msg.id,
-        snippet: row&.dig('snippet'),
-        created_at: msg.created_at,
-        message_type: msg.message_type
-      }
-    end.compact
+      .limit(50)
+      .select(:id, :created_at, :message_type, :status, Arel.sql(snippet_expr))
+      .map do |msg|
+        {
+          id: msg.id,
+          snippet: msg['snippet'],
+          created_at: msg.created_at,
+          message_type: msg.message_type,
+          status: msg.status
+        }
+      end
 
     render json: { success: true, data: results }
   end

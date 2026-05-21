@@ -40,6 +40,32 @@ export async function getConversations(
   return apiGet("/api/messaging/conversations", params as Record<string, string | number>, { signal });
 }
 
+export async function exportConversations(params?: ConversationFilters): Promise<void> {
+  const result = await apiGet<{ success: boolean; data: { name: string | null; phone: string | null }[] }>(
+    "/api/messaging/conversations/export",
+    params as Record<string, string | number>,
+  );
+  const escape = (val: string | null | undefined) => {
+    const str = val ?? "";
+    return str.includes(";") || str.includes('"') || str.includes("\n")
+      ? `"${str.replace(/"/g, '""')}"`
+      : str;
+  };
+  const rows = [
+    ["Nombre", "Teléfono"],
+    ...(result.data ?? []).map((r) => [escape(r.name), escape(r.phone)]),
+  ];
+  const csv = rows.map((r) => r.join(";")).join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const date = new Date().toISOString().slice(0, 10);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `conversaciones-${date}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export async function getConversation(id: number | string, tenantId?: number): Promise<Conversation> {
   const resp = await apiGet<{ success: boolean; data: Conversation }>(
     `/api/messaging/conversations/${id}`,

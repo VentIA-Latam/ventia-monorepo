@@ -181,6 +181,14 @@ class MessagingService:
             "GET", "/api/v1/conversations/counts", tenant_id, params=params
         )
 
+    async def export_conversations(
+        self, tenant_id: int, params: Optional[dict] = None
+    ) -> Optional[dict]:
+        """Export conversations filtered by active filters (no pagination)."""
+        return await self._request(
+            "GET", "/api/v1/conversations/export", tenant_id, params=params
+        )
+
     async def get_conversations_count_by_period(
         self,
         tenant_id: int,

@@ -63,6 +63,7 @@ Rails.application.routes.draw do
       resources :conversations, only: [:index, :show, :update, :destroy] do
         collection do
           get :counts
+          get :export
         end
         member do
           post :toggle_status
