@@ -109,3 +109,5 @@ Thumbs.db
 AGENTS.md
 apps/backend/uv.lock
 .superpowers/
+apps/messaging/Dockerfile
+.claude/settings.local.json
