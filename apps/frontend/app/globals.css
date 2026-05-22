@@ -109,6 +109,12 @@ html {
   --chat-outgoing: var(--cielo);
   --platform-badge: var(--marino);
 
+  /* Chat tokens */
+  --chat-wallpaper-filter: invert(1) brightness(1.85);
+  --chat-wallpaper-opacity: 0.1;
+  --chat-outgoing: var(--cielo);
+  --platform-badge: var(--marino);
+
   /* Core tokens — mapped to brand */
   --background: oklch(1 0 0);
   --foreground: oklch(0.20 0.03 250);
