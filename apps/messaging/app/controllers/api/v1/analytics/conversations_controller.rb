@@ -47,7 +47,7 @@ module Api
               }
             end
 
-          render_success(data: { total: total, results: results })
+          render_success({ total: total, results: results })
         end
 
         private
