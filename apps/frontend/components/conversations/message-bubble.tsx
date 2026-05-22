@@ -3,7 +3,7 @@
 import { memo, useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
-import { FileDown, Check, CheckCheck, AlertCircle, X, Download, ExternalLink, Bot, Reply, Phone, Copy } from "lucide-react";
+import { FileDown, Check, CheckCheck, AlertCircle, X, Download, ExternalLink, Bot, Reply, Phone, Copy, Smartphone } from "lucide-react";
 import type { MessageStatus, TemplateProcessedHeader, TemplateProcessedButton, WhatsAppTemplateButton, WhatsAppTemplateComponent } from "@/lib/types/messaging";
 import { LocationBubble } from "./location-bubble";
 import { ContactBubble } from "./contact-bubble";
@@ -392,7 +392,9 @@ export const MessageBubble = memo(function MessageBubble({
   const avatarTooltip =
     senderRole === "ai"
       ? "Enviado por: IA"
-      : `Enviado por: ${operatorName ?? "operador"}`;
+      : senderRole === "agent_mobile"
+        ? "Enviado por: Agente (WhatsApp)"
+        : `Enviado por: ${operatorName ?? "operador"}`;
 
   const isTemplate = message.message_type === "template";
   const templateParams = isTemplate ? message.additional_attributes?.template_params : undefined;
@@ -592,11 +594,15 @@ export const MessageBubble = memo(function MessageBubble({
                 "absolute bottom-0 -right-7 flex h-6 w-6 cursor-default items-center justify-center rounded-full text-[9px] font-bold transition-opacity duration-150 hover:opacity-90",
                 senderRole === "ai"
                   ? "bg-success-bg text-success border border-success/30"
-                  : "bg-cielo text-marino dark:bg-info-bg dark:text-info dark:border dark:border-info/30"
+                  : senderRole === "agent_mobile"
+                    ? "bg-agent text-white border border-agent/30"
+                    : "bg-cielo text-marino dark:bg-info-bg dark:text-info dark:border dark:border-info/30"
               )}
             >
               {senderRole === "ai" ? (
                 <Bot className="h-3 w-3" strokeWidth={2.5} />
+              ) : senderRole === "agent_mobile" ? (
+                <Smartphone className="h-3 w-3" strokeWidth={2.5} />
               ) : (
                 getInitials(operatorName)
               )}

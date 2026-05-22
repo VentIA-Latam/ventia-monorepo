@@ -135,6 +135,7 @@ export interface MessageContentAttributes {
   unavailable_reason?: string;
   automated?: boolean;
   automated_reason?: string;
+  external_echo?: boolean;
 }
 
 export type MessageStatus = "sent" | "delivered" | "read" | "failed";
