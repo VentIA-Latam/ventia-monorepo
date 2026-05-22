@@ -5,7 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Search, MessageSquare, Loader2, CheckSquare, Download, X } from "lucide-react";
+import { Search, MessageSquare, Loader2, CheckSquare, Download, X, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ConversationItem } from "./conversation-item";
 import { exportToCsv } from "@/lib/utils/messaging";
 import { ConversationFilters, type ActiveFilters } from "./conversation-filters";
@@ -361,37 +368,45 @@ export function ConversationList({
       {/* Header */}
       <div className="px-4 pt-4 pb-2">
         {isSelectMode ? (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-foreground">
-                {selectedIds.size} seleccionados
-              </span>
-              <Button variant="ghost" size="icon" onClick={toggleSelectMode} className="h-7 w-7 -mr-1">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" onClick={toggleSelectMode} className="h-7 w-7 shrink-0">
                 <X className="h-4 w-4" />
               </Button>
+              <span className="text-sm font-semibold text-foreground">
+                {selectedIds.size} seleccionadas
+              </span>
             </div>
-            <div className="flex items-center gap-1 -ml-1.5">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleExportAll}
-                disabled={isExportingAll}
-                className="h-7 text-xs px-2 gap-1"
-              >
-                {isExportingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                Exportar todo
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleExportCsv}
-                disabled={selectedIds.size === 0}
-                className="h-7 text-xs px-2 gap-1"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Exportar CSV
-              </Button>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" disabled={isExportingAll} className="h-7 text-xs px-2 gap-1 shrink-0">
+                  {isExportingAll
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <Download className="h-3.5 w-3.5" />}
+                  Exportar
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-60">
+                <DropdownMenuItem onClick={handleExportAll} className="flex flex-col items-start gap-0.5 py-2 cursor-pointer">
+                  <span className="text-sm font-medium">Todos los resultados</span>
+                  <span className="text-xs text-muted-foreground">Con filtros activos · hasta 5,000</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={selectedIds.size > 0 ? handleExportCsv : undefined}
+                  disabled={selectedIds.size === 0}
+                  className="flex flex-col items-start gap-0.5 py-2 cursor-pointer"
+                >
+                  <span className="text-sm font-medium">Exportar selección</span>
+                  <span className="text-xs text-muted-foreground">
+                    {selectedIds.size > 0
+                      ? `${selectedIds.size} ${selectedIds.size === 1 ? "conversación" : "conversaciones"}`
+                      : "Ninguna conversación seleccionada"}
+                  </span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ) : (
           <div className="flex items-center justify-between">
@@ -415,8 +430,20 @@ export function ConversationList({
               setSearchQuery(value);
               debouncedSearch(value);
             }}
-            className="pl-9 h-9 text-sm rounded-full bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/30"
+            className={`pl-9 h-9 text-sm rounded-full bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/30 ${searchQuery ? "pr-8" : ""}`}
           />
+          {searchQuery && (
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                debouncedSearch("");
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Limpiar búsqueda"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
 

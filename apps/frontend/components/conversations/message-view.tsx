@@ -83,7 +83,6 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [showActivityMessages, setShowActivityMessages] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [jumpHighlightId, setJumpHighlightId] = useState<string | null>(null);
   const [isJumpMode, setIsJumpMode] = useState(false);
   const [isNavigatingToMessage, setIsNavigatingToMessage] = useState(false);
@@ -395,6 +394,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
       // Track if user is near the bottom (within 150px)
       const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
       isPinnedToBottomRef.current = distanceFromBottom < 150;
+      if (distanceFromBottom < 150) setIsJumpMode(false);
 
       // Load older messages when near the top — calls through stable ref
       if (container.scrollTop < 100) {
@@ -513,7 +513,6 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
   // Reset search when conversation changes
   useEffect(() => {
     setIsSearchOpen(false);
-    setHighlightedMessageId(null);
     setJumpHighlightId(null);
     setIsJumpMode(false);
     setIsNavigatingToMessage(false);
@@ -529,7 +528,6 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
 
   const handleResultClick = useCallback((messageId: number | string) => {
     scrolledTargetRef.current = null;
-    setHighlightedMessageId(String(messageId));
     const targetId = Number(messageId);
     const el = document.querySelector(`[data-msg-id="${targetId}"]`);
     if (el) {
@@ -546,10 +544,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
   }, [conversation?.id]);
 
   const handleToggleSearch = useCallback(() => {
-    setIsSearchOpen((prev) => {
-      if (prev) setHighlightedMessageId(null);
-      return !prev;
-    });
+    setIsSearchOpen((prev) => !prev);
   }, []);
 
   const handleBackToBottom = useCallback(() => {
@@ -735,9 +730,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
                 next.message_type === "activity" ||
                 getSenderKey(next) !== getSenderKey(msg);
 
-              const isHighlighted =
-                (isSearchOpen && highlightedMessageId !== null && String(highlightedMessageId) === String(msg.id)) ||
-                (jumpHighlightId !== null && String(jumpHighlightId) === String(msg.id));
+              const isHighlighted = jumpHighlightId !== null && String(jumpHighlightId) === String(msg.id);
 
               return (
                 <div

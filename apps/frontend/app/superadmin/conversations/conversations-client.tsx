@@ -29,6 +29,7 @@ export function SuperAdminConversationsClient({ tenantId, section = "all", initi
   const [allLabels, setAllLabels] = useState<Label[]>([]);
   const [temperatureConfig, setTemperatureConfig] = useState<TemperatureDefinition[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [targetMessageId, setTargetMessageId] = useState<number | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const [loading, setLoading] = useState(true);
   const initialApplied = useRef(false);
@@ -112,8 +113,9 @@ export function SuperAdminConversationsClient({ tenantId, section = "all", initi
     [conversations, selectedId]
   );
 
-  const handleSelect = useCallback((id: number) => {
+  const handleSelect = useCallback((id: number, msgId?: number) => {
     setSelectedId(id);
+    setTargetMessageId(msgId ?? null);
     setShowInfo(false);
     setConversations((prev) =>
       prev.map((c) => (c.id === id ? { ...c, unread_count: 0 } : c))
@@ -196,6 +198,7 @@ export function SuperAdminConversationsClient({ tenantId, section = "all", initi
           <MessageView
             conversation={selectedConversation}
             tenantId={tenantId}
+            targetMessageId={targetMessageId}
             onBack={handleBack}
             onOpenInfo={handleOpenInfo}
             onConversationUpdate={handleConversationUpdate}
@@ -243,6 +246,7 @@ export function SuperAdminConversationsClient({ tenantId, section = "all", initi
         <MessageView
           conversation={selectedConversation}
           tenantId={tenantId}
+          targetMessageId={targetMessageId}
           onOpenInfo={handleOpenInfo}
           onConversationUpdate={handleConversationUpdate}
         />
