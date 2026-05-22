@@ -172,3 +172,41 @@ export async function fetchOrdersByCity(
 
   return response.json();
 }
+
+// --- Conversion Rate (US-CONV-004) ---
+
+export interface ConversionRate {
+  conversion_rate: number | null;
+  conversions: number;
+  total_conversations: number;
+  period: PeriodType;
+  start_date: string;
+  end_date: string;
+}
+
+export async function fetchConversionRate(
+  accessToken: string,
+  query?: MetricsQuery
+): Promise<ConversionRate> {
+  const params = new URLSearchParams();
+  if (query?.period) params.append('period', query.period);
+  if (query?.start_date && query.period === 'custom') params.append('start_date', query.start_date);
+  if (query?.end_date && query.period === 'custom') params.append('end_date', query.end_date);
+
+  const url = `${API_URL}/metrics/conversion-rate${params.toString() ? '?' + params.toString() : ''}`;
+
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Failed to fetch conversion rate' }));
+    throw new Error(error.detail || 'Failed to fetch conversion rate');
+  }
+
+  return response.json();
+}

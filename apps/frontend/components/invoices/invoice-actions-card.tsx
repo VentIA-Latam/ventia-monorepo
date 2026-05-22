@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Invoice } from "@/lib/types/invoice";
 import { formatDateTime } from "@/lib/utils";
+import { useTenantTimezone } from "@/lib/context/timezone-context";
 import { SendEmailDialog } from "@/components/invoices/send-email-dialog";
 
 interface InvoiceActionsCardProps {
@@ -47,6 +48,7 @@ export function InvoiceActionsCard({
   onConfirmSendEmail,
   basePath = '/dashboard',
 }: InvoiceActionsCardProps) {
+  const tz = useTenantTimezone();
   return (
     <div className="space-y-6">
       {/* Acciones */}
@@ -146,7 +148,7 @@ export function InvoiceActionsCard({
               <Calendar className="h-4 w-4" />
               Fecha de Emisión
             </p>
-            <p className="font-medium mt-1">{formatDateTime(invoice.created_at)}</p>
+            <p className="font-medium mt-1">{formatDateTime(invoice.created_at, tz)}</p>
           </div>
           {invoice.efact_processed_at && (
             <div>
@@ -154,7 +156,7 @@ export function InvoiceActionsCard({
                 <Clock className="h-4 w-4" />
                 Fecha de Validación
               </p>
-              <p className="font-medium mt-1">{formatDateTime(invoice.efact_processed_at)}</p>
+              <p className="font-medium mt-1">{formatDateTime(invoice.efact_processed_at, tz)}</p>
             </div>
           )}
           {invoice.efact_ticket && (

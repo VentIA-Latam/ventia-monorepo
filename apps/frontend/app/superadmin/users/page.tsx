@@ -4,7 +4,7 @@ import { UsersClient } from "./users-client";
 export default async function UsersPage() {
   const [usersData, tenantsData] = await Promise.all([
     fetchUsers({ limit: 10 }),
-    fetchTenants({ limit: 100 }),
+    fetchTenants({ limit: 100, is_active: true }),
   ]);
 
   return (

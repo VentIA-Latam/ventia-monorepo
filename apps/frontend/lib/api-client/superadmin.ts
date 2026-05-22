@@ -68,8 +68,9 @@ export interface RecentActivity {
 export async function getTenants(params?: {
   skip?: number;
   limit?: number;
+  is_active?: boolean;
 }): Promise<{ items: Tenant[]; total: number }> {
-  return apiGet('/api/superadmin/tenants', params as Record<string, number>);
+  return apiGet('/api/superadmin/tenants', params as Record<string, string | number | boolean>);
 }
 
 /**

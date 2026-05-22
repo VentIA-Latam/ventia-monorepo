@@ -80,8 +80,10 @@ class Api::V1::ConversationsController < Api::V1::BaseController
   end
 
   def update
+    ai_was_enabled = @conversation.ai_agent_enabled
     if @conversation.update(conversation_params)
-      render_success(conversation_json(@conversation), message: 'Conversation updated')
+      sync_soporte_humano_label if conversation_params.key?(:ai_agent_enabled) && ai_was_enabled != @conversation.ai_agent_enabled
+      render_success(conversation_json(@conversation.reload), message: 'Conversation updated')
     else
       render_error('Failed to update conversation', errors: @conversation.errors.full_messages)
     end
@@ -130,10 +132,12 @@ class Api::V1::ConversationsController < Api::V1::BaseController
   def resolve_escalation
     @conversation.update!(ai_agent_enabled: true)
 
+    # Destruir el ConversationLabel directamente para disparar after_destroy_commit
+    # → activity message "Etiqueta removida" + broadcast conversation.labels_updated.
+    # Mismo patrón que sync_soporte_humano_label (labels.delete() omite callbacks).
     label = current_account.labels.find_by(title: 'soporte-humano')
-    if label && @conversation.labels.exists?(label.id)
-      @conversation.labels.delete(label)
-    end
+    join = label && @conversation.conversation_labels.find_by(label_id: label.id)
+    join&.destroy!
 
     render_success(conversation_json(@conversation.reload), message: 'Escalation resolved, AI agent re-enabled')
   end
@@ -178,6 +182,27 @@ class Api::V1::ConversationsController < Api::V1::BaseController
     params.require(:conversation).permit(:status, :stage, :priority, :temperature, :ai_agent_enabled, custom_attributes: {})
   end
 
+  # Sincroniza la etiqueta soporte-humano con el estado del agente IA.
+  # Inversa de labels_controller.rb (que sincroniza IA cuando se añade/quita la etiqueta).
+  # Importante: destruir el ConversationLabel directamente (no usar labels.delete)
+  # para disparar after_destroy_commit → activity message + broadcast en tiempo real.
+  def sync_soporte_humano_label
+    if @conversation.ai_agent_enabled
+      # IA reactivada → quitar soporte-humano si estaba
+      label = current_account.labels.find_by(title: 'soporte-humano')
+      join = label && @conversation.conversation_labels.find_by(label_id: label.id)
+      join&.destroy!
+    else
+      # IA desactivada → añadir soporte-humano si no estaba
+      label = Label.find_or_create_by!(account_id: current_account.id, title: 'soporte-humano') do |l|
+        l.color = '#EF4444'
+        l.system = true
+        l.show_on_sidebar = true
+      end
+      @conversation.labels << label unless @conversation.labels.exists?(label.id)
+    end
+  end
+
   def conversation_json(conversation)
     last_msg = conversation.messages.where.not(message_type: :activity).order(created_at: :desc).first
 
@@ -194,10 +219,12 @@ class Api::V1::ConversationsController < Api::V1::BaseController
       created_at: conversation.created_at,
       last_message_at: conversation.messages.maximum(:created_at),
       contact: {
-        id: conversation.contact.id,
-        name: conversation.contact.name,
-        phone_number: conversation.contact.phone_number,
-        email: conversation.contact.email,
+        id:               conversation.contact.id,
+        name:             conversation.contact.name,
+        phone_number:     conversation.contact.phone_number,
+        email:            conversation.contact.email,
+        identifier:       conversation.contact.identifier,
+        whatsapp_bsuid:   conversation.contact_inbox&.whatsapp_bsuid,
         last_activity_at: conversation.contact.last_activity_at
       },
       assignee: conversation.assignee ? {

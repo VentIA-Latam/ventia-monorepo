@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Wallpaper Test - Light vs Dark</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui; display: flex; gap: 20px; padding: 20px; background: #f0f0f0; }
+
+  .container {
+    width: 500px;
+    height: 600px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+
+  .header {
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .header .avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600;
+  }
+  .header .name { font-weight: 600; font-size: 14px; }
+  .header .phone { font-size: 11px; }
+
+  .chat-area {
+    flex: 1; position: relative;
+    padding: 16px 40px;
+    display: flex; flex-direction: column;
+    justify-content: flex-end; gap: 6px;
+    height: calc(100% - 110px);
+    overflow-y: auto;
+  }
+  .chat-area::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image: url('/images/fondo-wts.webp');
+    background-repeat: repeat;
+    pointer-events: none; z-index: 0;
+  }
+  .chat-area > * { position: relative; z-index: 1; }
+
+  .bubble {
+    max-width: 280px; padding: 6px 10px;
+    border-radius: 8px; font-size: 13px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  .bubble .time { font-size: 10px; text-align: right; margin-top: 2px; }
+  .incoming { align-self: flex-start; border-top-left-radius: 2px; }
+  .outgoing { align-self: flex-end; border-top-right-radius: 2px; }
+
+  .composer {
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .composer input {
+    flex: 1; padding: 8px 14px; border-radius: 20px;
+    border: 1px solid; font-size: 12px; outline: none;
+  }
+  .composer .send {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: #25D366; border: none; color: white;
+    font-size: 16px; cursor: pointer;
+  }
+
+  /* ===== LIGHT ===== */
+  .light .header { background: #f8fbff; border-bottom: 1px solid #e0e5eb; }
+  .light .header .avatar { background: #ceeefe; color: #073567; }
+  .light .header .name { color: #0b1723; }
+  .light .header .phone { color: #576574; }
+  .light .chat-area { background: #f0f0f0; }
+  .light .chat-area::before { filter: invert(1) brightness(1.5); opacity: 0.1; }
+  .light .incoming { background: #fff; color: #0b1723; }
+  .light .outgoing { background: #ceeefe; color: #0b1723; }
+  .light .bubble .time { color: #576574; }
+  .light .composer { background: #f8fbff; border-top: 1px solid #e0e5eb; }
+  .light .composer input { background: #fff; border-color: #e0e5eb; color: #0b1723; }
+
+  /* ===== DARK ===== */
+  .dark .header { background: #0f0f12; border-bottom: 1px solid #28282e; }
+  .dark .header .avatar { background: #18181c; color: #59c8e8; }
+  .dark .header .name { color: #ededf0; }
+  .dark .header .phone { color: #707078; }
+  .dark .chat-area { background: #09090b; }
+  .dark .chat-area::before { filter: brightness(0.15); opacity: 0.6; }
+  .dark .incoming { background: #18181c; color: #ededf0; }
+  .dark .outgoing { background: #162D52; color: #ededf0; }
+  .dark .bubble .time { color: #707078; }
+  .dark .composer { background: #0f0f12; border-top: 1px solid #28282e; }
+  .dark .composer input { background: #18181c; border-color: #28282e; color: #ededf0; }
+
+  h3 { text-align: center; margin-bottom: 8px; color: #333; }
+</style>
+</head>
+<body>
+
+<div>
+  <h3>Light Mode</h3>
+  <div class="container light">
+    <div class="header">
+      <div class="avatar">MC</div>
+      <div>
+        <div class="name">María Castro</div>
+        <div class="phone">+51 987 654 321</div>
+      </div>
+    </div>
+    <div class="chat-area">
+      <div class="bubble incoming">Hola, ya realicé el pago por Yape. ¿Me pueden confirmar?<div class="time">10:30 a.m.</div></div>
+      <div class="bubble outgoing">¡Perfecto! Déjame verificar el pago. Un momento por favor.<div class="time">10:32 a.m. ✓✓</div></div>
+      <div class="bubble incoming">Sí, ya lo vi reflejado. ¡Gracias! Procedo a preparar tu pedido.<div class="time">10:35 a.m.</div></div>
+      <div class="bubble outgoing">Perfecto, confirmo el pago 🙌<div class="time">10:38 a.m. ✓✓</div></div>
+    </div>
+    <div class="composer">
+      <input placeholder="Escribe un mensaje">
+      <button class="send">➤</button>
+    </div>
+  </div>
+</div>
+
+<div>
+  <h3>Dark Mode</h3>
+  <div class="container dark">
+    <div class="header">
+      <div class="avatar">MC</div>
+      <div>
+        <div class="name">María Castro</div>
+        <div class="phone">+51 987 654 321</div>
+      </div>
+    </div>
+    <div class="chat-area">
+      <div class="bubble incoming">Hola, ya realicé el pago por Yape. ¿Me pueden confirmar?<div class="time">10:30 a.m.</div></div>
+      <div class="bubble outgoing">¡Perfecto! Déjame verificar el pago. Un momento por favor.<div class="time">10:32 a.m. ✓✓</div></div>
+      <div class="bubble incoming">Sí, ya lo vi reflejado. ¡Gracias! Procedo a preparar tu pedido.<div class="time">10:35 a.m.</div></div>
+      <div class="bubble outgoing">Perfecto, confirmo el pago 🙌<div class="time">10:38 a.m. ✓✓</div></div>
+    </div>
+    <div class="composer">
+      <input placeholder="Escribe un mensaje">
+      <button class="send">➤</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

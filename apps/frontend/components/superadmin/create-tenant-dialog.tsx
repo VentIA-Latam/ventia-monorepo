@@ -27,7 +27,7 @@ import {
   EmissorLocationForm,
 } from "./tenant-forms";
 
-type EcommercePlatform = "shopify" | "woocommerce";
+type EcommercePlatform = "shopify" | "woocommerce" | null;
 
 interface CreateTenantDialogProps {
   open: boolean;
@@ -38,7 +38,7 @@ interface CreateTenantDialogProps {
 export function CreateTenantDialog({ open, onOpenChange, onSuccess }: CreateTenantDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [platform, setPlatform] = useState<EcommercePlatform>("shopify");
+  const [platform, setPlatform] = useState<EcommercePlatform>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     // Datos generales
@@ -137,6 +137,8 @@ export function CreateTenantDialog({ open, onOpenChange, onSuccess }: CreateTena
         submitData.ecommerce_consumer_key = formData.woocommerce_consumer_key;
         submitData.ecommerce_consumer_secret = formData.woocommerce_consumer_secret;
         submitData.sync_on_validation = true;
+      } else {
+        submitData.ecommerce_platform = null;
       }
 
       // ✅ Usa Client API Layer
@@ -166,7 +168,7 @@ export function CreateTenantDialog({ open, onOpenChange, onSuccess }: CreateTena
         woocommerce_consumer_key: "",
         woocommerce_consumer_secret: "",
       });
-      setPlatform("shopify");
+      setPlatform(null);
       setCurrentStep(1);
 
       onSuccess();
@@ -293,8 +295,8 @@ export function CreateTenantDialog({ open, onOpenChange, onSuccess }: CreateTena
                 {/* Platform Selector */}
                 <PlatformSelector
                   selectedPlatform={platform}
-                  onPlatformChange={(p) => { if (p) setPlatform(p); }}
-                  columns={2}
+                  onPlatformChange={setPlatform}
+                  showNone={true}
                 />
 
                 {/* Shopify Fields */}

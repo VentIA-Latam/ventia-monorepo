@@ -7,6 +7,9 @@ import {
   ChevronsUpDown,
   LogOut,
   Bell,
+  Moon,
+  Sun,
+  Monitor,
   LayoutDashboard,
   Users,
   Building2,
@@ -20,6 +23,7 @@ import {
   ChevronRight,
 } from "lucide-react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useTheme } from "next-themes"
 import Image from "next/image"
 import Link from "next/link"
 import { useAuth } from "@/hooks/use-auth"
@@ -63,6 +67,8 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
@@ -229,6 +235,7 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
   const pathname = usePathname()
   const router = useRouter()
   const { user, isLoading } = useAuth()
+  const { theme, setTheme } = useTheme()
   const { selectedTenantId, setSelectedTenantId, tenants } = useTenant()
 
   const isActive = (url: string) => {
@@ -276,7 +283,13 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
                 src="/images/logo-ventia-sidebar.png"
                 alt="VentIA SuperAdmin"
                 fill
-                className="object-contain"
+                className="object-contain dark:hidden"
+              />
+              <Image
+                src="/images/logo-ventia-header.png"
+                alt="VentIA SuperAdmin"
+                fill
+                className="object-contain hidden dark:block"
               />
             </div>
             <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-luma/15 border border-luma/30">
@@ -457,6 +470,21 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
                     </div>
                   </div>
                 </DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-border" />
+                <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1 font-normal">
+                  Apariencia
+                </DropdownMenuLabel>
+                <DropdownMenuRadioGroup value={theme ?? "system"} onValueChange={setTheme}>
+                  <DropdownMenuRadioItem value="light" className="cursor-pointer">
+                    <Sun className="mr-2 h-4 w-4" /> Claro
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="system" className="cursor-pointer">
+                    <Monitor className="mr-2 h-4 w-4" /> Sistema
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="dark" className="cursor-pointer">
+                    <Moon className="mr-2 h-4 w-4" /> Oscuro
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
                 <DropdownMenuSeparator className="bg-border" />
                 <DropdownMenuItem
                   onClick={handleLogout}

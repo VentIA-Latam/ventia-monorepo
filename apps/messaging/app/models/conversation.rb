@@ -73,6 +73,7 @@ class Conversation < ApplicationRecord
   scope :recent, -> { order(last_activity_at: :desc) }
   scope :with_label, ->(title) { joins(:labels).where(labels: { title: title }).distinct }
   scope :in_date_range, ->(from, to) { where(last_activity_at: from..to) }
+  scope :created_in_range, ->(from, to) { where(created_at: from..to) }
   scope :by_stage, ->(stage) { where(stage: stage) }
   scope :unattended, -> { where(first_reply_created_at: nil).or(where.not(waiting_since: nil)) }
 

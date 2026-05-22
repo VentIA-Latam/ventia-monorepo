@@ -9,8 +9,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-ventia_db}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ventia_password_dev}
-    expose:
-      - "5432"
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
@@ -109,6 +109,7 @@ services:
       CORS_ORIGINS: https://app.ventia-latam.com
       FRONTEND_URL: https://app.ventia-latam.com
       MESSAGING_SERVICE_URL: ${MESSAGING_SERVICE_URL:-http://localhost:3001}
+      MESSAGING_SERVICE_API_KEY: ${MESSAGING_SERVICE_API_KEY:-}
       # Facebook/WhatsApp
       FACEBOOK_APP_ID: ${FACEBOOK_APP_ID}
       FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET}

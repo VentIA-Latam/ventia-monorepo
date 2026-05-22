@@ -4,10 +4,9 @@ Metrics repository - data access layer for metrics.
 
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional, Tuple
-
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import func, text
+from sqlalchemy import distinct, func, text
 from sqlalchemy.orm import Session
 
 from app.models.order import Order
@@ -252,6 +251,31 @@ class MetricsRepository:
             Order.tenant_id == tenant_id
         ).first()
         return currency[0] if currency else "USD"
+
+    def get_converted_conversations_count(
+        self,
+        db: Session,
+        tenant_id: int,
+        start: datetime,
+        end: datetime,
+    ) -> int:
+        """Count distinct conversations with a validated order in the period.
+
+        Uses validated_at as anchor so re-purchases on existing conversations
+        are captured regardless of when the conversation was originally created.
+        """
+        result = (
+            db.query(func.count(distinct(Order.messaging_conversation_id)))
+            .filter(
+                Order.tenant_id == tenant_id,
+                Order.validado.is_(True),
+                Order.validated_at >= start,
+                Order.validated_at <= end,
+                Order.messaging_conversation_id.isnot(None),
+            )
+            .scalar()
+        )
+        return result or 0
 
 
 # Global repository instance

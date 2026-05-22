@@ -1,6 +1,8 @@
 "use client";
 
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Phone, Mail, X, ChevronDown, Check } from "lucide-react";
+import { Phone, Mail, Fingerprint, X, ChevronDown, Check, AlertTriangle } from "lucide-react";
 import { TemperatureSelector } from "./temperature-selector";
 import { LabelManager } from "./label-manager";
 import { updateConversation, updateConversationStage } from "@/lib/api-client/messaging";
@@ -44,6 +46,13 @@ export const ContactInfoPanel = memo(function ContactInfoPanel({
 }: ContactInfoPanelProps) {
   const contact = conversation.contact;
   const stageConf = stageConfig[conversation.stage] ?? stageConfig.pre_sale;
+  const router = useRouter();
+  const { role } = useAuth();
+  const isAdmin = role?.toUpperCase() === "ADMIN";
+
+  const handleReportIncident = useCallback(() => {
+    router.push(`/dashboard/tickets?type=critical_incident&conversationId=${conversation.id}`);
+  }, [router, conversation.id]);
 
   const handleStageChange = useCallback(async (stage: "pre_sale" | "sale") => {
     if (stage === conversation.stage) return;
@@ -109,12 +118,18 @@ export const ContactInfoPanel = memo(function ContactInfoPanel({
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Contacto
           </p>
-          {contact?.phone_number && (
+          {(contact?.phone_number || contact?.whatsapp_bsuid) ? (
             <div className="flex items-center gap-3 text-sm">
-              <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span>{contact.phone_number}</span>
+              {contact.phone_number ? (
+                <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+              ) : (
+                <Fingerprint className="h-4 w-4 text-muted-foreground shrink-0" />
+              )}
+              <span className={contact.phone_number ? "" : "font-mono text-xs tracking-wide"}>
+                {contact.phone_number ?? contact.whatsapp_bsuid}
+              </span>
             </div>
-          )}
+          ) : null}
           {contact?.email && (
             <div className="flex items-center gap-3 text-sm">
               <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -186,6 +201,23 @@ export const ContactInfoPanel = memo(function ContactInfoPanel({
             )}
           </div>
         </div>
+
+        {isAdmin && (
+          <>
+            <Separator />
+            <div className="pb-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full border-destructive/40 text-destructive hover:bg-destructive/5 hover:text-destructive gap-2"
+                onClick={handleReportIncident}
+              >
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                Reportar incidencia crítica
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

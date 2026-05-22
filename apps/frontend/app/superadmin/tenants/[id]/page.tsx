@@ -199,7 +199,7 @@ export default function TenantDetailPage() {
                 <Badge variant="outline" className="bg-muted/50">Inactivo</Badge>
               )}
               {tenant.is_platform && (
-                <Badge variant="secondary" className="bg-luma/15 text-marino">
+                <Badge variant="secondary" className="bg-luma/15 text-platform-badge">
                   <Shield className="mr-1 h-3 w-3" />
                   Plataforma
                 </Badge>

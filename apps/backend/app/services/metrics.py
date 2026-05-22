@@ -2,6 +2,8 @@
 Metrics service - business logic for dashboard metrics.
 """
 
+import logging
+
 from sqlalchemy.orm import Session
 
 from app.repositories.metrics import metrics_repository
@@ -13,6 +15,9 @@ from app.schemas.metrics import (
     TopProduct,
     TopProductsResponse,
 )
+from app.services.messaging_service import messaging_service
+
+logger = logging.getLogger(__name__)
 
 
 class MetricsService:
@@ -122,6 +127,61 @@ class MetricsService:
             start_date=start.date(),
             end_date=end.date(),
         )
+
+    async def get_conversion_rate(
+        self,
+        db: Session,
+        tenant_id: int,
+        query: MetricsQuery,
+        tz_name: str = "America/Lima",
+    ) -> dict:
+        """Compute AI agent conversion rate for US-CONV-004.
+
+        Numerator: distinct conversations with a validated order in the period
+                   (local orders DB query — no cross-DB list passing).
+        Denominator: total conversations created in the period
+                     (messaging service — US-CONV-003 endpoint).
+
+        Rate is capped at 100 to handle edge case where an old conversation
+        has its order validated in the current period.
+
+        Raises:
+            RuntimeError: If the messaging service call fails.
+        """
+        start_utc, end_utc = metrics_repository._get_date_range(
+            query.period, query.start_date, query.end_date, tz_name
+        )
+
+        converted = metrics_repository.get_converted_conversations_count(
+            db, tenant_id, start_utc, end_utc
+        )
+
+        messaging_result = await messaging_service.get_conversations_count_by_period(
+            tenant_id=tenant_id,
+            start_date=start_utc.isoformat(),
+            end_date=end_utc.isoformat(),
+        )
+
+        if not messaging_result or "data" not in messaging_result:
+            logger.error(f"conversion_rate_messaging_failed: tenant_id={tenant_id}")
+            raise RuntimeError("Could not fetch conversations count from messaging service")
+
+        total = messaging_result["data"].get("total", 0)
+        rate = min(round(converted / total * 100, 1), 100.0) if total > 0 else None
+
+        logger.info(
+            f"conversion_rate_computed: tenant_id={tenant_id} period={query.period} "
+            f"total={total} converted={converted} rate={rate}"
+        )
+
+        return {
+            "conversion_rate": rate,
+            "conversions": converted,
+            "total_conversations": total,
+            "period": query.period,
+            "start_date": start_utc.date(),
+            "end_date": end_utc.date(),
+        }
 
 
 # Global service instance

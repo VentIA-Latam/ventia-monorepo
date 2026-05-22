@@ -51,6 +51,28 @@ class Api::V1::ContactsController < Api::V1::BaseController
     render_success(contacts.map { |c| contact_json(c) })
   end
 
+  def find_by_phone
+    phone = params[:phone]
+    return render_error("Phone parameter required", status: :bad_request) unless phone.present?
+
+    contact = current_account.contacts.find_by(phone_number: phone)
+    return render_success({ contact_id: nil, conversation: nil }) unless contact
+
+    conversation = contact.conversations
+                          .order(created_at: :desc)
+                          .first
+
+    render_success({
+      contact_id: contact.id,
+      phone_number: contact.phone_number,
+      name: contact.name,
+      conversation: conversation ? {
+        id: conversation.id,
+        created_at: conversation.created_at
+      } : nil
+    })
+  end
+
   private
 
   def set_contact

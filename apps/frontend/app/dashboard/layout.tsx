@@ -19,6 +19,8 @@ export default async function DashboardLayout({
     redirect("/superadmin");
   }
 
-  return <DashboardLayoutClient>{children}</DashboardLayoutClient>;
+  const timezone = user.tenant?.timezone || "America/Lima";
+
+  return <DashboardLayoutClient timezone={timezone}>{children}</DashboardLayoutClient>;
 }
 

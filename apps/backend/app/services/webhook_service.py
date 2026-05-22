@@ -17,6 +17,7 @@ from app.models.webhook import WebhookEvent
 from app.repositories.order import order_repository
 from app.repositories.webhook import webhook_repository
 from app.schemas.order import OrderCreate, OrderUpdate
+from app.core.phone import normalize_phone_to_e164
 from app.services.order import OrderService
 
 logger = logging.getLogger(__name__)
@@ -1542,6 +1543,60 @@ def process_shopify_order_cancelled(
         db.commit()
 
         raise
+
+
+# ==================== CONVERSATION LINKING ====================
+
+
+async def try_link_conversation(
+    db: Session,
+    order: Order,
+    tenant: Tenant,
+    payload: dict[str, Any],
+) -> None:
+    """
+    Try to link an order with a messaging conversation by phone number.
+
+    Extracts phone from shipping_address (priority), customer, or root payload.
+    Normalizes to E.164 and searches for a contact in messaging.
+    No-op if order already has messaging_conversation_id.
+
+    Uses db directly (not repository) to be consistent with the existing
+    webhook_service pattern of explicit transaction management.
+    """
+    if order.messaging_conversation_id:
+        return
+
+    from app.services.messaging_service import messaging_service  # lazy: messaging_service imports are heavy
+
+    raw_phone = (
+        (payload.get("shipping_address") or {}).get("phone")
+        or (payload.get("customer") or {}).get("phone")
+        or payload.get("phone")
+    )
+    normalized = normalize_phone_to_e164(raw_phone)
+    if not normalized:
+        return
+
+    try:
+        result = await messaging_service.find_contact_by_phone(tenant.id, normalized)
+        data = result.get("data") if result else None
+        if isinstance(data, dict) and data.get("conversation"):
+            conv_id = data["conversation"]["id"]
+            order.messaging_conversation_id = conv_id
+            db.commit()
+            logger.info(
+                f"auto_linked_conversation: order_id={order.id}, "
+                f"conversation_id={conv_id}, phone={normalized}"
+            )
+    except Exception as e:
+        logger.error(
+            f"auto_link_conversation_failed: order_id={order.id}, error={e}",
+            exc_info=True,
+        )
+
+
+# ==================== WOOCOMMERCE HANDLERS ====================
 
 
 def process_woocommerce_order_created(

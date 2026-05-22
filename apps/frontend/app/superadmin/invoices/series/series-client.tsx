@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,7 @@ import {
   InvoiceSerie,
   INVOICE_TYPE_LABELS,
 } from "@/lib/types/invoice";
-import { Tenant } from "@/lib/types/tenant";
+import { useTenant } from "@/lib/context/tenant-context";
 import { CreateSerieDialog } from "@/components/superadmin/create-serie-dialog";
 import { EditSerieDialog } from "@/components/superadmin/edit-serie-dialog";
 
@@ -28,27 +28,11 @@ interface InvoiceSeriesClientViewProps {
 
 export function InvoiceSeriesClientView({ initialSeries }: InvoiceSeriesClientViewProps) {
   const [series, setSeries] = useState<InvoiceSerie[]>(initialSeries);
-  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const { tenants } = useTenant();
   const [error, setError] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedSerie, setSelectedSerie] = useState<InvoiceSerie | null>(null);
-
-  useEffect(() => {
-    fetchTenants();
-  }, []);
-
-  const fetchTenants = async () => {
-    try {
-      const response = await fetch("/api/superadmin/tenants?limit=100");
-      if (response.ok) {
-        const data = await response.json();
-        setTenants(data.items || []);
-      }
-    } catch (error) {
-      console.error("Error fetching tenants:", error);
-    }
-  };
 
   const getTenantName = (tenantId: number): string => {
     const tenant = tenants.find((t) => t.id === tenantId);

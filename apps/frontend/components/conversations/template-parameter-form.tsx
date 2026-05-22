@@ -9,7 +9,10 @@ import type {
   WhatsAppTemplate,
   WhatsAppTemplateComponent,
   SendTemplatePayload,
+  TemplateProcessedParams,
+  TemplateProcessedButton,
 } from "@/lib/types/messaging";
+import { formatWhatsAppText } from "@/lib/utils/whatsapp-format";
 
 interface TemplateParameterFormProps {
   template: WhatsAppTemplate;
@@ -153,7 +156,7 @@ export function TemplateParameterForm({
   }, [bodyVars, headerTextVars, variables, template]);
 
   const handleSend = useCallback(() => {
-    const processedParams: Record<string, unknown> = {};
+    const processedParams: TemplateProcessedParams = {};
 
     if (Object.keys(variables.body).length > 0) {
       processedParams.body = variables.body;
@@ -162,7 +165,7 @@ export function TemplateParameterForm({
       processedParams.header = variables.header;
     }
     if (Object.keys(variables.buttons).length > 0) {
-      const buttonsArr: (Record<string, string> | null)[] = [];
+      const buttonsArr: (TemplateProcessedButton | null)[] = [];
       const allButtons = buttonsComponent?.buttons || [];
       for (let i = 0; i < allButtons.length; i++) {
         const btn = allButtons[i];
@@ -179,17 +182,15 @@ export function TemplateParameterForm({
     }
 
     const payload: SendTemplatePayload = {
-      content: previewText,
       template_params: {
         name: template.name,
-        namespace: template.namespace,
         language: template.language,
         processed_params: processedParams,
       },
     };
 
     onSend(payload);
-  }, [variables, previewText, template, onSend, buttonsComponent?.buttons]);
+  }, [variables, template, onSend, buttonsComponent?.buttons]);
 
   const needsInput =
     bodyVars.length > 0 ||
@@ -204,14 +205,14 @@ export function TemplateParameterForm({
       <div className="px-4 pb-3 shrink-0">
         <div className="rounded-lg bg-muted/40 p-3 text-sm space-y-1">
           {headerPreviewText && (
-            <p className="font-semibold text-xs">{headerPreviewText}</p>
+            <p className="font-semibold text-xs">{formatWhatsAppText(headerPreviewText)}</p>
           )}
           {headerComponent?.format && headerComponent.format !== "TEXT" && (
             <p className="text-xs text-muted-foreground italic">[{headerComponent.format}]</p>
           )}
-          <p className="whitespace-pre-wrap">{previewText}</p>
+          <p className="whitespace-pre-wrap">{formatWhatsAppText(previewText)}</p>
           {footerComponent?.text && (
-            <p className="text-xs text-muted-foreground mt-1">{footerComponent.text}</p>
+            <p className="text-xs text-muted-foreground mt-1">{formatWhatsAppText(footerComponent.text)}</p>
           )}
           {buttonsComponent?.buttons && buttonsComponent.buttons.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-border/30">

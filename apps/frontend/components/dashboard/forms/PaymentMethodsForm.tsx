@@ -59,7 +59,7 @@ export default function PaymentMethodsForm() {
   };
 
   return (
-    <div className="bg-white rounded-lg p-6 shadow-sm border border-border">
+    <div className="bg-card rounded-lg p-6 shadow-sm border border-border">
       <div className="flex items-center gap-3 mb-6">
         <div className="w-6 h-6 rounded-full border-2 border-aqua flex items-center justify-center">
           <div className="w-3 h-3 rounded-full bg-aqua"></div>
@@ -141,7 +141,7 @@ export default function PaymentMethodsForm() {
                       updateMethod(method.id, "methodType", value)
                     }
                   >
-                    <SelectTrigger className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua bg-white">
+                    <SelectTrigger className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:border-aqua focus:ring-1 focus:ring-aqua bg-card">
                       <SelectValue placeholder="Seleccionar tipo" />
                     </SelectTrigger>
                     <SelectContent>

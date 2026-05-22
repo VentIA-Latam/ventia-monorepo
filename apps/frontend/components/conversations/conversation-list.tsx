@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Search, MessageSquare, Loader2 } from "lucide-react";
 import { ConversationItem } from "./conversation-item";
 import { ConversationFilters, type ActiveFilters } from "./conversation-filters";
-import { useMessagingEvent, useMessagingEmit } from "./messaging-provider";
+import { useMessagingEvent, useMessagingEmit, useMessagingReconnect } from "./messaging-provider";
 import {
   getConversations,
   deleteConversation,
@@ -46,6 +46,7 @@ export function ConversationList({
 }: ConversationListProps) {
   const lastEvent = useMessagingEvent();
   const emitEvent = useMessagingEmit();
+  const reconnectedAt = useMessagingReconnect();
   const sectionFilter = (section === "sale" || section === "unattended" ? section : "all") as SectionValue;
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const [searchQuery, setSearchQuery] = useState("");
@@ -210,6 +211,11 @@ export function ConversationList({
       const attachments = Array.isArray(data.attachments) && data.attachments.length > 0
         ? data.attachments[0] : null;
 
+      // Activity messages (etiquetas, IA toggle, asignaciones) son eventos
+      // del sistema — no deben aparecer como preview en la lista ni mover
+      // la conversación arriba.
+      if (msgType === "activity") return;
+
       onConversationsChange(
         current.map((c) => c.id === convId ? {
           ...c,
@@ -222,6 +228,7 @@ export function ConversationList({
           } as Conversation["last_message"],
           last_message_at: createdAt as string | number,
           unread_count: msgType === "incoming" ? (c.unread_count ?? 0) + 1 : c.unread_count,
+          can_reply: msgType === "incoming" ? true : c.can_reply,
         } : c).sort((a, b) => {
           const aTime = a.last_message_at ? new Date(typeof a.last_message_at === "number" ? a.last_message_at * 1000 : a.last_message_at).getTime() : 0;
           const bTime = b.last_message_at ? new Date(typeof b.last_message_at === "number" ? b.last_message_at * 1000 : b.last_message_at).getTime() : 0;
@@ -252,9 +259,30 @@ export function ConversationList({
       onConversationsChange(
         current.map((c) => c.id === convId ? { ...c, labels } : c)
       );
+    } else if (event === "conversation.updated") {
+      // webhook_data del backend trae los campos actualizados (ai_agent_enabled,
+      // stage, status, temperature, assignee_id, team_id). Update in-place del
+      // item para reflejar cambios al instante (ej: quitar soporte-humano
+      // re-activa la IA y debe pintar el robot verde sin esperar refetch).
+      const convId = Number(data.id ?? data.conversation_id);
+      if (!Number.isNaN(convId) && current.some((c) => c.id === convId)) {
+        onConversationsChange(
+          current.map((c) => {
+            if (c.id !== convId) return c;
+            const next = { ...c };
+            if (typeof data.ai_agent_enabled === "boolean") next.ai_agent_enabled = data.ai_agent_enabled;
+            if (data.stage !== undefined) next.stage = data.stage as Conversation["stage"];
+            if (data.status !== undefined) next.status = data.status as Conversation["status"];
+            if (data.temperature !== undefined) next.temperature = data.temperature as Conversation["temperature"];
+            return next;
+          })
+        );
+      } else {
+        // Conversación no está en la lista actual (filtros/paginación) — refetch
+        debouncedRefetch();
+      }
     } else if (
       event === "conversation.created" ||
-      event === "conversation.updated" ||
       event === "conversation.status_changed"
     ) {
       debouncedRefetch();
@@ -264,6 +292,12 @@ export function ConversationList({
       if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
     };
   }, [lastEvent, onConversationsChange, debouncedRefetch]);
+
+  // Refresh conversation list when WebSocket reconnects (e.g. after sleep/wake)
+  useEffect(() => {
+    if (!reconnectedAt) return;
+    debouncedRefetch();
+  }, [reconnectedAt, debouncedRefetch]);
 
   // Scroll detection for infinite scroll (client-passive-event-listeners)
   useEffect(() => {
@@ -351,6 +385,7 @@ export function ConversationList({
                   conversation={conversation}
                   isSelected={selectedId === conversation.id}
                   temperatureConfig={temperatureConfig}
+                  tenantId={tenantId}
                   onClick={() => onSelect(conversation.id)}
                   onDelete={handleDelete}
                 />

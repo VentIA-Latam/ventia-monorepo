@@ -9,6 +9,8 @@ import {
   LogOut,
   Bell,
   Moon,
+  Sun,
+  Monitor,
   ChevronRight,
   CreditCard,
   Users,
@@ -20,8 +22,10 @@ import {
   Receipt,
   MessageSquare,
   Clock,
+  Ticket,
 } from "lucide-react"
 import { usePathname, useSearchParams } from "next/navigation"
+import { useTheme } from "next-themes"
 import { getConversationCounts } from "@/lib/api-client/messaging"
 import { useMessagingEvent } from "@/components/conversations/messaging-provider"
 import type { ConversationCounts } from "@/lib/types/messaging"
@@ -59,6 +63,8 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
@@ -225,7 +231,8 @@ const ConversationsNav = memo(function ConversationsNav({ pathname }: { pathname
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
-  const { user, isUserLoading, isSuperAdmin } = useAuth()
+  const { user, isUserLoading, isSuperAdmin, isAdmin } = useAuth()
+  const { theme, setTheme } = useTheme()
   const [notifDialogOpen, setNotifDialogOpen] = useState(false)
 
   const isActive = (url: string) => {
@@ -269,7 +276,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               src="/images/logo-ventia-sidebar.png"
               alt="VentIA"
               fill
-              className="object-contain"
+              className="object-contain dark:hidden"
+            />
+            <Image
+              src="/images/logo-ventia-header.png"
+              alt="VentIA"
+              fill
+              className="object-contain hidden dark:block"
             />
           </div>
         </div>
@@ -328,6 +341,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+
+              {isAdmin && (
+                <SidebarMenuItem className="mb-1">
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive("/dashboard/tickets")}
+                    tooltip="Tickets"
+                    className={`
+                        w-full justify-between h-10 px-3 rounded-lg transition-all duration-200
+                        ${isActive("/dashboard/tickets")
+                          ? "bg-gradient-to-r from-volt/10 to-aqua/5 border-l-2 border-l-volt shadow-sm"
+                          : "hover:bg-muted/60"
+                        }
+                    `}
+                  >
+                    <Link href="/dashboard/tickets" className="flex items-center w-full">
+                      <Ticket className="w-5 h-5 mr-3 shrink-0" />
+                      <span className="flex-1 truncate">Tickets</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -416,6 +451,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <Bell className="mr-2 h-4 w-4" />
                   Notificaciones
                 </DropdownMenuItem>
+                <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1 font-normal">
+                  Apariencia
+                </DropdownMenuLabel>
+                <DropdownMenuRadioGroup value={theme ?? "system"} onValueChange={setTheme}>
+                  <DropdownMenuRadioItem value="light" className="cursor-pointer">
+                    <Sun className="mr-2 h-4 w-4" /> Claro
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="system" className="cursor-pointer">
+                    <Monitor className="mr-2 h-4 w-4" /> Sistema
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="dark" className="cursor-pointer">
+                    <Moon className="mr-2 h-4 w-4" /> Oscuro
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
                 <DropdownMenuSeparator className="bg-sidebar-border" />
                 <DropdownMenuItem
                   onClick={handleLogout}

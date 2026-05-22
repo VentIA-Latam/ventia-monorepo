@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -13,6 +13,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import {
   Trash2,
@@ -27,15 +41,26 @@ import {
   MapPin,
   Paperclip,
   User,
+  Bot,
+  MoreVertical,
+  TrendingUp,
+  Headset,
 } from "lucide-react";
 import { TEMPERATURE_ICON_MAP } from "@/lib/utils/temperature-icons";
 import type { Conversation, TemperatureDefinition, MessageStatus } from "@/lib/types/messaging";
 import { getInitials, getWhatsAppTime } from "@/lib/utils/messaging";
+import { formatWhatsAppText } from "@/lib/utils/whatsapp-format";
+import {
+  updateConversationStage,
+  escalateConversation,
+  resolveEscalationConversation,
+} from "@/lib/api-client/messaging";
 
 interface ConversationItemProps {
   conversation: Conversation;
   isSelected: boolean;
   temperatureConfig?: TemperatureDefinition[];
+  tenantId?: number;
   onClick: () => void;
   onDelete?: (id: number) => void;
 }
@@ -68,7 +93,7 @@ function getMessagePreview(conversation: Conversation): React.ReactNode {
   const { last_message, contact } = conversation;
 
   if (!last_message) {
-    return contact?.phone_number || contact?.email || "";
+    return contact?.phone_number || contact?.whatsapp_bsuid || contact?.email || "";
   }
 
   // Attachment message
@@ -100,28 +125,63 @@ function getMessagePreview(conversation: Conversation): React.ReactNode {
         {last_message.message_type === "outgoing" && (
           <ListStatusIcon status={last_message.status} />
         )}
-        <span className="truncate">{last_message.content}</span>
+        <span className="truncate">{formatWhatsAppText(last_message.content)}</span>
       </span>
     );
   }
 
-  return contact?.phone_number || contact?.email || "";
+  return contact?.phone_number || contact?.whatsapp_bsuid || contact?.email || "";
 }
 
 export const ConversationItem = memo(function ConversationItem({
   conversation,
   isSelected,
   temperatureConfig = [],
+  tenantId,
   onClick,
   onDelete,
 }: ConversationItemProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const contact = conversation.contact;
+
+  const isPreSale = conversation.stage === "pre_sale";
+  const newStage = isPreSale ? "sale" : "pre_sale";
+  const stageLabel = isPreSale ? "Mover a Venta" : "Mover a Pre-venta";
+
+  const handleChangeStage = useCallback(async () => {
+    try {
+      await updateConversationStage(conversation.id, newStage, tenantId);
+    } catch (err) {
+      console.error("Error changing stage:", err);
+    }
+  }, [conversation.id, newStage, tenantId]);
+
+  const handleEscalate = useCallback(async () => {
+    try {
+      await escalateConversation(conversation.id, tenantId);
+    } catch (err) {
+      console.error("Error escalating conversation:", err);
+    }
+  }, [conversation.id, tenantId]);
+
+  const handleResolveEscalation = useCallback(async () => {
+    try {
+      await resolveEscalationConversation(conversation.id, tenantId);
+    } catch (err) {
+      console.error("Error resolving escalation:", err);
+    }
+  }, [conversation.id, tenantId]);
+
+  const handleDeleteClick = useCallback(() => {
+    setShowDeleteDialog(true);
+  }, []);
   const unreadCount = conversation.unread_count ?? 0;
   const hasUnread = unreadCount > 0;
 
   return (
     <>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
       <div
         className={cn(
           "group w-full flex items-center gap-3 py-3 px-4 text-left transition-colors cursor-pointer border-b border-border/30",
@@ -131,11 +191,33 @@ export const ConversationItem = memo(function ConversationItem({
         )}
         onClick={onClick}
       >
-        <Avatar className="h-12 w-12 shrink-0">
-          <AvatarFallback className="text-sm font-medium bg-muted">
-            {getInitials(contact?.name)}
-          </AvatarFallback>
-        </Avatar>
+        <div className="relative shrink-0">
+          <Avatar className="h-12 w-12">
+            <AvatarFallback className="text-sm font-medium bg-muted">
+              {getInitials(contact?.name)}
+            </AvatarFallback>
+          </Avatar>
+          <span
+            aria-label={
+              conversation.ai_agent_enabled
+                ? "Agente IA activo"
+                : "Agente IA pausado"
+            }
+            title={
+              conversation.ai_agent_enabled
+                ? "Agente IA activo"
+                : "Agente IA pausado"
+            }
+            className={cn(
+              "absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-background transition-colors",
+              conversation.ai_agent_enabled
+                ? "bg-success text-background shadow-[0_0_6px_-1px_oklch(0.59_0.18_145/0.5)]"
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            <Bot className="h-3 w-3" strokeWidth={2.5} />
+          </span>
+        </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
@@ -146,7 +228,7 @@ export const ConversationItem = memo(function ConversationItem({
                   hasUnread ? "font-semibold" : "font-medium"
                 )}
               >
-                {contact?.name || contact?.phone_number || "Sin nombre"}
+                {contact?.name || contact?.phone_number || contact?.whatsapp_bsuid || "Sin nombre"}
               </p>
               {conversation.stage === "sale" && (
                 <span className="inline-flex items-center shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold leading-none bg-success-bg text-success border border-success/30">
@@ -220,20 +302,86 @@ export const ConversationItem = memo(function ConversationItem({
           )}
         </div>
 
-        {onDelete && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowDeleteDialog(true);
-            }}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Más acciones"
+              className="h-8 w-8 shrink-0 text-muted-foreground transition-opacity opacity-100 [@media(hover:hover)]:md:opacity-0 [@media(hover:hover)]:md:group-hover:opacity-100 data-[state=open]:opacity-100"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            onClick={(e) => e.stopPropagation()}
           >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        )}
+            <DropdownMenuItem onSelect={handleChangeStage}>
+              <TrendingUp className="h-4 w-4 mr-2" />
+              {stageLabel}
+            </DropdownMenuItem>
+            {conversation.ai_agent_enabled ? (
+              <DropdownMenuItem onSelect={handleEscalate}>
+                <Headset className="h-4 w-4 mr-2" />
+                Escalar
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                onSelect={handleResolveEscalation}
+                className="text-success focus:text-success focus:bg-success-bg"
+              >
+                <Bot className="h-4 w-4 mr-2" />
+                Activar agente IA
+              </DropdownMenuItem>
+            )}
+            {onDelete && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={handleDeleteClick}
+                  className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar conversación
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem onSelect={handleChangeStage}>
+            <TrendingUp className="h-4 w-4 mr-2" />
+            {stageLabel}
+          </ContextMenuItem>
+          {conversation.ai_agent_enabled ? (
+            <ContextMenuItem onSelect={handleEscalate}>
+              <Headset className="h-4 w-4 mr-2" />
+              Escalar
+            </ContextMenuItem>
+          ) : (
+            <ContextMenuItem
+              onSelect={handleResolveEscalation}
+              className="text-success focus:text-success focus:bg-success-bg"
+            >
+              <Bot className="h-4 w-4 mr-2" />
+              Activar agente IA
+            </ContextMenuItem>
+          )}
+          {onDelete && (
+            <>
+              <ContextMenuSeparator />
+              <ContextMenuItem variant="destructive" onSelect={handleDeleteClick}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Eliminar conversación
+              </ContextMenuItem>
+            </>
+          )}
+        </ContextMenuContent>
+      </ContextMenu>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>

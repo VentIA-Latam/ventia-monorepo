@@ -55,7 +55,7 @@ RSpec.describe ActivityMessageHandler, type: :model do
       # Skip temperature validation for test
       allow_any_instance_of(Conversation).to receive(:validate_temperature_key).and_return(true)
       conversation.update!(temperature: 'calido')
-      expect(activity_messages.last.content).to eq('Temperatura cambiada a calido por Juan Pérez')
+      expect(activity_messages.last.content).to eq("Temperatura 'calido' añadida por Juan Pérez")
     end
   end
 

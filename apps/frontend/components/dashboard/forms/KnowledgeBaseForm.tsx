@@ -27,7 +27,7 @@ export default function KnowledgeBaseForm() {
   ];
 
   return (
-    <div className="bg-white rounded-lg p-6 shadow-sm border border-border">
+    <div className="bg-card rounded-lg p-6 shadow-sm border border-border">
       <div className="flex items-center gap-3 mb-6">
         <div className="w-6 h-6 rounded-full border-2 border-aqua flex items-center justify-center">
           <div className="w-3 h-3 rounded-full bg-aqua"></div>
@@ -77,7 +77,7 @@ export default function KnowledgeBaseForm() {
       {/* Modal para agregar tema */}
       {showAddTopicModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fadeIn">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-2xl animate-scaleIn">
+          <div className="bg-card rounded-lg p-6 w-full max-w-md shadow-2xl animate-scaleIn">
             {/* Header del modal */}
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-foreground">
@@ -148,7 +148,7 @@ export default function KnowledgeBaseForm() {
                       className="fixed inset-0 z-10"
                       onClick={() => setShowTopicTypeDropdown(false)}
                     />
-                    <div className="absolute z-20 w-full mt-1 bg-white border border-border rounded-lg shadow-lg max-h-60 overflow-auto">
+                    <div className="absolute z-20 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-60 overflow-auto">
                       {topics.map((topic) => (
                         <button
                           key={topic.id}

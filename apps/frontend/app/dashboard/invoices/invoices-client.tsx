@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatDate } from "@/lib/utils";
+import { useTenantTimezone } from "@/lib/context/timezone-context";
 import { Invoice, INVOICE_TYPE_NAMES, INVOICE_STATUS_NAMES, INVOICE_STATUS_COLORS } from "@/lib/types/invoice";
 import {
   Search,
@@ -70,6 +71,7 @@ async function fetchInvoicesFromApi(
 
 export function InvoicesClientView({ initialInvoices, initialTotal }: InvoicesClientViewProps) {
   const { toast } = useToast();
+  const tz = useTenantTimezone();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -364,7 +366,7 @@ export function InvoicesClientView({ initialInvoices, initialTotal }: InvoicesCl
                       {invoice.currency} {invoice.total.toFixed(2)}
                     </TableCell>
                     <TableCell>
-                      {formatDate(invoice.created_at)}
+                      {formatDate(invoice.created_at, tz)}
                     </TableCell>
                     <TableCell>
                       <Badge

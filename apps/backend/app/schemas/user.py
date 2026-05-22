@@ -78,6 +78,7 @@ class TenantInfo(BaseModel):
     id: int
     name: str
     slug: str
+    timezone: str
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -85,7 +86,7 @@ class TenantInfo(BaseModel):
 class UserWithTenant(UserResponse):
     """Schema for User response with tenant info."""
 
-    tenant: TenantInfo = Field(..., description="Tenant info (id, name, slug)")
+    tenant: TenantInfo = Field(..., description="Tenant info (id, name, slug, timezone)")
 
     model_config = ConfigDict(from_attributes=True)
 

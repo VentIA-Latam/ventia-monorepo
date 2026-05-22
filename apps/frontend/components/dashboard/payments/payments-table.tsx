@@ -17,18 +17,19 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { useTenantTimezone } from "@/lib/context/timezone-context"
 
 /* -------------------- COLUMNAS -------------------- */
 
 import { formatDate } from "@/lib/utils";
 
-export const paymentColumns: ColumnDef<PaymentRecord>[] = [
+export const buildPaymentColumns = (tz: string): ColumnDef<PaymentRecord>[] => [
   {
     accessorKey: "fechaIngresada",
     header: "FECHA INGRESADA",
     cell: ({ row }) => (
       <span className="text-sm text-muted-foreground">
-        {formatDate(row.original.fechaIngresada)}
+        {formatDate(row.original.fechaIngresada, tz)}
       </span>
     ),
   },
@@ -37,7 +38,7 @@ export const paymentColumns: ColumnDef<PaymentRecord>[] = [
     header: "FECHA DE ENTREGA DEL PEDIDO",
     cell: ({ row }) => (
       <span className="text-sm text-muted-foreground">
-        {formatDate(row.original.fechaEntrega)}
+        {formatDate(row.original.fechaEntrega, tz)}
       </span>
     ),
   },
@@ -182,7 +183,7 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Tabla */}
-      <div className="border rounded-lg bg-white shadow-sm overflow-hidden">
+      <div className="border rounded-lg bg-card shadow-sm overflow-hidden">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -235,7 +236,7 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Info de paginación */}
-      <div className="flex justify-end text-xs text-slate-500">
+      <div className="flex justify-end text-xs text-muted-foreground">
         Página {table.getState().pagination.pageIndex + 1} de{" "}
         {table.getPageCount() || 1}
       </div>
@@ -250,5 +251,7 @@ interface PaymentsTableProps {
 }
 
 export function PaymentsTable({ records }: PaymentsTableProps) {
-  return <DataTable columns={paymentColumns} data={records} />
+  const tz = useTenantTimezone();
+  const columns = React.useMemo(() => buildPaymentColumns(tz), [tz]);
+  return <DataTable columns={columns} data={records} />
 }

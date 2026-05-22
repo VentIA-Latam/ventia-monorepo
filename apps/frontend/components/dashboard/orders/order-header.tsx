@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { CancelOrderDialog } from "./cancel-order-dialog";
 import { formatDateTime, getEcommerceOrderId } from "@/lib/utils";
+import { useTenantTimezone } from "@/lib/context/timezone-context";
 
 interface OrderHeaderProps {
   order: Order;
@@ -29,6 +30,7 @@ export function OrderHeader({
   basePath = '/dashboard',
 }: OrderHeaderProps) {
   const router = useRouter();
+  const tz = useTenantTimezone();
 
   const getStatusBadge = () => {
     if (order.validado && order.status === 'Pagado') {
@@ -94,7 +96,7 @@ export function OrderHeader({
           <div className="min-w-0 flex-1">
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold break-words">Pedido #{getEcommerceOrderId(order)}</h1>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              Creado el {formatDateTime(order.created_at)}
+              Creado el {formatDateTime(order.created_at, tz)}
             </p>
           </div>
         </div>

@@ -29,6 +29,7 @@ from app.services.webhook_service import (
     process_woocommerce_order_created,
     process_woocommerce_order_deleted,
     process_woocommerce_order_updated,
+    try_link_conversation,
 )
 
 logger = logging.getLogger(__name__)
@@ -265,6 +266,7 @@ async def _receive_shopify_webhook_impl(
                 logger.info(
                     f"Processed draft_orders/create: created order_id={order.id}"
                 )
+                await try_link_conversation(db, order, tenant, payload)
             except Exception as process_error:
                 logger.error(
                     f"Failed to process draft_orders/create webhook: {str(process_error)}",
@@ -316,6 +318,7 @@ async def _receive_shopify_webhook_impl(
                         f"Processed orders/create: created/updated order_id={order.id}, "
                         f"status={order.status}, validado={order.validado}"
                     )
+                    await try_link_conversation(db, order, tenant, payload)
                 else:
                     logger.warning(
                         f"Processed orders/create but order not returned for tenant={tenant.id}"
@@ -385,6 +388,8 @@ async def _receive_shopify_webhook_impl(
                 logger.info(
                     f"Processed orders/updated: updated order_id={order.id if order else 'not_found'}"
                 )
+                if order:
+                    await try_link_conversation(db, order, tenant, payload)
             except Exception as process_error:
                 logger.error(
                     f"Failed to process orders/updated webhook: {str(process_error)}",

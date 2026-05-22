@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, memo } from "react";
 import { flushSync } from "react-dom";
+import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,10 +19,11 @@ import { ArrowLeft, MessageSquare, Loader2, Bot, AlertTriangle, MoreVertical, Us
 import { MessageBubble } from "./message-bubble";
 import { MessageComposer } from "./message-composer";
 import { TemplatePicker } from "./template-picker";
-import { useMessagingEvent } from "./messaging-provider";
+import { useMessagingEvent, useMessagingReconnect } from "./messaging-provider";
 import { getMessages, sendMessage, updateConversation, markConversationRead } from "@/lib/api-client/messaging";
-import type { Conversation, Message, MessageType, MessageStatus, MessageContentAttributes, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
-import { getInitials, getDateSeparatorLabel, parseTimestamp } from "@/lib/utils/messaging";
+import type { Conversation, Message, MessageType, MessageStatus, MessageContentAttributes, MessageAdditionalAttributes, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
+import { getInitials, getDateSeparatorLabel, parseTimestamp, getSenderKey } from "@/lib/utils/messaging";
+import { useAuth } from "@/hooks/use-auth";
 
 function mapWebSocketAttachments(raw: unknown): AttachmentBrief[] {
   if (!Array.isArray(raw)) return [];
@@ -62,6 +64,12 @@ interface MessageViewProps {
 
 export const MessageView = memo(function MessageView({ conversation, tenantId, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
   const lastEvent = useMessagingEvent();
+  const reconnectedAt = useMessagingReconnect();
+  const { userDetails } = useAuth();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted && resolvedTheme === "dark";
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -118,6 +126,25 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
     };
   }, [conversation?.id]);
 
+  // Refresh messages when WebSocket reconnects (e.g. after sleep/wake)
+  useEffect(() => {
+    if (!reconnectedAt || !conversation) return;
+
+    let cancelled = false;
+    getMessages(conversation.id, { tenantId })
+      .then((data) => {
+        if (cancelled) return;
+        const msgs = data.data ?? [];
+        messageIdsRef.current = new Set(msgs.map((m) => String(m.id)));
+        scrollBehaviorRef.current = "instant";
+        setMessages(msgs);
+        setHasMore(Boolean(data.meta?.has_more));
+      })
+      .catch((err) => console.error("[reconnect] Error refreshing messages:", err));
+
+    return () => { cancelled = true; };
+  }, [reconnectedAt, conversation?.id, tenantId]);
+
   // Append new messages from WebSocket events
   useEffect(() => {
     if (!lastEvent || !conversation) return;
@@ -141,8 +168,11 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
     const wsAttachments = mapWebSocketAttachments(msgData.attachments);
     const wsSender = mapWebSocketSender(msgData.sender);
 
+    const wsAdditionalAttributes =
+      (msgData.additional_attributes as MessageAdditionalAttributes | undefined) ?? null;
+
     setMessages((prev) => {
-      if (msgType === "outgoing") {
+      if (msgType === "outgoing" || msgType === "template") {
         const lastTempIdx = prev.findLastIndex((m) => String(m.id).startsWith("temp-"));
         if (lastTempIdx >= 0) {
           const tempMsg = prev[lastTempIdx];
@@ -153,6 +183,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
             message_type: msgType as MessageType,
             status: (msgData.status as MessageStatus) ?? undefined,
             content_attributes: (msgData.content_attributes as MessageContentAttributes) ?? undefined,
+            additional_attributes: wsAdditionalAttributes ?? tempMsg.additional_attributes ?? null,
             sender: wsSender,
             attachments: wsAttachments.length > 0 ? wsAttachments : tempMsg.attachments,
             created_at: createdAt,
@@ -167,6 +198,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
         message_type: msgType as MessageType,
         status: (msgData.status as MessageStatus) ?? undefined,
         content_attributes: (msgData.content_attributes as MessageContentAttributes) ?? undefined,
+        additional_attributes: wsAdditionalAttributes,
         sender: wsSender,
         attachments: wsAttachments,
         created_at: createdAt,
@@ -338,7 +370,9 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
         id: `temp-${Date.now()}`,
         content,
         message_type: "outgoing",
-        sender: null,
+        sender: userDetails
+          ? { id: userDetails.id, name: userDetails.name, email: userDetails.email }
+          : null,
         attachments: tempAttachments,
         created_at: new Date().toISOString(),
       };
@@ -364,7 +398,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
         if (previewUrl) URL.revokeObjectURL(previewUrl);
       }
     },
-    [conversation?.id, tenantId]
+    [conversation?.id, tenantId, userDetails]
   );
 
   // Toggle AI agent
@@ -387,7 +421,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
   // No conversation selected
   if (!conversation) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-muted/20">
+      <div className="flex-1 flex items-center justify-center bg-background">
         <EmptyState
           icon={<MessageSquare className="h-8 w-8" />}
           title="Selecciona una conversación"
@@ -467,12 +501,32 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
       </div>
 
       {/* Messages — WhatsApp style with chat wallpaper */}
-      <div
-        ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-16 py-3 min-h-0 min-w-0 overscroll-y-contain"
-        style={{ backgroundImage: "url('/images/fondo-conversacion.png')", backgroundRepeat: "repeat" }}
-      >
-        <div ref={contentRef} className="space-y-1 max-w-full">
+      <div className="flex-1 relative min-h-0 min-w-0 bg-[#f0f0f0] dark:bg-[#09090b]">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-10 dark:hidden"
+          style={{
+            zIndex: 0,
+            backgroundImage: "url('/images/fondo-wts.webp')",
+            backgroundRepeat: "repeat",
+            filter: "invert(1) brightness(1.5)",
+          }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-60 hidden dark:block"
+          style={{
+            zIndex: 0,
+            backgroundImage: "url('/images/fondo-wts.webp')",
+            backgroundRepeat: "repeat",
+            filter: "brightness(0.15)",
+          }}
+        />
+        <div
+          ref={scrollContainerRef}
+          className="relative z-[1] h-full overflow-y-auto overflow-x-hidden overscroll-y-contain"
+        >
+        <div ref={contentRef} className="space-y-1 max-w-full px-4 md:px-16 py-3">
           {!hasMore && !loading && messages.length > 0 && (
             <div className="flex justify-center py-4">
               <p className="text-xs text-muted-foreground/60">
@@ -510,6 +564,13 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
                 msgDate.getDate() !== prevDate.getDate()
               );
 
+              // Avatar lateral solo en el último de un cluster del mismo sender (estilo iMessage)
+              const next = arr[i + 1];
+              const isLastInCluster =
+                !next ||
+                next.message_type === "activity" ||
+                getSenderKey(next) !== getSenderKey(msg);
+
               return (
                 <div key={msg.id} data-msg-id={msg.id}>
                   {showSeparator ? (
@@ -520,7 +581,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
                     </div>
                   ) : null}
                   <div style={MESSAGE_ITEM_STYLE}>
-                    <MessageBubble message={msg} />
+                    <MessageBubble message={msg} showAvatar={isLastInCluster} />
                   </div>
                 </div>
               );
@@ -529,6 +590,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
 
           {/* Scroll anchor */}
           <div ref={bottomRef} className="h-px" />
+        </div>
         </div>
       </div>
 

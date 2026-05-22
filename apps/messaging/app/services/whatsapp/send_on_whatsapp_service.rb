@@ -31,7 +31,16 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
       return
     end
 
-    message_id = channel.send_template(message.conversation.contact_inbox.source_id, {
+    source_id = message.conversation.contact_inbox.source_id
+    if template_category == 'AUTHENTICATION' && bsuid_recipient?(source_id)
+      message.update!(
+        status: :failed,
+        external_error: '131062: Authentication templates require phone number (BSUID not supported)'
+      )
+      return
+    end
+
+    message_id = channel.send_template(source_id, {
                                          name: name,
                                          namespace: namespace,
                                          lang_code: lang_code,
@@ -47,5 +56,13 @@ class Whatsapp::SendOnWhatsappService < Base::SendOnChannelService
 
   def template_params
     message.additional_attributes && message.additional_attributes['template_params']
+  end
+
+  def template_category
+    template_params&.dig('template_snapshot', 'category')
+  end
+
+  def bsuid_recipient?(source_id)
+    source_id.to_s.match?(/\A[A-Z]{2}\./)
   end
 end

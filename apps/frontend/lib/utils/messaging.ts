@@ -3,6 +3,34 @@
  * Extracted from conversation-item, message-bubble, message-view, contact-info-panel.
  */
 
+import type { Message } from "@/lib/types/messaging";
+
+export type SenderRole = "customer" | "operator" | "ai";
+
+/**
+ * Identifica quién envió el mensaje:
+ * - "customer": mensaje incoming del cliente (Contact)
+ * - "operator": outgoing con sender (operador humano via header X-User-Id)
+ * - "ai": outgoing sin sender (n8n llama API solo con tenant header)
+ */
+export function getSenderRole(message: Message): SenderRole {
+  if (message.message_type === "incoming") return "customer";
+  return message.sender ? "operator" : "ai";
+}
+
+/**
+ * Devuelve una clave estable que identifica el sender para agrupar
+ * mensajes consecutivos en clusters (estilo iMessage).
+ */
+export function getSenderKey(message: Message): string {
+  const role = getSenderRole(message);
+  if (role === "ai") return "ai";
+  if (message.sender && "id" in message.sender) {
+    return `${role}:${message.sender.id}`;
+  }
+  return role;
+}
+
 export function getInitials(name: string | null | undefined): string {
   if (!name) return "?";
   return name

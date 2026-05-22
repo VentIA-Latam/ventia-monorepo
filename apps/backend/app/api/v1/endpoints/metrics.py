@@ -11,6 +11,7 @@ from app.api.deps import get_current_user, get_database
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.schemas.metrics import (
+    ConversionRateResponse,
     DashboardMetrics,
     MetricsQuery,
     OrdersByCityResponse,
@@ -143,4 +144,31 @@ async def get_orders_by_city(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve orders by city: {str(e)}",
+        )
+
+
+@router.get("/conversion-rate", response_model=ConversionRateResponse, tags=["metrics"])
+async def get_conversion_rate(
+    period: PeriodType = Query("today"),
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_database),
+) -> ConversionRateResponse:
+    """Get AI agent conversion rate for a period (US-CONV-004)."""
+    try:
+        query = MetricsQuery(period=period, start_date=start_date, end_date=end_date)
+        tz_name = _get_tenant_timezone(db, current_user.tenant_id)
+        result = await metrics_service.get_conversion_rate(
+            db, current_user.tenant_id, query, tz_name=tz_name
+        )
+        return ConversionRateResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve conversion rate: {e}",
         )

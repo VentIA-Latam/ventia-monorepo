@@ -40,7 +40,11 @@ export async function getConversations(
 }
 
 export async function getConversation(id: number | string, tenantId?: number): Promise<Conversation> {
-  return apiGet(`/api/messaging/conversations/${id}`, tenantId ? { tenant_id: tenantId } : undefined);
+  const resp = await apiGet<{ success: boolean; data: Conversation }>(
+    `/api/messaging/conversations/${id}`,
+    tenantId ? { tenant_id: tenantId } : undefined,
+  );
+  return resp.data;
 }
 
 export async function updateConversation(
@@ -68,6 +72,22 @@ export async function updateConversationStage(
 ): Promise<unknown> {
   const qs = tenantId ? `?tenant_id=${tenantId}` : "";
   return apiPost(`/api/messaging/conversations/${id}/stage${qs}`, { stage });
+}
+
+export async function escalateConversation(
+  id: number | string,
+  tenantId?: number
+): Promise<unknown> {
+  const qs = tenantId ? `?tenant_id=${tenantId}` : "";
+  return apiPost(`/api/messaging/conversations/${id}/escalate${qs}`, {});
+}
+
+export async function resolveEscalationConversation(
+  id: number | string,
+  tenantId?: number
+): Promise<unknown> {
+  const qs = tenantId ? `?tenant_id=${tenantId}` : "";
+  return apiPost(`/api/messaging/conversations/${id}/resolve-escalation${qs}`, {});
 }
 
 export async function markConversationRead(conversationId: number | string, tenantId?: number): Promise<unknown> {

@@ -14,6 +14,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Search, RefreshCw, FileText, ArrowLeft, AlertCircle } from "lucide-react";
 import { getTemplates, syncTemplates, sendTemplateMessage } from "@/lib/api-client/messaging";
+import { ClientApiError } from "@/lib/api-client/client";
+import { formatWhatsAppText } from "@/lib/utils/whatsapp-format";
 import { TemplateParameterForm } from "./template-parameter-form";
 import type { WhatsAppTemplate, SendTemplatePayload } from "@/lib/types/messaging";
 
@@ -110,12 +112,16 @@ export function TemplatePicker({
         onOpenChange(false);
       } catch (err) {
         console.error("Error sending template:", err);
-        setSendError("Error al enviar la plantilla. Intenta de nuevo.");
+        const friendly =
+          err instanceof ClientApiError && err.message
+            ? err.message
+            : "Error al enviar la plantilla. Intenta de nuevo.";
+        setSendError(friendly);
       } finally {
         setSending(false);
       }
     },
-    [conversationId, onSent, onOpenChange]
+    [conversationId, tenantId, onSent, onOpenChange]
   );
 
   const filteredTemplates = useMemo(() => {
@@ -244,7 +250,7 @@ export function TemplatePicker({
                           </p>
                         )}
                         <p className="text-xs text-muted-foreground line-clamp-2">
-                          {getTemplateBody(template)}
+                          {formatWhatsAppText(getTemplateBody(template))}
                         </p>
                       </button>
                     );

@@ -10,7 +10,9 @@ export interface PlatformSelectorProps {
   onPlatformChange: (platform: Platform) => void;
   /** If provided, shows "Actual" badge and "Ninguna" option (edit mode) */
   initialPlatform?: Platform;
-  /** Number of columns for the grid. Defaults to 2 (create) or 3 (edit with initialPlatform) */
+  /** Explicitly show the "Ninguna" option regardless of initialPlatform */
+  showNone?: boolean;
+  /** Number of columns for the grid. Defaults to 2 (create) or 3 (when Ninguna is shown) */
   columns?: 2 | 3;
 }
 
@@ -18,9 +20,10 @@ export function PlatformSelector({
   selectedPlatform,
   onPlatformChange,
   initialPlatform,
+  showNone: showNoneProp,
   columns,
 }: PlatformSelectorProps) {
-  const showNone = initialPlatform !== undefined;
+  const showNone = showNoneProp ?? initialPlatform !== undefined;
   const gridCols = columns ?? (showNone ? 3 : 2);
 
   return (

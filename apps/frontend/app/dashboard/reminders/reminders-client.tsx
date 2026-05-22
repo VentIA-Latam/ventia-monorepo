@@ -48,7 +48,7 @@ function getWindowShortLabel(label: string): string {
 }
 
 function getTempColor(temperature: string): string {
-  return TEMP_COLORS[temperature] || "bg-gray-100 text-gray-700 border-gray-200";
+  return TEMP_COLORS[temperature] || "bg-muted text-muted-foreground border-border";
 }
 
 function getTempDisplay(temperature: string): string {
@@ -377,7 +377,7 @@ export function RemindersClient({ initialData, initialWorkflowActive }: Props) {
                       {activePreview.windowLabel}
                     </p>
                     {/* WhatsApp bubble */}
-                    <div className="bg-cielo/30 border border-aqua/20 rounded-xl rounded-tl-sm px-4 py-3 shadow-sm">
+                    <div className="bg-chat-outgoing/30 border border-aqua/20 rounded-xl rounded-tl-sm px-4 py-3 shadow-sm">
                       <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
                         {activePreview.text || (
                           <span className="text-muted-foreground italic">

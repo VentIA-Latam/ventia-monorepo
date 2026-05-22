@@ -32,12 +32,14 @@ import {
 } from "@/components/ui/select";
 import { Tenant, TenantFilters, EcommercePlatform } from "@/lib/types/tenant";
 import { useRouter } from "next/navigation";
+import { useTenant } from "@/lib/context/tenant-context";
 import { CreateTenantDialog } from "@/components/superadmin/create-tenant-dialog";
 import { EditTenantDialog } from "@/components/superadmin/edit-tenant-dialog";
 import { ToggleTenantStatusDialog } from "@/components/superadmin/toggle-tenant-status-dialog";
 
 export function TenantsClient({ initialTenants }: { initialTenants: Tenant[] }) {
   const router = useRouter();
+  const { refreshTenants: refreshGlobalTenants } = useTenant();
   const [tenants, setTenants] = useState<Tenant[]>(initialTenants);
   const [filters, setFilters] = useState<TenantFilters>({
     search: "",
@@ -96,6 +98,7 @@ export function TenantsClient({ initialTenants }: { initialTenants: Tenant[] }) 
     try {
       const data = await getTenants({ limit: 100 });
       setTenants(data.items || []);
+      await refreshGlobalTenants();
     } catch (error) {
       console.error('Error fetching tenants:', error);
     }
@@ -264,7 +267,7 @@ export function TenantsClient({ initialTenants }: { initialTenants: Tenant[] }) 
                       </TableCell>
                       <TableCell>
                         {tenant.is_platform ? (
-                          <Badge variant="secondary" className="bg-luma/15 text-marino border-0 hover:bg-luma/15 rounded-md px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs">
+                          <Badge variant="secondary" className="bg-luma/15 text-platform-badge border-0 hover:bg-luma/15 rounded-md px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs">
                             Plataforma
                           </Badge>
                         ) : (
