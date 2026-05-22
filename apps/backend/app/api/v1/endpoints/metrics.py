@@ -14,6 +14,7 @@ from app.schemas.metrics import (
     ConversionRateResponse,
     DashboardMetrics,
     MetricsQuery,
+    NoPurchaseReasonsResponse,
     OrdersByCityResponse,
     PeriodType,
     SetNoPurchaseReasonRequest,
@@ -210,22 +211,33 @@ async def set_no_purchase_reason(
 
 @router.get(
     "/no-purchase-reasons",
+    response_model=NoPurchaseReasonsResponse,
     summary="KPI motivos de no compra por rango de fechas",
     tags=["metrics"],
 )
 async def get_no_purchase_reasons(
-    start_date: str = Query(..., description="Fecha inicio ISO 8601 (YYYY-MM-DD)"),
-    end_date: str = Query(..., description="Fecha fin ISO 8601 (YYYY-MM-DD)"),
+    period: PeriodType = Query("custom"),
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
     current_user: User = Depends(require_permission_dual("GET", "/metrics/*")),
-) -> dict:
-    tenant_id = _resolve_tenant_id(current_user)
-    data, status_code = await messaging_service.get_no_purchase_reasons(
-        tenant_id=tenant_id,
-        start_date=start_date,
-        end_date=end_date,
-    )
-    if status_code == 0:
-        raise HTTPException(status_code=503, detail="Messaging service unavailable")
-    if status_code not in (200, 201):
-        raise HTTPException(status_code=status_code, detail="Error fetching data")
-    return data
+    db: Session = Depends(get_database),
+) -> NoPurchaseReasonsResponse:
+    """Get no-purchase reasons KPI for the current user's tenant."""
+    try:
+        query = MetricsQuery(period=period, start_date=start_date, end_date=end_date)
+        tz_name = _get_tenant_timezone(db, current_user.tenant_id)
+        result = await metrics_service.get_no_purchase_reasons(
+            tenant_id=current_user.tenant_id,
+            query=query,
+            tz_name=tz_name,
+        )
+        return NoPurchaseReasonsResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve no-purchase reasons: {e}",
+        )
