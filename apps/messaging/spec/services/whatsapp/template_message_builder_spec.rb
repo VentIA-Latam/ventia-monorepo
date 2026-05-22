@@ -17,6 +17,7 @@ RSpec.describe Whatsapp::TemplateMessageBuilder do
       'language' => 'es',
       'status' => 'APPROVED',
       'namespace' => 'ns_123',
+      'category' => 'MARKETING',
       'components' => [
         { 'type' => 'HEADER', 'format' => 'IMAGE' },
         { 'type' => 'BODY', 'text' => 'Hola {{1}} te enviamos tu pedido {{2}}' },
@@ -51,6 +52,17 @@ RSpec.describe Whatsapp::TemplateMessageBuilder do
           'namespace' => 'ns_123'
         )
         expect(result[:additional_attributes]['template_params']['template_snapshot']['components']).to eq(approved_template['components'])
+      end
+
+      it 'snapshots the template category for downstream BSUID validation (Bug B)' do
+        result = described_class.new(
+          conversation: conversation,
+          name: 'imagen_button',
+          language: 'es',
+          processed_params: { 'body' => { '1' => 'Tarek', '2' => '#ORD-1' } }
+        ).build
+
+        expect(result[:additional_attributes]['template_params']['template_snapshot']['category']).to eq('MARKETING')
       end
     end
 

@@ -219,10 +219,12 @@ class Api::V1::ConversationsController < Api::V1::BaseController
       created_at: conversation.created_at,
       last_message_at: conversation.messages.maximum(:created_at),
       contact: {
-        id: conversation.contact.id,
-        name: conversation.contact.name,
-        phone_number: conversation.contact.phone_number,
-        email: conversation.contact.email,
+        id:               conversation.contact.id,
+        name:             conversation.contact.name,
+        phone_number:     conversation.contact.phone_number,
+        email:            conversation.contact.email,
+        identifier:       conversation.contact.identifier,
+        whatsapp_bsuid:   conversation.contact_inbox&.whatsapp_bsuid,
         last_activity_at: conversation.contact.last_activity_at
       },
       assignee: conversation.assignee ? {

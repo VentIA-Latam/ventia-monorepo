@@ -112,8 +112,9 @@ class Whatsapp::IncomingMessageService
 
   def process_single_message(message_data)
     msg_type = message_data['type'] || message_data[:type]
-    msg_id = message_data['id'] || message_data[:id]
-    from = message_data['from'] || message_data[:from]
+    msg_id   = message_data['id']   || message_data[:id]
+    from     = message_data['from'] || message_data[:from]
+    bsuid    = message_data['from_user_id'] || message_data[:from_user_id]
 
     # For echo messages, contact phone is in 'to' field (reversed — business sent TO customer)
     contact_phone = if @outgoing_echo
@@ -127,12 +128,14 @@ class Whatsapp::IncomingMessageService
     return if Message.exists?(source_id: msg_id)
 
     cache_message_source_id(msg_id)
-    contact_info = @outgoing_echo ? {} : find_contact_info(from)
+    contact_info = @outgoing_echo ? {} : find_contact_info(from, bsuid)
 
     ActiveRecord::Base.transaction do
-      @contact = find_or_create_contact(contact_phone, contact_info)
-      @contact_inbox = find_or_create_contact_inbox(@contact, contact_phone)
-      @conversation = find_or_create_conversation(@contact, @contact_inbox)
+      @contact       = find_or_create_contact(contact_phone, bsuid, contact_info)
+      @contact_inbox = find_or_create_contact_inbox(@contact, contact_phone, bsuid)
+      return if @contact_inbox.nil?
+
+      @conversation  = find_or_create_conversation(@contact, @contact_inbox)
 
       in_reply_to_external_id = message_data.dig('context', 'id') || message_data.dig(:context, :id)
 
@@ -146,9 +149,10 @@ class Whatsapp::IncomingMessageService
     update_contact_with_profile_name(contact_info)
   end
 
-  def find_contact_info(wa_id)
+  def find_contact_info(phone, bsuid)
     contacts_data.find do |c|
-      (c['wa_id'] || c[:wa_id]) == wa_id
+      ((c['wa_id']   || c[:wa_id])   == phone && phone.present?) ||
+      ((c['user_id'] || c[:user_id]) == bsuid && bsuid.present?)
     end || {}
   end
 
@@ -323,8 +327,9 @@ class Whatsapp::IncomingMessageService
     return if profile_name.blank?
     return if @contact.name == profile_name
 
-    phone = @contact.phone_number
-    return unless @contact.name == phone || @contact.name == phone&.gsub('+', '')
+    default_name = @contact.phone_number || @contact_inbox&.whatsapp_bsuid
+    return if default_name.blank?
+    return unless @contact.name == default_name || @contact.name == default_name.gsub('+', '')
 
     @contact.update(name: profile_name)
   end

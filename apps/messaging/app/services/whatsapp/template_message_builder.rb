@@ -25,7 +25,10 @@ class Whatsapp::TemplateMessageBuilder
           'language'          => @language,
           'namespace'         => template['namespace'],
           'processed_params'  => @processed_params,
-          'template_snapshot' => { 'components' => template['components'] }
+          'template_snapshot' => {
+            'components' => template['components'],
+            'category'   => template['category']
+          }
         }
       }
     }
