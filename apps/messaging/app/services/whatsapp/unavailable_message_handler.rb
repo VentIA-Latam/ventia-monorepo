@@ -29,6 +29,8 @@ class Whatsapp::UnavailableMessageHandler
     ActiveRecord::Base.transaction do
       @contact      = find_or_create_contact(phone, bsuid, contact_info)
       contact_inbox = find_or_create_contact_inbox(@contact, phone, bsuid)
+      return if contact_inbox.nil?
+
       @conversation = find_or_create_conversation(@contact, contact_inbox)
 
       create_placeholder_message(msg_id, referral)

@@ -30,12 +30,16 @@ class Campaigns::TriggerService
   end
 
   def reachable_contacts
-    with_phone = @campaign.account.contacts.where.not(phone_number: nil)
-    with_bsuid = @campaign.account.contacts
-                           .joins(:contact_inboxes)
-                           .where(contact_inboxes: { inbox: @campaign.inbox })
-                           .where.not(contact_inboxes: { whatsapp_bsuid: nil })
-    with_phone.or(with_bsuid).distinct
+    # Use subquery IDs to keep both branches structurally compatible for #or.
+    ids_with_phone = @campaign.account.contacts.where.not(phone_number: nil).select(:id)
+    ids_with_bsuid = ContactInbox
+                       .where(inbox: @campaign.inbox)
+                       .where.not(whatsapp_bsuid: nil)
+                       .select(:contact_id)
+
+    @campaign.account.contacts.where(id: ids_with_phone).or(
+      @campaign.account.contacts.where(id: ids_with_bsuid)
+    )
   end
 
   def filter_audience_contacts
@@ -63,7 +67,10 @@ class Campaigns::TriggerService
   end
 
   def create_campaign_conversation(contact)
-    existing_ci = ContactInbox.find_by(contact: contact, inbox: @campaign.inbox)
+    existing_ci = ContactInbox
+                    .where(contact: contact, inbox: @campaign.inbox)
+                    .order(Arel.sql('whatsapp_bsuid IS NULL ASC'))
+                    .first
     bsuid     = existing_ci&.whatsapp_bsuid
     source_id = bsuid.presence || contact.phone_number&.gsub(/[^\d]/, '')
 

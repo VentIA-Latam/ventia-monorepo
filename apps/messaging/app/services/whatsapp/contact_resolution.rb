@@ -1,5 +1,7 @@
 module Whatsapp::ContactResolution
   def find_or_create_contact(phone, bsuid, contact_info)
+    raise ArgumentError, 'Cannot resolve contact: phone and bsuid both blank' if phone.blank? && bsuid.blank?
+
     name = contact_info.dig('profile', 'name') || contact_info.dig(:profile, :name)
 
     # Prioridad 1: contact_inbox por BSUID (scoped al inbox, alineado con Chatwoot upstream)
@@ -26,21 +28,32 @@ module Whatsapp::ContactResolution
   end
 
   def find_or_create_contact_inbox(contact, phone, bsuid)
+    return nil if phone.blank? && bsuid.blank?
+
+    # Prioridad 1: match exacto por bsuid (identidad estable)
     if bsuid.present?
       ci = ContactInbox.find_by(inbox: @inbox, whatsapp_bsuid: bsuid)
       return ci if ci
     end
 
-    source = bsuid.presence || phone
-    ContactInbox.find_or_create_by!(
-      contact:   contact,
-      inbox:     @inbox,
-      source_id: source
-    ) do |ci|
-      ci.whatsapp_bsuid = bsuid if bsuid.present?
+    # Prioridad 2: CI legacy del mismo (contact, inbox) — enriquecer en vez de duplicar
+    existing = ContactInbox.where(contact: contact, inbox: @inbox).order(:created_at).first
+    if existing
+      existing.update!(whatsapp_bsuid: bsuid) if bsuid.present? && existing.whatsapp_bsuid.blank?
+      return existing
     end
+
+    # Prioridad 3: crear nuevo
+    source = bsuid.presence || phone
+    ContactInbox.create!(
+      contact:        contact,
+      inbox:          @inbox,
+      source_id:      source,
+      whatsapp_bsuid: bsuid
+    )
   rescue ActiveRecord::RecordNotUnique
-    ContactInbox.find_by!(inbox: @inbox, whatsapp_bsuid: bsuid)
+    ContactInbox.find_by(inbox: @inbox, whatsapp_bsuid: bsuid) ||
+      ContactInbox.find_by(inbox: @inbox, source_id: source)
   end
 
   def find_or_create_conversation(contact, contact_inbox)

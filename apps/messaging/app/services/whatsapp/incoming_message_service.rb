@@ -133,6 +133,8 @@ class Whatsapp::IncomingMessageService
     ActiveRecord::Base.transaction do
       @contact       = find_or_create_contact(contact_phone, bsuid, contact_info)
       @contact_inbox = find_or_create_contact_inbox(@contact, contact_phone, bsuid)
+      return if @contact_inbox.nil?
+
       @conversation  = find_or_create_conversation(@contact, @contact_inbox)
 
       in_reply_to_external_id = message_data.dig('context', 'id') || message_data.dig(:context, :id)
@@ -326,7 +328,8 @@ class Whatsapp::IncomingMessageService
     return if @contact.name == profile_name
 
     default_name = @contact.phone_number || @contact_inbox&.whatsapp_bsuid
-    return unless @contact.name == default_name || @contact.name == default_name&.gsub('+', '')
+    return if default_name.blank?
+    return unless @contact.name == default_name || @contact.name == default_name.gsub('+', '')
 
     @contact.update(name: profile_name)
   end
