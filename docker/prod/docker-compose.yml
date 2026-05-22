@@ -111,6 +111,7 @@ services:
       SECRET_KEY_BASE: ${SECRET_KEY_BASE:?Set SECRET_KEY_BASE in .env}
       CORS_ORIGINS: ${MESSAGING_CORS_ORIGINS:-https://ventia-latam.com}
       MESSAGING_SERVICE_URL: ${MESSAGING_SERVICE_URL:-https://ws.ventia-latam.com}
+      MESSAGING_SERVICE_API_KEY: ${MESSAGING_SERVICE_API_KEY}
       FRONTEND_URL: ${FRONTEND_URL:-https://ventia-latam.com}
       # WhatsApp / Meta
       FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
@@ -160,6 +161,7 @@ services:
       REDIS_URL: redis://:${REDIS_PASSWORD}@chatbot-prod-redis:6379/1
       SECRET_KEY_BASE: ${SECRET_KEY_BASE}
       MESSAGING_SERVICE_URL: ${MESSAGING_SERVICE_URL:-https://ws.ventia-latam.com}
+      MESSAGING_SERVICE_API_KEY: ${MESSAGING_SERVICE_API_KEY}
       FRONTEND_URL: ${FRONTEND_URL:-https://ventia-latam.com}
       # WhatsApp / Meta
       FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
