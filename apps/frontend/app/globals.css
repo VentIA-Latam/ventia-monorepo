@@ -75,6 +75,7 @@ html {
   --color-danger-bg: var(--danger-bg);
   --color-info: var(--info);
   --color-info-bg: var(--info-bg);
+  --color-agent: var(--agent);
   /* Chat tokens */
   --color-chat-outgoing: var(--chat-outgoing);
   --color-platform-badge: var(--platform-badge);
@@ -100,6 +101,7 @@ html {
   --danger-bg: oklch(0.98 0.02 20);
   --info: var(--aqua);
   --info-bg: var(--cielo);
+  --agent: oklch(0.49 0.08 190);
 
   /* Chat tokens */
   --chat-wallpaper-filter: invert(1) brightness(1.85);
@@ -193,6 +195,7 @@ html {
   --warning-bg: oklch(0.22 0.04 90);
   --danger-bg: oklch(0.22 0.04 20);
   --info-bg: oklch(0.22 0.04 230);
+  --agent: oklch(0.60 0.10 190);
 
   /* Chat tokens — dark overrides */
   --chat-wallpaper-filter: brightness(0.15);
