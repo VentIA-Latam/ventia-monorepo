@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_04_08_000001) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_13_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -168,9 +168,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_04_08_000001) do
     t.string "source_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "whatsapp_bsuid"
     t.index ["contact_id"], name: "index_contact_inboxes_on_contact_id"
     t.index ["inbox_id"], name: "index_contact_inboxes_on_inbox_id"
     t.index ["source_id", "inbox_id"], name: "index_contact_inboxes_on_source_id_and_inbox_id", unique: true
+    t.index ["whatsapp_bsuid", "inbox_id"], name: "index_contact_inboxes_on_whatsapp_bsuid_and_inbox_id", unique: true, where: "(whatsapp_bsuid IS NOT NULL)"
   end
 
   create_table "contacts", force: :cascade do |t|
