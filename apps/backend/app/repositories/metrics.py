@@ -190,6 +190,7 @@ class MetricsRepository:
               AND UPPER(item->>'sku') != 'DELIVERY'
               AND item->>'product' IS NOT NULL
             GROUP BY item->>'product'
+            HAVING COALESCE(SUM((item->>'subtotal')::float), 0) > 0
             ORDER BY total_sold DESC
             LIMIT :limit
         """)
