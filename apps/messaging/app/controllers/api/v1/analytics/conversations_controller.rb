@@ -26,6 +26,30 @@ module Api
           })
         end
 
+        def no_purchase_reasons
+          start_date, end_date = parse_date_range
+          return if performed?
+
+          counts = current_account.conversations
+            .created_in_range(start_date, end_date)
+            .where("custom_attributes->>'no_purchase_reason' IS NOT NULL")
+            .group("custom_attributes->>'no_purchase_reason'")
+            .count
+
+          total = counts.values.sum
+          results = counts
+            .sort_by { |_, v| -v }
+            .map do |reason, count|
+              {
+                reason: reason,
+                count: count,
+                percentage: total > 0 ? (count.to_f / total * 100).round(1) : 0.0
+              }
+            end
+
+          render_success({ total: total, results: results })
+        end
+
         private
 
         def parse_date_range

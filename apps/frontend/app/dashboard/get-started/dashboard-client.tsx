@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { StatsCard } from "@/components/dashboard/stats-card";
+import { NoPurchaseReasonsRanking } from "@/components/dashboard/no-purchase-reasons-ranking";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -23,7 +24,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { DashboardMetrics, ConversionRate } from "@/lib/services/metrics-service";
-import type { TopProduct, CityOrderCount } from "@/lib/services/metrics-service";
+import type { TopProduct, CityOrderCount, NoPurchaseReasonsResponse } from "@/lib/services/metrics-service";
 import type { Order } from "@/lib/services/order-service";
 import { formatDate, getEcommerceOrderId, getCurrencySymbol, cn, toLocalDateStr } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -48,6 +49,7 @@ interface DashboardClientProps {
   topProducts: TopProduct[];
   ordersByCity: CityOrderCount[];
   initialConversionRate: ConversionRate;
+  noPurchaseReasons?: NoPurchaseReasonsResponse;
   startDate: string;
   endDate: string;
   defaultStartDate: string;
@@ -243,7 +245,7 @@ function TopProductsRanking({ products }: { products: TopProduct[] }) {
 
 // --- Main Dashboard ---
 
-export function DashboardClient({ initialMetrics, recentOrders, topProducts, ordersByCity, initialConversionRate, startDate, endDate, defaultStartDate, defaultEndDate }: DashboardClientProps) {
+export function DashboardClient({ initialMetrics, recentOrders, topProducts, ordersByCity, initialConversionRate, noPurchaseReasons, startDate, endDate, defaultStartDate, defaultEndDate }: DashboardClientProps) {
   const router = useRouter();
   const timezone = useTenantTimezone();
   const [isPending, startTransition] = useTransition();
@@ -417,6 +419,11 @@ export function DashboardClient({ initialMetrics, recentOrders, topProducts, ord
           <TopProductsRanking products={topProducts} />
         </motion.div>
       </div>
+
+      {/* No-purchase reasons */}
+      <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <NoPurchaseReasonsRanking data={noPurchaseReasons} />
+      </motion.div>
 
       {/* Sales Map */}
       <motion.div variants={fadeUp}>

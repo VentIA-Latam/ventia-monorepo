@@ -107,3 +107,31 @@ class ConversionRateResponse(BaseModel):
     end_date: date
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SetNoPurchaseReasonRequest(BaseModel):
+    reason: str = Field(..., min_length=1, description="Motivo de no compra (string libre, no vacío).")
+
+
+class NoPurchaseReasonItem(BaseModel):
+    """Item del ranking de motivos de no compra."""
+
+    reason: str = Field(..., description="Motivo de no compra")
+    count: int = Field(..., description="Conversaciones con este motivo")
+    percentage: float = Field(..., description="Porcentaje del total (0-100)")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NoPurchaseReasonsResponse(BaseModel):
+    """KPI motivos de no compra agrupados en un período."""
+
+    total: int = Field(..., description="Total conversaciones con motivo registrado")
+    results: list[NoPurchaseReasonItem] = Field(
+        default_factory=list, description="Motivos ordenados desc por count"
+    )
+    period: PeriodType
+    start_date: date
+    end_date: date
+
+    model_config = ConfigDict(from_attributes=True)

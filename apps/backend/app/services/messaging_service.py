@@ -116,6 +116,42 @@ class MessagingService:
 
         return (response.text or response.reason_phrase)[:500]
 
+    async def _request_with_status(
+        self,
+        method: str,
+        path: str,
+        tenant_id: int,
+        user_id: Optional[str] = None,
+        params: Optional[dict] = None,
+        json_data: Optional[dict] = None,
+        timeout: float = 10.0,
+    ) -> tuple[Optional[dict], int]:
+        """Like _request() but returns (response_data, status_code). status_code=0 on network error."""
+        url = f"{self.base_url}{path}"
+        headers = self._headers(tenant_id, user_id)
+
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                response = await client.request(
+                    method,
+                    url,
+                    headers=headers,
+                    params=params,
+                    json=json_data,
+                )
+
+                if response.status_code == 204:
+                    return {"success": True}, 204
+
+                try:
+                    return response.json(), response.status_code
+                except Exception:
+                    return None, response.status_code
+
+        except httpx.RequestError as e:
+            logger.error(f"Messaging service request failed: {method} {path} -> {e}")
+            return None, 0
+
     # --- Account provisioning ---
 
     async def create_account(self, tenant_id: int, account_data: dict) -> Optional[dict]:
@@ -632,6 +668,37 @@ class MessagingService:
             user_id=user_id,
             json_data={"notification_settings": payload},
         )
+
+    # --- No purchase reason ---
+
+    async def get_no_purchase_reasons(
+        self,
+        tenant_id: int,
+        start_date: str,
+        end_date: str,
+    ) -> tuple[Optional[dict], int]:
+        return await self._request_with_status(
+            "GET",
+            "/api/v1/analytics/no_purchase_reasons",
+            tenant_id,
+            params={"start_date": start_date, "end_date": end_date},
+            timeout=15.0,
+        )
+
+    async def set_no_purchase_reason(
+        self,
+        tenant_id: int,
+        conversation_id: int,
+        reason: str,
+    ) -> tuple[Optional[dict], int]:
+        return await self._request_with_status(
+            "POST",
+            f"/api/v1/conversations/{conversation_id}/no_purchase_reason",
+            tenant_id,
+            json_data={"reason": reason},
+            timeout=15.0,
+        )
+
 
 # Global service instance
 messaging_service = MessagingService()

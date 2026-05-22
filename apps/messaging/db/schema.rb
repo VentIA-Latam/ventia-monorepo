@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_13_000001) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_16_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -238,6 +238,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_13_000001) do
     t.boolean "ai_agent_enabled", default: true, null: false
     t.integer "stage", default: 0, null: false
     t.string "temperature"
+    t.index "((custom_attributes ->> 'no_purchase_reason'::text))", name: "idx_conversations_no_purchase_reason"
     t.index ["account_id"], name: "index_conversations_on_account_id"
     t.index ["assignee_id"], name: "index_conversations_on_assignee_id"
     t.index ["campaign_id"], name: "index_conversations_on_campaign_id"

@@ -210,3 +210,57 @@ export async function fetchConversionRate(
 
   return response.json();
 }
+
+// --- No-Purchase Reasons ---
+
+export interface NoPurchaseReasonItem {
+  reason: string;
+  count: number;
+  percentage: number;
+}
+
+export interface NoPurchaseReasonsResponse {
+  total: number;
+  results: NoPurchaseReasonItem[];
+  // Campos extra que devuelve el backend por consistencia; el componente no los usa.
+  period?: PeriodType;
+  start_date?: string;
+  end_date?: string;
+}
+
+export async function fetchNoPurchaseReasons(
+  accessToken: string,
+  query?: MetricsQuery,
+): Promise<NoPurchaseReasonsResponse> {
+  const params = new URLSearchParams();
+
+  if (query?.period) {
+    params.append('period', query.period);
+  }
+
+  if (query?.start_date && query.period === 'custom') {
+    params.append('start_date', query.start_date);
+  }
+
+  if (query?.end_date && query.period === 'custom') {
+    params.append('end_date', query.end_date);
+  }
+
+  const url = `${API_URL}/metrics/no-purchase-reasons${params.toString() ? '?' + params.toString() : ''}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Failed to fetch no-purchase reasons' }));
+    throw new Error(error.detail || 'Failed to fetch no-purchase reasons');
+  }
+
+  return response.json();
+}

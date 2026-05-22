@@ -75,6 +75,7 @@ Rails.application.routes.draw do
           post :assign_team
           patch :assign, controller: 'conversation_assignments'
           post :unassign, controller: 'conversation_assignments'
+          post :no_purchase_reason
         end
         resources :messages, only: [:index, :create]
         resources :labels, only: [:index, :create, :destroy], controller: 'conversations/labels'
@@ -153,6 +154,7 @@ Rails.application.routes.draw do
       # Analytics (KPIs agregados por periodo)
       namespace :analytics do
         get 'conversations_count', to: 'conversations#count'
+        get 'no_purchase_reasons', to: 'conversations#no_purchase_reasons'
       end
 
       # Reports

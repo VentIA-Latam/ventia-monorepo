@@ -183,6 +183,69 @@ class MetricsService:
             "end_date": end_utc.date(),
         }
 
+    async def get_no_purchase_reasons(
+        self,
+        tenant_id: int,
+        query: MetricsQuery,
+        tz_name: str = "America/Lima",
+    ) -> dict:
+        """KPI motivos de no compra para un período (proxy a messaging Rails).
+
+        Raises:
+            RuntimeError: If the messaging service is unreachable or returns
+                a non-success status / malformed payload.
+        """
+        start_utc, end_utc = metrics_repository._get_date_range(
+            query.period, query.start_date, query.end_date, tz_name
+        )
+
+        messaging_result, status_code = await messaging_service.get_no_purchase_reasons(
+            tenant_id=tenant_id,
+            start_date=start_utc.isoformat(),
+            end_date=end_utc.isoformat(),
+        )
+
+        if status_code == 0:
+            logger.error(
+                f"no_purchase_reasons_messaging_unavailable: tenant_id={tenant_id}"
+            )
+            raise RuntimeError("Messaging service unavailable")
+
+        if status_code >= 500:
+            logger.error(
+                f"no_purchase_reasons_messaging_error: tenant_id={tenant_id} status={status_code}"
+            )
+            raise RuntimeError(f"Messaging service error (status {status_code})")
+
+        if status_code not in (200, 201):
+            logger.error(
+                f"no_purchase_reasons_unexpected_status: tenant_id={tenant_id} status={status_code}"
+            )
+            raise RuntimeError(f"Unexpected status from messaging service: {status_code}")
+
+        if not messaging_result or "data" not in messaging_result:
+            logger.error(
+                f"no_purchase_reasons_invalid_response: tenant_id={tenant_id}"
+            )
+            raise RuntimeError("Invalid response from messaging service")
+
+        data = messaging_result["data"]
+        total = data.get("total", 0)
+        results = data.get("results", [])
+
+        logger.info(
+            f"no_purchase_reasons_computed: tenant_id={tenant_id} period={query.period} "
+            f"total={total} reasons={len(results)}"
+        )
+
+        return {
+            "total": total,
+            "results": results,
+            "period": query.period,
+            "start_date": start_utc.date(),
+            "end_date": end_utc.date(),
+        }
+
 
 # Global service instance
 metrics_service = MetricsService()

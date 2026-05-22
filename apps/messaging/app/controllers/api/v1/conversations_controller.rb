@@ -172,6 +172,21 @@ class Api::V1::ConversationsController < Api::V1::BaseController
     render_success(conversation_json(@conversation))
   end
 
+  def no_purchase_reason
+    reason = params[:reason].to_s.strip
+    return render json: { success: false, error: "reason_required" },
+                  status: :unprocessable_entity if reason.blank?
+
+    conversation = current_account.conversations.find(params[:id])
+    new_attrs = (conversation.custom_attributes || {}).merge("no_purchase_reason" => reason)
+    conversation.update!(custom_attributes: new_attrs)
+
+    render json: {
+      success: true,
+      data: { conversation_id: conversation.id, reason: reason }
+    }
+  end
+
   private
 
   def set_conversation
