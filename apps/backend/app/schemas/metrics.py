@@ -135,3 +135,29 @@ class NoPurchaseReasonsResponse(BaseModel):
     end_date: date
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AdSummaryItem(BaseModel):
+    """Performance de un anuncio Meta (click-to-WhatsApp)."""
+
+    ad_id: str = Field(..., description="Meta ad_id from referral.source_id")
+    headline: str | None = Field(None, description="Most recent ad headline")
+    image_url: str | None = Field(None, description="Most recent ad creative URL")
+    source_url: str | None = Field(None, description="Short link to ad (fb.me/...)")
+    conversations_started: int = Field(..., description="Conversaciones iniciadas desde este anuncio en el periodo")
+    conversations_converted: int = Field(..., description="Conversaciones que generaron orden validada")
+    conversion_rate: float = Field(..., description="Porcentaje 0-100")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AdsSummaryResponse(BaseModel):
+    """Resumen de conversaciones agrupadas por anuncio de origen."""
+
+    ads: list[AdSummaryItem] = Field(default_factory=list, description="Anuncios ordenados desc por started")
+    total_ads: int = Field(..., description="Número de anuncios distintos en el periodo")
+    period: PeriodType
+    start_date: date
+    end_date: date
+
+    model_config = ConfigDict(from_attributes=True)

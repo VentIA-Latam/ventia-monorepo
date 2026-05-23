@@ -699,6 +699,32 @@ class MessagingService:
             timeout=15.0,
         )
 
+    # --- Ads summary ---
+
+    async def get_ads_summary(
+        self,
+        tenant_id: int,
+        start_date: str,
+        end_date: str,
+        converted_conversation_ids: list[int],
+    ) -> tuple[Optional[dict], int]:
+        """Aggregate conversations by Meta ad in a period.
+
+        Sends the list of converted conversation_ids so Rails can compute
+        started and converted counts per ad in a single SQL pass.
+        """
+        return await self._request_with_status(
+            "POST",
+            "/api/v1/analytics/ads_summary",
+            tenant_id,
+            json_data={
+                "start_date": start_date,
+                "end_date": end_date,
+                "converted_conversation_ids": converted_conversation_ids,
+            },
+            timeout=15.0,
+        )
+
 
 # Global service instance
 messaging_service = MessagingService()
