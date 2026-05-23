@@ -264,3 +264,60 @@ export async function fetchNoPurchaseReasons(
 
   return response.json();
 }
+
+// --- Ads Summary (Resumen por anuncio Meta) ---
+
+export interface AdSummaryItem {
+  ad_id: string;
+  headline: string | null;
+  image_url: string | null;
+  source_url: string | null;
+  conversations_started: number;
+  conversations_converted: number;
+  conversion_rate: number;
+}
+
+export interface AdsSummaryResponse {
+  ads: AdSummaryItem[];
+  total_ads: number;
+  period?: PeriodType;
+  start_date?: string;
+  end_date?: string;
+}
+
+export async function fetchAdsSummary(
+  accessToken: string,
+  query?: MetricsQuery,
+): Promise<AdsSummaryResponse> {
+  const params = new URLSearchParams();
+
+  if (query?.period) {
+    params.append('period', query.period);
+  }
+
+  if (query?.start_date && query.period === 'custom') {
+    params.append('start_date', query.start_date);
+  }
+
+  if (query?.end_date && query.period === 'custom') {
+    params.append('end_date', query.end_date);
+  }
+
+  const url = `${API_URL}/metrics/ads-summary${params.toString() ? '?' + params.toString() : ''}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Failed to fetch ads summary' }));
+    throw new Error(error.detail || 'Failed to fetch ads summary');
+  }
+
+  return response.json();
+}

@@ -5,8 +5,10 @@ import {
   fetchOrdersByCity,
   fetchConversionRate,
   fetchNoPurchaseReasons,
+  fetchAdsSummary,
   ConversionRate,
   NoPurchaseReasonsResponse,
+  AdsSummaryResponse,
 } from "@/lib/services/metrics-service";
 import { fetchOrders } from "@/lib/services/order-service";
 import { getCurrentUser } from "@/lib/services/user-service";
@@ -48,6 +50,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   let ordersByCity;
   let conversionRate: ConversionRate | undefined;
   let noPurchaseReasons: NoPurchaseReasonsResponse | undefined;
+  let adsSummary: AdsSummaryResponse | undefined;
   let error: Error | null = null;
 
   const conversionRateFallback: ConversionRate = {
@@ -65,6 +68,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       ordersByCityRes,
       conversionRateRes,
       noPurchaseReasonsRes,
+      adsSummaryRes,
     ] = await Promise.allSettled([
       fetchDashboardMetrics(accessToken, query),
       fetchOrders(accessToken, { limit: 5, skip: 0, sortBy: 'updated_at', sortOrder: 'desc' }),
@@ -72,6 +76,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       fetchOrdersByCity(accessToken, query),
       fetchConversionRate(accessToken, query),
       fetchNoPurchaseReasons(accessToken, query),
+      fetchAdsSummary(accessToken, query),
     ]);
 
     if (metricsRes.status === 'rejected') throw metricsRes.reason;
@@ -82,6 +87,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     conversionRate = conversionRateRes.status === 'fulfilled' ? conversionRateRes.value : conversionRateFallback;
     noPurchaseReasons =
       noPurchaseReasonsRes.status === 'fulfilled' ? noPurchaseReasonsRes.value : undefined;
+    adsSummary =
+      adsSummaryRes.status === 'fulfilled' ? adsSummaryRes.value : undefined;
 
     if (conversionRateRes.status === 'rejected') {
       console.error('Error loading conversion rate:', conversionRateRes.reason);
@@ -89,6 +96,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
     if (noPurchaseReasonsRes.status === 'rejected') {
       console.error('Error loading no-purchase reasons:', noPurchaseReasonsRes.reason);
+    }
+
+    if (adsSummaryRes.status === 'rejected') {
+      console.error('Error loading ads summary:', adsSummaryRes.reason);
     }
   } catch (err) {
     console.error('Error loading dashboard data:', err);
@@ -117,6 +128,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         ordersByCity={ordersByCity?.data || []}
         initialConversionRate={conversionRate!}
         noPurchaseReasons={noPurchaseReasons}
+        adsSummary={adsSummary}
         startDate={startDate}
         endDate={endDate}
         defaultStartDate={defaults.start}

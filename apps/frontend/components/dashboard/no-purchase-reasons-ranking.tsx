@@ -35,6 +35,7 @@ export function NoPurchaseReasonsRanking({ data }: NoPurchaseReasonsRankingProps
   }
 
   const sorted = data.results.slice(0, 7);
+  const totalReasons = data.results.length;
 
   return (
     <Card className="flex flex-col w-full">
@@ -42,6 +43,7 @@ export function NoPurchaseReasonsRanking({ data }: NoPurchaseReasonsRankingProps
         <CardTitle className="text-base font-semibold">Motivos de no compra</CardTitle>
         <p className="text-xs text-muted-foreground mt-1">
           {data.total} {data.total === 1 ? "conversación" : "conversaciones"} sin compra
+          {totalReasons > 7 && ` · Top 7 de ${totalReasons} motivos`}
         </p>
       </CardHeader>
       <CardContent className="flex-1 pt-0 space-y-5">
