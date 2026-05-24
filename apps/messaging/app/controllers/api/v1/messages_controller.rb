@@ -1,4 +1,6 @@
 class Api::V1::MessagesController < Api::V1::BaseController
+  include SearchSnippetSafety
+
   before_action :set_conversation
 
   def index
@@ -28,9 +30,9 @@ class Api::V1::MessagesController < Api::V1::BaseController
 
     tsquery = build_snippet_tsquery(query)
     snippet_expr = ActiveRecord::Base.sanitize_sql_array([
-      "ts_headline('simple', COALESCE(processed_message_content, content), to_tsquery('simple', ?), " \
-      "'MaxWords=15, MinWords=8, StartSel=<mark>, StopSel=</mark>') AS snippet",
-      tsquery
+      "ts_headline('simple', COALESCE(processed_message_content, content), to_tsquery('simple', ?), ?) AS snippet",
+      tsquery,
+      SNIPPET_HEADLINE_OPTIONS
     ])
 
     results = @conversation.messages
@@ -43,7 +45,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
       .map do |msg|
         {
           id: msg.id,
-          snippet: msg['snippet'],
+          snippet: sanitize_snippet(msg['snippet']),
           created_at: msg.created_at,
           message_type: msg.message_type,
           status: msg.status

@@ -1,4 +1,6 @@
 class Api::V1::ConversationsController < Api::V1::BaseController
+  include SearchSnippetSafety
+
   before_action :set_conversation, only: [:show, :update, :toggle_status, :update_stage, :escalate, :resolve_escalation, :mark_payment_review, :update_last_seen, :destroy]
 
   def index
@@ -309,7 +311,7 @@ class Api::V1::ConversationsController < Api::V1::BaseController
             'simple',
             COALESCE(processed_message_content, content),
             to_tsquery('simple', ?),
-            'MaxWords=12, MinWords=6, StartSel=<mark>, StopSel=</mark>'
+            ?
           ) AS snippet
           FROM messages
           WHERE conversation_id = ?
@@ -323,6 +325,7 @@ class Api::V1::ConversationsController < Api::V1::BaseController
           LIMIT 1
         SQL
         tsquery,
+        SNIPPET_HEADLINE_OPTIONS,
         conversation.id,
         sanitized,
         ilike_term
@@ -330,8 +333,8 @@ class Api::V1::ConversationsController < Api::V1::BaseController
     )
     row = result.first
     return nil if row.nil?
-    snippet = row['snippet'].presence
-    return nil if snippet.nil?
-    { snippet: snippet, message_id: row['id'].to_i }
+    safe_snippet = sanitize_snippet(row['snippet'])
+    return nil if safe_snippet.blank?
+    { snippet: safe_snippet, message_id: row['id'].to_i }
   end
 end

@@ -13,7 +13,13 @@
 # los mensajes más antiguos quedan FUERA de la ventana inicial de 20,
 # forzando el flujo navigateToMessage.
 
-puts "=== Seed de volumen para Nassau ==="
+if Rails.env.production?
+  abort "ABORT: seed_volume_data refuses to run in production. " \
+        "This script creates synthetic contacts, conversations, and ~10k " \
+        "messages tied to ventia_tenant_id=2 and could collide with real data."
+end
+
+puts "=== Seed de volumen para Nassau (env=#{Rails.env}) ==="
 
 # ── 1. Encontrar / crear Account ────────────────────────────────────────────
 
@@ -60,12 +66,13 @@ end
 
 inbox = Inbox.where(account_id: account.id).first
 if inbox.nil?
-  channel = ChannelWhatsapp.create!(
+  channel = Channel::Whatsapp.new(
     phone_number:    "+51900000001",
     provider:        "whatsapp_cloud",
     provider_config: { access_token: "SEED_TOKEN", phone_number_id: "SEED_PHONE_ID" },
     account_id:      account.id
   )
+  channel.save!(validate: false)
   inbox = Inbox.create!(
     name:         "WhatsApp Nassau",
     channel_type: "Channel::Whatsapp",
