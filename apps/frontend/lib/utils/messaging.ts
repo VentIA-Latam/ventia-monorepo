@@ -5,17 +5,20 @@
 
 import type { Conversation, Message } from "@/lib/types/messaging";
 
-export type SenderRole = "customer" | "operator" | "ai";
+export type SenderRole = "customer" | "operator" | "agent_mobile" | "ai";
 
 /**
  * Identifica quién envió el mensaje:
  * - "customer": mensaje incoming del cliente (Contact)
  * - "operator": outgoing con sender (operador humano via header X-User-Id)
+ * - "agent_mobile": outgoing sin sender desde WhatsApp móvil (coexistence, marcado por Meta con external_echo)
  * - "ai": outgoing sin sender (n8n llama API solo con tenant header)
  */
 export function getSenderRole(message: Message): SenderRole {
   if (message.message_type === "incoming") return "customer";
-  return message.sender ? "operator" : "ai";
+  if (message.sender) return "operator";
+  if (message.content_attributes?.external_echo) return "agent_mobile";
+  return "ai";
 }
 
 /**

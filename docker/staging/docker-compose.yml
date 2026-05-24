@@ -182,6 +182,7 @@ services:
       SECRET_KEY_BASE: ${SECRET_KEY_BASE:-change-me-in-production}
       CORS_ORIGINS: ${MESSAGING_CORS_ORIGINS:-https://staging.ventia-latam.com}
       MESSAGING_SERVICE_URL: ${MESSAGING_SERVICE_URL:-https://staging-ws.ventia-latam.com}
+      MESSAGING_SERVICE_API_KEY: ${MESSAGING_SERVICE_API_KEY:-}
       FRONTEND_URL: ${FRONTEND_URL:-https://staging.ventia-latam.com}
       # WhatsApp / Meta
       FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
@@ -236,6 +237,7 @@ services:
       SECRET_KEY_BASE: ${SECRET_KEY_BASE:-change-me-in-production}
       FRONTEND_URL: ${FRONTEND_URL:-https://staging.ventia-latam.com}
       MESSAGING_SERVICE_URL: ${MESSAGING_SERVICE_URL:-https://staging-ws.ventia-latam.com}
+      MESSAGING_SERVICE_API_KEY: ${MESSAGING_SERVICE_API_KEY:-}
       # WhatsApp / Meta
       FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
       FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET:-}

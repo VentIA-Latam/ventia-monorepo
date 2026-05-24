@@ -5,11 +5,13 @@ VentIA Backend - FastAPI application entry point.
 import logging
 
 import sentry_sdk
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.v1.api import api_router
 from app.core.config import settings
+from app.services.messaging_service import MessagingClientError
 
 # Configure logging
 logging.basicConfig(
@@ -54,6 +56,16 @@ app.add_middleware(
 
 # Include API router
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+
+# Propagate 4xx errors from the Rails messaging service with their original status + detail
+# so the operator sees the real reason (e.g. "Template not found") instead of a 503.
+@app.exception_handler(MessagingClientError)
+async def messaging_client_error_handler(request: Request, exc: MessagingClientError) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
 
 
 @app.get("/", tags=["root"])

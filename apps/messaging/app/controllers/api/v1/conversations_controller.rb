@@ -141,6 +141,21 @@ class Api::V1::ConversationsController < Api::V1::BaseController
     render_success(conversation_json(@conversation))
   end
 
+  def no_purchase_reason
+    reason = params[:reason].to_s.strip
+    return render json: { success: false, error: "reason_required" },
+                  status: :unprocessable_entity if reason.blank?
+
+    conversation = current_account.conversations.find(params[:id])
+    new_attrs = (conversation.custom_attributes || {}).merge("no_purchase_reason" => reason)
+    conversation.update!(custom_attributes: new_attrs)
+
+    render json: {
+      success: true,
+      data: { conversation_id: conversation.id, reason: reason }
+    }
+  end
+
   private
 
   def apply_filters(base)
@@ -234,10 +249,12 @@ class Api::V1::ConversationsController < Api::V1::BaseController
       created_at: conversation.created_at,
       last_message_at: conversation.messages.maximum(:created_at),
       contact: {
-        id: conversation.contact.id,
-        name: conversation.contact.name,
-        phone_number: conversation.contact.phone_number,
-        email: conversation.contact.email,
+        id:               conversation.contact.id,
+        name:             conversation.contact.name,
+        phone_number:     conversation.contact.phone_number,
+        email:            conversation.contact.email,
+        identifier:       conversation.contact.identifier,
+        whatsapp_bsuid:   conversation.contact_inbox&.whatsapp_bsuid,
         last_activity_at: conversation.contact.last_activity_at
       },
       assignee: conversation.assignee ? {

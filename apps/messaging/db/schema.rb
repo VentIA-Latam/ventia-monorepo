@@ -168,9 +168,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_20_000002) do
     t.string "source_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "whatsapp_bsuid"
     t.index ["contact_id"], name: "index_contact_inboxes_on_contact_id"
     t.index ["inbox_id"], name: "index_contact_inboxes_on_inbox_id"
     t.index ["source_id", "inbox_id"], name: "index_contact_inboxes_on_source_id_and_inbox_id", unique: true
+    t.index ["whatsapp_bsuid", "inbox_id"], name: "index_contact_inboxes_on_whatsapp_bsuid_and_inbox_id", unique: true, where: "(whatsapp_bsuid IS NOT NULL)"
   end
 
   create_table "contacts", force: :cascade do |t|
@@ -236,6 +238,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_20_000002) do
     t.boolean "ai_agent_enabled", default: true, null: false
     t.integer "stage", default: 0, null: false
     t.string "temperature"
+    t.index "((custom_attributes ->> 'no_purchase_reason'::text))", name: "idx_conversations_no_purchase_reason"
     t.index ["account_id"], name: "index_conversations_on_account_id"
     t.index ["assignee_id"], name: "index_conversations_on_assignee_id"
     t.index ["campaign_id"], name: "index_conversations_on_campaign_id"

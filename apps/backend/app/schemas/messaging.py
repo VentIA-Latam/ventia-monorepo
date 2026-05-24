@@ -34,6 +34,8 @@ class ContactBrief(BaseModel):
     type: Optional[str] = None
     name: Optional[str] = None
     phone_number: Optional[str] = None
+    identifier: Optional[str] = None
+    whatsapp_bsuid: Optional[str] = None
     email: Optional[str] = None
     last_activity_at: Optional[datetime] = None
 
@@ -89,6 +91,8 @@ class ContactDetails(BaseModel):
     id: Optional[int] = None
     name: Optional[str] = None
     phone_number: Optional[str] = None
+    identifier: Optional[str] = None
+    whatsapp_bsuid: Optional[str] = None
     email: Optional[str] = None
     last_activity_at: Optional[datetime] = None
 
@@ -194,6 +198,7 @@ class MessageResponse(BaseModel):
     message_type: Optional[str] = None
     content_type: Optional[str] = None
     content_attributes: Optional[dict] = None
+    additional_attributes: Optional[dict] = None
     status: Optional[str] = None
     sender: Optional[UserBrief | ContactBrief] = None
     attachments: list[AttachmentBrief] = []
@@ -257,14 +262,15 @@ class SendMessageRequest(BaseModel):
 
 class TemplateParamsRequest(BaseModel):
     name: str
-    namespace: Optional[str] = None
     language: str
     processed_params: Optional[dict] = None
+    # namespace lo resuelve el backend Rails desde el template encontrado.
+    # template_snapshot lo arma el backend Rails copiando los components del template.
 
 
 class SendTemplateMessageRequest(BaseModel):
-    content: str
     template_params: TemplateParamsRequest
+    # content lo interpola el backend Rails desde el BODY del template.
 
 
 class AssignConversationRequest(BaseModel):
@@ -397,10 +403,18 @@ class TeamsListResponse(BaseModel):
     data: list[TeamResponse] = []
 
 
+class TemplateButton(BaseModel):
+    type: Optional[str] = None
+    text: Optional[str] = None
+    url: Optional[str] = None
+    phone_number: Optional[str] = None
+
+
 class TemplateComponent(BaseModel):
     text: Optional[str] = None
     type: Optional[str] = None
     format: Optional[str] = None
+    buttons: Optional[list[TemplateButton]] = None
 
 
 class TemplateItem(BaseModel):

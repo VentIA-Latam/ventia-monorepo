@@ -59,14 +59,25 @@ class Api::V1::MessagesController < Api::V1::BaseController
     message.inbox = @conversation.inbox
     message.sender = current_user if current_user
 
-    # Template message: set type and store template_params in additional_attributes
+    # Template message: backend looks up template, interpolates body and builds the snapshot.
+    # Client only sends { name, language, processed_params } — see Whatsapp::TemplateMessageBuilder.
     if params.dig(:message, :template_params).present?
-      message.message_type = :template
-      permitted_template_params = params.require(:message).require(:template_params).permit(
-        :name, :namespace, :language,
-        processed_params: {}
+      tp = params.require(:message).require(:template_params).permit(
+        :name, :language, processed_params: {}
       )
-      message.additional_attributes = { 'template_params' => permitted_template_params.to_h }
+
+      begin
+        built = Whatsapp::TemplateMessageBuilder.new(
+          conversation:     @conversation,
+          name:             tp[:name],
+          language:         tp[:language],
+          processed_params: tp[:processed_params]&.to_h
+        ).build
+        message.assign_attributes(built)
+      rescue Whatsapp::TemplateMessageBuilder::TemplateNotFound,
+             Whatsapp::TemplateMessageBuilder::MissingBodyVariables => e
+        return render_error(e.message)
+      end
     else
       message.message_type = :outgoing
     end
@@ -155,6 +166,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
       message_type: message.message_type,
       content_type: message.content_type,
       content_attributes: message.content_attributes,
+      additional_attributes: message.additional_attributes,
       status: message.status,
       created_at: message.created_at,
       sender: case message.sender&.class&.name

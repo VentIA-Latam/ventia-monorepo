@@ -60,7 +60,14 @@ class Whatsapp::Providers::BaseService
   end
 
   def error_message(response)
-    response.parsed_response&.dig('error', 'message')
+    err = response.parsed_response&.dig('error')
+    return nil if err.blank?
+
+    code = err['code']
+    msg  = err['message']
+    return '131062: Authentication templates do not support BSUID recipients' if code == 131_062
+
+    code.present? ? "#{code}: #{msg}" : msg
   end
 
   def whatsapp_reply_context(message)

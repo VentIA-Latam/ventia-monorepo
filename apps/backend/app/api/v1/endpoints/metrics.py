@@ -7,20 +7,30 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_database
+from app.api.deps import get_current_user, get_database, require_permission_dual
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.schemas.metrics import (
+    AdsSummaryResponse,
     ConversionRateResponse,
     DashboardMetrics,
     MetricsQuery,
+    NoPurchaseReasonsResponse,
     OrdersByCityResponse,
     PeriodType,
+    SetNoPurchaseReasonRequest,
     TopProductsResponse,
 )
+from app.services.messaging_service import messaging_service
 from app.services.metrics import metrics_service
 
 router = APIRouter()
+
+
+def _resolve_tenant_id(current_user: User) -> int:
+    if not current_user.tenant_id:
+        raise HTTPException(status_code=400, detail="User has no tenant assigned")
+    return current_user.tenant_id
 
 
 def _get_tenant_timezone(db: Session, tenant_id: int) -> str:
@@ -171,4 +181,99 @@ async def get_conversion_rate(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve conversion rate: {e}",
+        )
+
+
+@router.post(
+    "/conversations/{conversation_id}/no-purchase-reason",
+    summary="Registrar motivo de no compra (n8n)",
+    status_code=200,
+    tags=["metrics"],
+)
+async def set_no_purchase_reason(
+    conversation_id: int,
+    body: SetNoPurchaseReasonRequest,
+    current_user: User = Depends(require_permission_dual("POST", "/metrics/*")),
+) -> dict:
+    tenant_id = _resolve_tenant_id(current_user)
+    data, status_code = await messaging_service.set_no_purchase_reason(
+        tenant_id=tenant_id,
+        conversation_id=conversation_id,
+        reason=body.reason,
+    )
+    if status_code == 0:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    if status_code == 404:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    if status_code == 422:
+        raise HTTPException(status_code=422, detail="Invalid reason")
+    return data
+
+
+@router.get(
+    "/no-purchase-reasons",
+    response_model=NoPurchaseReasonsResponse,
+    summary="KPI motivos de no compra por rango de fechas",
+    tags=["metrics"],
+)
+async def get_no_purchase_reasons(
+    period: PeriodType = Query("custom"),
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
+    current_user: User = Depends(require_permission_dual("GET", "/metrics/*")),
+    db: Session = Depends(get_database),
+) -> NoPurchaseReasonsResponse:
+    """Get no-purchase reasons KPI for the current user's tenant."""
+    try:
+        query = MetricsQuery(period=period, start_date=start_date, end_date=end_date)
+        tz_name = _get_tenant_timezone(db, current_user.tenant_id)
+        result = await metrics_service.get_no_purchase_reasons(
+            tenant_id=current_user.tenant_id,
+            query=query,
+            tz_name=tz_name,
+        )
+        return NoPurchaseReasonsResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve no-purchase reasons: {e}",
+        )
+
+
+@router.get(
+    "/ads-summary",
+    response_model=AdsSummaryResponse,
+    summary="Resumen de conversaciones agrupadas por anuncio Meta (click-to-WhatsApp)",
+    tags=["metrics"],
+)
+async def get_ads_summary(
+    period: PeriodType = Query("last_30_days"),
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
+    current_user: User = Depends(require_permission_dual("GET", "/metrics/*")),
+    db: Session = Depends(get_database),
+) -> AdsSummaryResponse:
+    """Get ads performance summary for the current user's tenant."""
+    try:
+        query = MetricsQuery(period=period, start_date=start_date, end_date=end_date)
+        tz_name = _get_tenant_timezone(db, current_user.tenant_id)
+        result = await metrics_service.get_ads_summary(
+            db=db,
+            tenant_id=current_user.tenant_id,
+            query=query,
+            tz_name=tz_name,
+        )
+        return AdsSummaryResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve ads summary: {e}",
         )

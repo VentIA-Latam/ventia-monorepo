@@ -12,6 +12,20 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
+class MessagingClientError(Exception):
+    """Raised when the messaging service returns a 4xx response with usable detail.
+
+    A global FastAPI exception handler converts this into an HTTP response with the
+    original status code so the operator sees the real error (e.g. template not found)
+    instead of a generic 503.
+    """
+
+    def __init__(self, status_code: int, detail: str):
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(f"{status_code}: {detail}")
+
+
 class MessagingService:
     """Service for communicating with the standalone messaging module."""
 
@@ -60,17 +74,83 @@ class MessagingService:
 
                 if response.status_code in (200, 201):
                     return response.json()
-                elif response.status_code == 204:
+                if response.status_code == 204:
                     return {"success": True}
-                else:
-                    logger.error(
-                        f"Messaging API error: {method} {path} -> {response.status_code} - {response.text[:500]}"
+
+                # 4xx: Rails rejected the request with a usable reason. Propagate so the
+                # operator sees the real error instead of a generic 503.
+                if 400 <= response.status_code < 500:
+                    detail = self._extract_error_detail(response)
+                    logger.warning(
+                        f"Messaging API client error: {method} {path} -> {response.status_code} - {detail}"
                     )
-                    return None
+                    raise MessagingClientError(response.status_code, detail)
+
+                # 5xx: service-level failure. Keep "service unavailable" semantics.
+                logger.error(
+                    f"Messaging API server error: {method} {path} -> {response.status_code} - {response.text[:500]}"
+                )
+                return None
 
         except httpx.RequestError as e:
             logger.error(f"Messaging service request failed: {method} {path} -> {e}")
             return None
+
+    @staticmethod
+    def _extract_error_detail(response: httpx.Response) -> str:
+        """Best-effort extraction of a user-facing error message from a 4xx response."""
+        try:
+            body = response.json()
+        except Exception:
+            return (response.text or response.reason_phrase)[:500]
+
+        if isinstance(body, dict):
+            # Rails messaging response shape (base_controller.rb:48 render_error)
+            if body.get("error"):
+                return str(body["error"])
+            # FastAPI/Pydantic style
+            if body.get("detail"):
+                return str(body["detail"])
+            if body.get("message"):
+                return str(body["message"])
+
+        return (response.text or response.reason_phrase)[:500]
+
+    async def _request_with_status(
+        self,
+        method: str,
+        path: str,
+        tenant_id: int,
+        user_id: Optional[str] = None,
+        params: Optional[dict] = None,
+        json_data: Optional[dict] = None,
+        timeout: float = 10.0,
+    ) -> tuple[Optional[dict], int]:
+        """Like _request() but returns (response_data, status_code). status_code=0 on network error."""
+        url = f"{self.base_url}{path}"
+        headers = self._headers(tenant_id, user_id)
+
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                response = await client.request(
+                    method,
+                    url,
+                    headers=headers,
+                    params=params,
+                    json=json_data,
+                )
+
+                if response.status_code == 204:
+                    return {"success": True}, 204
+
+                try:
+                    return response.json(), response.status_code
+                except Exception:
+                    return None, response.status_code
+
+        except httpx.RequestError as e:
+            logger.error(f"Messaging service request failed: {method} {path} -> {e}")
+            return None, 0
 
     # --- Account provisioning ---
 
@@ -607,6 +687,63 @@ class MessagingService:
             user_id=user_id,
             json_data={"notification_settings": payload},
         )
+
+    # --- No purchase reason ---
+
+    async def get_no_purchase_reasons(
+        self,
+        tenant_id: int,
+        start_date: str,
+        end_date: str,
+    ) -> tuple[Optional[dict], int]:
+        return await self._request_with_status(
+            "GET",
+            "/api/v1/analytics/no_purchase_reasons",
+            tenant_id,
+            params={"start_date": start_date, "end_date": end_date},
+            timeout=15.0,
+        )
+
+    async def set_no_purchase_reason(
+        self,
+        tenant_id: int,
+        conversation_id: int,
+        reason: str,
+    ) -> tuple[Optional[dict], int]:
+        return await self._request_with_status(
+            "POST",
+            f"/api/v1/conversations/{conversation_id}/no_purchase_reason",
+            tenant_id,
+            json_data={"reason": reason},
+            timeout=15.0,
+        )
+
+    # --- Ads summary ---
+
+    async def get_ads_summary(
+        self,
+        tenant_id: int,
+        start_date: str,
+        end_date: str,
+        converted_conversation_ids: list[int],
+    ) -> tuple[Optional[dict], int]:
+        """Aggregate conversations by Meta ad in a period.
+
+        Sends the list of converted conversation_ids so Rails can compute
+        started and converted counts per ad in a single SQL pass.
+        """
+        return await self._request_with_status(
+            "POST",
+            "/api/v1/analytics/ads_summary",
+            tenant_id,
+            json_data={
+                "start_date": start_date,
+                "end_date": end_date,
+                "converted_conversation_ids": converted_conversation_ids,
+            },
+            timeout=15.0,
+        )
+
 
 # Global service instance
 messaging_service = MessagingService()

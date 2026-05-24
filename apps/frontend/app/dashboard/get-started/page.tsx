@@ -5,7 +5,11 @@ import {
   fetchOrdersByCity,
   fetchConversionRate,
   fetchConversationCount,
+  fetchNoPurchaseReasons,
+  fetchAdsSummary,
   ConversionRate,
+  NoPurchaseReasonsResponse,
+  AdsSummaryResponse,
 } from "@/lib/services/metrics-service";
 import { fetchOrders } from "@/lib/services/order-service";
 import { getCurrentUser } from "@/lib/services/user-service";
@@ -47,6 +51,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   let ordersByCity;
   let conversionRate: ConversionRate | undefined;
   let conversationCount = 0;
+  let noPurchaseReasons: NoPurchaseReasonsResponse | undefined;
+  let adsSummary: AdsSummaryResponse | undefined;
   let error: Error | null = null;
 
   const conversionRateFallback: ConversionRate = {
@@ -57,13 +63,24 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const query = { period: 'custom' as const, start_date: startDate, end_date: endDate };
 
   try {
-    const [metricsRes, ordersRes, topProductsRes, ordersByCityRes, conversionRateRes, conversationCountRes] = await Promise.allSettled([
+    const [
+      metricsRes,
+      ordersRes,
+      topProductsRes,
+      ordersByCityRes,
+      conversionRateRes,
+      conversationCountRes,
+      noPurchaseReasonsRes,
+      adsSummaryRes,
+    ] = await Promise.allSettled([
       fetchDashboardMetrics(accessToken, query),
       fetchOrders(accessToken, { limit: 5, skip: 0, sortBy: 'updated_at', sortOrder: 'desc' }),
       fetchTopProducts(accessToken, query),
       fetchOrdersByCity(accessToken, query),
       fetchConversionRate(accessToken, query),
       fetchConversationCount(accessToken, { start_date: startDate, end_date: endDate }),
+      fetchNoPurchaseReasons(accessToken, query),
+      fetchAdsSummary(accessToken, query),
     ]);
 
     if (metricsRes.status === 'rejected') throw metricsRes.reason;
@@ -73,9 +90,21 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     ordersByCity = ordersByCityRes.status === 'fulfilled' ? ordersByCityRes.value : undefined;
     conversionRate = conversionRateRes.status === 'fulfilled' ? conversionRateRes.value : conversionRateFallback;
     conversationCount = conversationCountRes.status === 'fulfilled' ? conversationCountRes.value : 0;
+    noPurchaseReasons =
+      noPurchaseReasonsRes.status === 'fulfilled' ? noPurchaseReasonsRes.value : undefined;
+    adsSummary =
+      adsSummaryRes.status === 'fulfilled' ? adsSummaryRes.value : undefined;
 
     if (conversionRateRes.status === 'rejected') {
       console.error('Error loading conversion rate:', conversionRateRes.reason);
+    }
+
+    if (noPurchaseReasonsRes.status === 'rejected') {
+      console.error('Error loading no-purchase reasons:', noPurchaseReasonsRes.reason);
+    }
+
+    if (adsSummaryRes.status === 'rejected') {
+      console.error('Error loading ads summary:', adsSummaryRes.reason);
     }
   } catch (err) {
     console.error('Error loading dashboard data:', err);
@@ -104,6 +133,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         ordersByCity={ordersByCity?.data || []}
         initialConversionRate={conversionRate!}
         conversationCount={conversationCount}
+        noPurchaseReasons={noPurchaseReasons}
+        adsSummary={adsSummary}
         startDate={startDate}
         endDate={endDate}
         defaultStartDate={defaults.start}

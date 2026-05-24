@@ -26,6 +26,52 @@ module Api
           })
         end
 
+        def no_purchase_reasons
+          start_date, end_date = parse_date_range
+          return if performed?
+
+          counts = current_account.conversations
+            .created_in_range(start_date, end_date)
+            .where("custom_attributes->>'no_purchase_reason' IS NOT NULL")
+            .group("custom_attributes->>'no_purchase_reason'")
+            .count
+
+          total = counts.values.sum
+          results = counts
+            .sort_by { |_, v| -v }
+            .map do |reason, count|
+              {
+                reason: reason,
+                count: count,
+                percentage: total > 0 ? (count.to_f / total * 100).round(1) : 0.0
+              }
+            end
+
+          render_success({ total: total, results: results })
+        end
+
+        # POST /api/v1/analytics/ads_summary
+        # Body:
+        #   - start_date (ISO 8601, required)
+        #   - end_date   (ISO 8601, required)
+        #   - converted_conversation_ids (array<integer>, optional, default [])
+        # Respuesta:
+        #   { success: true,
+        #     data: { ads: [{ ad_id, headline, image_url, source_url, started, converted }] } }
+        def ads_summary
+          start_date, end_date = parse_date_range
+          return if performed?
+
+          ads = ::Analytics::AdsSummaryService.new(
+            account: current_account,
+            start_date: start_date,
+            end_date: end_date,
+            converted_conversation_ids: Array(params[:converted_conversation_ids])
+          ).perform
+
+          render_success({ ads: ads })
+        end
+
         private
 
         def parse_date_range

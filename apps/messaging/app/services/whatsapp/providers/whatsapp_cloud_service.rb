@@ -21,10 +21,9 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     request_body = {
       messaging_product: 'whatsapp',
       recipient_type: 'individual',
-      to: phone_number,
       type: 'template',
       template: template_body
-    }
+    }.merge(build_recipient(phone_number))
 
     response = HTTParty.post(
       "#{phone_id_path}/messages",
@@ -110,10 +109,9 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     request_body = {
       messaging_product: 'whatsapp',
       context: whatsapp_reply_context(message),
-      to: phone_number,
       type: 'text',
       text: { body: message.content }
-    }.compact
+    }.merge(build_recipient(phone_number)).compact
 
     response = HTTParty.post(
       "#{phone_id_path}/messages",
@@ -135,10 +133,9 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     request_body = {
       messaging_product: 'whatsapp',
       context: whatsapp_reply_context(message),
-      to: phone_number,
       type: type,
       type.to_s => type_content
-    }.compact
+    }.merge(build_recipient(phone_number)).compact
 
     response = HTTParty.post(
       "#{phone_id_path}/messages",
@@ -154,10 +151,9 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
 
     request_body = {
       messaging_product: 'whatsapp',
-      to: phone_number,
       type: 'contacts',
       contacts: contacts
-    }
+    }.merge(build_recipient(phone_number))
 
     response = HTTParty.post(
       "#{phone_id_path}/messages",
@@ -180,10 +176,9 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
 
     request_body = {
       messaging_product: 'whatsapp',
-      to: phone_number,
       type: 'interactive',
       interactive: payload
-    }
+    }.merge(build_recipient(phone_number))
 
     response = HTTParty.post(
       "#{phone_id_path}/messages",
@@ -199,10 +194,9 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
 
     request_body = {
       messaging_product: 'whatsapp',
-      to: phone_number,
       type: 'interactive',
       interactive: payload
-    }
+    }.merge(build_recipient(phone_number))
 
     response = HTTParty.post(
       "#{phone_id_path}/messages",
@@ -211,6 +205,16 @@ class Whatsapp::Providers::WhatsappCloudService < Whatsapp::Providers::BaseServi
     )
 
     process_response(response, message)
+  end
+
+  # BSUID tiene formato "CC.alphanumeric" (ej: "PE.1A2B..."). Meta requiere
+  # campo `recipient` para BSUID y `to` para teléfonos (disponible junio 2026).
+  def build_recipient(source_id)
+    if source_id.to_s.match?(/\A[A-Z]{2}\./)
+      { recipient: source_id }
+    else
+      { to: source_id }
+    end
   end
 
   def build_template_body(template_info)

@@ -107,3 +107,57 @@ class ConversionRateResponse(BaseModel):
     end_date: date
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SetNoPurchaseReasonRequest(BaseModel):
+    reason: str = Field(..., min_length=1, description="Motivo de no compra (string libre, no vacío).")
+
+
+class NoPurchaseReasonItem(BaseModel):
+    """Item del ranking de motivos de no compra."""
+
+    reason: str = Field(..., description="Motivo de no compra")
+    count: int = Field(..., description="Conversaciones con este motivo")
+    percentage: float = Field(..., description="Porcentaje del total (0-100)")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NoPurchaseReasonsResponse(BaseModel):
+    """KPI motivos de no compra agrupados en un período."""
+
+    total: int = Field(..., description="Total conversaciones con motivo registrado")
+    results: list[NoPurchaseReasonItem] = Field(
+        default_factory=list, description="Motivos ordenados desc por count"
+    )
+    period: PeriodType
+    start_date: date
+    end_date: date
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AdSummaryItem(BaseModel):
+    """Performance de un anuncio Meta (click-to-WhatsApp)."""
+
+    ad_id: str = Field(..., description="Meta ad_id from referral.source_id")
+    headline: str | None = Field(None, description="Most recent ad headline")
+    image_url: str | None = Field(None, description="Most recent ad creative URL")
+    source_url: str | None = Field(None, description="Short link to ad (fb.me/...)")
+    conversations_started: int = Field(..., description="Conversaciones iniciadas desde este anuncio en el periodo")
+    conversations_converted: int = Field(..., description="Conversaciones que generaron orden validada")
+    conversion_rate: float = Field(..., description="Porcentaje 0-100")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AdsSummaryResponse(BaseModel):
+    """Resumen de conversaciones agrupadas por anuncio de origen."""
+
+    ads: list[AdSummaryItem] = Field(default_factory=list, description="Anuncios ordenados desc por started")
+    total_ads: int = Field(..., description="Número de anuncios distintos en el periodo")
+    period: PeriodType
+    start_date: date
+    end_date: date
+
+    model_config = ConfigDict(from_attributes=True)

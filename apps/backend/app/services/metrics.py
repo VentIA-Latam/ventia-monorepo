@@ -183,6 +183,157 @@ class MetricsService:
             "end_date": end_utc.date(),
         }
 
+    async def get_no_purchase_reasons(
+        self,
+        tenant_id: int,
+        query: MetricsQuery,
+        tz_name: str = "America/Lima",
+    ) -> dict:
+        """KPI motivos de no compra para un período (proxy a messaging Rails).
+
+        Raises:
+            RuntimeError: If the messaging service is unreachable or returns
+                a non-success status / malformed payload.
+        """
+        start_utc, end_utc = metrics_repository._get_date_range(
+            query.period, query.start_date, query.end_date, tz_name
+        )
+
+        messaging_result, status_code = await messaging_service.get_no_purchase_reasons(
+            tenant_id=tenant_id,
+            start_date=start_utc.isoformat(),
+            end_date=end_utc.isoformat(),
+        )
+
+        if status_code == 0:
+            logger.error(
+                f"no_purchase_reasons_messaging_unavailable: tenant_id={tenant_id}"
+            )
+            raise RuntimeError("Messaging service unavailable")
+
+        if status_code >= 500:
+            logger.error(
+                f"no_purchase_reasons_messaging_error: tenant_id={tenant_id} status={status_code}"
+            )
+            raise RuntimeError(f"Messaging service error (status {status_code})")
+
+        if status_code not in (200, 201):
+            logger.error(
+                f"no_purchase_reasons_unexpected_status: tenant_id={tenant_id} status={status_code}"
+            )
+            raise RuntimeError(f"Unexpected status from messaging service: {status_code}")
+
+        if not messaging_result or "data" not in messaging_result:
+            logger.error(
+                f"no_purchase_reasons_invalid_response: tenant_id={tenant_id}"
+            )
+            raise RuntimeError("Invalid response from messaging service")
+
+        data = messaging_result["data"]
+        total = data.get("total", 0)
+        results = data.get("results", [])
+
+        logger.info(
+            f"no_purchase_reasons_computed: tenant_id={tenant_id} period={query.period} "
+            f"total={total} reasons={len(results)}"
+        )
+
+        return {
+            "total": total,
+            "results": results,
+            "period": query.period,
+            "start_date": start_utc.date(),
+            "end_date": end_utc.date(),
+        }
+
+    async def get_ads_summary(
+        self,
+        db: Session,
+        tenant_id: int,
+        query: MetricsQuery,
+        tz_name: str = "America/Lima",
+    ) -> dict:
+        """Aggregate conversations grouped by Meta ad in a period.
+
+        Hybrid flow:
+          1) Local DB: list of conversation_ids whose order was validated in the period.
+          2) Messaging (Rails): POST that list + date range, get started/converted counts per ad.
+          3) Compute conversion_rate per ad.
+
+        Raises:
+            RuntimeError: If the messaging service is unreachable or returns
+                a non-success status / malformed payload.
+        """
+        start_utc, end_utc = metrics_repository._get_date_range(
+            query.period, query.start_date, query.end_date, tz_name
+        )
+
+        converted_ids = metrics_repository.get_validated_order_conversation_ids(
+            db, tenant_id, start_utc, end_utc
+        )
+
+        messaging_result, status_code = await messaging_service.get_ads_summary(
+            tenant_id=tenant_id,
+            start_date=start_utc.isoformat(),
+            end_date=end_utc.isoformat(),
+            converted_conversation_ids=converted_ids,
+        )
+
+        if status_code == 0:
+            logger.error(f"ads_summary_messaging_unavailable: tenant_id={tenant_id}")
+            raise RuntimeError("Messaging service unavailable")
+
+        if status_code >= 500:
+            logger.error(
+                f"ads_summary_messaging_error: tenant_id={tenant_id} status={status_code}"
+            )
+            raise RuntimeError(f"Messaging service error (status {status_code})")
+
+        if status_code not in (200, 201):
+            logger.error(
+                f"ads_summary_unexpected_status: tenant_id={tenant_id} status={status_code}"
+            )
+            raise RuntimeError(f"Unexpected status from messaging service: {status_code}")
+
+        if not messaging_result or "data" not in messaging_result:
+            logger.error(f"ads_summary_invalid_response: tenant_id={tenant_id}")
+            raise RuntimeError("Invalid response from messaging service")
+
+        ads_raw = messaging_result["data"].get("ads", [])
+        ads = []
+        for row in ads_raw:
+            ad_id = row.get("ad_id")
+            if not ad_id:
+                logger.warning(
+                    f"ads_summary_skipped_malformed_row: tenant_id={tenant_id} row={row}"
+                )
+                continue
+            started = row.get("started", 0)
+            converted = row.get("converted", 0)
+            rate = round(converted / started * 100, 2) if started > 0 else 0.0
+            ads.append({
+                "ad_id": ad_id,
+                "headline": row.get("headline"),
+                "image_url": row.get("image_url"),
+                "source_url": row.get("source_url"),
+                "conversations_started": started,
+                "conversations_converted": converted,
+                "conversion_rate": rate,
+            })
+
+        logger.info(
+            f"ads_summary_computed: tenant_id={tenant_id} period={query.period} "
+            f"ads={len(ads)} converted_ids={len(converted_ids)}"
+        )
+
+        return {
+            "ads": ads,
+            "total_ads": len(ads),
+            "period": query.period,
+            "start_date": start_utc.date(),
+            "end_date": end_utc.date(),
+        }
+
 
 # Global service instance
 metrics_service = MetricsService()

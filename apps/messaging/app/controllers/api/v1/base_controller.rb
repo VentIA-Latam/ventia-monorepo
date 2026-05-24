@@ -1,4 +1,6 @@
 class Api::V1::BaseController < ApplicationController
+  include MessagingApiKeyAuthentication
+
   before_action :set_current_account
   before_action :set_current_user
   before_action :set_sentry_context

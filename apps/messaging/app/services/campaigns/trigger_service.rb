@@ -22,19 +22,29 @@ class Campaigns::TriggerService
   end
 
   def audience_contacts
-    # If audience is specified, use it. Otherwise, send to all contacts
     if @campaign.audience.present?
       filter_audience_contacts
     else
-      @campaign.account.contacts.where.not(phone_number: nil)
+      reachable_contacts
     end
+  end
+
+  def reachable_contacts
+    # Use subquery IDs to keep both branches structurally compatible for #or.
+    ids_with_phone = @campaign.account.contacts.where.not(phone_number: nil).select(:id)
+    ids_with_bsuid = ContactInbox
+                       .where(inbox: @campaign.inbox)
+                       .where.not(whatsapp_bsuid: nil)
+                       .select(:contact_id)
+
+    @campaign.account.contacts.where(id: ids_with_phone).or(
+      @campaign.account.contacts.where(id: ids_with_bsuid)
+    )
   end
 
   def filter_audience_contacts
     # Audience format: [{ "filter_operator": "equal_to", "attribute_key": "phone_number", "values": ["+123..."] }]
-    base_scope = @campaign.account.contacts.where.not(phone_number: nil)
-
-    @campaign.audience.reduce(base_scope) do |scope, filter|
+    @campaign.audience.reduce(reachable_contacts) do |scope, filter|
       apply_filter(scope, filter)
     end
   end
@@ -57,12 +67,25 @@ class Campaigns::TriggerService
   end
 
   def create_campaign_conversation(contact)
-    # Find or create contact_inbox
+    existing_ci = ContactInbox
+                    .where(contact: contact, inbox: @campaign.inbox)
+                    .order(Arel.sql('whatsapp_bsuid IS NULL ASC'))
+                    .first
+    bsuid     = existing_ci&.whatsapp_bsuid
+    source_id = bsuid.presence || contact.phone_number&.gsub(/[^\d]/, '')
+
+    if source_id.blank?
+      Rails.logger.warn "[Campaign] Contact #{contact.id} has no whatsapp_bsuid nor phone, skipping"
+      return
+    end
+
     contact_inbox = ContactInbox.find_or_create_by!(
-      contact: contact,
-      inbox: @campaign.inbox,
-      source_id: contact.phone_number.gsub(/[^\d]/, '')
-    )
+      contact:   contact,
+      inbox:     @campaign.inbox,
+      source_id: source_id
+    ) do |ci|
+      ci.whatsapp_bsuid = bsuid if bsuid.present?
+    end
 
     # Create conversation
     conversation = Conversation.create!(
@@ -91,6 +114,6 @@ class Campaigns::TriggerService
     ).perform
 
   rescue StandardError => e
-    Rails.logger.error "[Campaign] Failed to send to #{contact.phone_number}: #{e.message}"
+    Rails.logger.error "[Campaign] Failed to send to #{contact.phone_number || bsuid}: #{e.message}"
   end
 end
