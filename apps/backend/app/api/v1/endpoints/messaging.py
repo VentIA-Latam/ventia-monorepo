@@ -491,7 +491,7 @@ async def export_conversations(
     ai_agent_enabled: bool | None = Query(None),
     search: str | None = Query(None),
     tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
-    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/export")),
 ):
     tenant_id = _resolve_tenant_id(current_user, tenant_id)
     params = {}
@@ -880,7 +880,7 @@ async def list_messages(
 )
 async def search_messages(
     conversation_id: str,
-    q: str = Query(..., description="Search query term"),
+    q: str = Query(..., min_length=2, description="Search query term"),
     tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):

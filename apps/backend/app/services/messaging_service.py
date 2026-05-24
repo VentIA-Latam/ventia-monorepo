@@ -266,7 +266,8 @@ class MessagingService:
     ) -> Optional[dict]:
         """Export conversations filtered by active filters (no pagination)."""
         return await self._request(
-            "GET", "/api/v1/conversations/export", tenant_id, params=params
+            "GET", "/api/v1/conversations/export", tenant_id, params=params,
+            timeout=30.0,
         )
 
     async def get_conversations_count_by_period(
@@ -365,6 +366,7 @@ class MessagingService:
             f"/api/v1/conversations/{conversation_id}/messages/search",
             tenant_id,
             params={"q": query},
+            timeout=15.0,
         )
 
     async def send_message(

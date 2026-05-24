@@ -6,15 +6,16 @@ class Api::V1::ConversationsController < Api::V1::BaseController
   def index
     conversations = apply_filters(
       current_account.conversations
-                     .includes(:contact, :inbox, :labels, :assignee, :team, messages: :attachments)
+                     .includes(:contact, :contact_inbox, :inbox, :labels, :assignee, :team)
                      .recent
     ).page(params[:page] || 1).per(params[:per_page] || 25)
 
     search_term = params[:search].presence
+    stats = precompute_conversation_stats(conversations)
 
     render json: {
       success: true,
-      data: conversations.map { |c| conversation_json(c, search_term: search_term) },
+      data: conversations.map { |c| conversation_json(c, search_term: search_term, stats: stats) },
       meta: pagination_meta(conversations)
     }
   end
@@ -160,6 +161,63 @@ class Api::V1::ConversationsController < Api::V1::BaseController
 
   private
 
+  def precompute_conversation_stats(conversations)
+    conv_ids = conversations.map(&:id)
+    return {} if conv_ids.empty?
+
+    pg_ids = "{#{conv_ids.join(',')}}"
+
+    last_msgs = Message
+      .where(conversation_id: conv_ids)
+      .where.not(message_type: :activity)
+      .select('DISTINCT ON (conversation_id) messages.*')
+      .order('conversation_id, created_at DESC')
+      .includes(:attachments)
+
+    agg = ActiveRecord::Base.connection.execute(
+      ActiveRecord::Base.sanitize_sql_array([
+        <<~SQL, pg_ids
+          SELECT conversation_id, COUNT(*) AS cnt, MAX(created_at) AS max_date
+          FROM messages
+          WHERE conversation_id = ANY(?::int[])
+          GROUP BY conversation_id
+        SQL
+      ])
+    )
+
+    unread_rows = ActiveRecord::Base.connection.execute(
+      ActiveRecord::Base.sanitize_sql_array([
+        <<~SQL, pg_ids
+          SELECT m.conversation_id, COUNT(*) AS unread
+          FROM messages m
+          JOIN conversations c ON c.id = m.conversation_id
+          WHERE m.conversation_id = ANY(?::int[])
+            AND m.message_type = 0
+            AND m.created_at > COALESCE(c.agent_last_seen_at, '1970-01-01')
+          GROUP BY m.conversation_id
+        SQL
+      ])
+    )
+
+    counts = {}
+    max_dates = {}
+    agg.each do |row|
+      cid = row['conversation_id'].to_i
+      counts[cid] = row['cnt'].to_i
+      max_dates[cid] = row['max_date']
+    end
+
+    unread = {}
+    unread_rows.each { |row| unread[row['conversation_id'].to_i] = row['unread'].to_i }
+
+    {
+      last_messages: last_msgs.index_by(&:conversation_id),
+      counts: counts,
+      max_dates: max_dates,
+      unread: unread
+    }
+  end
+
   def apply_filters(base)
     base = base.where(status: params[:status]) if params[:status]
     base = base.by_stage(params[:stage]) if params[:stage].present?
@@ -231,8 +289,18 @@ class Api::V1::ConversationsController < Api::V1::BaseController
     end
   end
 
-  def conversation_json(conversation, search_term: nil)
-    last_msg = conversation.messages.where.not(message_type: :activity).order(created_at: :desc).first
+  def conversation_json(conversation, search_term: nil, stats: nil)
+    if stats
+      last_msg       = stats[:last_messages][conversation.id]
+      last_message_at = stats[:max_dates][conversation.id]
+      messages_count = stats[:counts][conversation.id] || 0
+      unread_count   = stats[:unread][conversation.id] || 0
+    else
+      last_msg       = conversation.messages.where.not(message_type: :activity).order(created_at: :desc).first
+      last_message_at = conversation.messages.maximum(:created_at)
+      messages_count = conversation.messages.count
+      unread_count   = conversation.unread_messages.count
+    end
 
     snippet_data      = build_message_snippet(conversation, search_term)
     message_snippet   = snippet_data&.dig(:snippet)
@@ -249,7 +317,7 @@ class Api::V1::ConversationsController < Api::V1::BaseController
       last_activity_at: conversation.last_activity_at,
       agent_last_seen_at: conversation.agent_last_seen_at,
       created_at: conversation.created_at,
-      last_message_at: conversation.messages.maximum(:created_at),
+      last_message_at: last_message_at,
       contact: {
         id:               conversation.contact.id,
         name:             conversation.contact.name,
@@ -278,8 +346,8 @@ class Api::V1::ConversationsController < Api::V1::BaseController
       waiting_since: conversation.waiting_since&.to_i,
       first_reply_created_at: conversation.first_reply_created_at&.to_i,
       ai_agent_enabled: conversation.ai_agent_enabled,
-      messages_count: conversation.messages.count,
-      unread_count: conversation.unread_messages.count,
+      messages_count: messages_count,
+      unread_count: unread_count,
       last_message: last_msg ? {
         content: last_msg.content&.truncate(100),
         message_type: last_msg.message_type,

@@ -80,6 +80,7 @@ PERMISSIONS: Dict[Tuple[str, str], List[Role]] = {
 
     # MESSAGING ENDPOINTS
     ("GET", "/messaging/*"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
+    ("GET", "/messaging/export"): [Role.SUPERADMIN, Role.ADMIN],
     ("POST", "/messaging/*"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
     ("PATCH", "/messaging/*"): [Role.SUPERADMIN, Role.ADMIN],
     ("PUT", "/messaging/*"): [Role.SUPERADMIN, Role.ADMIN],

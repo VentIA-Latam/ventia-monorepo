@@ -107,18 +107,17 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
       return;
     }
 
-    let cancelled = false;
+    const controller = new AbortController();
     setMessages([]);
     setLoading(true);
     setHasMore(true);
     messageIdsRef.current = new Set<string>();
 
-    getMessages(conversation.id, { tenantId })
+    getMessages(conversation.id, { tenantId, signal: controller.signal })
       .then((data) => {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           const msgs = data.data ?? [];
           messageIdsRef.current = new Set(msgs.map((m) => String(m.id)));
-          // Skip auto-scroll when there's a target message — the targetMessageId effect handles navigation
           scrollBehaviorRef.current = targetMessageId ? false : "instant";
           setMessages(msgs);
           setHasMore(Boolean(data.meta?.has_more));
@@ -126,17 +125,17 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
         }
       })
       .catch((err) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
         console.error("Error loading messages:", err);
-        if (!cancelled) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       });
 
-    // Mark as read (non-blocking, with logging for diagnostics)
     markConversationRead(conversation.id, tenantId)
       .then(() => console.log(`[mark-read] Conversation ${conversation.id} marked as read`))
       .catch((err) => console.error(`[mark-read] FAILED for conversation ${conversation.id}:`, err));
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [conversation?.id]);
 

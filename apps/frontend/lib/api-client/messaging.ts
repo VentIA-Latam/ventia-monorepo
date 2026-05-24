@@ -124,7 +124,7 @@ export async function markConversationRead(conversationId: number | string, tena
 
 export async function getMessages(
   conversationId: number | string,
-  options?: { before?: number; after?: number; tenantId?: number }
+  options?: { before?: number; after?: number; tenantId?: number; signal?: AbortSignal }
 ): Promise<MessageListResponse> {
   const params: Record<string, string | number> = {};
   if (options?.before) params.before = options.before;
@@ -132,7 +132,8 @@ export async function getMessages(
   if (options?.tenantId) params.tenant_id = options.tenantId;
   return apiGet(
     `/api/messaging/conversations/${conversationId}/messages`,
-    Object.keys(params).length > 0 ? params : undefined
+    Object.keys(params).length > 0 ? params : undefined,
+    options?.signal ? { signal: options.signal } : undefined
   );
 }
 
