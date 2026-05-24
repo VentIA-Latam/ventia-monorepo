@@ -6,21 +6,30 @@ class Api::V1::MessagesController < Api::V1::BaseController
   def index
     base = @conversation.messages.includes(attachments: { file_attachment: :blob })
 
-    messages = if params[:before].present?
-                 # Load older messages (scroll up)
-                 base.reorder(created_at: :desc).where('id < ?', params[:before].to_i).limit(20).reverse
+    messages, has_more = if params[:around].present?
+                 target = base.find_by(id: params[:around].to_i)
+                 if target
+                   before = base.where('created_at < ?', target.created_at).reorder(created_at: :desc).limit(10).reverse
+                   after  = base.where('created_at > ?', target.created_at).reorder(created_at: :asc).limit(10)
+                   [[*before, target, *after], before.size == 10]
+                 else
+                   [base.reorder(created_at: :desc).limit(20).reverse, true]
+                 end
+               elsif params[:before].present?
+                 msgs = base.reorder(created_at: :desc).where('id < ?', params[:before].to_i).limit(20).reverse
+                 [msgs, msgs.size == 20]
                elsif params[:after].present?
-                 # Load newer messages (real-time catch-up)
-                 base.reorder(created_at: :asc).where('id > ?', params[:after].to_i).limit(100)
+                 msgs = base.reorder(created_at: :asc).where('id > ?', params[:after].to_i).limit(100)
+                 [msgs, false]
                else
-                 # Default: latest 20 messages in chronological order
-                 base.reorder(created_at: :desc).limit(20).reverse
+                 msgs = base.reorder(created_at: :desc).limit(20).reverse
+                 [msgs, msgs.size == 20]
                end
 
     render json: {
       success: true,
       data: messages.map { |m| message_json(m) },
-      meta: { has_more: messages.size == 20 }
+      meta: { has_more: has_more }
     }
   end
 

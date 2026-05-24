@@ -60,12 +60,13 @@ interface MessageViewProps {
   conversation: Conversation | null;
   tenantId?: number;
   targetMessageId?: number | null;
+  targetNonce?: number;
   onBack?: () => void;
   onOpenInfo?: () => void;
   onConversationUpdate?: (updated: Conversation) => void;
 }
 
-export const MessageView = memo(function MessageView({ conversation, tenantId, targetMessageId, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
+export const MessageView = memo(function MessageView({ conversation, tenantId, targetMessageId, targetNonce, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
   const lastEvent = useMessagingEvent();
   const reconnectedAt = useMessagingReconnect();
   const { userDetails } = useAuth();
@@ -87,6 +88,8 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [jumpHighlightId, setJumpHighlightId] = useState<string | null>(null);
   const [isJumpMode, setIsJumpMode] = useState(false);
+  const [showScrollDown, setShowScrollDown] = useState(false);
+  const showScrollDownRef = useRef(false);
   const [isNavigatingToMessage, setIsNavigatingToMessage] = useState(false);
   const isLoadingPreviousRef = useRef(false);
   const isLoadingTargetRef = useRef(false);
@@ -355,40 +358,34 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
     isLoadingTargetRef.current = true;
     setIsNavigatingToMessage(true);
     try {
-      const [beforeData, afterData] = await Promise.all([
-        getMessages(capturedConvId, { before: targetId + 1, tenantId }),
-        getMessages(capturedConvId, { after: targetId, tenantId }),
-      ]);
-      // Discard result if conversation changed while awaiting
+      const data = await getMessages(capturedConvId, { around: targetId, tenantId });
       if (currentConvIdRef.current !== capturedConvId) return;
-      const beforeMsgs = beforeData.data ?? [];
-      const afterMsgs = afterData.data ?? [];
-      const combined = [...beforeMsgs, ...afterMsgs].sort(
-        (a, b) => new Date(String(a.created_at)).getTime() - new Date(String(b.created_at)).getTime()
-      );
-      if (combined.length === 0) return;
-      messageIdsRef.current = new Set(combined.map((m) => String(m.id)));
-      // flushSync commits DOM synchronously — scrollIntoView runs in the same call stack
+      const msgs = data.data ?? [];
+      if (msgs.length === 0) return;
+      messageIdsRef.current = new Set(msgs.map((m) => String(m.id)));
       flushSync(() => {
-        setMessages(combined);
-        setHasMore(Boolean(beforeData.meta?.has_more));
+        setMessages(msgs);
+        setHasMore(Boolean(data.meta?.has_more));
         setIsJumpMode(true);
       });
-      const targetEl = document.querySelector(`[data-msg-id="${targetId}"]`);
-      if (targetEl) {
-        scrolledTargetRef.current = `${conversation.id}-${targetId}`;
-        isPinnedToBottomRef.current = false;
-        targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
-        setJumpHighlightId(String(targetId));
-        setTimeout(() => setJumpHighlightId(null), 1500);
-      }
+      isPinnedToBottomRef.current = false;
+      requestAnimationFrame(() => {
+        const targetEl = document.querySelector(`[data-msg-id="${targetId}"]`);
+        if (targetEl) {
+          scrolledTargetRef.current = `${conversation.id}-${targetId}-${targetNonce}`;
+          targetEl.scrollIntoView({ behavior: "instant", block: "center" });
+          setJumpHighlightId(String(targetId));
+          setTimeout(() => setJumpHighlightId(null), 1500);
+        }
+        isLoadingTargetRef.current = false;
+        setIsNavigatingToMessage(false);
+      });
     } catch (err) {
       console.error("[navigate-to-message]", err);
-    } finally {
       isLoadingTargetRef.current = false;
       setIsNavigatingToMessage(false);
     }
-  }, [conversation?.id, tenantId]);
+  }, [conversation?.id, tenantId, targetNonce]);
 
   navigateToMessageRef.current = navigateToMessage;
 
@@ -400,10 +397,16 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
     const handleScroll = () => {
       if (isLoadingPreviousRef.current) return;
 
-      // Track if user is near the bottom (within 150px)
       const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-      isPinnedToBottomRef.current = distanceFromBottom < 150;
-      if (distanceFromBottom < 150) setIsJumpMode(false);
+      const isNearBottom = distanceFromBottom < 150;
+      isPinnedToBottomRef.current = isNearBottom;
+      if (isNearBottom) setIsJumpMode(false);
+
+      const shouldShow = !isNearBottom;
+      if (showScrollDownRef.current !== shouldShow) {
+        showScrollDownRef.current = shouldShow;
+        setShowScrollDown(shouldShow);
+      }
 
       // Load older messages when near the top — calls through stable ref
       if (container.scrollTop < 100) {
@@ -497,10 +500,11 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
 
   // Navigate to targetMessageId when provided from conversation list search.
   // For internal search panel clicks, handleResultClick handles scroll directly.
+  // targetNonce forces re-execution even when clicking the same result twice.
   useEffect(() => {
     if (!targetMessageId || messages.length === 0) return;
 
-    const key = `${conversation?.id}-${targetMessageId}`;
+    const key = `${conversation?.id}-${targetMessageId}-${targetNonce}`;
     if (scrolledTargetRef.current === key) return;
 
     const id = String(targetMessageId);
@@ -515,17 +519,21 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
 
     scrolledTargetRef.current = key;
     isPinnedToBottomRef.current = false;
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-    setJumpHighlightId(id);
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: "instant", block: "center" });
+      setJumpHighlightId(id);
+    });
     const timerId = setTimeout(() => setJumpHighlightId(null), 1500);
     return () => clearTimeout(timerId);
-  }, [targetMessageId, messages, conversation?.id]);
+  }, [targetMessageId, targetNonce, messages, conversation?.id]);
 
   // Reset search when conversation changes
   useEffect(() => {
     setIsSearchOpen(false);
     setJumpHighlightId(null);
     setIsJumpMode(false);
+    setShowScrollDown(false);
+    showScrollDownRef.current = false;
     setIsNavigatingToMessage(false);
     scrolledTargetRef.current = null;
     isPinnedToBottomRef.current = false;
@@ -747,7 +755,6 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
                 <div
                   key={msg.id}
                   data-msg-id={msg.id}
-                  className={`rounded-lg transition-colors duration-300 ${isHighlighted ? "bg-volt/15" : ""}`}
                 >
                   {showSeparator ? (
                     <div className="flex justify-center my-3">
@@ -756,7 +763,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
                       </span>
                     </div>
                   ) : null}
-                  <div style={MESSAGE_ITEM_STYLE}>
+                  <div className={`rounded-lg transition-colors duration-300 ${isHighlighted ? "bg-volt/15" : ""}`} style={MESSAGE_ITEM_STYLE}>
                     <MessageBubble message={msg} showAvatar={isLastInCluster} />
                   </div>
                 </div>
@@ -769,16 +776,16 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
         </div>
         </div>
 
-        {isJumpMode && (
+        {showScrollDown && (
           <div className="absolute bottom-4 right-4 z-10">
             <Button
-              size="sm"
+              size="icon"
               variant="secondary"
-              onClick={handleBackToBottom}
-              className="shadow-lg gap-1.5 border border-border/50"
+              onClick={isJumpMode ? handleBackToBottom : () => bottomRef.current?.scrollIntoView({ behavior: "smooth" })}
+              aria-label="Ir a los más recientes"
+              className="h-10 w-10 rounded-full shadow-md border border-border/40"
             >
-              <ArrowDown className="h-3.5 w-3.5" />
-              Ir a los más recientes
+              <ArrowDown className="h-5 w-5" />
             </Button>
           </div>
         )}

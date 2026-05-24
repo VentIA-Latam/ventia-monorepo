@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Sheet,
@@ -36,6 +36,7 @@ export function ConversationsClient({
   );
   const [selectedId, setSelectedId] = useState<number | null>(initialConversationId ?? null);
   const [targetMessageId, setTargetMessageId] = useState<number | null>(null);
+  const [targetNonce, setTargetNonce] = useState(0);
   const [showInfo, setShowInfo] = useState(false);
   const [allLabels, setAllLabels] = useState<Label[]>(initialLabels as Label[]);
   const [temperatureConfig] = useState<TemperatureDefinition[]>(initialTemperatureConfig as TemperatureDefinition[]);
@@ -54,14 +55,21 @@ export function ConversationsClient({
     );
   }, []);
 
-  const selectedConversation = useMemo(
-    () => conversations.find((c) => c.id === selectedId) ?? null,
-    [conversations, selectedId]
-  );
+  const selectedConvCacheRef = useRef<Conversation | null>(null);
+  const selectedConversation = useMemo(() => {
+    if (selectedId === null) {
+      selectedConvCacheRef.current = null;
+      return null;
+    }
+    const found = conversations.find((c) => c.id === selectedId) ?? null;
+    if (found) selectedConvCacheRef.current = found;
+    return found ?? selectedConvCacheRef.current;
+  }, [conversations, selectedId]);
 
   const handleSelect = useCallback((id: number, msgId?: number) => {
     setSelectedId(id);
     setTargetMessageId(msgId ?? null);
+    if (msgId) setTargetNonce((n) => n + 1);
     setShowInfo(false);
     // Optimistic: clear unread badge immediately
     setConversations((prev) =>
@@ -126,6 +134,7 @@ export function ConversationsClient({
             <MessageView
               conversation={selectedConversation}
               targetMessageId={targetMessageId}
+              targetNonce={targetNonce}
               onBack={handleBack}
               onOpenInfo={handleOpenInfo}
               onConversationUpdate={handleConversationUpdate}
@@ -178,6 +187,7 @@ export function ConversationsClient({
         <MessageView
           conversation={selectedConversation}
           targetMessageId={targetMessageId}
+              targetNonce={targetNonce}
           onOpenInfo={handleOpenInfo}
           onConversationUpdate={handleConversationUpdate}
         />

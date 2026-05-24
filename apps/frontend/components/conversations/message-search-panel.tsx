@@ -7,6 +7,7 @@ import { searchMessages } from "@/lib/api-client/messaging";
 import type { MessageSearchResult, MessageStatus } from "@/lib/types/messaging";
 import { parseTimestamp } from "@/lib/utils/messaging";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 function StatusIcon({ status }: { status?: MessageStatus }) {
   switch (status) {
@@ -47,6 +48,7 @@ export function MessageSearchPanel({ conversationId, tenantId, onClose, onResult
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const t = setTimeout(() => inputRef.current?.focus(), 50);
@@ -58,13 +60,14 @@ export function MessageSearchPanel({ conversationId, tenantId, onClose, onResult
   }, [onClose]);
 
   useEffect(() => {
-    if (!query.trim()) {
+    if (query.trim().length < 2) {
       setResults([]);
+      setIsSearching(false);
       return;
     }
+    setIsSearching(true);
     let cancelled = false;
     const timer = setTimeout(async () => {
-      setIsSearching(true);
       try {
         const res = await searchMessages(conversationId, query, tenantId);
         if (!cancelled) setResults(res.data ?? []);
@@ -142,7 +145,7 @@ export function MessageSearchPanel({ conversationId, tenantId, onClose, onResult
           </p>
         )}
 
-        {!isSearching && query.trim() && results.length === 0 && (
+        {!isSearching && query.trim().length >= 2 && results.length === 0 && (
           <p className="text-xs text-muted-foreground text-center py-10 px-4">
             Sin resultados para &ldquo;{query}&rdquo;
           </p>
@@ -151,7 +154,7 @@ export function MessageSearchPanel({ conversationId, tenantId, onClose, onResult
         {!isSearching && results.map((result) => (
           <button
             key={result.id}
-            onClick={() => onResultClick(result.id)}
+            onClick={() => { onResultClick(result.id); if (isMobile) onClose(); }}
             className="w-full text-left px-4 py-3 hover:bg-muted/50 border-b border-border/20 transition-colors"
           >
             <p className="text-xs text-muted-foreground mb-0.5">

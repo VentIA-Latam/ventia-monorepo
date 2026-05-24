@@ -816,6 +816,7 @@ async def list_messages(
     page: int | None = Query(None, description="Page number"),
     before: int | None = Query(None, description="Load messages with id < this value (scroll up)"),
     after: int | None = Query(None, description="Load messages with id > this value (catch up)"),
+    around: int | None = Query(None, description="Load messages centered around this message id"),
     tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):
@@ -860,9 +861,11 @@ async def list_messages(
     params = {}
     if page:
         params["page"] = page
-    if before:
+    if around:
+        params["around"] = around
+    elif before:
         params["before"] = before
-    if after:
+    elif after:
         params["after"] = after
 
     result = await messaging_service.get_messages(tenant_id, conversation_id, params or None)

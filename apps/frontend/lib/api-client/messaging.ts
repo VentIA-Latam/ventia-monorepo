@@ -124,11 +124,12 @@ export async function markConversationRead(conversationId: number | string, tena
 
 export async function getMessages(
   conversationId: number | string,
-  options?: { before?: number; after?: number; tenantId?: number; signal?: AbortSignal }
+  options?: { before?: number; after?: number; around?: number; tenantId?: number; signal?: AbortSignal }
 ): Promise<MessageListResponse> {
   const params: Record<string, string | number> = {};
-  if (options?.before) params.before = options.before;
-  if (options?.after) params.after = options.after;
+  if (options?.around) params.around = options.around;
+  else if (options?.before) params.before = options.before;
+  else if (options?.after) params.after = options.after;
   if (options?.tenantId) params.tenant_id = options.tenantId;
   return apiGet(
     `/api/messaging/conversations/${conversationId}/messages`,

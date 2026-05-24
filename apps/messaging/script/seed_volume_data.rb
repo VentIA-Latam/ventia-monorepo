@@ -66,10 +66,11 @@ end
 
 inbox = Inbox.where(account_id: account.id).first
 if inbox.nil?
+  Channel::Whatsapp.skip_callback(:commit, :after, :setup_webhooks) rescue nil
   channel = Channel::Whatsapp.new(
     phone_number:    "+51900000001",
     provider:        "whatsapp_cloud",
-    provider_config: { access_token: "SEED_TOKEN", phone_number_id: "SEED_PHONE_ID" },
+    provider_config: {},
     account_id:      account.id
   )
   channel.save!(validate: false)
@@ -268,7 +269,7 @@ CONTACTOS_A_CREAR.times do |i|
       contact_id:       contact.id,
       contact_inbox_id: ci.id,
       assignee_id:      messaging_user.id,
-      status:           [0, 0, 0, 1, 2].sample,  # mayoría open
+      status:           0,  # open
       ai_agent_enabled: [true, false].sample,
       last_activity_at: rand(1..30).days.ago,
       created_at:       rand(30..180).days.ago
@@ -288,17 +289,14 @@ CONTACTOS_A_CREAR.times do |i|
   extras = Array.new(num_msgs - hilo.size) { MENSAJES_ADICIONALES.sample }
   todos  = hilo + extras
 
-  # Fechas: distribuidas en los últimos 6 meses
-  conv_age_days = rand(30..180)
+  # Fechas: cronológicas desde la creación de la conversación
+  ts = conv.created_at
   msg_rows = todos.each_with_index.map do |contenido, idx|
-    # Conversación alternada: pares=incoming (cliente), impares=outgoing (agente)
     msg_type = idx.even? ? 0 : 1  # 0=incoming, 1=outgoing
     sender_type = msg_type == 0 ? "Contact" : "User"
     sender_id   = msg_type == 0 ? contact.id : messaging_user.id
 
-    # Timestamp: más antiguo primero, con pequeñas variaciones
-    offset_hours = (conv_age_days * 24) - (idx * rand(1..6))
-    ts = Time.current - [offset_hours, 0].max.hours
+    ts += rand(1..6).hours
 
     {
       content:                   contenido,
@@ -322,6 +320,7 @@ CONTACTOS_A_CREAR.times do |i|
     Message.insert_all!(batch)
   end
 
+  conv.update_columns(last_activity_at: msg_rows.last[:created_at])
   created_msgs += msg_rows.size
 
   print "." if (i + 1) % 10 == 0
