@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Search, X, Loader2, Check, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { searchMessages } from "@/lib/api-client/messaging";
 import type { MessageSearchResult, MessageStatus } from "@/lib/types/messaging";
 import { parseTimestamp } from "@/lib/utils/messaging";
+import { useToast } from "@/hooks/use-toast";
 
 function StatusIcon({ status }: { status?: MessageStatus }) {
   switch (status) {
@@ -44,10 +45,17 @@ export function MessageSearchPanel({ conversationId, tenantId, onClose, onResult
   const [results, setResults] = useState<MessageSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
-    setTimeout(() => inputRef.current?.focus(), 50);
+    const t = setTimeout(() => inputRef.current?.focus(), 50);
+    return () => clearTimeout(t);
   }, []);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Escape") onClose();
+  }, [onClose]);
 
   useEffect(() => {
     if (!query.trim()) {
@@ -60,8 +68,11 @@ export function MessageSearchPanel({ conversationId, tenantId, onClose, onResult
       try {
         const res = await searchMessages(conversationId, query, tenantId);
         if (!cancelled) setResults(res.data ?? []);
-      } catch {
-        if (!cancelled) setResults([]);
+      } catch (err) {
+        if (!cancelled) {
+          setResults([]);
+          toast({ title: "Error al buscar mensajes", variant: "destructive" });
+        }
       } finally {
         if (!cancelled) setIsSearching(false);
       }
@@ -70,7 +81,14 @@ export function MessageSearchPanel({ conversationId, tenantId, onClose, onResult
   }, [query, conversationId, tenantId]);
 
   return (
-    <div className="absolute inset-0 z-10 w-full md:relative md:inset-auto md:z-auto md:w-[320px] md:shrink-0 flex flex-col h-full border-l border-border/30 bg-background">
+    <div
+      ref={panelRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Buscar mensajes"
+      onKeyDown={handleKeyDown}
+      className="absolute inset-0 z-10 w-full md:relative md:inset-auto md:z-auto md:w-[320px] md:shrink-0 flex flex-col h-full border-l border-border/30 bg-background"
+    >
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border/30 bg-muted/30 shrink-0 min-h-[53px]">
         <Button

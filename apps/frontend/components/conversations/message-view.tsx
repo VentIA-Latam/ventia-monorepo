@@ -25,6 +25,7 @@ import type { Conversation, Message, MessageType, MessageStatus, MessageContentA
 import { MessageSearchPanel } from "./message-search-panel";
 import { getInitials, getDateSeparatorLabel, parseTimestamp, getSenderKey } from "@/lib/utils/messaging";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 
 function mapWebSocketAttachments(raw: unknown): AttachmentBrief[] {
   if (!Array.isArray(raw)) return [];
@@ -68,6 +69,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
   const lastEvent = useMessagingEvent();
   const reconnectedAt = useMessagingReconnect();
   const { userDetails } = useAuth();
+  const { toast } = useToast();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -127,7 +129,10 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
       .catch((err) => {
         if (err instanceof DOMException && err.name === "AbortError") return;
         console.error("Error loading messages:", err);
-        if (!controller.signal.aborted) setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+          toast({ title: "Error al cargar mensajes", description: "Intenta recargar la página", variant: "destructive" });
+        }
       });
 
     markConversationRead(conversation.id, tenantId)
@@ -464,6 +469,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
         }
       } catch (err) {
         console.error("Error sending message:", err);
+        toast({ title: "Error al enviar mensaje", description: "Verifica tu conexión e intenta de nuevo", variant: "destructive" });
       } finally {
         if (previewUrl) URL.revokeObjectURL(previewUrl);
       }
@@ -483,6 +489,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
       } catch (err) {
         console.error("Error toggling AI agent:", err);
         onConversationUpdate?.(conversation);
+        toast({ title: "Error al cambiar agente IA", variant: "destructive" });
       }
     },
     [conversation, onConversationUpdate, tenantId]

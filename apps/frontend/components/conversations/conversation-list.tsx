@@ -24,6 +24,7 @@ import {
   type ConversationFilters as ConversationFilterParams,
 } from "@/lib/api-client/messaging";
 import type { Conversation, Label, TemperatureDefinition } from "@/lib/types/messaging";
+import { useToast } from "@/hooks/use-toast";
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -57,6 +58,7 @@ export function ConversationList({
   const lastEvent = useMessagingEvent();
   const emitEvent = useMessagingEmit();
   const reconnectedAt = useMessagingReconnect();
+  const { toast } = useToast();
   const sectionFilter = (section === "sale" || section === "unattended" ? section : "all") as SectionValue;
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const [searchQuery, setSearchQuery] = useState("");
@@ -114,6 +116,7 @@ export function ConversationList({
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
         console.error("Error fetching conversations:", error);
+        toast({ title: "Error al cargar conversaciones", variant: "destructive" });
       } finally {
         if (!signal?.aborted) setLoading(false);
       }
@@ -190,9 +193,10 @@ export function ConversationList({
         emitEvent({ event: "conversation.deleted", data: { id } });
       } catch (error) {
         console.error("Error deleting conversation:", error);
+        toast({ title: "Error al eliminar conversación", variant: "destructive" });
       }
     },
-    [onConversationsChange, onDeleteConversation, emitEvent]
+    [onConversationsChange, onDeleteConversation, emitEvent, toast]
   );
 
   // Debounced full refetch (fallback for events we can't handle locally)
@@ -351,6 +355,7 @@ export function ConversationList({
       await exportConversations(buildParams(sectionFilterRef.current, activeFiltersRef.current, searchQueryRef.current));
     } catch (error) {
       console.error("Error exporting conversations:", error);
+      toast({ title: "Error al exportar conversaciones", variant: "destructive" });
     } finally {
       setIsExportingAll(false);
     }
