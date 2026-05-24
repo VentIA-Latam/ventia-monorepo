@@ -50,6 +50,28 @@ module Api
           render_success({ total: total, results: results })
         end
 
+        # POST /api/v1/analytics/ads_summary
+        # Body:
+        #   - start_date (ISO 8601, required)
+        #   - end_date   (ISO 8601, required)
+        #   - converted_conversation_ids (array<integer>, optional, default [])
+        # Respuesta:
+        #   { success: true,
+        #     data: { ads: [{ ad_id, headline, image_url, source_url, started, converted }] } }
+        def ads_summary
+          start_date, end_date = parse_date_range
+          return if performed?
+
+          ads = ::Analytics::AdsSummaryService.new(
+            account: current_account,
+            start_date: start_date,
+            end_date: end_date,
+            converted_conversation_ids: Array(params[:converted_conversation_ids])
+          ).perform
+
+          render_success({ ads: ads })
+        end
+
         private
 
         def parse_date_range

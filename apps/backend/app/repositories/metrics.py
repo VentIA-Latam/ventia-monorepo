@@ -278,6 +278,31 @@ class MetricsRepository:
         )
         return result or 0
 
+    def get_validated_order_conversation_ids(
+        self,
+        db: Session,
+        tenant_id: int,
+        start: datetime,
+        end: datetime,
+    ) -> list[int]:
+        """Return distinct messaging_conversation_ids with a validated order in the period.
+
+        Used by ads-summary endpoint: the list is sent to Rails so it can
+        aggregate started/converted per ad in a single SQL pass.
+        """
+        rows = (
+            db.query(distinct(Order.messaging_conversation_id))
+            .filter(
+                Order.tenant_id == tenant_id,
+                Order.validado.is_(True),
+                Order.validated_at >= start,
+                Order.validated_at <= end,
+                Order.messaging_conversation_id.isnot(None),
+            )
+            .all()
+        )
+        return [row[0] for row in rows]
+
 
 # Global repository instance
 metrics_repository = MetricsRepository()

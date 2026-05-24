@@ -11,6 +11,7 @@ from app.api.deps import get_current_user, get_database, require_permission_dual
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.schemas.metrics import (
+    AdsSummaryResponse,
     ConversionRateResponse,
     DashboardMetrics,
     MetricsQuery,
@@ -240,4 +241,39 @@ async def get_no_purchase_reasons(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve no-purchase reasons: {e}",
+        )
+
+
+@router.get(
+    "/ads-summary",
+    response_model=AdsSummaryResponse,
+    summary="Resumen de conversaciones agrupadas por anuncio Meta (click-to-WhatsApp)",
+    tags=["metrics"],
+)
+async def get_ads_summary(
+    period: PeriodType = Query("last_30_days"),
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
+    current_user: User = Depends(require_permission_dual("GET", "/metrics/*")),
+    db: Session = Depends(get_database),
+) -> AdsSummaryResponse:
+    """Get ads performance summary for the current user's tenant."""
+    try:
+        query = MetricsQuery(period=period, start_date=start_date, end_date=end_date)
+        tz_name = _get_tenant_timezone(db, current_user.tenant_id)
+        result = await metrics_service.get_ads_summary(
+            db=db,
+            tenant_id=current_user.tenant_id,
+            query=query,
+            tz_name=tz_name,
+        )
+        return AdsSummaryResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve ads summary: {e}",
         )
