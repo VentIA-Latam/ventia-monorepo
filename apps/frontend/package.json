@@ -12,9 +12,11 @@
     "audit:dark": "tsx scripts/audit-dark-mode.ts",
     "audit:dark:login": "tsx scripts/audit-dark-mode.ts --login",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed",
-    "test:e2e:debug": "PWDEBUG=1 playwright test",
+    "test:e2e:desktop": "playwright test --project=chromium",
+    "test:e2e:mobile": "playwright test --project=mobile-chrome",
+    "test:e2e:ui": "playwright test --ui --project=chromium",
+    "test:e2e:headed": "playwright test --headed --project=chromium",
+    "test:e2e:debug": "PWDEBUG=1 playwright test --project=chromium",
     "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
