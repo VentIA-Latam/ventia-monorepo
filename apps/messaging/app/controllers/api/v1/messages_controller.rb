@@ -1,25 +1,67 @@
 class Api::V1::MessagesController < Api::V1::BaseController
+  include SearchSnippetSafety
+
   before_action :set_conversation
 
   def index
     base = @conversation.messages.includes(attachments: { file_attachment: :blob })
 
-    messages = if params[:before].present?
-                 # Load older messages (scroll up)
-                 base.reorder(created_at: :desc).where('id < ?', params[:before].to_i).limit(20).reverse
+    messages, has_more = if params[:around].present?
+                 target = base.find_by(id: params[:around].to_i)
+                 if target
+                   before = base.where('created_at < ?', target.created_at).reorder(created_at: :desc).limit(10).reverse
+                   after  = base.where('created_at > ?', target.created_at).reorder(created_at: :asc).limit(10)
+                   [[*before, target, *after], before.size == 10]
+                 else
+                   [base.reorder(created_at: :desc).limit(20).reverse, true]
+                 end
+               elsif params[:before].present?
+                 msgs = base.reorder(created_at: :desc).where('id < ?', params[:before].to_i).limit(20).reverse
+                 [msgs, msgs.size == 20]
                elsif params[:after].present?
-                 # Load newer messages (real-time catch-up)
-                 base.reorder(created_at: :asc).where('id > ?', params[:after].to_i).limit(100)
+                 msgs = base.reorder(created_at: :asc).where('id > ?', params[:after].to_i).limit(100)
+                 [msgs, false]
                else
-                 # Default: latest 20 messages in chronological order
-                 base.reorder(created_at: :desc).limit(20).reverse
+                 msgs = base.reorder(created_at: :desc).limit(20).reverse
+                 [msgs, msgs.size == 20]
                end
 
     render json: {
       success: true,
       data: messages.map { |m| message_json(m) },
-      meta: { has_more: messages.size == 20 }
+      meta: { has_more: has_more }
     }
+  end
+
+  def search
+    query = params[:q].to_s.strip
+    return render json: { success: true, data: [] } if query.blank?
+
+    tsquery = build_snippet_tsquery(query)
+    snippet_expr = ActiveRecord::Base.sanitize_sql_array([
+      "ts_headline('simple', COALESCE(processed_message_content, content), to_tsquery('simple', ?), ?) AS snippet",
+      tsquery,
+      SNIPPET_HEADLINE_OPTIONS
+    ])
+
+    results = @conversation.messages
+      .where.not(message_type: :activity)
+      .where("COALESCE(processed_message_content, content) IS NOT NULL")
+      .fulltext_search(query)
+      .order(created_at: :desc)
+      .limit(50)
+      .select(:id, :created_at, :message_type, :status, Arel.sql(snippet_expr))
+      .map do |msg|
+        {
+          id: msg.id,
+          snippet: sanitize_snippet(msg['snippet']),
+          created_at: msg.created_at,
+          message_type: msg.message_type,
+          status: msg.status
+        }
+      end
+
+    render json: { success: true, data: results }
   end
 
   def create
@@ -94,6 +136,11 @@ class Api::V1::MessagesController < Api::V1::BaseController
 
   def set_conversation
     @conversation = current_account.conversations.find(params[:conversation_id])
+  end
+
+  def build_snippet_tsquery(query)
+    terms = query.to_s.strip.split.map { |t| "'#{t.gsub("'", "''")}':*" }
+    terms.empty? ? "'':*" : terms.join(" & ")
   end
 
   def message_params

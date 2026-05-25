@@ -474,6 +474,56 @@ async def get_conversation_counts(
 
 
 @router.get(
+    "/conversations/export",
+    summary="Export conversations as JSON for CSV download",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def export_conversations(
+    status: str | None = Query(None),
+    stage: str | None = Query(None),
+    conversation_type: str | None = Query(None),
+    label: str | None = Query(None),
+    temperature: str | None = Query(None),
+    created_after: str | None = Query(None),
+    created_before: str | None = Query(None),
+    unread: str | None = Query(None),
+    ai_agent_enabled: bool | None = Query(None),
+    search: str | None = Query(None),
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/export")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    params = {}
+    if status:
+        params["status"] = status
+    if stage:
+        params["stage"] = stage
+    if conversation_type:
+        params["conversation_type"] = conversation_type
+    if label:
+        params["label"] = label
+    if temperature:
+        params["temperature"] = temperature
+    if created_after:
+        params["created_after"] = created_after
+    if created_before:
+        params["created_before"] = created_before
+    if unread:
+        params["unread"] = unread
+    if ai_agent_enabled is not None:
+        params["ai_agent_enabled"] = str(ai_agent_enabled).lower()
+    if search:
+        params["search"] = search
+
+    result = await messaging_service.export_conversations(tenant_id, params or None)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.get(
     "/conversations/{conversation_id}",
     response_model=ConversationDetailResponse,
     summary="Get conversation details",
@@ -766,6 +816,7 @@ async def list_messages(
     page: int | None = Query(None, description="Page number"),
     before: int | None = Query(None, description="Load messages with id < this value (scroll up)"),
     after: int | None = Query(None, description="Load messages with id > this value (catch up)"),
+    around: int | None = Query(None, description="Load messages centered around this message id"),
     tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):
@@ -810,12 +861,39 @@ async def list_messages(
     params = {}
     if page:
         params["page"] = page
-    if before:
+    if around:
+        params["around"] = around
+    elif before:
         params["before"] = before
-    if after:
+    elif after:
         params["after"] = after
 
     result = await messaging_service.get_messages(tenant_id, conversation_id, params or None)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.get(
+    "/conversations/{conversation_id}/messages/search",
+    summary="Search messages by content in a conversation",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def search_messages(
+    conversation_id: str,
+    q: str = Query(..., min_length=2, description="Search query term"),
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    """
+    Searches message content within a specific conversation using full-text search.
+    Returns matching messages with highlighted snippets (HTML with <mark> tags).
+    """
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.search_messages(tenant_id, conversation_id, q)
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")
 

@@ -63,6 +63,7 @@ Rails.application.routes.draw do
       resources :conversations, only: [:index, :show, :update, :destroy] do
         collection do
           get :counts
+          get :export
         end
         member do
           post :toggle_status
@@ -77,7 +78,11 @@ Rails.application.routes.draw do
           post :unassign, controller: 'conversation_assignments'
           post :no_purchase_reason
         end
-        resources :messages, only: [:index, :create]
+        resources :messages, only: [:index, :create] do
+          collection do
+            get :search
+          end
+        end
         resources :labels, only: [:index, :create, :destroy], controller: 'conversations/labels'
       end
 

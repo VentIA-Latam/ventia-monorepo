@@ -15,15 +15,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, MessageSquare, Loader2, Bot, AlertTriangle, MoreVertical, User, Search } from "lucide-react";
+import { ArrowLeft, ArrowDown, MessageSquare, Loader2, Bot, AlertTriangle, MoreVertical, User, Search } from "lucide-react";
 import { MessageBubble } from "./message-bubble";
 import { MessageComposer } from "./message-composer";
 import { TemplatePicker } from "./template-picker";
 import { useMessagingEvent, useMessagingReconnect } from "./messaging-provider";
 import { getMessages, sendMessage, updateConversation, markConversationRead } from "@/lib/api-client/messaging";
 import type { Conversation, Message, MessageType, MessageStatus, MessageContentAttributes, MessageAdditionalAttributes, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
+import { MessageSearchPanel } from "./message-search-panel";
 import { getInitials, getDateSeparatorLabel, parseTimestamp, getSenderKey } from "@/lib/utils/messaging";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 
 function mapWebSocketAttachments(raw: unknown): AttachmentBrief[] {
   if (!Array.isArray(raw)) return [];
@@ -57,15 +59,18 @@ const MESSAGE_ITEM_STYLE = {};
 interface MessageViewProps {
   conversation: Conversation | null;
   tenantId?: number;
+  targetMessageId?: number | null;
+  targetNonce?: number;
   onBack?: () => void;
   onOpenInfo?: () => void;
   onConversationUpdate?: (updated: Conversation) => void;
 }
 
-export const MessageView = memo(function MessageView({ conversation, tenantId, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
+export const MessageView = memo(function MessageView({ conversation, tenantId, targetMessageId, targetNonce, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
   const lastEvent = useMessagingEvent();
   const reconnectedAt = useMessagingReconnect();
   const { userDetails } = useAuth();
+  const { toast } = useToast();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -80,13 +85,25 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
   const scrollBehaviorRef = useRef<false | "instant" | "smooth">(false);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [showActivityMessages, setShowActivityMessages] = useState(true);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [jumpHighlightId, setJumpHighlightId] = useState<string | null>(null);
+  const [isJumpMode, setIsJumpMode] = useState(false);
+  const [showScrollDown, setShowScrollDown] = useState(false);
+  const showScrollDownRef = useRef(false);
+  const [isNavigatingToMessage, setIsNavigatingToMessage] = useState(false);
   const isLoadingPreviousRef = useRef(false);
+  const isLoadingTargetRef = useRef(false);
+  const navigateToMessageRef = useRef<(id: number) => Promise<void>>(async () => {});
   // Track if we should stay pinned to the bottom
   const isPinnedToBottomRef = useRef(true);
   // O(1) dedup for incoming WS messages
   const messageIdsRef = useRef(new Set<string>());
   // Stable ref for loadOlderMessages to avoid scroll listener re-attachment
   const loadOlderRef = useRef<() => void>(() => {});
+  // Guard: prevents re-scroll when messages change due to new WS messages
+  const scrolledTargetRef = useRef<string | null>(null);
+  // Tracks current conversation ID — used to detect stale navigateToMessage calls after await
+  const currentConvIdRef = useRef<number | string | undefined>(conversation?.id);
 
   // Load messages when conversation changes
   useEffect(() => {
@@ -95,34 +112,38 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
       return;
     }
 
-    let cancelled = false;
+    const controller = new AbortController();
+    setMessages([]);
     setLoading(true);
     setHasMore(true);
     messageIdsRef.current = new Set<string>();
 
-    getMessages(conversation.id, { tenantId })
+    getMessages(conversation.id, { tenantId, signal: controller.signal })
       .then((data) => {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           const msgs = data.data ?? [];
           messageIdsRef.current = new Set(msgs.map((m) => String(m.id)));
-          scrollBehaviorRef.current = "instant";
+          scrollBehaviorRef.current = targetMessageId ? false : "instant";
           setMessages(msgs);
           setHasMore(Boolean(data.meta?.has_more));
           setLoading(false);
         }
       })
       .catch((err) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
         console.error("Error loading messages:", err);
-        if (!cancelled) setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+          toast({ title: "Error al cargar mensajes", description: "Intenta recargar la página", variant: "destructive" });
+        }
       });
 
-    // Mark as read (non-blocking, with logging for diagnostics)
     markConversationRead(conversation.id, tenantId)
       .then(() => console.log(`[mark-read] Conversation ${conversation.id} marked as read`))
       .catch((err) => console.error(`[mark-read] FAILED for conversation ${conversation.id}:`, err));
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [conversation?.id]);
 
@@ -289,7 +310,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
 
     try {
       const data = await getMessages(conversation.id, { before: Number(oldestId), tenantId });
-      const olderMessages = data.data ?? [];
+      const olderMessages = (data.data ?? []).filter((m) => !messageIdsRef.current.has(String(m.id)));
 
       olderMessages.forEach((m) => messageIdsRef.current.add(String(m.id)));
 
@@ -299,13 +320,21 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
         // flushSync: commit DOM synchronously (like Vue's nextTick in Chatwoot)
         // This lets us restore scroll in the SAME call stack — no layout effect needed
         flushSync(() => {
-          setMessages((prev) => [...olderMessages, ...prev]);
+          setMessages((prev) =>
+            [...olderMessages, ...prev].sort(
+              (a, b) => new Date(String(a.created_at)).getTime() - new Date(String(b.created_at)).getTime()
+            )
+          );
           setHasMore(Boolean(data.meta?.has_more));
         });
 
         // DOM is now updated — restore scroll position immediately (Chatwoot pattern)
         const heightDifference = container.scrollHeight - savedHeight;
         container.scrollTop = savedScrollTop + heightDifference;
+
+        // Loading older content means we are NOT at the bottom — unpin unconditionally
+        // so ResizeObserver doesn't fight scrollIntoView when seeking a target message
+        isPinnedToBottomRef.current = false;
       }
     } catch (err) {
       console.error("Error loading older messages:", err);
@@ -317,6 +346,48 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
 
   // Keep stable ref for scroll handler (avoids re-attaching listener on every render)
   loadOlderRef.current = loadOlderMessages;
+  // Always reflects the current conversation ID — checked in navigateToMessage after await
+  currentConvIdRef.current = conversation?.id;
+
+  // Navigate directly to a target message by loading context around it.
+  // Uses flushSync to commit the DOM synchronously, then scrolls directly —
+  // avoids the timing gap between setMessages → render → useEffect → scroll.
+  const navigateToMessage = useCallback(async (targetId: number) => {
+    if (!conversation || isLoadingTargetRef.current) return;
+    const capturedConvId = conversation.id;
+    isLoadingTargetRef.current = true;
+    setIsNavigatingToMessage(true);
+    try {
+      const data = await getMessages(capturedConvId, { around: targetId, tenantId });
+      if (currentConvIdRef.current !== capturedConvId) return;
+      const msgs = data.data ?? [];
+      if (msgs.length === 0) return;
+      messageIdsRef.current = new Set(msgs.map((m) => String(m.id)));
+      flushSync(() => {
+        setMessages(msgs);
+        setHasMore(Boolean(data.meta?.has_more));
+        setIsJumpMode(true);
+      });
+      isPinnedToBottomRef.current = false;
+      requestAnimationFrame(() => {
+        const targetEl = document.querySelector(`[data-msg-id="${targetId}"]`);
+        if (targetEl) {
+          scrolledTargetRef.current = `${conversation.id}-${targetId}-${targetNonce}`;
+          targetEl.scrollIntoView({ behavior: "instant", block: "center" });
+          setJumpHighlightId(String(targetId));
+          setTimeout(() => setJumpHighlightId(null), 1500);
+        }
+        isLoadingTargetRef.current = false;
+        setIsNavigatingToMessage(false);
+      });
+    } catch (err) {
+      console.error("[navigate-to-message]", err);
+      isLoadingTargetRef.current = false;
+      setIsNavigatingToMessage(false);
+    }
+  }, [conversation?.id, tenantId, targetNonce]);
+
+  navigateToMessageRef.current = navigateToMessage;
 
   // Scroll event handler: load older messages on scroll up + track pinned state
   useEffect(() => {
@@ -326,9 +397,16 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
     const handleScroll = () => {
       if (isLoadingPreviousRef.current) return;
 
-      // Track if user is near the bottom (within 150px)
       const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-      isPinnedToBottomRef.current = distanceFromBottom < 150;
+      const isNearBottom = distanceFromBottom < 150;
+      isPinnedToBottomRef.current = isNearBottom;
+      if (isNearBottom) setIsJumpMode(false);
+
+      const shouldShow = !isNearBottom;
+      if (showScrollDownRef.current !== shouldShow) {
+        showScrollDownRef.current = shouldShow;
+        setShowScrollDown(shouldShow);
+      }
 
       // Load older messages when near the top — calls through stable ref
       if (container.scrollTop < 100) {
@@ -394,6 +472,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
         }
       } catch (err) {
         console.error("Error sending message:", err);
+        toast({ title: "Error al enviar mensaje", description: "Verifica tu conexión e intenta de nuevo", variant: "destructive" });
       } finally {
         if (previewUrl) URL.revokeObjectURL(previewUrl);
       }
@@ -413,10 +492,98 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
       } catch (err) {
         console.error("Error toggling AI agent:", err);
         onConversationUpdate?.(conversation);
+        toast({ title: "Error al cambiar agente IA", variant: "destructive" });
       }
     },
     [conversation, onConversationUpdate, tenantId]
   );
+
+  // Navigate to targetMessageId when provided from conversation list search.
+  // For internal search panel clicks, handleResultClick handles scroll directly.
+  // targetNonce forces re-execution even when clicking the same result twice.
+  useEffect(() => {
+    if (!targetMessageId || messages.length === 0) return;
+
+    const key = `${conversation?.id}-${targetMessageId}-${targetNonce}`;
+    if (scrolledTargetRef.current === key) return;
+
+    const id = String(targetMessageId);
+    const el = document.querySelector(`[data-msg-id="${id}"]`);
+
+    if (!el) {
+      if (!isLoadingTargetRef.current) {
+        navigateToMessageRef.current(targetMessageId);
+      }
+      return;
+    }
+
+    scrolledTargetRef.current = key;
+    isPinnedToBottomRef.current = false;
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: "instant", block: "center" });
+      setJumpHighlightId(id);
+    });
+    const timerId = setTimeout(() => setJumpHighlightId(null), 1500);
+    return () => clearTimeout(timerId);
+  }, [targetMessageId, targetNonce, messages, conversation?.id]);
+
+  // Reset search when conversation changes
+  useEffect(() => {
+    setIsSearchOpen(false);
+    setJumpHighlightId(null);
+    setIsJumpMode(false);
+    setShowScrollDown(false);
+    showScrollDownRef.current = false;
+    setIsNavigatingToMessage(false);
+    scrolledTargetRef.current = null;
+    isPinnedToBottomRef.current = false;
+    if (jumpTimerRef.current) {
+      clearTimeout(jumpTimerRef.current);
+      jumpTimerRef.current = null;
+    }
+  }, [conversation?.id]);
+
+  const jumpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleResultClick = useCallback((messageId: number | string) => {
+    scrolledTargetRef.current = null;
+    const targetId = Number(messageId);
+    const el = document.querySelector(`[data-msg-id="${targetId}"]`);
+    if (el) {
+      scrolledTargetRef.current = `${conversation?.id}-${targetId}`;
+      isPinnedToBottomRef.current = false;
+      setIsJumpMode(true);
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      setJumpHighlightId(String(targetId));
+      if (jumpTimerRef.current) clearTimeout(jumpTimerRef.current);
+      jumpTimerRef.current = setTimeout(() => setJumpHighlightId(null), 1500);
+    } else {
+      navigateToMessageRef.current(targetId);
+    }
+  }, [conversation?.id]);
+
+  const handleToggleSearch = useCallback(() => {
+    setIsSearchOpen((prev) => !prev);
+  }, []);
+
+  const handleBackToBottom = useCallback(() => {
+    if (!conversation) return;
+    setIsJumpMode(false);
+    scrolledTargetRef.current = null;
+    setLoading(true);
+    setHasMore(true);
+    messageIdsRef.current = new Set();
+    getMessages(conversation.id, { tenantId })
+      .then((data) => {
+        const msgs = data.data ?? [];
+        messageIdsRef.current = new Set(msgs.map((m) => String(m.id)));
+        scrollBehaviorRef.current = "instant";
+        setMessages(msgs);
+        setHasMore(Boolean(data.meta?.has_more));
+      })
+      .catch((err) => console.error("[back-to-bottom]", err))
+      .finally(() => setLoading(false));
+  }, [conversation?.id, tenantId]);
 
   // No conversation selected
   if (!conversation) {
@@ -434,7 +601,8 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
   const contact = conversation.contact;
 
   return (
-    <div className="flex-1 flex flex-col h-full min-h-0 min-w-0 overflow-hidden">
+    <div className="flex-1 flex h-full min-h-0 min-w-0 overflow-hidden relative">
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
       {/* Header — WhatsApp style with bg-muted/30 */}
       <div className="px-4 py-2.5 bg-muted/30 flex items-center gap-3 shrink-0 border-b border-border/30">
         {onBack && (
@@ -458,8 +626,13 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
           </p>
         </div>
 
-        {/* Search icon (visual, no functionality yet) */}
-        <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 text-muted-foreground">
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`shrink-0 h-8 w-8 transition-colors ${isSearchOpen ? "text-foreground bg-muted" : "text-muted-foreground"}`}
+          onClick={handleToggleSearch}
+          aria-label="Buscar en conversación"
+        >
           <Search className="h-5 w-5" />
         </Button>
 
@@ -522,6 +695,11 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
             filter: "brightness(0.15)",
           }}
         />
+        {isNavigatingToMessage && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/50 backdrop-blur-[2px]">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        )}
         <div
           ref={scrollContainerRef}
           className="relative z-[1] h-full overflow-y-auto overflow-x-hidden overscroll-y-contain"
@@ -571,8 +749,13 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
                 next.message_type === "activity" ||
                 getSenderKey(next) !== getSenderKey(msg);
 
+              const isHighlighted = jumpHighlightId !== null && String(jumpHighlightId) === String(msg.id);
+
               return (
-                <div key={msg.id} data-msg-id={msg.id}>
+                <div
+                  key={msg.id}
+                  data-msg-id={msg.id}
+                >
                   {showSeparator ? (
                     <div className="flex justify-center my-3">
                       <span className="text-xs text-muted-foreground bg-background/90 border rounded-lg px-3 py-1 shadow-sm">
@@ -580,7 +763,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
                       </span>
                     </div>
                   ) : null}
-                  <div style={MESSAGE_ITEM_STYLE}>
+                  <div className={`rounded-lg transition-colors duration-300 ${isHighlighted ? "bg-volt/15" : ""}`} style={MESSAGE_ITEM_STYLE}>
                     <MessageBubble message={msg} showAvatar={isLastInCluster} />
                   </div>
                 </div>
@@ -592,6 +775,20 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
           <div ref={bottomRef} className="h-px" />
         </div>
         </div>
+
+        {showScrollDown && (
+          <div className="absolute bottom-4 right-4 z-10">
+            <Button
+              size="icon"
+              variant="secondary"
+              onClick={isJumpMode ? handleBackToBottom : () => bottomRef.current?.scrollIntoView({ behavior: "smooth" })}
+              aria-label="Ir a los más recientes"
+              className="h-10 w-10 rounded-full shadow-md border border-border/40"
+            >
+              <ArrowDown className="h-5 w-5" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* 24-hour window warning */}
@@ -630,6 +827,16 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, o
               setMessages(msgs);
             }).catch((err) => console.error("Error refreshing messages:", err));
           }}
+        />
+      )}
+      </div>
+
+      {isSearchOpen && (
+        <MessageSearchPanel
+          conversationId={conversation.id}
+          tenantId={tenantId}
+          onClose={handleToggleSearch}
+          onResultClick={handleResultClick}
         />
       )}
     </div>

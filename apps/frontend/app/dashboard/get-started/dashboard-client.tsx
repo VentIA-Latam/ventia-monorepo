@@ -23,6 +23,7 @@ import {
   MapPin,
   TrendingUp,
   RotateCcw,
+  MessageSquare,
 } from "lucide-react";
 import { DashboardMetrics, ConversionRate } from "@/lib/services/metrics-service";
 import type { TopProduct, CityOrderCount, NoPurchaseReasonsResponse, AdsSummaryResponse } from "@/lib/services/metrics-service";
@@ -50,6 +51,7 @@ interface DashboardClientProps {
   topProducts: TopProduct[];
   ordersByCity: CityOrderCount[];
   initialConversionRate: ConversionRate;
+  conversationCount: number;
   noPurchaseReasons?: NoPurchaseReasonsResponse;
   adsSummary?: AdsSummaryResponse;
   startDate: string;
@@ -247,7 +249,7 @@ function TopProductsRanking({ products }: { products: TopProduct[] }) {
 
 // --- Main Dashboard ---
 
-export function DashboardClient({ initialMetrics, recentOrders, topProducts, ordersByCity, initialConversionRate, noPurchaseReasons, adsSummary, startDate, endDate, defaultStartDate, defaultEndDate }: DashboardClientProps) {
+export function DashboardClient({ initialMetrics, recentOrders, topProducts, ordersByCity, initialConversionRate, conversationCount, noPurchaseReasons, adsSummary, startDate, endDate, defaultStartDate, defaultEndDate }: DashboardClientProps) {
   const router = useRouter();
   const timezone = useTenantTimezone();
   const [isPending, startTransition] = useTransition();
@@ -388,6 +390,13 @@ export function DashboardClient({ initialMetrics, recentOrders, topProducts, ord
             comparison: initialConversionRate.conversion_rate !== null
               ? `${initialConversionRate.conversions.toLocaleString('es-PE')} conv. de ${initialConversionRate.total_conversations.toLocaleString('es-PE')}`
               : undefined,
+          },
+          {
+            title: "Conversaciones",
+            value: conversationCount.toLocaleString('es-PE'),
+            icon: <MessageSquare className="w-5 h-5" />,
+            comparison: "iniciadas en el período",
+            accentColor: "cielo" as const,
           },
         ].map((card, i) => (
           <motion.div key={i} variants={fadeUp}>

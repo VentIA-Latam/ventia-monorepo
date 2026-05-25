@@ -7,6 +7,9 @@
 # Ignore bundler config.
 /.bundle
 
+# Ignore vendored gems (bundle install --path vendor/bundle)
+/vendor/bundle
+
 # Ignore all logfiles and tempfiles.
 /log/*
 /tmp/*

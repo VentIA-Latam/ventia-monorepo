@@ -4,6 +4,7 @@ import {
   fetchTopProducts,
   fetchOrdersByCity,
   fetchConversionRate,
+  fetchConversationCount,
   fetchNoPurchaseReasons,
   fetchAdsSummary,
   ConversionRate,
@@ -49,6 +50,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   let topProducts;
   let ordersByCity;
   let conversionRate: ConversionRate | undefined;
+  let conversationCount = 0;
   let noPurchaseReasons: NoPurchaseReasonsResponse | undefined;
   let adsSummary: AdsSummaryResponse | undefined;
   let error: Error | null = null;
@@ -67,6 +69,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       topProductsRes,
       ordersByCityRes,
       conversionRateRes,
+      conversationCountRes,
       noPurchaseReasonsRes,
       adsSummaryRes,
     ] = await Promise.allSettled([
@@ -75,6 +78,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       fetchTopProducts(accessToken, query),
       fetchOrdersByCity(accessToken, query),
       fetchConversionRate(accessToken, query),
+      fetchConversationCount(accessToken, { start_date: startDate, end_date: endDate }),
       fetchNoPurchaseReasons(accessToken, query),
       fetchAdsSummary(accessToken, query),
     ]);
@@ -85,6 +89,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     topProducts = topProductsRes.status === 'fulfilled' ? topProductsRes.value : undefined;
     ordersByCity = ordersByCityRes.status === 'fulfilled' ? ordersByCityRes.value : undefined;
     conversionRate = conversionRateRes.status === 'fulfilled' ? conversionRateRes.value : conversionRateFallback;
+    conversationCount = conversationCountRes.status === 'fulfilled' ? conversationCountRes.value : 0;
     noPurchaseReasons =
       noPurchaseReasonsRes.status === 'fulfilled' ? noPurchaseReasonsRes.value : undefined;
     adsSummary =
@@ -127,6 +132,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         topProducts={topProducts?.data || []}
         ordersByCity={ordersByCity?.data || []}
         initialConversionRate={conversionRate!}
+        conversationCount={conversationCount}
         noPurchaseReasons={noPurchaseReasons}
         adsSummary={adsSummary}
         startDate={startDate}

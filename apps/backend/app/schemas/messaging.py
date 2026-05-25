@@ -139,6 +139,8 @@ class ConversationListItem(BaseModel):
     team: Optional[TeamBrief] = None
     labels: list[LabelBrief] = []
     last_message: Optional[LastMessageBrief] = None
+    message_snippet: Optional[str] = None
+    matched_message_id: Optional[int] = None
 
     class Config:
         from_attributes = True
