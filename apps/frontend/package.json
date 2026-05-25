@@ -10,7 +10,12 @@
     "start": "next start",
     "lint": "eslint",
     "audit:dark": "tsx scripts/audit-dark-mode.ts",
-    "audit:dark:login": "tsx scripts/audit-dark-mode.ts --login"
+    "audit:dark:login": "tsx scripts/audit-dark-mode.ts --login",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "PWDEBUG=1 playwright test",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.14.0",
@@ -55,6 +60,7 @@
     "wavesurfer.js": "^7.12.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@types/geojson": "^7946.0.16",
     "@types/leaflet": "^1.9.21",
