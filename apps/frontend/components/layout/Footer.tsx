@@ -26,7 +26,7 @@ const linkColumns = [
     links: [
       { label: "Términos y Condiciones", href: "/terms-and-conditions" },
       { label: "Política de Privacidad", href: "/privacy-policy" },
-      { label: "Libro de Reclamaciones", href: "https://docs.google.com/forms/d/e/1FAIpQLSfCUOtWIsBN84P8g2HFGWejHpPuhZbuGQOKitRpitTaXqxinQ/viewform?usp=send_form", external: true },
+      { label: "Libro de Reclamaciones", href: "/libro-de-reclamaciones" },
     ],
   },
 ];

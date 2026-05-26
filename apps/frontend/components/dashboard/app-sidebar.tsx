@@ -363,6 +363,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
+
+              {isAdmin && (
+                <SidebarMenuItem className="mb-1">
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive("/dashboard/plan")}
+                    tooltip="Mi Plan"
+                    className={`
+                        w-full justify-between h-10 px-3 rounded-lg transition-all duration-200
+                        ${isActive("/dashboard/plan")
+                          ? "bg-gradient-to-r from-volt/10 to-aqua/5 border-l-2 border-l-volt shadow-sm"
+                          : "hover:bg-muted/60"
+                        }
+                    `}
+                  >
+                    <Link href="/dashboard/plan" className="flex items-center w-full">
+                      <CreditCard className="w-5 h-5 mr-3 shrink-0" />
+                      <span className="flex-1 truncate">Mi Plan</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

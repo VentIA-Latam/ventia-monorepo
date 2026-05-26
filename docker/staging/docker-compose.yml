@@ -145,6 +145,9 @@ services:
       GCS_BUCKET_NAME: ${GCS_BUCKET_NAME:-}
       GCS_CLIENT_EMAIL: ${GCS_CLIENT_EMAIL:-}
       GCS_PRIVATE_KEY: ${GCS_PRIVATE_KEY:-}
+      # Resend (Libro de Reclamaciones — server-side API route)
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RECLAMACIONES_TO_EMAIL: ${RECLAMACIONES_TO_EMAIL:-}
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:
