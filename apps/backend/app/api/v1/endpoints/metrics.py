@@ -10,7 +10,9 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_database, require_permission_dual
 from app.models.tenant import Tenant
 from app.models.user import User
+from app.core.permissions import Role
 from app.schemas.metrics import (
+    ActivityByHourResponse,
     AdsSummaryResponse,
     ConversionRateResponse,
     DashboardMetrics,
@@ -276,4 +278,59 @@ async def get_ads_summary(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve ads summary: {e}",
+        )
+
+
+@router.get(
+    "/activity-by-hour",
+    response_model=ActivityByHourResponse,
+    summary="Distribución de mensajes por hora del día y día de semana (heatmap 7×24)",
+    tags=["metrics"],
+)
+async def get_activity_by_hour(
+    period: PeriodType = Query("custom"),
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
+    tenant_id: int | None = Query(None, description="Tenant ID (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/metrics/*")),
+    db: Session = Depends(get_database),
+) -> ActivityByHourResponse:
+    """Get message activity distribution by hour and day of week."""
+    try:
+        query = MetricsQuery(period=period, start_date=start_date, end_date=end_date)
+
+        cross_tenant = False
+        timezone_note = None
+
+        if current_user.role == Role.SUPERADMIN:
+            target_tenant = tenant_id
+            if target_tenant is None:
+                cross_tenant = True
+                tz_name = "UTC"
+                timezone_note = "UTC"
+            else:
+                tz_name = _get_tenant_timezone(db, target_tenant)
+        else:
+            target_tenant = current_user.tenant_id
+            tz_name = _get_tenant_timezone(db, target_tenant)
+
+        result = await metrics_service.get_activity_by_hour(
+            tenant_id=target_tenant,
+            query=query,
+            tz_name=tz_name,
+            cross_tenant=cross_tenant,
+        )
+
+        if timezone_note:
+            result["timezone_note"] = timezone_note
+
+        return ActivityByHourResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve activity by hour: {e}",
         )

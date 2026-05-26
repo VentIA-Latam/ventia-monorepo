@@ -746,6 +746,31 @@ class MessagingService:
             timeout=15.0,
         )
 
+    # --- Activity by hour (heatmap) ---
+
+    async def get_activity_by_hour(
+        self,
+        tenant_id: int,
+        start_date: str,
+        end_date: str,
+        timezone: str = "America/Lima",
+        cross_tenant: bool = False,
+    ) -> tuple[Optional[dict], int]:
+        params: dict = {
+            "start_date": start_date,
+            "end_date": end_date,
+            "timezone": timezone,
+        }
+        if cross_tenant:
+            params["cross_tenant"] = "true"
+        return await self._request_with_status(
+            "GET",
+            "/api/v1/analytics/activity_by_hour",
+            tenant_id,
+            params=params,
+            timeout=15.0,
+        )
+
 
 # Global service instance
 messaging_service = MessagingService()

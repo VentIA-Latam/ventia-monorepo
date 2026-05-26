@@ -72,6 +72,38 @@ module Api
           render_success({ ads: ads })
         end
 
+        def activity_by_hour
+          start_date, end_date = parse_date_range
+          return if performed?
+
+          tz = params[:timezone].presence || 'America/Lima'
+          begin
+            TZInfo::Timezone.get(tz)
+          rescue TZInfo::InvalidTimezoneIdentifier
+            return render_error('Invalid timezone identifier', status: :bad_request)
+          end
+
+          # cross_tenant solo es enviado por el backend Python tras verificar rol SUPERADMIN
+          scope = if params[:cross_tenant] == 'true'
+                    Message.where(created_at: start_date..end_date)
+                  else
+                    current_account.messages.where(created_at: start_date..end_date)
+                  end
+
+          tz_quoted = ActiveRecord::Base.connection.quote(tz)
+          counts = scope
+                   .group(Arel.sql("EXTRACT(DOW FROM messages.created_at AT TIME ZONE #{tz_quoted})"))
+                   .group(Arel.sql("EXTRACT(HOUR FROM messages.created_at AT TIME ZONE #{tz_quoted})"))
+                   .count
+
+          matrix = Array.new(7) { Array.new(24, 0) }
+          counts.each do |(dow, hour), count|
+            matrix[dow.to_i][hour.to_i] = count
+          end
+
+          render_success({ matrix: matrix, max_count: matrix.flatten.max || 0 })
+        end
+
         private
 
         def parse_date_range

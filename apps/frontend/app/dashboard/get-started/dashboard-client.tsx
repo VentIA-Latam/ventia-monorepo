@@ -9,6 +9,7 @@ import { es } from "date-fns/locale";
 import { StatsCard } from "@/components/dashboard/stats-card";
 import { NoPurchaseReasonsRanking } from "@/components/dashboard/no-purchase-reasons-ranking";
 import { AdsSummaryWidget } from "@/components/dashboard/ads-summary-widget";
+import { ActivityHeatmapWidget } from "@/components/dashboard/activity-heatmap-widget";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -435,6 +436,11 @@ export function DashboardClient({ initialMetrics, recentOrders, topProducts, ord
       <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <NoPurchaseReasonsRanking data={noPurchaseReasons} />
         <AdsSummaryWidget data={adsSummary} />
+      </motion.div>
+
+      {/* Activity Heatmap */}
+      <motion.div variants={fadeUp}>
+        <ActivityHeatmapWidget />
       </motion.div>
 
       {/* Sales Map */}

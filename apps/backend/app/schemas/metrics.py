@@ -137,6 +137,23 @@ class NoPurchaseReasonsResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ActivityByHourResponse(BaseModel):
+    """Distribución de mensajes por hora del día y día de semana (heatmap 7×24)."""
+
+    matrix: list[list[int]] = Field(
+        ..., description="Matriz 7×24: matrix[dow][hour] = count. dow 0=domingo, 6=sábado"
+    )
+    max_count: int = Field(..., description="Valor máximo en la matriz")
+    period: PeriodType
+    start_date: date
+    end_date: date
+    timezone_note: str | None = Field(
+        None, description="'UTC' cuando SUPERADMIN consulta cross-tenant"
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class AdSummaryItem(BaseModel):
     """Performance de un anuncio Meta (click-to-WhatsApp)."""
 
