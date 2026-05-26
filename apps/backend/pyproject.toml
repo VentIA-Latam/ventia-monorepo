@@ -23,6 +23,7 @@ dependencies = [
     "tzdata>=2025.3",
     "openpyxl>=3.1.5",
     "sentry-sdk[fastapi]>=2.0.0",
+    "cachetools>=5.3.0",
 ]
 
 [project.optional-dependencies]
