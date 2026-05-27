@@ -23,20 +23,16 @@ class FcmListener < BaseListener
 
     if label_titles.include?('soporte-humano')
       contact_name = conversation.contact&.name || 'Cliente'
-      send_push_to_offline_agents(
-        account, conversation,
-        'Conversación requiere soporte humano',
-        "#{contact_name} necesita atención humana",
+      send_email_to_offline_agents(
+        account, conversation, contact_name,
         flag_name: :human_support
       )
     end
 
     if label_titles.include?('en-revisión')
       contact_name = conversation.contact&.name || 'Cliente'
-      send_push_to_offline_agents(
-        account, conversation,
-        'Pago pendiente de validar',
-        "#{contact_name} envió un comprobante de pago",
+      send_email_to_offline_agents(
+        account, conversation, contact_name,
         flag_name: :payment_review
       )
     end
@@ -45,6 +41,40 @@ class FcmListener < BaseListener
   end
 
   private
+
+  def send_email_to_offline_agents(account, conversation, contact_name, flag_name:)
+    all_agent_ids = account.account_users.pluck(:user_id).map(&:to_s)
+    online_ids = OnlineStatusTracker.get_available_user_ids(account.id).map(&:to_s)
+    offline_ids = all_agent_ids - online_ids
+
+    return if offline_ids.blank?
+
+    settings = NotificationSetting
+                 .where(account_id: account.id, user_id: offline_ids)
+                 .index_by { |s| s.user_id.to_s }
+
+    eligible_ids = offline_ids.select do |uid|
+      setting = settings[uid]
+      setting.nil? || setting.email_enabled?(flag_name)
+    end
+
+    return if eligible_ids.blank?
+
+    emails = User.where(id: eligible_ids).pluck(:email).compact
+    return if emails.blank?
+
+    frontend_url = ENV.fetch('FRONTEND_URL', 'https://app.ventia-latam.com')
+
+    NotificationMailer.send(
+      flag_name,
+      emails: emails,
+      contact_name: contact_name,
+      conversation_url: "#{frontend_url}/dashboard/conversations?id=#{conversation.id}",
+      account_name: account.name
+    ).deliver_later
+  rescue StandardError => e
+    Rails.logger.error "[FcmListener] Error sending email: #{e.message}"
+  end
 
   def send_push_to_offline_agents(account, conversation, title, body, flag_name:)
     all_agent_ids = account.account_users.pluck(:user_id).map(&:to_s)

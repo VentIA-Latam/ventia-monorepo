@@ -1,7 +1,12 @@
 class Api::V1::NotificationSettingsController < Api::V1::BaseController
+  EMAIL_FLAG_NAMES = %i[human_support payment_review].freeze
+
   def show
     setting = find_or_create_setting
-    render_success({ push_flags: setting.push_flags_hash })
+    render_success({
+      push_flags: setting.push_flags_hash,
+      email_flags: setting.email_flags_hash
+    })
   end
 
   def update
@@ -9,19 +14,35 @@ class Api::V1::NotificationSettingsController < Api::V1::BaseController
     flags = params.require(:notification_settings).permit(*NotificationSetting::FLAGS.keys)
 
     new_push_flags = setting.push_flags
+    new_email_flags = setting.email_flags
+
     flags.each do |flag_name, enabled|
       flag_value = NotificationSetting::FLAGS[flag_name.to_sym]
       next unless flag_value
 
+      is_email = EMAIL_FLAG_NAMES.include?(flag_name.to_sym)
+
       if ActiveModel::Type::Boolean.new.cast(enabled)
-        new_push_flags |= flag_value
+        if is_email
+          new_email_flags |= flag_value
+        else
+          new_push_flags |= flag_value
+        end
       else
-        new_push_flags &= ~flag_value
+        if is_email
+          new_email_flags &= ~flag_value
+        else
+          new_push_flags &= ~flag_value
+        end
       end
     end
 
-    setting.update!(push_flags: new_push_flags)
-    render_success({ push_flags: setting.reload.push_flags_hash })
+    setting.update!(push_flags: new_push_flags, email_flags: new_email_flags)
+    setting.reload
+    render_success({
+      push_flags: setting.push_flags_hash,
+      email_flags: setting.email_flags_hash
+    })
   end
 
   private

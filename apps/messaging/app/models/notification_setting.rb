@@ -30,7 +30,8 @@ class NotificationSetting < ApplicationRecord
     message_ai_on: 8
   }.freeze
 
-  DEFAULT_PUSH_FLAGS = FLAGS[:human_support] | FLAGS[:payment_review] | FLAGS[:message_ai_off] # 7
+  DEFAULT_PUSH_FLAGS = FLAGS[:message_ai_off] # 4
+  DEFAULT_EMAIL_FLAGS = FLAGS[:human_support] | FLAGS[:payment_review] # 3
 
   def email_enabled?(flag_name)
     flag_value = FLAGS[flag_name.to_sym]
@@ -78,10 +79,13 @@ class NotificationSetting < ApplicationRecord
     FLAGS.transform_values { |bit| (push_flags & bit) != 0 }
   end
 
-  # Set defaults for new account users
+  def email_flags_hash
+    FLAGS.transform_values { |bit| (email_flags & bit) != 0 }
+  end
+
   def self.create_default_for(user:, account:)
     find_or_create_by!(user: user, account: account) do |s|
-      s.email_flags = 0
+      s.email_flags = DEFAULT_EMAIL_FLAGS
       s.push_flags = DEFAULT_PUSH_FLAGS
     end
   end

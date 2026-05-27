@@ -527,14 +527,22 @@ class NotificationsResponse(BaseModel):
 # --- Notification Settings Response ---
 
 class PushFlags(BaseModel):
+    human_support: bool = False
+    payment_review: bool = False
+    message_ai_off: bool = True
+    message_ai_on: bool = False
+
+
+class EmailFlags(BaseModel):
     human_support: bool = True
     payment_review: bool = True
-    message_ai_off: bool = True
+    message_ai_off: bool = False
     message_ai_on: bool = False
 
 
 class NotificationSettingsData(BaseModel):
     push_flags: PushFlags
+    email_flags: Optional[EmailFlags] = None
 
 
 class NotificationSettingsResponse(BaseModel):
