@@ -328,3 +328,12 @@ export interface WhatsAppChannel {
   last_template_sync: string | null;
   reauthorization_required: boolean;
 }
+
+export interface InstagramChannel {
+  id: number;
+  instagram_id: string;
+  username: string | null;
+  inbox_id: number | null;
+  inbox_name: string | null;
+  reauthorization_required: boolean;
+}

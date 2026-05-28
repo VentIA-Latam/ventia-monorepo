@@ -23,6 +23,7 @@ import {
   MessageSquare,
   Clock,
   Ticket,
+  Instagram,
 } from "lucide-react"
 import { usePathname, useSearchParams } from "next/navigation"
 import { useTheme } from "next-themes"
@@ -96,6 +97,11 @@ const dataPlatform = [
     title: "WhatsApp",
     url: "/dashboard/whatsapp-connect",
     icon: MessageSquare,
+  },
+  {
+    title: "Instagram",
+    url: "/dashboard/instagram-connect",
+    icon: Instagram,
   },
   {
     title: "Campañas",
