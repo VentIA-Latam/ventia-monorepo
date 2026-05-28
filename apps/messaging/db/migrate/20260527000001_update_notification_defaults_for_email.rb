@@ -4,7 +4,7 @@ class UpdateNotificationDefaultsForEmail < ActiveRecord::Migration[7.2]
     change_column_default :notification_settings, :email_flags, 3
 
     execute <<-SQL
-      UPDATE notification_settings
+      UPDATE messaging.notification_settings
       SET push_flags = push_flags & ~3,
           email_flags = email_flags | 3
     SQL
@@ -15,7 +15,7 @@ class UpdateNotificationDefaultsForEmail < ActiveRecord::Migration[7.2]
     change_column_default :notification_settings, :email_flags, 0
 
     execute <<-SQL
-      UPDATE notification_settings
+      UPDATE messaging.notification_settings
       SET push_flags = push_flags | 3,
           email_flags = email_flags & ~3
     SQL

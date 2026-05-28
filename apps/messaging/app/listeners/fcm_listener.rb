@@ -65,15 +65,18 @@ class FcmListener < BaseListener
 
     frontend_url = ENV.fetch('FRONTEND_URL', 'https://app.ventia-latam.com')
 
-    NotificationMailer.send(
+    channel_name = conversation.inbox&.channel_type&.split('::')&.last || 'Desconocido'
+
+    NotificationMailer.public_send(
       flag_name,
       emails: emails,
       contact_name: contact_name,
       conversation_url: "#{frontend_url}/dashboard/conversations?id=#{conversation.id}",
-      account_name: account.name
+      account_name: account.name,
+      channel_name: channel_name
     ).deliver_later
   rescue StandardError => e
-    Rails.logger.error "[FcmListener] Error sending email: #{e.message}"
+    Rails.logger.error "[FcmListener] Error sending email (account_id=#{account.id}, conversation_id=#{conversation.id}): #{e.message}"
   end
 
   def send_push_to_offline_agents(account, conversation, title, body, flag_name:)

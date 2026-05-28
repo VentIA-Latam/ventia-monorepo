@@ -88,5 +88,7 @@ class NotificationSetting < ApplicationRecord
       s.email_flags = DEFAULT_EMAIL_FLAGS
       s.push_flags = DEFAULT_PUSH_FLAGS
     end
+  rescue ActiveRecord::RecordNotUnique
+    find_by!(user: user, account: account)
   end
 end
