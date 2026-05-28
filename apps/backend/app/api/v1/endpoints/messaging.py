@@ -20,6 +20,8 @@ from app.schemas.messaging import (
     ConversationListResponse,
     InboxListResponse,
     InboxTemplatesResponse,
+    InstagramAuthorizeResponse,
+    InstagramStatusResponse,
     ManualWhatsAppRequest,
     MessageListResponse,
     MessagingError,
@@ -1818,6 +1820,58 @@ async def manual_connect_whatsapp(
     }
 
     result = await messaging_service.create_whatsapp_inbox(tenant_id, inbox_data)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+# --- Instagram ---
+
+
+@router.get(
+    "/instagram/authorize",
+    response_model=InstagramAuthorizeResponse,
+    summary="Get Instagram Login authorize URL",
+    tags=["messaging", "instagram"],
+    responses={503: {"model": MessagingError}},
+)
+async def instagram_authorize(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    """
+    Returns the Instagram Login authorize URL (with a signed state tying the flow to the
+    tenant). The frontend opens this URL in a new tab to start the OAuth consent flow.
+    Channel creation happens server-side in the messaging service callback.
+    """
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.instagram_authorize(tenant_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.get(
+    "/instagram/status",
+    response_model=InstagramStatusResponse,
+    summary="List connected Instagram channels",
+    tags=["messaging", "instagram"],
+    responses={503: {"model": MessagingError}},
+)
+async def instagram_status(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    """
+    Retrieves the status and details of all Instagram channels (inboxes) currently connected
+    for the tenant.
+    """
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.instagram_status(tenant_id)
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")
 

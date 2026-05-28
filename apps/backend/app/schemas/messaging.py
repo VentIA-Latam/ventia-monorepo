@@ -505,6 +505,34 @@ class WhatsAppHealthResponse(BaseModel):
     data: WhatsAppHealthData
 
 
+# --- Instagram Response ---
+
+class InstagramAuthorizeData(BaseModel):
+    authorize_url: str
+
+
+class InstagramAuthorizeResponse(BaseModel):
+    success: bool = True
+    data: InstagramAuthorizeData
+
+
+class InstagramChannel(BaseModel):
+    id: int
+    instagram_id: str
+    username: Optional[str] = None
+    inbox_id: Optional[int] = None
+    inbox_name: Optional[str] = None
+    reauthorization_required: bool = False
+
+    class Config:
+        from_attributes = True
+
+
+class InstagramStatusResponse(BaseModel):
+    success: bool = True
+    data: list[InstagramChannel] = []
+
+
 # --- Notifications Response ---
 
 class NotificationItem(BaseModel):
