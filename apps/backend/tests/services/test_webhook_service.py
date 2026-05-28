@@ -412,7 +412,7 @@ class TestShopifyOrdersPaid:
 
     @pytest.fixture
     def orders_paid_payload(self):
-        """Sample Shopify orders/paid payload."""
+        """Sample Shopify orders/paid payload — matches Shopify REST webhook structure."""
         return {
             "id": 987654321,
             "email": "customer@example.com",
@@ -420,6 +420,15 @@ class TestShopifyOrdersPaid:
             "currency": "USD",
             "financial_status": "paid",
             "payment_gateway_names": ["Shopify Payments"],
+            "line_items": [
+                {
+                    "id": 987654321 * 10,
+                    "sku": "PAID-SKU-001",
+                    "title": "Producto Pagado",
+                    "quantity": 2,
+                    "price": "75.00",
+                }
+            ],
         }
 
     def test_validate_order_by_shopify_order_id(
@@ -506,6 +515,9 @@ class TestShopifyOrdersPaid:
         existing_order.validado = False
         existing_order.status = "Pendiente"
         existing_order.shopify_draft_order_id = "gid://shopify/DraftOrder/111222333"
+        existing_order.line_items = [
+            {"sku": "PAID-SKU-001", "product": "Producto Pagado", "quantity": 2, "unitPrice": 75.0}
+        ]
 
         with patch("app.services.webhook_service.order_repository") as mock_repo:
             mock_repo.get_by_shopify_order_id.return_value = None  # Not found by ID
