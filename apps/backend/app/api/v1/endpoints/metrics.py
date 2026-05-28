@@ -14,6 +14,7 @@ from app.core.permissions import Role
 from app.schemas.metrics import (
     ActivityByHourResponse,
     AdsSummaryResponse,
+    ConversationDistributionResponse,
     ConversionRateResponse,
     DashboardMetrics,
     MetricsQuery,
@@ -333,4 +334,54 @@ async def get_activity_by_hour(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve activity by hour: {e}",
+        )
+
+
+@router.get(
+    "/conversation-distribution",
+    response_model=ConversationDistributionResponse,
+    summary="Distribución de conversaciones por tipo (IA / Humano / Abandonadas)",
+    tags=["metrics"],
+)
+async def get_conversation_distribution(
+    period: PeriodType = Query("last_30_days"),
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
+    tenant_id: int | None = Query(None, description="Tenant ID (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/metrics/*")),
+    db: Session = Depends(get_database),
+) -> ConversationDistributionResponse:
+    """Get conversation distribution by attention type: AI, human, or abandoned."""
+    try:
+        query = MetricsQuery(period=period, start_date=start_date, end_date=end_date)
+
+        cross_tenant = False
+
+        if current_user.role == Role.SUPERADMIN:
+            target_tenant = tenant_id
+            if target_tenant is None:
+                cross_tenant = True
+                tz_name = "UTC"
+            else:
+                tz_name = _get_tenant_timezone(db, target_tenant)
+        else:
+            target_tenant = current_user.tenant_id
+            tz_name = _get_tenant_timezone(db, target_tenant)
+
+        result = await metrics_service.get_conversation_distribution(
+            tenant_id=target_tenant,
+            query=query,
+            tz_name=tz_name,
+            cross_tenant=cross_tenant,
+        )
+
+        return ConversationDistributionResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve conversation distribution: {e}",
         )

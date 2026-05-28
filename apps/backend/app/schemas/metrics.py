@@ -178,3 +178,23 @@ class AdsSummaryResponse(BaseModel):
     end_date: date
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class DistributionCategory(BaseModel):
+    """Un bucket de la distribución de conversaciones por tipo de atención."""
+
+    category: Literal["agent_ai", "human_support", "abandoned"]
+    count: int = Field(..., description="Número de conversaciones en este bucket")
+    percentage: float = Field(..., description="Porcentaje 0-100 sobre el total")
+    total_hours: float = Field(..., description="Suma de duración de las conversaciones (horas)")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ConversationDistributionResponse(BaseModel):
+    """Distribución de conversaciones por tipo: IA / Humano / Abandonadas."""
+
+    distribution: list[DistributionCategory]
+    total_conversations: int = Field(..., description="Total de conversaciones clasificadas (excluye campañas)")
+
+    model_config = ConfigDict(from_attributes=True)
