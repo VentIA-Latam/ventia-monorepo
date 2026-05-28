@@ -9,6 +9,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.order import Order
@@ -331,48 +332,50 @@ def process_shopify_orders_paid(
             f"searching by draft_order_id or other fields..."
         )
 
-        # Strategy: find unvalidated orders from this tenant that don't have shopify_order_id yet
-        # and match by customer email (if available in payload)
+        # Strategy: find unvalidated draft orders from this tenant that don't have
+        # shopify_order_id yet and match by price (+ products when no real email).
         customer_email = payload.get("email") or payload.get("customer", {}).get("email")
+        has_real_email = bool(customer_email)
 
-        if customer_email:
-            # Search for recent unvalidated orders with matching email
-            potential_orders = (
-                db.query(Order)
-                .filter(
-                    Order.tenant_id == tenant.id,
-                    Order.customer_email == customer_email,
-                    Order.validado == False,
-                    Order.shopify_order_id == None,
-                    Order.shopify_draft_order_id != None,
-                )
-                .order_by(Order.created_at.desc())
-                .limit(5)
-                .all()
-            )
+        match_conditions = [
+            Order.tenant_id == tenant.id,
+            Order.validado == False,
+            Order.shopify_order_id == None,
+            Order.shopify_draft_order_id != None,
+        ]
+        # Only filter by email when it's real; placeholders differ between webhooks.
+        if has_real_email:
+            match_conditions.append(Order.customer_email == customer_email)
+        potential_orders = (
+            db.query(Order)
+            .filter(*match_conditions)
+            .order_by(Order.created_at.desc())
+            .limit(5)
+            .all()
+        )
 
-            # Try to match by total_price for additional confidence
-            total_price_str = payload.get("total_price")
-            if total_price_str and potential_orders:
-                try:
-                    total_price = float(total_price_str)
-                    for potential_order in potential_orders:
-                        if abs(potential_order.total_price - total_price) < 0.01:  # Allow small float diff
-                            order = potential_order
-                            logger.info(
-                                f"Found order by email and price match: order_id={order.id}, "
-                                f"draft_order_id={order.shopify_draft_order_id}"
-                            )
-                            break
-                except (ValueError, TypeError):
-                    pass
-
-            # If still not found but we have potential orders, take the most recent one
-            if not order and potential_orders:
-                order = potential_orders[0]
-                logger.info(
-                    f"Using most recent unvalidated order with matching email: order_id={order.id}"
-                )
+        # Match by total_price, and require matching products when there's no email
+        total_price_str = payload.get("total_price")
+        payload_line_items = payload.get("line_items", [])
+        if total_price_str and potential_orders:
+            try:
+                total_price = float(total_price_str)
+                for potential_order in potential_orders:
+                    if abs(potential_order.total_price - total_price) >= 0.01:
+                        continue
+                    if not has_real_email and not _line_items_match(
+                        payload_line_items, potential_order.line_items
+                    ):
+                        continue
+                    order = potential_order
+                    logger.info(
+                        f"Found order by price/line-items match: order_id={order.id}, "
+                        f"draft_order_id={order.shopify_draft_order_id}, "
+                        f"has_real_email={has_real_email}"
+                    )
+                    break
+            except (ValueError, TypeError):
+                pass
 
     # If order still not found, log warning and mark webhook as processed
     if not order:
@@ -529,6 +532,11 @@ def process_shopify_orders_create(
     if not customer_email and customer:
         customer_email = customer.get("email")
 
+    # Track whether a real email was provided. When it's missing, both the draft
+    # and this order get distinct placeholder emails (based on different IDs), so
+    # matching by email would fail and create a duplicate.
+    has_real_email = bool(customer_email)
+
     # Use placeholder email if missing (guest orders or orders without email)
     if not customer_email:
         customer_email = generate_placeholder_email("shopify", shopify_order_id)
@@ -554,29 +562,41 @@ def process_shopify_orders_create(
         f"searching for draft order by email and price..."
     )
 
+    match_conditions = [
+        Order.tenant_id == tenant.id,
+        Order.shopify_order_id == None,  # Must not have order_id yet
+        Order.shopify_draft_order_id != None,  # Must be from draft
+    ]
+    # Only filter by email when it's real. With placeholder emails the draft and
+    # the order have different placeholders, so we match by price + line items.
+    if has_real_email:
+        match_conditions.append(Order.customer_email == customer_email)
     potential_orders = (
         db.query(Order)
-        .filter(
-            Order.tenant_id == tenant.id,
-            Order.customer_email == customer_email,
-            Order.shopify_order_id == None,  # Must not have order_id yet
-            Order.shopify_draft_order_id != None,  # Must be from draft
-        )
+        .filter(*match_conditions)
         .order_by(Order.created_at.desc())
         .limit(5)
         .all()
     )
 
     # Try to match by total_price
+    payload_line_items = payload.get("line_items", [])
     if potential_orders:
         for potential_order in potential_orders:
-            if abs(potential_order.total_price - total_price) < 0.01:  # Allow small float diff
-                order = potential_order
-                logger.info(
-                    f"Found draft order by email and price match: order_id={order.id}, "
-                    f"draft_order_id={order.shopify_draft_order_id}"
-                )
-                break
+            if abs(potential_order.total_price - total_price) >= 0.01:  # Allow small float diff
+                continue
+            # Without a real email, price alone is too weak: two guest orders can
+            # share a total. Require the products (SKU + quantity) to match too.
+            if not has_real_email and not _line_items_match(
+                payload_line_items, potential_order.line_items
+            ):
+                continue
+            order = potential_order
+            logger.info(
+                f"Found draft order by price/line-items match: order_id={order.id}, "
+                f"draft_order_id={order.shopify_draft_order_id}, has_real_email={has_real_email}"
+            )
+            break
 
     # 5. If found draft order, UPDATE it with shopify_order_id and status
     if order:
@@ -749,6 +769,35 @@ def process_shopify_orders_create(
 
         return order
 
+    except IntegrityError:
+        # Lost a race (concurrent orders/create, or a missed match): the unique
+        # constraint on (tenant_id, shopify_order_id) rejected the duplicate.
+        # Re-query and return the existing order to stay idempotent.
+        db.rollback()
+        existing = order_repository.get_by_shopify_order_id(
+            db, tenant_id=tenant.id, shopify_order_id=shopify_order_id
+        )
+        if existing:
+            logger.info(
+                f"Duplicate order/create blocked by unique constraint (idempotent): "
+                f"tenant={tenant.id}, shopify_order_id={shopify_order_id}, "
+                f"order_id={existing.id}"
+            )
+            webhook_event.processed = True
+            webhook_event.order_id = existing.id
+            db.commit()
+            return existing
+        # No existing row found despite the IntegrityError - re-raise to surface it
+        error_msg = (
+            f"IntegrityError creating order but no existing order found: "
+            f"shopify_order_id={shopify_order_id}, tenant={tenant.id}"
+        )
+        logger.error(error_msg, exc_info=True)
+        webhook_event.processed = True
+        webhook_event.error = error_msg
+        db.commit()
+        raise
+
     except Exception as e:
         db.rollback()
         error_msg = f"Failed to create order from Shopify orders/create: {str(e)}"
@@ -757,6 +806,47 @@ def process_shopify_orders_create(
         webhook_event.error = error_msg
         db.commit()
         raise
+
+
+def _line_items_signature(
+    items: list[dict[str, Any]] | None,
+    raw_shopify: bool,
+) -> list[tuple[str, int]]:
+    """Build a normalized (sku, quantity) multiset to compare two line item lists.
+
+    Handles both raw Shopify payload items and our stored/transformed items.
+    Shipping ("DELIVERY") lines are excluded so the comparison reflects products.
+    """
+    signature: list[tuple[str, int]] = []
+    for item in items or []:
+        if raw_shopify:
+            sku = item.get("sku") or item.get("variant_id") or str(item.get("id", ""))
+        else:
+            sku = item.get("sku")
+        if sku == "DELIVERY":
+            continue
+        try:
+            quantity = int(item.get("quantity", 1))
+        except (ValueError, TypeError):
+            quantity = 1
+        signature.append((str(sku), quantity))
+    return sorted(signature)
+
+
+def _line_items_match(
+    payload_line_items: list[dict[str, Any]] | None,
+    stored_line_items: list[dict[str, Any]] | None,
+) -> bool:
+    """True if both lists describe the same NON-EMPTY set of products (SKU + quantity).
+
+    Used as a discriminator for email-less dedup, so an empty signature must NOT
+    count as a match: otherwise two product-less guest orders sharing a price
+    would still be merged.
+    """
+    payload_signature = _line_items_signature(payload_line_items, raw_shopify=True)
+    if not payload_signature:
+        return False
+    return payload_signature == _line_items_signature(stored_line_items, raw_shopify=False)
 
 
 def _map_woo_status(woo_status: str) -> tuple[str, bool] | None:
@@ -950,6 +1040,18 @@ def process_shopify_draft_order_update(
         db.commit()
         return None
 
+    # 2b. Link to the real Shopify order when the draft has been completed.
+    # Shopify populates payload["order_id"] (null until completion). Capturing it
+    # here lets the later orders/create webhook match by shopify_order_id instead
+    # of relying on customer_email, which prevents duplicates when email is missing.
+    completed_order_id = payload.get("order_id")
+    shopify_order_id_to_set = None
+    if completed_order_id and not order.shopify_order_id:
+        if isinstance(completed_order_id, int):
+            shopify_order_id_to_set = f"gid://shopify/Order/{completed_order_id}"
+        else:
+            shopify_order_id_to_set = str(completed_order_id)
+
     # 3. Extract updated data
     customer_email = payload.get("email")
     if not customer_email:
@@ -1049,6 +1151,9 @@ def process_shopify_draft_order_update(
     # Compare channel
     if order.channel != channel:
         needs_update = True
+    # Link to completed Shopify order if newly available
+    if shopify_order_id_to_set:
+        needs_update = True
 
     if not needs_update:
         logger.info(
@@ -1082,6 +1187,14 @@ def process_shopify_draft_order_update(
 
         # Update channel
         order.channel = channel
+
+        # Link to the completed Shopify order so orders/create can match by ID
+        if shopify_order_id_to_set:
+            order.shopify_order_id = shopify_order_id_to_set
+            logger.info(
+                f"Linked draft order to completed Shopify order: order_id={order.id}, "
+                f"shopify_order_id={shopify_order_id_to_set}"
+            )
 
         db.flush()
 
@@ -1259,33 +1372,45 @@ def process_shopify_order_updated(
         except (ValueError, TypeError):
             total_price = 0.0
 
-        if customer_email:
+        has_real_email = bool(customer_email)
+        logger.info(
+            f"Order not found by shopify_order_id={shopify_order_id}, "
+            f"searching by price/line-items (has_real_email={has_real_email})"
+        )
+
+        # Get recent orders (last 30 days)
+        recent_date = datetime.utcnow() - timedelta(days=30)
+
+        match_conditions = [
+            Order.tenant_id == tenant.id,
+            Order.created_at >= recent_date,
+        ]
+        # Only filter by email when it's real; placeholders differ between webhooks.
+        if has_real_email:
+            match_conditions.append(Order.customer_email == customer_email)
+        potential_orders = (
+            db.query(Order)
+            .filter(*match_conditions)
+            .order_by(Order.created_at.desc())
+            .limit(10)
+            .all()
+        )
+
+        # Match by total price, and require matching products when there's no email
+        payload_line_items = payload.get("line_items", [])
+        for potential_order in potential_orders:
+            if abs(potential_order.total_price - total_price) >= 0.01:
+                continue
+            if not has_real_email and not _line_items_match(
+                payload_line_items, potential_order.line_items
+            ):
+                continue
+            order = potential_order
             logger.info(
-                f"Order not found by shopify_order_id={shopify_order_id}, "
-                f"searching by email={customer_email} and total_price={total_price}"
+                f"Found order by price/line-items match: order_id={order.id}, "
+                f"has_real_email={has_real_email}"
             )
-
-            # Get recent orders (last 30 days)
-            recent_date = datetime.utcnow() - timedelta(days=30)
-
-            potential_orders = (
-                db.query(Order)
-                .filter(
-                    Order.tenant_id == tenant.id,
-                    Order.customer_email == customer_email,
-                    Order.created_at >= recent_date,
-                )
-                .order_by(Order.created_at.desc())
-                .limit(10)
-                .all()
-            )
-
-            # Try to match by total price
-            for potential_order in potential_orders:
-                if abs(potential_order.total_price - total_price) < 0.01:
-                    order = potential_order
-                    logger.info(f"Found order by email and price match: order_id={order.id}")
-                    break
+            break
 
     if not order:
         warning_msg = f"Order not found for shopify_order_id={shopify_order_id}"

@@ -11,10 +11,12 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import relationship
 
@@ -181,6 +183,16 @@ class Order(Base, TimestampMixin):
             "tenant_id",
             "woocommerce_order_id",
             name="uq_tenant_woo_order",
+        ),
+        # Partial unique index: prevents duplicate Shopify orders per tenant.
+        # Partial (WHERE NOT NULL) so multiple draft-only orders (NULL order_id)
+        # are still allowed.
+        Index(
+            "uq_tenant_shopify_order",
+            "tenant_id",
+            "shopify_order_id",
+            unique=True,
+            postgresql_where=text("shopify_order_id IS NOT NULL"),
         ),
     )
 

@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_database
+from app.core.config import settings
 from app.core.webhook_signature import verify_shopify_webhook, verify_woocommerce_webhook
 from app.repositories.tenant import tenant_repository
 from app.repositories.webhook import webhook_repository
@@ -196,15 +197,23 @@ async def _receive_shopify_webhook_impl(
     logger.info(f"DEBUG: client_secret length: {len(client_secret) if client_secret else 0}")
 
     if not client_secret:
-        logger.error(f"Shopify client_secret not configured for tenant {tenant_id}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Shopify client_secret not configured for this tenant",
-        )
+        if settings.SKIP_WEBHOOK_HMAC:
+            logger.warning(f"SKIP_WEBHOOK_HMAC=true: bypassing missing client_secret for tenant {tenant_id}")
+            client_secret = "dev-bypass"
+        else:
+            logger.error(f"Shopify client_secret not configured for tenant {tenant_id}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Shopify client_secret not configured for this tenant",
+            )
 
     # Validate HMAC signature using client_secret
     logger.info(f"Validating HMAC for {topic}...")
-    signature_valid = verify_shopify_webhook(raw_body, hmac_header, client_secret)
+    if settings.SKIP_WEBHOOK_HMAC:
+        logger.warning(f"SKIP_WEBHOOK_HMAC=true: skipping HMAC validation for {topic}")
+        signature_valid = True
+    else:
+        signature_valid = verify_shopify_webhook(raw_body, hmac_header, client_secret)
 
     if not signature_valid:
         logger.warning(f"Invalid HMAC signature for {topic}")

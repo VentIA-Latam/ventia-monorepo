@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     RESEND_FROM_EMAIL: str = "noreply@ventia.pe"  # Email address for sending invoices
     RESEND_FROM_NAME: str = "VentIA - Facturación"  # Sender name for emails
 
+    # Development / testing
+    SKIP_WEBHOOK_HMAC: bool = False  # Set to true in dev to bypass HMAC validation
+
     # Webhooks
     WEBHOOK_BASE_URL: str = Field(
         default="",

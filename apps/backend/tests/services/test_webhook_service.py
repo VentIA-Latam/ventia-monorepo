@@ -575,7 +575,7 @@ class TestShopifyOrdersPaid:
     def test_validate_order_fallback_search_wrong_total(
         self, mock_db, mock_tenant, mock_webhook_event, orders_paid_payload
     ):
-        """Test that fallback search with wrong total_price still uses most recent order."""
+        """Wrong total_price must NOT match (the 'take most recent' fallback was removed)."""
         from app.services.webhook_service import process_shopify_orders_paid
 
         # Mock an order with different total_price
@@ -603,10 +603,9 @@ class TestShopifyOrdersPaid:
                 tenant=mock_tenant,
             )
 
-            # Code uses most recent order even if price doesn't match
-            assert result == existing_order
-            assert existing_order.validado is True
-            assert existing_order.status == "Pagado"
+            # Price mismatch -> no match -> not validated (no dangerous fallback)
+            assert result is None
+            assert existing_order.validado is False
 
     def test_database_error_during_update_marks_webhook_as_failed(
         self, mock_db, mock_tenant, mock_webhook_event, orders_paid_payload
@@ -1070,6 +1069,107 @@ class TestShopifyDraftOrderUpdate:
             process_shopify_draft_order_update(
                 db=mock_db, webhook_event=mock_webhook_event, payload=payload, tenant=mock_tenant
             )
+
+    def test_update_draft_order_links_completed_order_id(
+        self, mock_db, mock_tenant, mock_webhook_event, existing_order
+    ):
+        """When the draft is completed, payload['order_id'] links the real Shopify order.
+
+        Even when no other field changed, the link must persist (needs_update gate).
+        """
+        from app.services.webhook_service import process_shopify_draft_order_update
+
+        existing_order.shopify_order_id = None
+
+        # Payload identical to existing order data EXCEPT it now carries order_id
+        payload = {
+            "id": 555666777,
+            "order_id": 888999,
+            "email": "old@example.com",
+            "customer": {
+                "first_name": "Old",
+                "last_name": "Name",
+                "email": "old@example.com",
+            },
+            "total_price": "100.00",
+            "currency": "USD",
+            "line_items": [],
+        }
+
+        with patch("app.services.webhook_service.order_repository") as mock_repo:
+            mock_repo.get_by_shopify_draft_id.return_value = existing_order
+
+            result = process_shopify_draft_order_update(
+                db=mock_db, webhook_event=mock_webhook_event, payload=payload, tenant=mock_tenant
+            )
+
+            assert result == existing_order
+            assert existing_order.shopify_order_id == "gid://shopify/Order/888999"
+            # The link alone must trigger a persist even without other changes
+            mock_db.flush.assert_called_once()
+            mock_db.commit.assert_called()
+
+    def test_update_draft_order_null_order_id_keeps_shopify_order_id_none(
+        self, mock_db, mock_tenant, mock_webhook_event, existing_order
+    ):
+        """A null order_id (draft not yet completed) must not set shopify_order_id."""
+        from app.services.webhook_service import process_shopify_draft_order_update
+
+        existing_order.shopify_order_id = None
+
+        payload = {
+            "id": 555666777,
+            "order_id": None,
+            "email": "old@example.com",
+            "customer": {
+                "first_name": "Old",
+                "last_name": "Name",
+                "email": "old@example.com",
+            },
+            "total_price": "100.00",
+            "currency": "USD",
+            "line_items": [],
+        }
+
+        with patch("app.services.webhook_service.order_repository") as mock_repo:
+            mock_repo.get_by_shopify_draft_id.return_value = existing_order
+
+            result = process_shopify_draft_order_update(
+                db=mock_db, webhook_event=mock_webhook_event, payload=payload, tenant=mock_tenant
+            )
+
+            assert result == existing_order
+            assert existing_order.shopify_order_id is None
+            # No changes at all -> idempotent skip, no flush
+            mock_db.flush.assert_not_called()
+
+    def test_update_draft_order_string_order_id(
+        self, mock_db, mock_tenant, mock_webhook_event, existing_order
+    ):
+        """A string order_id (already a GID) must be stored as-is, not re-wrapped."""
+        from app.services.webhook_service import process_shopify_draft_order_update
+
+        existing_order.shopify_order_id = None
+
+        payload = {
+            "id": 555666777,
+            "order_id": "gid://shopify/Order/888999",
+            "email": "old@example.com",
+            "customer": {"first_name": "Old", "last_name": "Name", "email": "old@example.com"},
+            "total_price": "100.00",
+            "currency": "USD",
+            "line_items": [],
+        }
+
+        with patch("app.services.webhook_service.order_repository") as mock_repo:
+            mock_repo.get_by_shopify_draft_id.return_value = existing_order
+
+            result = process_shopify_draft_order_update(
+                db=mock_db, webhook_event=mock_webhook_event, payload=payload, tenant=mock_tenant
+            )
+
+            assert result == existing_order
+            assert existing_order.shopify_order_id == "gid://shopify/Order/888999"
 
 
 class TestShopifyDraftOrderDelete:
@@ -1999,3 +2099,396 @@ class TestWooCommerceOrderDeleted:
             assert "not found" in mock_webhook_event.error.lower()
 
             mock_db.commit.assert_called()
+
+
+class TestShopifyOrdersCreateDeduplication:
+    """Tests for orders/create deduplication when the customer email is missing."""
+
+    @pytest.fixture
+    def mock_db(self):
+        db = MagicMock()
+        db.commit = MagicMock()
+        db.rollback = MagicMock()
+        db.flush = MagicMock()
+        db.refresh = MagicMock()
+        return db
+
+    @pytest.fixture
+    def mock_tenant(self):
+        tenant = MagicMock(spec=Tenant)
+        tenant.id = 1
+        tenant.name = "Test Tenant"
+        return tenant
+
+    @pytest.fixture
+    def mock_webhook_event(self):
+        event = MagicMock(spec=WebhookEvent)
+        event.id = 200
+        event.platform = "shopify"
+        event.event_type = "orders/create"
+        event.tenant_id = 1
+        event.processed = False
+        event.error = None
+        event.order_id = None
+        return event
+
+    def _wire_query(self, mock_db, candidates):
+        """Wire the db.query(...).filter(*conds).order_by(...).limit(...).all() chain."""
+        chain = mock_db.query.return_value.filter.return_value.order_by.return_value.limit.return_value
+        chain.all.return_value = candidates
+
+    def _filter_arg_count(self, mock_db):
+        """Number of conditions passed to the single .filter(*conds) call."""
+        return len(mock_db.query.return_value.filter.call_args.args)
+
+    def _make_draft(self, total_price=100.0, line_items=None):
+        draft = MagicMock(spec=Order)
+        draft.id = 50
+        draft.tenant_id = 1
+        draft.shopify_draft_order_id = "gid://shopify/DraftOrder/111"
+        draft.shopify_order_id = None
+        draft.customer_email = "no-email-shopify-111@example.com"
+        draft.total_price = total_price
+        draft.channel = "shopify"
+        draft.line_items = line_items if line_items is not None else [
+            {"sku": "SKU1", "product": "P", "unitPrice": 50.0, "quantity": 2, "subtotal": 100.0}
+        ]
+        return draft
+
+    def test_orders_create_no_email_matches_draft_by_price_and_items(
+        self, mock_db, mock_tenant, mock_webhook_event
+    ):
+        """No email: match the draft by price + line_items and do NOT duplicate.
+
+        Regression for the reported bug: draft and order get different placeholder
+        emails, so email matching failed and a duplicate was created.
+        """
+        from app.services.webhook_service import process_shopify_orders_create
+
+        draft_order = self._make_draft()
+
+        payload = {
+            "id": 7750411255970,
+            "total_price": "100.00",
+            "financial_status": "pending",
+            "line_items": [{"sku": "SKU1", "title": "P", "quantity": 2, "price": "50.00"}],
+        }
+
+        with patch("app.services.webhook_service.order_repository") as mock_repo:
+            mock_repo.get_by_shopify_order_id.return_value = None
+            self._wire_query(mock_db, [draft_order])
+
+            result = process_shopify_orders_create(
+                db=mock_db,
+                webhook_event=mock_webhook_event,
+                payload=payload,
+                tenant=mock_tenant,
+            )
+
+            assert result == draft_order
+            assert draft_order.shopify_order_id == "gid://shopify/Order/7750411255970"
+            mock_db.add.assert_not_called()
+            # No email -> 3 base conditions, NO email condition appended
+            assert self._filter_arg_count(mock_db) == 3
+
+    def test_orders_create_with_email_applies_email_filter(
+        self, mock_db, mock_tenant, mock_webhook_event
+    ):
+        """With a real email, the email filter MUST be applied (validates the gate)."""
+        from app.services.webhook_service import process_shopify_orders_create
+
+        payload = {
+            "id": 7750411255970,
+            "email": "real@customer.com",
+            "total_price": "100.00",
+            "financial_status": "pending",
+            "line_items": [{"sku": "SKU1", "title": "P", "quantity": 2, "price": "50.00"}],
+        }
+
+        with patch("app.services.webhook_service.order_repository") as mock_repo:
+            mock_repo.get_by_shopify_order_id.return_value = None
+            self._wire_query(mock_db, [])  # no match -> create path
+
+            process_shopify_orders_create(
+                db=mock_db,
+                webhook_event=mock_webhook_event,
+                payload=payload,
+                tenant=mock_tenant,
+            )
+
+            # Real email -> 4 conditions (3 base + email)
+            assert self._filter_arg_count(mock_db) == 4
+
+    def test_orders_create_no_email_divergent_price_creates_new(
+        self, mock_db, mock_tenant, mock_webhook_event
+    ):
+        """No email + different price: must NOT merge; creates a new order instead."""
+        from app.services.webhook_service import process_shopify_orders_create
+
+        draft_order = self._make_draft(total_price=999.0)  # different price
+
+        payload = {
+            "id": 7750411255970,
+            "total_price": "100.00",
+            "financial_status": "pending",
+            "line_items": [{"sku": "SKU1", "title": "P", "quantity": 2, "price": "50.00"}],
+        }
+
+        with patch("app.services.webhook_service.order_repository") as mock_repo:
+            mock_repo.get_by_shopify_order_id.return_value = None
+            self._wire_query(mock_db, [draft_order])
+
+            process_shopify_orders_create(
+                db=mock_db,
+                webhook_event=mock_webhook_event,
+                payload=payload,
+                tenant=mock_tenant,
+            )
+
+            # Price differs -> draft NOT linked, a new order is created
+            assert draft_order.shopify_order_id is None
+            mock_db.add.assert_called_once()
+
+    def test_orders_create_no_email_different_items_creates_new(
+        self, mock_db, mock_tenant, mock_webhook_event
+    ):
+        """No email + same price but different products: must NOT merge (anti wrong-merge)."""
+        from app.services.webhook_service import process_shopify_orders_create
+
+        # Same total, but the draft has different SKUs than the incoming order
+        draft_order = self._make_draft(
+            line_items=[{"sku": "OTHER", "quantity": 2, "unitPrice": 50.0}]
+        )
+
+        payload = {
+            "id": 7750411255970,
+            "total_price": "100.00",
+            "financial_status": "pending",
+            "line_items": [{"sku": "SKU1", "title": "P", "quantity": 2, "price": "50.00"}],
+        }
+
+        with patch("app.services.webhook_service.order_repository") as mock_repo:
+            mock_repo.get_by_shopify_order_id.return_value = None
+            self._wire_query(mock_db, [draft_order])
+
+            process_shopify_orders_create(
+                db=mock_db,
+                webhook_event=mock_webhook_event,
+                payload=payload,
+                tenant=mock_tenant,
+            )
+
+            assert draft_order.shopify_order_id is None
+            mock_db.add.assert_called_once()
+
+    def test_orders_create_no_email_empty_items_creates_new(
+        self, mock_db, mock_tenant, mock_webhook_event
+    ):
+        """No email + both line_items empty: price alone must NOT merge (empty != match)."""
+        from app.services.webhook_service import process_shopify_orders_create
+
+        draft_order = self._make_draft(line_items=[])  # draft has no products
+
+        payload = {
+            "id": 7750411255970,
+            "total_price": "100.00",
+            "financial_status": "pending",
+            "line_items": [],  # incoming has no products either
+        }
+
+        with patch("app.services.webhook_service.order_repository") as mock_repo:
+            mock_repo.get_by_shopify_order_id.return_value = None
+            self._wire_query(mock_db, [draft_order])
+
+            process_shopify_orders_create(
+                db=mock_db,
+                webhook_event=mock_webhook_event,
+                payload=payload,
+                tenant=mock_tenant,
+            )
+
+            # Empty signatures must not count as a match -> new order created
+            assert draft_order.shopify_order_id is None
+            mock_db.add.assert_called_once()
+
+    def test_orders_create_integrity_error_returns_existing(
+        self, mock_db, mock_tenant, mock_webhook_event
+    ):
+        """A race that hits the unique constraint must re-query and return the existing order."""
+        from sqlalchemy.exc import IntegrityError
+
+        from app.services.webhook_service import process_shopify_orders_create
+
+        existing = MagicMock(spec=Order)
+        existing.id = 77
+        existing.tenant_id = 1
+        existing.shopify_order_id = "gid://shopify/Order/7750411255970"
+
+        payload = {
+            "id": 7750411255970,
+            "total_price": "100.00",
+            "financial_status": "pending",
+            "line_items": [],
+        }
+
+        with patch("app.services.webhook_service.order_repository") as mock_repo:
+            # 1st call (idempotency) -> None; 2nd call (after IntegrityError) -> existing
+            mock_repo.get_by_shopify_order_id.side_effect = [None, existing]
+            self._wire_query(mock_db, [])  # no draft match -> create path
+            mock_db.flush.side_effect = IntegrityError("stmt", {}, Exception("duplicate key"))
+
+            result = process_shopify_orders_create(
+                db=mock_db,
+                webhook_event=mock_webhook_event,
+                payload=payload,
+                tenant=mock_tenant,
+            )
+
+            assert result == existing
+            assert mock_webhook_event.order_id == existing.id
+            mock_db.rollback.assert_called()
+
+    def test_orders_create_integrity_error_requery_none_reraises(
+        self, mock_db, mock_tenant, mock_webhook_event
+    ):
+        """If the unique constraint fires but no existing row is found, re-raise."""
+        from sqlalchemy.exc import IntegrityError
+
+        from app.services.webhook_service import process_shopify_orders_create
+
+        payload = {
+            "id": 7750411255970,
+            "total_price": "100.00",
+            "financial_status": "pending",
+            "line_items": [],
+        }
+
+        with patch("app.services.webhook_service.order_repository") as mock_repo:
+            # Both lookups return None -> cannot recover -> must re-raise
+            mock_repo.get_by_shopify_order_id.side_effect = [None, None]
+            self._wire_query(mock_db, [])
+            mock_db.flush.side_effect = IntegrityError("stmt", {}, Exception("duplicate key"))
+
+            with pytest.raises(IntegrityError):
+                process_shopify_orders_create(
+                    db=mock_db,
+                    webhook_event=mock_webhook_event,
+                    payload=payload,
+                    tenant=mock_tenant,
+                )
+
+
+class TestShopifyOrdersPaidDeduplication:
+    """Tests for orders/paid matching when the customer email is missing."""
+
+    @pytest.fixture
+    def mock_db(self):
+        db = MagicMock()
+        db.commit = MagicMock()
+        db.rollback = MagicMock()
+        db.flush = MagicMock()
+        db.refresh = MagicMock()
+        return db
+
+    @pytest.fixture
+    def mock_tenant(self):
+        tenant = MagicMock(spec=Tenant)
+        tenant.id = 1
+        tenant.name = "Test Tenant"
+        return tenant
+
+    @pytest.fixture
+    def mock_webhook_event(self):
+        event = MagicMock(spec=WebhookEvent)
+        event.id = 201
+        event.platform = "shopify"
+        event.event_type = "orders/paid"
+        event.tenant_id = 1
+        event.processed = False
+        event.error = None
+        event.order_id = None
+        return event
+
+    def _wire_query(self, mock_db, candidates):
+        chain = mock_db.query.return_value.filter.return_value.order_by.return_value.limit.return_value
+        chain.all.return_value = candidates
+
+    def _filter_arg_count(self, mock_db):
+        return len(mock_db.query.return_value.filter.call_args.args)
+
+    def _make_draft(self, total_price=100.0, line_items=None):
+        draft = MagicMock(spec=Order)
+        draft.id = 60
+        draft.tenant_id = 1
+        draft.shopify_draft_order_id = "gid://shopify/DraftOrder/222"
+        draft.shopify_order_id = None
+        draft.customer_email = "no-email-shopify-222@example.com"
+        draft.total_price = total_price
+        draft.validado = False
+        draft.status = "Pendiente"
+        draft.channel = "shopify"
+        draft.line_items = line_items if line_items is not None else [
+            {"sku": "SKU1", "product": "P", "unitPrice": 50.0, "quantity": 2, "subtotal": 100.0}
+        ]
+        return draft
+
+    def test_orders_paid_no_email_matches_and_marks_paid(
+        self, mock_db, mock_tenant, mock_webhook_event
+    ):
+        """No email: match the draft by price + line_items and mark it paid."""
+        from app.services.webhook_service import process_shopify_orders_paid
+
+        draft_order = self._make_draft()
+
+        payload = {
+            "id": 7750411255970,
+            "total_price": "100.00",
+            "line_items": [{"sku": "SKU1", "title": "P", "quantity": 2, "price": "50.00"}],
+        }
+
+        with patch("app.services.webhook_service.order_repository") as mock_repo:
+            mock_repo.get_by_shopify_order_id.return_value = None
+            self._wire_query(mock_db, [draft_order])
+
+            result = process_shopify_orders_paid(
+                db=mock_db,
+                webhook_event=mock_webhook_event,
+                payload=payload,
+                tenant=mock_tenant,
+            )
+
+            assert result == draft_order
+            assert draft_order.validado is True
+            assert draft_order.status == "Pagado"
+            assert draft_order.shopify_order_id == "gid://shopify/Order/7750411255970"
+            # No email -> 4 base conditions, NO email condition appended
+            assert self._filter_arg_count(mock_db) == 4
+
+    def test_orders_paid_divergent_price_returns_none_no_fallback(
+        self, mock_db, mock_tenant, mock_webhook_event
+    ):
+        """The removed 'take most recent' fallback must NOT match an unrelated order."""
+        from app.services.webhook_service import process_shopify_orders_paid
+
+        draft_order = self._make_draft(total_price=999.0)  # different price
+
+        payload = {
+            "id": 7750411255970,
+            "total_price": "100.00",
+            "line_items": [{"sku": "SKU1", "title": "P", "quantity": 2, "price": "50.00"}],
+        }
+
+        with patch("app.services.webhook_service.order_repository") as mock_repo:
+            mock_repo.get_by_shopify_order_id.return_value = None
+            self._wire_query(mock_db, [draft_order])
+
+            result = process_shopify_orders_paid(
+                db=mock_db,
+                webhook_event=mock_webhook_event,
+                payload=payload,
+                tenant=mock_tenant,
+            )
+
+            # Previously this returned the most recent order; now it must be None
+            assert result is None
+            assert draft_order.validado is False
