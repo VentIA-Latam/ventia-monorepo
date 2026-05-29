@@ -336,11 +336,13 @@ function StatusIcon({ status }: { status?: MessageStatus }) {
 interface MessageBubbleProps {
   message: Message;
   showAvatar?: boolean;
+  channelType?: string | null;
 }
 
 export const MessageBubble = memo(function MessageBubble({
   message,
   showAvatar = true,
+  channelType,
 }: MessageBubbleProps) {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const closeLightbox = useCallback(() => setLightboxSrc(null), []);
@@ -389,11 +391,17 @@ export const MessageBubble = memo(function MessageBubble({
   const senderRole = getSenderRole(message);
   const operatorName =
     message.sender && "name" in message.sender ? message.sender.name : null;
+  const channelName =
+    channelType === "Channel::Instagram"
+      ? "Instagram"
+      : channelType === "Channel::Whatsapp"
+        ? "WhatsApp"
+        : "móvil";
   const avatarTooltip =
     senderRole === "ai"
       ? "Enviado por: IA"
       : senderRole === "agent_mobile"
-        ? "Enviado por: Agente (WhatsApp)"
+        ? `Enviado por: Agente (${channelName})`
         : `Enviado por: ${operatorName ?? "operador"}`;
 
   const isTemplate = message.message_type === "template";
