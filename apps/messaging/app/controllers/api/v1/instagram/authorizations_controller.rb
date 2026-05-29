@@ -3,7 +3,7 @@ class Api::V1::Instagram::AuthorizationsController < Api::V1::BaseController
   # the current account. The frontend opens this URL in a new tab.
   def authorize
     state = ::Instagram::StateTokenService.encode(current_account.id)
-    render_success(authorize_url: ::Instagram::OauthTokenService.authorize_url(state))
+    render_success({ authorize_url: ::Instagram::OauthTokenService.authorize_url(state) })
   end
 
   def status

@@ -75,9 +75,11 @@ class Instagram::OauthTokenService
       "#{self.class::GRAPH_BASE}/access_token",
       query: {
         grant_type: 'ig_exchange_token',
+        client_id: self.class.app_id,
         client_secret: self.class.app_secret,
         access_token: short_lived_token
-      }
+      },
+      headers: { 'Accept' => 'application/json' }
     )
     handle(response, 'Long-lived token exchange failed')
   end
@@ -86,9 +88,10 @@ class Instagram::OauthTokenService
     response = HTTParty.get(
       "#{self.class::GRAPH_BASE}/#{self.class.api_version}/me",
       query: {
-        fields: 'id,user_id,username,name,profile_picture_url',
+        fields: 'id,user_id,username,name,profile_picture_url,account_type',
         access_token: access_token
-      }
+      },
+      headers: { 'Accept' => 'application/json' }
     )
     handle(response, 'Profile fetch failed')
   end
