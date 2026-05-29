@@ -38,9 +38,10 @@ interface MessageComposerProps {
   onSend: (content: string, file?: File) => void;
   disabled?: boolean;
   onOpenTemplates?: () => void;
+  audioFormat?: "mp3" | "wav";
 }
 
-export function MessageComposer({ onSend, disabled, onOpenTemplates }: MessageComposerProps) {
+export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat = "mp3" }: MessageComposerProps) {
   const [content, setContent] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -186,6 +187,7 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates }: MessageCo
 
       {isRecording ? (
         <AudioRecorder
+          audioFormat={audioFormat}
           onSend={(file) => {
             onSend("", file);
             setIsRecording(false);

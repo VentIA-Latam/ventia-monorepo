@@ -803,6 +803,9 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
       <MessageComposer
         onSend={handleSend}
         disabled={loading || conversation.can_reply === false}
+        audioFormat={
+          conversation.inbox?.channel_type === "Channel::Instagram" ? "wav" : "mp3"
+        }
         onOpenTemplates={
           conversation.inbox?.channel_type === "Channel::Whatsapp"
             ? () => setShowTemplatePicker(true)
