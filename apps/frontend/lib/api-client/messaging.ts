@@ -16,7 +16,6 @@ import type {
   ManualWhatsAppConnectParams,
   WhatsAppTemplate,
   WhatsAppChannel,
-  InstagramChannel,
   TemperatureDefinition,
 } from "@/lib/types/messaging";
 
@@ -253,12 +252,6 @@ export async function connectWhatsAppManually(
 
 export async function getWhatsAppStatus(tenantId?: number): Promise<{ success: boolean; data: WhatsAppChannel[] }> {
   return apiGet("/api/messaging/whatsapp/status", tenantId ? { tenant_id: tenantId } : undefined);
-}
-
-// --- Instagram ---
-
-export async function getInstagramStatus(tenantId?: number): Promise<{ success: boolean; data: InstagramChannel[] }> {
-  return apiGet("/api/messaging/instagram/status", tenantId ? { tenant_id: tenantId } : undefined);
 }
 
 // --- WhatsApp Templates ---

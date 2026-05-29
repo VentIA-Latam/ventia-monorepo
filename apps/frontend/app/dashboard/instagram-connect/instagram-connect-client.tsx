@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Bot, Clock, Users, Instagram as InstagramIcon, Plus, Loader2 } from "lucide-react";
 import { FaInstagram } from "react-icons/fa6";
@@ -8,7 +8,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { ChannelCard } from "@/components/instagram/channel-card";
-import { getInstagramStatus } from "@/lib/api-client/messaging";
 import type { InstagramChannel } from "@/lib/types/messaging";
 
 const BENEFITS = [
@@ -17,82 +16,24 @@ const BENEFITS = [
   { icon: Users, text: "Soporte multi-agente" },
 ];
 
-const POLL_INTERVAL_MS = 3000;
-const POLL_MAX_ATTEMPTS = 40; // ~2 minutos
-
 interface InstagramConnectClientProps {
   initialChannels: InstagramChannel[];
 }
 
 export function InstagramConnectClient({ initialChannels }: InstagramConnectClientProps) {
-  const [channels, setChannels] = useState<InstagramChannel[]>(initialChannels);
   const [connecting, setConnecting] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const refreshChannels = useCallback(async () => {
-    try {
-      const result = await getInstagramStatus();
-      setChannels(result.data ?? []);
-      return result.data ?? [];
-    } catch {
-      return null;
-    }
-  }, []);
-
-  const stopPolling = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-    setConnecting(false);
-  }, []);
-
-  const startPolling = useCallback(() => {
-    if (pollRef.current) return;
-    setConnecting(true);
-    const baseline = channels.length;
-    let attempts = 0;
-
-    pollRef.current = setInterval(async () => {
-      attempts += 1;
-      const data = await refreshChannels();
-      if ((data && data.length > baseline) || attempts >= POLL_MAX_ATTEMPTS) {
-        stopPolling();
-      }
-    }, POLL_INTERVAL_MS);
-  }, [channels.length, refreshChannels, stopPolling]);
-
-  useEffect(() => () => stopPolling(), [stopPolling]);
-
-  // Cross-tab: when the OAuth tab finishes, refresh this (background) tab instantly
-  // instead of waiting for the next poll.
-  useEffect(() => {
-    if (typeof window === "undefined" || !("BroadcastChannel" in window)) return;
-    const bc = new BroadcastChannel("instagram-connect");
-    bc.onmessage = (event) => {
-      if (event.data === "connected") {
-        stopPolling();
-        refreshChannels();
-      }
-    };
-    return () => bc.close();
-  }, [stopPolling, refreshChannels]);
-
-  // Handle the redirect coming back from the OAuth callback (?status=...)
+  // Handle the redirect coming back from the OAuth callback (?status=...).
+  // The server component re-renders with the latest channels on return.
   useEffect(() => {
     const status = searchParams.get("status");
     if (!status) return;
 
     if (status === "success") {
       toast({ title: "Instagram conectado", description: "Tu cuenta de Instagram se conecto correctamente." });
-      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
-        const bc = new BroadcastChannel("instagram-connect");
-        bc.postMessage("connected");
-        bc.close();
-      }
     } else {
       toast({
         title: "No se pudo conectar Instagram",
@@ -103,14 +44,16 @@ export function InstagramConnectClient({ initialChannels }: InstagramConnectClie
     router.replace("/dashboard/instagram-connect");
   }, [searchParams, toast, router]);
 
+  // Full-page navigation to the consent route handler (server-side redirect to
+  // Instagram). Same tab avoids popup blockers; OAuth returns here with ?status.
   const handleConnect = useCallback(() => {
-    window.open("/dashboard/instagram-connect/consent", "_blank");
-    startPolling();
-  }, [startPolling]);
+    setConnecting(true);
+    window.location.assign("/dashboard/instagram-connect/consent");
+  }, []);
 
   return (
     <div className="space-y-6">
-      {channels.length > 0 ? (
+      {initialChannels.length > 0 ? (
         <>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
@@ -128,11 +71,11 @@ export function InstagramConnectClient({ initialChannels }: InstagramConnectClie
               className="bg-gradient-to-r from-[#feda75] via-[#d62976] to-[#962fbf] hover:opacity-90 text-white"
             >
               {connecting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-              {connecting ? "Esperando conexion..." : "Conectar cuenta"}
+              {connecting ? "Conectando..." : "Conectar cuenta"}
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {channels.map((channel) => (
+            {initialChannels.map((channel) => (
               <ChannelCard key={channel.id} channel={channel} />
             ))}
           </div>
@@ -169,14 +112,9 @@ export function InstagramConnectClient({ initialChannels }: InstagramConnectClie
                     className="bg-gradient-to-r from-[#feda75] via-[#d62976] to-[#962fbf] hover:opacity-90 text-white"
                   >
                     {connecting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FaInstagram className="mr-2 h-4 w-4" />}
-                    {connecting ? "Esperando conexion..." : "Conectar con Instagram"}
+                    {connecting ? "Conectando..." : "Conectar con Instagram"}
                   </Button>
                 </div>
-                {connecting ? (
-                  <p className="text-xs text-muted-foreground mt-4">
-                    Completa la autorizacion en la pestaña que se abrio. Esta vista se actualizara automaticamente.
-                  </p>
-                ) : null}
               </div>
 
               <div className="hidden md:flex w-[380px] items-center justify-center p-8 border-l relative overflow-hidden bg-muted/30">
