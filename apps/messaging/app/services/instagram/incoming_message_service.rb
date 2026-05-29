@@ -63,13 +63,47 @@ class Instagram::IncomingMessageService
 
     cache_message_source_id(msg_id)
 
+    # Fetch the sender's name/username (best-effort) before the transaction, so the
+    # contact shows a readable name instead of the raw IGSID. Skipped for echoes.
+    profile = echo ? {} : maybe_fetch_profile(igsid)
+
     ActiveRecord::Base.transaction do
-      @contact       = find_or_create_contact(igsid)
+      @contact       = find_or_create_contact(igsid, profile)
       @contact_inbox = find_or_create_contact_inbox(@contact, igsid)
       @conversation  = find_or_create_conversation(@contact, @contact_inbox)
 
       create_message(msg, msg_id, echo)
     end
+  end
+
+  # --- Sender profile (name/username) ---
+
+  # Only fetches when we don't already have a real name, to avoid an API call on
+  # every incoming message.
+  def maybe_fetch_profile(igsid)
+    ci = ContactInbox.find_by(inbox: @inbox, source_id: igsid)
+    return {} if ci && ci.contact.name != igsid
+
+    fetch_sender_profile(igsid)
+  end
+
+  def fetch_sender_profile(igsid)
+    response = HTTParty.get(
+      "https://graph.instagram.com/#{api_version}/#{igsid}",
+      query: { fields: 'name,username', access_token: @channel.valid_access_token },
+      headers: { 'Accept' => 'application/json' }
+    )
+    parsed = response.parsed_response
+    return {} unless response.success? && parsed.is_a?(Hash) && parsed['error'].blank?
+
+    parsed
+  rescue StandardError => e
+    Rails.logger.warn "[Instagram] Sender profile fetch failed (#{igsid}): #{e.message}"
+    {}
+  end
+
+  def api_version
+    ENV.fetch('INSTAGRAM_API_VERSION', 'v22.0')
   end
 
   def create_message(msg, msg_id, echo)

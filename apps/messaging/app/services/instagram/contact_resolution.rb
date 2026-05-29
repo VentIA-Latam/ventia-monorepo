@@ -3,12 +3,21 @@ module Instagram::ContactResolution
   # The IGSID is stored on contact_inboxes.source_id, never on contacts.identifier
   # (which is reserved for CRM usage — same convention as Whatsapp::ContactResolution).
   def find_or_create_contact(igsid, profile = {})
+    display_name = profile['name'].presence || profile['username'].presence
     ci = ContactInbox.find_by(inbox: @inbox, source_id: igsid)
-    return enrich_contact(ci.contact, profile) if ci
+
+    if ci
+      contact = ci.contact
+      # Only set the name when the contact is still labeled with the raw IGSID,
+      # so we don't clobber a manually edited or previously enriched name.
+      contact.update!(name: display_name) if display_name.present? && contact.name == igsid
+      merge_profile_attributes(contact, profile)
+      return contact
+    end
 
     Contact.create!(
       account: @inbox.account,
-      name: profile['username'].presence || profile['name'].presence || igsid,
+      name: display_name.presence || igsid,
       additional_attributes: contact_attributes(profile)
     )
   end
@@ -41,12 +50,9 @@ module Instagram::ContactResolution
 
   private
 
-  def enrich_contact(contact, profile)
-    return contact if profile.blank?
-
+  def merge_profile_attributes(contact, profile)
     attrs = contact_attributes(profile)
     contact.update!(additional_attributes: contact.additional_attributes.merge(attrs)) if attrs.present?
-    contact
   end
 
   def contact_attributes(profile)
