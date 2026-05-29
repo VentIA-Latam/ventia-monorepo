@@ -114,7 +114,10 @@ class Instagram::IncomingMessageService
       message_type: echo ? :outgoing : :incoming,
       status: echo ? :delivered : :sent,
       content: msg['text'],
-      source_id: msg_id
+      source_id: msg_id,
+      # Marks the message as sent externally (native Instagram app) so the frontend
+      # shows the agent_mobile avatar instead of the AI bot icon.
+      content_attributes: echo ? { external_echo: true } : {}
     )
     @message.skip_send_reply = true if echo
 
