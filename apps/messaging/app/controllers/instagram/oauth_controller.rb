@@ -27,8 +27,8 @@ class Instagram::OauthController < ActionController::API
   end
 
   def redirect_with(status, reason = nil)
-    base = "#{ENV.fetch('FRONTEND_URL', 'http://localhost:3000').chomp('/')}/dashboard/instagram-connect"
-    query = { status: status }
+    base = "#{ENV.fetch('FRONTEND_URL', 'http://localhost:3000').chomp('/')}/dashboard/channels"
+    query = { status: status, channel: 'instagram' }
     query[:reason] = reason if reason
     redirect_to "#{base}?#{query.to_query}", allow_other_host: true
   end
