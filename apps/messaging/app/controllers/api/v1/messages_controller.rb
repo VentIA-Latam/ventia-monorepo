@@ -70,6 +70,21 @@ class Api::V1::MessagesController < Api::V1::BaseController
     message.inbox = @conversation.inbox
     message.sender = current_user if current_user
 
+    # Carousel (Instagram generic template) is channel-specific: only Instagram supports it.
+    # Validate up-front (fail-fast) so the caller gets a clear 422 and no orphan message is created.
+    if message.content_type == 'cards'
+      unless @conversation.inbox.channel.is_a?(Channel::Instagram)
+        return render_error('cards (carrusel) solo está soportado en Instagram',
+                            status: :unprocessable_entity)
+      end
+
+      cards = message.content_attributes&.dig('cards')
+      if cards.blank? || !cards.is_a?(Array)
+        return render_error('content_attributes.cards debe ser un array no vacío',
+                            status: :unprocessable_entity)
+      end
+    end
+
     # Template message: backend looks up template, interpolates body and builds the snapshot.
     # Client only sends { name, language, processed_params } — see Whatsapp::TemplateMessageBuilder.
     if params.dig(:message, :template_params).present?

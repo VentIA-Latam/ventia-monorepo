@@ -20,6 +20,8 @@ from app.schemas.messaging import (
     ConversationListResponse,
     InboxListResponse,
     InboxTemplatesResponse,
+    InstagramAuthorizeResponse,
+    InstagramStatusResponse,
     ManualWhatsAppRequest,
     MessageListResponse,
     MessagingError,
@@ -356,6 +358,7 @@ async def list_conversations(
     unread: str | None = Query(None, description="Filter unread only: true"),
     ai_agent_enabled: bool | None = Query(None, description="Filter by AI agent status: true/false"),
     search: str | None = Query(None, description="Search by contact name, phone or email"),
+    inbox_ids: str | None = Query(None, description="Filter by inbox IDs (comma-separated, e.g. '12,45')"),
     tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):
@@ -427,6 +430,8 @@ async def list_conversations(
         params["ai_agent_enabled"] = str(ai_agent_enabled).lower()
     if search:
         params["search"] = search
+    if inbox_ids:
+        params["inbox_ids"] = inbox_ids
 
     result = await messaging_service.get_conversations(tenant_id, params or None)
     if result is None:
@@ -443,6 +448,8 @@ async def list_conversations(
     responses={503: {"model": MessagingError}},
 )
 async def get_conversation_counts(
+    inbox_id: int | None = Query(None, description="Filter by a single inbox ID"),
+    inbox_ids: str | None = Query(None, description="Filter by inbox IDs (comma-separated, e.g. '12,45')"),
     tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):
@@ -450,7 +457,8 @@ async def get_conversation_counts(
     Returns a summary of conversation counts organized by different sections.
 
     Useful for displaying dashboard metrics like total conversations, sale stage conversations,
-    and unattended conversations.
+    and unattended conversations. Honors the same `inbox_ids` filter as `list_conversations` so
+    badges stay consistent with the filtered list.
 
     **Example response:**
     ```json
@@ -466,7 +474,13 @@ async def get_conversation_counts(
     """
     tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
-    result = await messaging_service.get_conversation_counts(tenant_id)
+    params: dict = {}
+    if inbox_id is not None:
+        params["inbox_id"] = inbox_id
+    if inbox_ids:
+        params["inbox_ids"] = inbox_ids
+
+    result = await messaging_service.get_conversation_counts(tenant_id, params or None)
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")
 
@@ -490,6 +504,7 @@ async def export_conversations(
     unread: str | None = Query(None),
     ai_agent_enabled: bool | None = Query(None),
     search: str | None = Query(None),
+    inbox_ids: str | None = Query(None, description="Filter by inbox IDs (comma-separated)"),
     tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("GET", "/messaging/export")),
 ):
@@ -515,6 +530,8 @@ async def export_conversations(
         params["ai_agent_enabled"] = str(ai_agent_enabled).lower()
     if search:
         params["search"] = search
+    if inbox_ids:
+        params["inbox_ids"] = inbox_ids
 
     result = await messaging_service.export_conversations(tenant_id, params or None)
     if result is None:
@@ -1818,6 +1835,58 @@ async def manual_connect_whatsapp(
     }
 
     result = await messaging_service.create_whatsapp_inbox(tenant_id, inbox_data)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+# --- Instagram ---
+
+
+@router.get(
+    "/instagram/authorize",
+    response_model=InstagramAuthorizeResponse,
+    summary="Get Instagram Login authorize URL",
+    tags=["messaging", "instagram"],
+    responses={503: {"model": MessagingError}},
+)
+async def instagram_authorize(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    """
+    Returns the Instagram Login authorize URL (with a signed state tying the flow to the
+    tenant). The frontend opens this URL in a new tab to start the OAuth consent flow.
+    Channel creation happens server-side in the messaging service callback.
+    """
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.instagram_authorize(tenant_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.get(
+    "/instagram/status",
+    response_model=InstagramStatusResponse,
+    summary="List connected Instagram channels",
+    tags=["messaging", "instagram"],
+    responses={503: {"model": MessagingError}},
+)
+async def instagram_status(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    """
+    Retrieves the status and details of all Instagram channels (inboxes) currently connected
+    for the tenant.
+    """
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.instagram_status(tenant_id)
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")
 

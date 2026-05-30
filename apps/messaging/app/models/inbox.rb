@@ -60,6 +60,10 @@ class Inbox < ApplicationRecord
     channel_type == 'Channel::Whatsapp'
   end
 
+  def instagram?
+    channel_type == 'Channel::Instagram'
+  end
+
   def api?
     channel_type == 'Channel::Api'
   end

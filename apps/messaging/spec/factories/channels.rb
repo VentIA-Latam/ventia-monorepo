@@ -19,4 +19,11 @@ FactoryBot.define do
       channel.define_singleton_method(:setup_webhooks) { nil }
     end
   end
+
+  factory :channel_instagram, class: 'Channel::Instagram' do
+    association :account
+    sequence(:instagram_id) { |n| "1784142556998070#{n}" }
+    access_token { 'test_ig_access_token' }
+    provider_config { {} }
+  end
 end

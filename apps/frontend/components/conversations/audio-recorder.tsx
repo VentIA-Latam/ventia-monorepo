@@ -3,13 +3,14 @@
 import { useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Trash2, Square, Send } from "lucide-react";
-import { useAudioRecorder } from "@/hooks/use-audio-recorder";
+import { useAudioRecorder, type AudioFormat } from "@/hooks/use-audio-recorder";
 import { AudioPlayer } from "./audio-player";
 import { cn } from "@/lib/utils";
 
 interface AudioRecorderProps {
   onSend: (file: File) => void;
   onCancel: () => void;
+  audioFormat?: AudioFormat;
 }
 
 function formatTime(seconds: number): string {
@@ -18,7 +19,7 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export function AudioRecorder({ onSend, onCancel }: AudioRecorderProps) {
+export function AudioRecorder({ onSend, onCancel, audioFormat = "mp3" }: AudioRecorderProps) {
   const {
     status,
     duration,
@@ -28,7 +29,7 @@ export function AudioRecorder({ onSend, onCancel }: AudioRecorderProps) {
     discardRecording,
     getAudioFile,
     recordWaveformRef,
-  } = useAudioRecorder();
+  } = useAudioRecorder({ format: audioFormat });
 
   const startedRef = useRef(false);
 

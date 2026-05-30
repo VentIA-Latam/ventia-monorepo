@@ -569,6 +569,20 @@ class MessagingService:
             "POST", "/api/v1/inboxes", tenant_id, json_data=payload
         )
 
+    # --- Instagram ---
+
+    async def instagram_authorize(self, tenant_id: int) -> Optional[dict]:
+        """Get the Instagram Login authorize URL (with signed state) for the tenant."""
+        return await self._request(
+            "GET", "/api/v1/instagram/authorize", tenant_id
+        )
+
+    async def instagram_status(self, tenant_id: int) -> Optional[dict]:
+        """Get status of connected Instagram channels."""
+        return await self._request(
+            "GET", "/api/v1/instagram/status", tenant_id
+        )
+
     # --- Labels ---
 
     async def get_labels(self, tenant_id: int) -> Optional[dict]:

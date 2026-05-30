@@ -9,6 +9,8 @@ import { LocationBubble } from "./location-bubble";
 import { ContactBubble } from "./contact-bubble";
 import type { Message, AttachmentBrief, CtaUrlData } from "@/lib/types/messaging";
 import { ReferralBubble } from "./referral-bubble";
+import { StoryReplyBubble } from "./story-reply-bubble";
+import { CarouselBubble } from "./carousel-bubble";
 import { formatTime, getSenderRole, getInitials } from "@/lib/utils/messaging";
 import { formatWhatsAppText } from "@/lib/utils/whatsapp-format";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -336,11 +338,13 @@ function StatusIcon({ status }: { status?: MessageStatus }) {
 interface MessageBubbleProps {
   message: Message;
   showAvatar?: boolean;
+  channelType?: string | null;
 }
 
 export const MessageBubble = memo(function MessageBubble({
   message,
   showAvatar = true,
+  channelType,
 }: MessageBubbleProps) {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const closeLightbox = useCallback(() => setLightboxSrc(null), []);
@@ -389,11 +393,17 @@ export const MessageBubble = memo(function MessageBubble({
   const senderRole = getSenderRole(message);
   const operatorName =
     message.sender && "name" in message.sender ? message.sender.name : null;
+  const channelName =
+    channelType === "Channel::Instagram"
+      ? "Instagram"
+      : channelType === "Channel::Whatsapp"
+        ? "WhatsApp"
+        : "móvil";
   const avatarTooltip =
     senderRole === "ai"
       ? "Enviado por: IA"
       : senderRole === "agent_mobile"
-        ? "Enviado por: Agente (WhatsApp)"
+        ? `Enviado por: Agente (${channelName})`
         : `Enviado por: ${operatorName ?? "operador"}`;
 
   const isTemplate = message.message_type === "template";
@@ -408,33 +418,50 @@ export const MessageBubble = memo(function MessageBubble({
   const templateHasButtons = templateButtons.length > 0;
 
   // Single-pass partition (js-combine-iterations): media goes edge-to-edge at top, rest stays inline below.
+  // The story-reply preview (meta.story_reply) is pulled out so it renders as quoted context, not a normal attachment.
   const mediaAttachments: AttachmentBrief[] = [];
   const otherAttachments: AttachmentBrief[] = [];
+  let storyAttachment: AttachmentBrief | undefined;
   for (const att of message.attachments ?? []) {
-    if (att.file_type === "image" || att.file_type === "video") {
+    if (att.meta?.story_reply === true) {
+      storyAttachment = att;
+    } else if (att.file_type === "image" || att.file_type === "video") {
       mediaAttachments.push(att);
     } else {
       otherAttachments.push(att);
     }
   }
+  const hasStoryReply = !isOutgoing && (!!storyAttachment || !!message.content_attributes?.reply_to_story);
   const hasMediaAttachment = mediaAttachments.length > 0;
   const hasOtherAttachment = otherAttachments.length > 0;
+  const carouselCards = message.content_attributes?.cards;
+  const hasCards = !!carouselCards && carouselCards.length > 0;
 
   return (
     <div
       className={cn(
         "relative flex",
-        isTemplate || hasMediaAttachment ? "max-w-[340px]" : "max-w-[min(65%,500px)]",
+        hasCards
+          ? "max-w-[min(80%,520px)]"
+          : isTemplate || hasMediaAttachment
+            ? "max-w-[340px]"
+            : "max-w-[min(65%,500px)]",
         isOutgoing ? "ml-auto justify-end" : "mr-auto"
       )}
     >
       <div
         className={cn(
-          "relative rounded-lg px-3 py-1.5 text-sm shadow-sm overflow-hidden min-w-0",
-          hasReferral && "w-[280px]",
-          isOutgoing
-            ? "bg-chat-outgoing rounded-tr-[4px]"
-            : "bg-card rounded-tl-[4px]"
+          "relative text-sm min-w-0",
+          // Carousels sit on the chat background (like a catalog), not inside the colored bubble.
+          hasCards
+            ? ""
+            : cn(
+                "rounded-lg px-3 py-1.5 shadow-sm overflow-hidden",
+                hasReferral && "w-[280px]",
+                isOutgoing
+                  ? "bg-chat-outgoing rounded-tr-[4px]"
+                  : "bg-card rounded-tl-[4px]"
+              )
         )}
       >
         {/* Template header media (image/video/doc) — rendered edge-to-edge above content */}
@@ -445,6 +472,18 @@ export const MessageBubble = memo(function MessageBubble({
         {/* Image/video attachments — edge-to-edge above caption, WhatsApp-style */}
         {hasMediaAttachment ? (
           <MediaAttachmentsTop attachments={mediaAttachments} onImageClick={setLightboxSrc} />
+        ) : null}
+
+        {/* Carousel (Instagram generic template) — on the chat background, not in a bubble */}
+        {hasCards ? (
+          <div className="mb-1">
+            <CarouselBubble cards={carouselCards!} />
+          </div>
+        ) : null}
+
+        {/* Story-reply context for incoming messages that replied to a story */}
+        {hasStoryReply ? (
+          <StoryReplyBubble attachment={storyAttachment} onImageClick={setLightboxSrc} />
         ) : null}
 
         {/* Referral preview for incoming messages from ads */}
@@ -544,8 +583,9 @@ export const MessageBubble = memo(function MessageBubble({
         ) : null}
 
         {/* Timestamp + checkmarks (skip for CTA / template-with-buttons — already rendered above) */}
-        {message.content_attributes?.cta_url || templateHasButtons ? null : hasOtherAttachment ? (
-          /* Flow-based timestamp below non-media attachments (audio/file/location/contact) */
+        {message.content_attributes?.cta_url || templateHasButtons ? null : hasOtherAttachment || hasCards || (hasMediaAttachment && !message.content) ? (
+          /* Flow timestamp below non-media attachments, carousel, or media without caption
+             (an absolute timestamp would overlap an edge-to-edge image) */
           <div
             className={cn(
               "flex items-center justify-end gap-0.5 text-[11px] mt-1",

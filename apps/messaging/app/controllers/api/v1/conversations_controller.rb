@@ -37,6 +37,9 @@ class Api::V1::ConversationsController < Api::V1::BaseController
     base = current_account.conversations
     base = base.where(inbox_id: params[:inbox_id]) if params[:inbox_id]
 
+    ids = parsed_inbox_ids
+    base = base.where(inbox_id: ids) if ids.any?
+
     render json: {
       success: true,
       data: {
@@ -218,11 +221,23 @@ class Api::V1::ConversationsController < Api::V1::BaseController
     }
   end
 
+  # Parses params[:inbox_ids] from CSV ("12,45") or array ("?inbox_ids[]=12") forms.
+  # Coerces to integers and drops anything that parses to 0 (non-numeric strings, blanks).
+  def parsed_inbox_ids
+    return [] if params[:inbox_ids].blank?
+
+    Array(params[:inbox_ids]).flat_map { |v| v.to_s.split(',') }.map(&:to_i).reject(&:zero?)
+  end
+
   def apply_filters(base)
     base = base.where(status: params[:status]) if params[:status]
     base = base.by_stage(params[:stage]) if params[:stage].present?
     base = base.unattended if params[:conversation_type] == 'unattended'
     base = base.where(inbox_id: params[:inbox_id]) if params[:inbox_id]
+
+    ids = parsed_inbox_ids
+    base = base.where(inbox_id: ids) if ids.any?
+
     base = base.with_label(params[:label]) if params[:label].present?
     base = base.where(temperature: params[:temperature]) if params[:temperature].present?
     base = base.where(ai_agent_enabled: ActiveModel::Type::Boolean.new.cast(params[:ai_agent_enabled])) if params[:ai_agent_enabled].present?
@@ -352,7 +367,8 @@ class Api::V1::ConversationsController < Api::V1::BaseController
         content: last_msg.content&.truncate(100),
         message_type: last_msg.message_type,
         status: last_msg.status,
-        attachment_type: last_msg.attachments.any? ? last_msg.attachments.first.file_type : nil,
+        # Ignore story-reply previews (quoted context) so the list shows the text reply, not "Foto".
+        attachment_type: last_msg.attachments.reject { |a| a.meta&.dig('story_reply') }.first&.file_type,
         created_at: last_msg.created_at
       } : nil,
       message_snippet: message_snippet,

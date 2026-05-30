@@ -30,6 +30,7 @@ export interface ConversationFilters {
   created_before?: string;
   unread?: string;
   search?: string;
+  inbox_ids?: string;
   tenant_id?: number;
 }
 
@@ -88,8 +89,16 @@ export async function deleteConversation(id: number | string, tenantId?: number)
   return apiDelete(`/api/messaging/conversations/${id}${qs}`);
 }
 
-export async function getConversationCounts(tenantId?: number): Promise<{ success: boolean; data: ConversationCounts }> {
-  return apiGet("/api/messaging/conversations/counts", tenantId ? { tenant_id: tenantId } : undefined);
+export async function getConversationCounts(
+  tenantId?: number,
+  options?: { inboxIds?: number[] },
+): Promise<{ success: boolean; data: ConversationCounts }> {
+  const params: Record<string, string | number> = {};
+  if (tenantId) params.tenant_id = tenantId;
+  if (options?.inboxIds && options.inboxIds.length > 0) {
+    params.inbox_ids = options.inboxIds.join(",");
+  }
+  return apiGet("/api/messaging/conversations/counts", Object.keys(params).length > 0 ? params : undefined);
 }
 
 export async function updateConversationStage(
@@ -180,8 +189,15 @@ export async function getWsToken(tenantId?: number): Promise<WebSocketToken> {
   return apiGet("/api/messaging/ws-token", tenantId ? { tenant_id: tenantId } : undefined);
 }
 
-export async function getInboxes(tenantId?: number): Promise<Inbox[]> {
-  return apiGet("/api/messaging/inboxes", tenantId ? { tenant_id: tenantId } : undefined);
+export async function getInboxes(
+  tenantId?: number,
+  signal?: AbortSignal,
+): Promise<{ success: boolean; data: Inbox[] }> {
+  return apiGet(
+    "/api/messaging/inboxes",
+    tenantId ? { tenant_id: tenantId } : undefined,
+    signal ? { signal } : undefined,
+  );
 }
 
 export async function getCannedResponses(tenantId?: number): Promise<CannedResponse[]> {

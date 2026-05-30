@@ -69,3 +69,10 @@ export const fetchWhatsAppStatus = cache(async (accessToken: string) => {
     accessToken
   );
 });
+
+export const fetchInstagramStatus = cache(async (accessToken: string) => {
+  return fetchWithAuth<{ success: boolean; data: import("@/lib/types/messaging").InstagramChannel[] }>(
+    "/instagram/status",
+    accessToken
+  );
+});
