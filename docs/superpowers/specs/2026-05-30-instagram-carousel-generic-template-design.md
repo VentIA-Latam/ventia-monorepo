@@ -107,9 +107,18 @@ y, en vez de `send_attachments`/`send_text`, arma el payload `generic`:
   }
 }
 ```
-**Validación defensiva** (evitar 400 de Graph API): cap 10 elementos, cap 3 botones por tarjeta,
-truncar `title`/`subtitle` a 80, descartar tarjetas sin `title`, descartar botones inválidos
-(`web_url` sin `url`, `postback` sin `payload`). `process_response` guarda `source_id` igual que hoy.
+**Validación defensiva** (evitar 400 de Graph API). Límites confirmados con la doc oficial de Meta
+(generic template, Instagram API with Instagram Login):
+- **Máx 10 elementos (tarjetas)** por mensaje.
+- **Máx 3 botones por tarjeta**, límite **compartido** entre `web_url` y `postback` (no 3 + 3).
+- Solo botones `web_url` y `postback`.
+- `default_action`: mismas propiedades que un botón URL **excepto `title`** (solo `url`) → mapea
+  desde `default_action_url`.
+- `title` y `subtitle`: **≤ 80 caracteres** (se truncan).
+
+Aplicación: cap 10 tarjetas, cap 3 botones/tarjeta, truncar `title`/`subtitle` a 80, descartar
+tarjetas sin `title`, descartar botones inválidos (`web_url` sin `url`, `postback` sin `payload`).
+`process_response` guarda `source_id` igual que hoy.
 
 ### 3. Postback entrante — `app/services/instagram/incoming_message_service.rb`
 Nuevo branch en `process_event` para `event['postback']` (junto a `message`/`read`):
