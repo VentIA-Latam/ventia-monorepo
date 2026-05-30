@@ -131,10 +131,27 @@ export interface StoryReplyData {
   id: string;
 }
 
+export interface CarouselCardButton {
+  type: "web_url" | "postback";
+  title: string;
+  url?: string; // web_url
+  payload?: string; // postback
+}
+
+export interface CarouselCard {
+  title: string;
+  subtitle?: string;
+  image_url?: string;
+  default_action_url?: string;
+  buttons?: CarouselCardButton[];
+}
+
 export interface MessageContentAttributes {
   cta_url?: CtaUrlData;
   referral?: ReferralData;
   reply_to_story?: StoryReplyData;
+  cards?: CarouselCard[];
+  postback_payload?: string;
   items?: Array<{ title: string; value: string }>;
   contacts?: unknown[];
   in_reply_to?: string;

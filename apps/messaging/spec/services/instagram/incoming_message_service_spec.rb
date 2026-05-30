@@ -115,6 +115,44 @@ RSpec.describe Instagram::IncomingMessageService do
     end
   end
 
+  describe '#perform — postback (carousel button tap)' do
+    let(:payload) do
+      {
+        'object' => 'instagram',
+        'entry'  => [{
+          'id'        => channel.instagram_id,
+          'time'      => 1,
+          'messaging' => [{
+            'sender'    => { 'id' => 'IGSID_PB' },
+            'recipient' => { 'id' => channel.instagram_id },
+            'timestamp' => 1_780_000_000,
+            'postback'  => { 'mid' => 'ig.pb.1', 'title' => 'Quiero este', 'payload' => 'BUY_RUNNER_123' }
+          }]
+        }]
+      }
+    end
+
+    it 'creates an incoming message carrying the postback payload' do
+      described_class.new(inbox: inbox, params: payload).perform
+
+      msg = Message.find_by(source_id: 'ig.pb.1')
+      expect(msg).not_to be_nil
+      expect(msg.message_type).to eq('incoming')
+      expect(msg.content).to eq('Quiero este')
+      expect(msg.content_attributes['postback_payload']).to eq('BUY_RUNNER_123')
+    end
+
+    it 'falls back to a synthetic source_id when mid is absent (and dedups)' do
+      payload['entry'][0]['messaging'][0]['postback'].delete('mid')
+
+      described_class.new(inbox: inbox, params: payload).perform
+      described_class.new(inbox: inbox, params: payload).perform # replay -> dedup
+
+      msgs = Message.where("content_attributes->>'postback_payload' = ?", 'BUY_RUNNER_123')
+      expect(msgs.count).to eq(1)
+    end
+  end
+
   describe '#perform — plain text message (no origin context)' do
     let(:payload) do
       webhook(message: { 'mid' => 'ig.mid.plain1', 'text' => 'Hola' })

@@ -42,8 +42,48 @@ class Instagram::IncomingMessageService
   def process_event(event)
     if event['message'] || event[:message]
       process_message(event.with_indifferent_access)
+    elsif event['postback'] || event[:postback]
+      process_postback(event.with_indifferent_access)
     elsif event['read'] || event[:read]
       process_read(event.with_indifferent_access)
+    end
+  end
+
+  # --- Postbacks (carousel button taps) ---
+
+  # Fires when the contact taps a generic-template `postback` button. We store it as an incoming
+  # message (content = button title, content_attributes.postback_payload = payload) so it flows to
+  # the AI bot via the webhook listener and is visible in the chat.
+  def process_postback(event)
+    postback = event['postback']
+    igsid    = event.dig('sender', 'id')
+    payload  = postback['payload']
+    return if igsid.blank? || payload.blank?
+
+    # Postbacks may omit `mid`; fall back to a stable-enough synthetic dedup key.
+    source_id = postback['mid'].presence || "postback:#{igsid}:#{event['timestamp']}:#{payload}"
+    return if message_under_process?(source_id)
+    return if Message.exists?(source_id: source_id)
+
+    cache_message_source_id(source_id)
+
+    profile = maybe_fetch_profile(igsid)
+
+    ActiveRecord::Base.transaction do
+      @contact       = find_or_create_contact(igsid, profile)
+      @contact_inbox = find_or_create_contact_inbox(@contact, igsid)
+      @conversation  = find_or_create_conversation(@contact, @contact_inbox)
+
+      @conversation.messages.create!(
+        account: @inbox.account,
+        inbox: @inbox,
+        sender: @contact,
+        message_type: :incoming,
+        status: :sent,
+        content: postback['title'],
+        source_id: source_id,
+        content_attributes: { postback_payload: payload }
+      )
     end
   end
 

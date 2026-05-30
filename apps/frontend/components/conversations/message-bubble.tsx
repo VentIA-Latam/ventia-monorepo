@@ -10,6 +10,7 @@ import { ContactBubble } from "./contact-bubble";
 import type { Message, AttachmentBrief, CtaUrlData } from "@/lib/types/messaging";
 import { ReferralBubble } from "./referral-bubble";
 import { StoryReplyBubble } from "./story-reply-bubble";
+import { CarouselBubble } from "./carousel-bubble";
 import { formatTime, getSenderRole, getInitials } from "@/lib/utils/messaging";
 import { formatWhatsAppText } from "@/lib/utils/whatsapp-format";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -433,22 +434,34 @@ export const MessageBubble = memo(function MessageBubble({
   const hasStoryReply = !isOutgoing && (!!storyAttachment || !!message.content_attributes?.reply_to_story);
   const hasMediaAttachment = mediaAttachments.length > 0;
   const hasOtherAttachment = otherAttachments.length > 0;
+  const carouselCards = message.content_attributes?.cards;
+  const hasCards = !!carouselCards && carouselCards.length > 0;
 
   return (
     <div
       className={cn(
         "relative flex",
-        isTemplate || hasMediaAttachment ? "max-w-[340px]" : "max-w-[min(65%,500px)]",
+        hasCards
+          ? "max-w-[min(80%,520px)]"
+          : isTemplate || hasMediaAttachment
+            ? "max-w-[340px]"
+            : "max-w-[min(65%,500px)]",
         isOutgoing ? "ml-auto justify-end" : "mr-auto"
       )}
     >
       <div
         className={cn(
-          "relative rounded-lg px-3 py-1.5 text-sm shadow-sm overflow-hidden min-w-0",
-          hasReferral && "w-[280px]",
-          isOutgoing
-            ? "bg-chat-outgoing rounded-tr-[4px]"
-            : "bg-card rounded-tl-[4px]"
+          "relative text-sm min-w-0",
+          // Carousels sit on the chat background (like a catalog), not inside the colored bubble.
+          hasCards
+            ? ""
+            : cn(
+                "rounded-lg px-3 py-1.5 shadow-sm overflow-hidden",
+                hasReferral && "w-[280px]",
+                isOutgoing
+                  ? "bg-chat-outgoing rounded-tr-[4px]"
+                  : "bg-card rounded-tl-[4px]"
+              )
         )}
       >
         {/* Template header media (image/video/doc) — rendered edge-to-edge above content */}
@@ -459,6 +472,13 @@ export const MessageBubble = memo(function MessageBubble({
         {/* Image/video attachments — edge-to-edge above caption, WhatsApp-style */}
         {hasMediaAttachment ? (
           <MediaAttachmentsTop attachments={mediaAttachments} onImageClick={setLightboxSrc} />
+        ) : null}
+
+        {/* Carousel (Instagram generic template) — on the chat background, not in a bubble */}
+        {hasCards ? (
+          <div className="mb-1">
+            <CarouselBubble cards={carouselCards!} />
+          </div>
         ) : null}
 
         {/* Story-reply context for incoming messages that replied to a story */}
@@ -563,8 +583,8 @@ export const MessageBubble = memo(function MessageBubble({
         ) : null}
 
         {/* Timestamp + checkmarks (skip for CTA / template-with-buttons — already rendered above) */}
-        {message.content_attributes?.cta_url || templateHasButtons ? null : hasOtherAttachment ? (
-          /* Flow-based timestamp below non-media attachments (audio/file/location/contact) */
+        {message.content_attributes?.cta_url || templateHasButtons ? null : hasOtherAttachment || hasCards ? (
+          /* Flow-based timestamp below non-media attachments (audio/file/location/contact) or carousel */
           <div
             className={cn(
               "flex items-center justify-end gap-0.5 text-[11px] mt-1",

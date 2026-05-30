@@ -16,6 +16,7 @@
 # Usage:
 #   ./apps/messaging/scripts/replay_instagram_webhook.sh            # ad referral (default)
 #   ./apps/messaging/scripts/replay_instagram_webhook.sh --story    # reply-to-story
+#   ./apps/messaging/scripts/replay_instagram_webhook.sh --postback # carousel button tap
 #   ./apps/messaging/scripts/replay_instagram_webhook.sh --ad --container ventia-messaging
 #
 # Overrides (env or flags):
@@ -38,6 +39,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --ad) MODE="ad"; shift ;;
     --story) MODE="story"; shift ;;
+    --postback) MODE="postback"; shift ;;
     --container) CONTAINER="$2"; shift 2 ;;
     --url) URL="$2"; shift 2 ;;
     --ig-id) IG_ID="$2"; shift 2 ;;
@@ -51,11 +53,19 @@ NOW="$(date +%s)"
 TS="${NOW}000"
 MID="ig.${MODE}.${NOW}"   # unique per run — dedup happens via Redis + Message.exists?(source_id:)
 
-if [ "$MODE" = "story" ]; then
-  CONTEXT='"reply_to": { "story": { "id": "18468529870103136", "url": "https://picsum.photos/seed/ventia-story/600/1067" } }'
-  TEXT="Buena noticia!!!"
+# Build the messaging[0] event per mode. Postback is a distinct event (no "message").
+if [ "$MODE" = "postback" ]; then
+  EVENT='"postback": {
+        "mid": "'"${MID}"'",
+        "title": "Quiero este",
+        "payload": "BUY_RUNNER_123"
+      }'
 else
-  CONTEXT='"referral": {
+  if [ "$MODE" = "story" ]; then
+    CONTEXT='"reply_to": { "story": { "id": "18468529870103136", "url": "https://picsum.photos/seed/ventia-story/600/1067" } }'
+    TEXT="Buena noticia!!!"
+  else
+    CONTEXT='"referral": {
           "ref": "promo-mayo-2026",
           "ad_id": "120210000000000123",
           "source": "ADS",
@@ -65,7 +75,13 @@ else
             "photo_url": "https://picsum.photos/seed/ventia-ad/600/600"
           }
         }'
-  TEXT="Hola, vi su anuncio ¿tienen stock?"
+    TEXT="Hola, vi su anuncio ¿tienen stock?"
+  fi
+  EVENT='"message": {
+        "mid": "'"${MID}"'",
+        "text": "'"${TEXT}"'",
+        '"${CONTEXT}"'
+      }'
 fi
 
 BODY=$(cat <<JSON
@@ -78,11 +94,7 @@ BODY=$(cat <<JSON
       "sender": { "id": "${SENDER}" },
       "recipient": { "id": "${IG_ID}" },
       "timestamp": ${TS},
-      "message": {
-        "mid": "${MID}",
-        "text": "${TEXT}",
-        ${CONTEXT}
-      }
+      ${EVENT}
     }]
   }]
 }
