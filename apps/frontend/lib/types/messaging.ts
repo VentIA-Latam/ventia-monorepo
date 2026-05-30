@@ -127,9 +127,14 @@ export interface ReferralData {
   image_url?: string;
 }
 
+export interface StoryReplyData {
+  id: string;
+}
+
 export interface MessageContentAttributes {
   cta_url?: CtaUrlData;
   referral?: ReferralData;
+  reply_to_story?: StoryReplyData;
   items?: Array<{ title: string; value: string }>;
   contacts?: unknown[];
   in_reply_to?: string;

@@ -254,8 +254,13 @@ export function ConversationList({
       const msgType = (data.message_type as string) ?? "incoming";
       const msgStatus = (data.status as string) ?? undefined;
       const createdAt = data.created_at ?? new Date().toISOString();
-      const attachments = Array.isArray(data.attachments) && data.attachments.length > 0
-        ? data.attachments[0] : null;
+      // Skip story-reply previews (quoted context) so the list shows the text reply, not "Foto"
+      // — mirrors the backend REST logic in conversations_controller#last_message.
+      const attachments = Array.isArray(data.attachments)
+        ? (data.attachments as Array<Record<string, unknown>>).find(
+            (a) => (a.meta as Record<string, unknown> | null)?.story_reply !== true,
+          ) ?? null
+        : null;
 
       // Activity messages (etiquetas, IA toggle, asignaciones) son eventos
       // del sistema — no deben aparecer como preview en la lista ni mover

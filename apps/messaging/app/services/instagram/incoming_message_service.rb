@@ -115,14 +115,83 @@ class Instagram::IncomingMessageService
       status: echo ? :delivered : :sent,
       content: msg['text'],
       source_id: msg_id,
-      # Marks the message as sent externally (native Instagram app) so the frontend
-      # shows the agent_mobile avatar instead of the AI bot icon.
-      content_attributes: echo ? { external_echo: true } : {}
+      content_attributes: content_attributes_for(msg, echo)
     )
     @message.skip_send_reply = true if echo
 
     attach_files(msg['attachments'])
+    attach_story_reply(msg)
     @message.save!
+  end
+
+  # Builds content_attributes capturing the message origin:
+  # - external_echo: business reply sent from the native Instagram app (shows agent_mobile
+  #   avatar instead of the AI bot icon).
+  # - reply_to_story: id of the story the contact replied to (preview media is mirrored to
+  #   storage by #attach_story_reply so it survives the story's ~24h expiry).
+  # - referral: ad-originated (Click-to-Instagram-Direct) context, mapped to the same shape
+  #   WhatsApp uses so the chat ReferralBubble and the "Performance por anuncio" dashboard
+  #   (Analytics::AdsSummaryService) pick it up channel-agnostically.
+  def content_attributes_for(msg, echo)
+    attrs = echo ? { external_echo: true } : {}
+
+    story = msg.dig('reply_to', 'story')
+    attrs[:reply_to_story] = { id: story['id'] } if story.present? && story['id'].present?
+
+    referral = ad_referral_attributes(msg['referral'])
+    attrs[:referral] = referral if referral
+
+    attrs
+  end
+
+  # Maps an Instagram ads referral (source == "ADS") onto the shared referral shape.
+  # ads_context_data only carries photo_url when an image was clicked, otherwise a video
+  # thumbnail; Instagram provides no landing/source_url.
+  def ad_referral_attributes(referral)
+    return nil if referral.blank? || referral['source'] != 'ADS'
+
+    ctx = referral['ads_context_data'] || {}
+    photo_url = ctx['photo_url']
+    video_url = ctx['video_url']
+
+    {
+      'source_type' => referral['source'],
+      'source_id' => referral['ad_id'],
+      'ref' => referral['ref'],
+      'headline' => ctx['ad_title'],
+      'image_url' => photo_url.presence || video_url,
+      'media_type' => photo_url.present? ? 'image' : 'video'
+    }
+  end
+
+  # When the message is a reply to a story, Instagram sends a signed (time-limited) CDN url.
+  # Download it now and persist it as an attachment flagged via meta.story_reply, so the UI
+  # can render story context even after the original story expires.
+  def attach_story_reply(msg)
+    story = msg.dig('reply_to', 'story')
+    return if story.blank?
+
+    url = story['url']
+    return if url.blank?
+
+    file = Down.download(url, max_size: MAX_ATTACHMENT_SIZE, open_timeout: 5, read_timeout: 15)
+    @message.attachments.new(
+      account_id: @inbox.account.id,
+      file_type: story_file_type(file.content_type),
+      meta: { story_reply: true, story_id: story['id'] },
+      file: {
+        io: file,
+        filename: file.original_filename,
+        content_type: file.content_type
+      }
+    )
+  rescue Down::Error => e
+    # Keep the message (and the reply_to_story id) even if the preview can't be downloaded.
+    Rails.logger.warn "[Instagram] Story reply download failed (#{story['id']}): #{e.message}"
+  end
+
+  def story_file_type(content_type)
+    content_type.to_s.start_with?('video') ? :video : :image
   end
 
   def attach_files(attachments)

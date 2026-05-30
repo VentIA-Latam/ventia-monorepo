@@ -46,6 +46,7 @@ class TestGetAdsSummary:
                 "headline": "Tu descanso no espera",
                 "image_url": "https://img.test/a.png",
                 "source_url": "https://fb.me/x",
+                "channel": "instagram",
                 "started": 5,
                 "converted": 3,
             }
@@ -70,6 +71,7 @@ class TestGetAdsSummary:
 
         ad = result["ads"][0]
         assert ad["ad_id"] == "120243814566250320"
+        assert ad["channel"] == "instagram"
         assert ad["conversations_started"] == 5
         assert ad["conversations_converted"] == 3
         assert ad["conversion_rate"] == 60.0

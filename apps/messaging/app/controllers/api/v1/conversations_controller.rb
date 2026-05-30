@@ -367,7 +367,8 @@ class Api::V1::ConversationsController < Api::V1::BaseController
         content: last_msg.content&.truncate(100),
         message_type: last_msg.message_type,
         status: last_msg.status,
-        attachment_type: last_msg.attachments.any? ? last_msg.attachments.first.file_type : nil,
+        # Ignore story-reply previews (quoted context) so the list shows the text reply, not "Foto".
+        attachment_type: last_msg.attachments.reject { |a| a.meta&.dig('story_reply') }.first&.file_type,
         created_at: last_msg.created_at
       } : nil,
       message_snippet: message_snippet,

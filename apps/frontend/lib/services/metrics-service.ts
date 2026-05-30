@@ -299,6 +299,7 @@ export interface AdSummaryItem {
   headline: string | null;
   image_url: string | null;
   source_url: string | null;
+  channel: "instagram" | "whatsapp" | null;
   conversations_started: number;
   conversations_converted: number;
   conversion_rate: number;

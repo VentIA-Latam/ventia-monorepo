@@ -316,6 +316,7 @@ class MetricsService:
                 "headline": row.get("headline"),
                 "image_url": row.get("image_url"),
                 "source_url": row.get("source_url"),
+                "channel": row.get("channel"),
                 "conversations_started": started,
                 "conversations_converted": converted,
                 "conversion_rate": rate,

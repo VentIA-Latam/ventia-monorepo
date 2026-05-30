@@ -9,6 +9,7 @@ import { LocationBubble } from "./location-bubble";
 import { ContactBubble } from "./contact-bubble";
 import type { Message, AttachmentBrief, CtaUrlData } from "@/lib/types/messaging";
 import { ReferralBubble } from "./referral-bubble";
+import { StoryReplyBubble } from "./story-reply-bubble";
 import { formatTime, getSenderRole, getInitials } from "@/lib/utils/messaging";
 import { formatWhatsAppText } from "@/lib/utils/whatsapp-format";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -416,15 +417,20 @@ export const MessageBubble = memo(function MessageBubble({
   const templateHasButtons = templateButtons.length > 0;
 
   // Single-pass partition (js-combine-iterations): media goes edge-to-edge at top, rest stays inline below.
+  // The story-reply preview (meta.story_reply) is pulled out so it renders as quoted context, not a normal attachment.
   const mediaAttachments: AttachmentBrief[] = [];
   const otherAttachments: AttachmentBrief[] = [];
+  let storyAttachment: AttachmentBrief | undefined;
   for (const att of message.attachments ?? []) {
-    if (att.file_type === "image" || att.file_type === "video") {
+    if (att.meta?.story_reply === true) {
+      storyAttachment = att;
+    } else if (att.file_type === "image" || att.file_type === "video") {
       mediaAttachments.push(att);
     } else {
       otherAttachments.push(att);
     }
   }
+  const hasStoryReply = !isOutgoing && (!!storyAttachment || !!message.content_attributes?.reply_to_story);
   const hasMediaAttachment = mediaAttachments.length > 0;
   const hasOtherAttachment = otherAttachments.length > 0;
 
@@ -453,6 +459,11 @@ export const MessageBubble = memo(function MessageBubble({
         {/* Image/video attachments — edge-to-edge above caption, WhatsApp-style */}
         {hasMediaAttachment ? (
           <MediaAttachmentsTop attachments={mediaAttachments} onImageClick={setLightboxSrc} />
+        ) : null}
+
+        {/* Story-reply context for incoming messages that replied to a story */}
+        {hasStoryReply ? (
+          <StoryReplyBubble attachment={storyAttachment} onImageClick={setLightboxSrc} />
         ) : null}
 
         {/* Referral preview for incoming messages from ads */}

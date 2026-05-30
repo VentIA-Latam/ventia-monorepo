@@ -138,12 +138,13 @@ class NoPurchaseReasonsResponse(BaseModel):
 
 
 class AdSummaryItem(BaseModel):
-    """Performance de un anuncio Meta (click-to-WhatsApp)."""
+    """Performance de un anuncio Meta (click-to-WhatsApp / click-to-Instagram)."""
 
     ad_id: str = Field(..., description="Meta ad_id from referral.source_id")
     headline: str | None = Field(None, description="Most recent ad headline")
     image_url: str | None = Field(None, description="Most recent ad creative URL")
     source_url: str | None = Field(None, description="Short link to ad (fb.me/...)")
+    channel: str | None = Field(None, description="Origin channel: 'instagram' | 'whatsapp'")
     conversations_started: int = Field(..., description="Conversaciones iniciadas desde este anuncio en el periodo")
     conversations_converted: int = Field(..., description="Conversaciones que generaron orden validada")
     conversion_rate: float = Field(..., description="Porcentaje 0-100")
