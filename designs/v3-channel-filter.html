@@ -1,0 +1,845 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>V3 · Filtro acumulativo de bandejas — VentIA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.20 0.03 250);
+    --muted: oklch(0.97 0.01 250);
+    --muted-foreground: oklch(0.50 0.03 250);
+    --border: oklch(0.92 0.01 250);
+    --primary: oklch(0.58 0.19 260);
+    --primary-soft: oklch(0.97 0.03 260);
+    --primary-foreground: oklch(1 0 0);
+    --accent: oklch(0.93 0.04 230);
+    --noche: oklch(0.20 0.03 250);
+
+    --wa: #25D366;
+    --ig: oklch(0.62 0.22 0);
+
+    --avatar-1: oklch(0.65 0.15 30);
+    --avatar-2: oklch(0.60 0.12 200);
+    --avatar-3: oklch(0.55 0.14 280);
+    --avatar-4: oklch(0.68 0.13 80);
+    --avatar-5: oklch(0.62 0.14 340);
+    --avatar-6: oklch(0.58 0.13 160);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: oklch(0.965 0.012 250);
+    color: var(--foreground);
+    min-height: 100vh;
+    padding: 48px 32px 96px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .page-head {
+    max-width: 1320px;
+    margin: 0 auto 32px;
+  }
+  .page-head h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    margin: 0 0 4px;
+  }
+  .page-head p {
+    font-size: 13.5px;
+    color: var(--muted-foreground);
+    margin: 0;
+    line-height: 1.5;
+    max-width: 72ch;
+  }
+  .page-head .legend {
+    margin-top: 18px;
+    display: inline-flex;
+    align-items: center;
+    gap: 18px;
+    padding: 8px 14px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 12px;
+    color: var(--muted-foreground);
+  }
+  .page-head .legend strong { color: var(--foreground); font-weight: 600; }
+  .legend-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 999px;
+    margin-right: 6px;
+    vertical-align: -1px;
+  }
+  .legend-dot.wa { background: var(--wa); }
+  .legend-dot.ig { background: var(--ig); }
+
+  .grid {
+    max-width: 1320px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+
+  /* Mockup card chrome */
+  .mock {
+    background: var(--background);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    box-shadow: 0 1px 0 oklch(0.20 0.03 250 / 0.02);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .mock-caption {
+    padding: 14px 18px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .mock-eyebrow {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.9px;
+    color: oklch(0.65 0.04 250);
+    text-transform: uppercase;
+  }
+  .mock-eyebrow.accent { color: var(--primary); }
+  .mock-desc {
+    font-size: 12.5px;
+    color: var(--muted-foreground);
+    line-height: 1.45;
+  }
+
+  /* Toolbar row */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px 12px;
+  }
+
+  /* Search input */
+  .search {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--muted);
+    border-radius: 10px;
+    font-size: 13px;
+    color: var(--muted-foreground);
+    min-width: 0;
+  }
+  .search svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .search span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Filter trigger button */
+  .filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 11px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--foreground);
+    cursor: pointer;
+    line-height: 1;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: border-color .12s ease, background .12s ease;
+  }
+  .filter-btn:hover { border-color: oklch(0.85 0.02 250); background: oklch(0.985 0.008 250); }
+  .filter-btn.is-on {
+    background: var(--primary-soft);
+    border-color: oklch(0.85 0.06 260);
+    color: var(--primary);
+  }
+  .filter-btn .ic { width: 14px; height: 14px; display: inline-flex; }
+  .filter-btn .badge-n {
+    background: var(--foreground);
+    color: white;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .filter-btn.is-on .badge-n {
+    background: var(--primary);
+  }
+  .filter-btn .caret { color: var(--muted-foreground); margin-left: 2px; }
+  .filter-btn.is-on .caret { color: var(--primary); }
+
+  /* Active filter summary chip (under toolbar) */
+  .active-summary {
+    margin: 0 18px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--primary-soft);
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--primary);
+    border: 1px solid oklch(0.90 0.06 260);
+  }
+  .active-summary .x {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--primary);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .active-summary strong { font-weight: 600; }
+
+  /* Popover */
+  .popover {
+    position: absolute;
+    top: 100px;
+    right: 18px;
+    width: 304px;
+    background: white;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    box-shadow:
+      0 1px 2px oklch(0.20 0.03 250 / 0.05),
+      0 12px 32px oklch(0.20 0.03 250 / 0.10);
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    max-height: 480px;
+    overflow: hidden;
+  }
+  .popover-head {
+    padding: 12px 14px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .popover-head h3 {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--foreground);
+  }
+  .popover-head .clear {
+    font-size: 11.5px;
+    color: var(--muted-foreground);
+    cursor: pointer;
+    background: none;
+    border: 0;
+    padding: 4px 6px;
+    border-radius: 6px;
+  }
+  .popover-head .clear:hover { color: var(--foreground); background: var(--muted); }
+
+  .popover-search {
+    margin: 0 14px 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    background: var(--muted);
+    border-radius: 8px;
+    font-size: 12.5px;
+    color: var(--muted-foreground);
+  }
+  .popover-search svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+  .popover-body {
+    overflow-y: auto;
+    padding: 2px 0 6px;
+  }
+
+  .group-label {
+    padding: 8px 14px 4px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: oklch(0.6 0.04 250);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .group-label .ico { display: inline-flex; width: 12px; height: 12px; }
+  .group-label .ico svg { width: 12px; height: 12px; }
+  .group-label.wa .ico { color: var(--wa); }
+  .group-label.ig .ico { color: var(--ig); }
+
+  .check-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: background .1s ease;
+  }
+  .check-row:hover { background: var(--muted); }
+  .check-row .cb {
+    width: 16px;
+    height: 16px;
+    border-radius: 5px;
+    border: 1.5px solid oklch(0.82 0.02 250);
+    background: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background .1s ease, border-color .1s ease;
+  }
+  .check-row .cb svg { width: 11px; height: 11px; color: white; opacity: 0; transition: opacity .08s ease; }
+  .check-row.is-checked .cb { background: var(--primary); border-color: var(--primary); }
+  .check-row.is-checked .cb svg { opacity: 1; }
+  .check-row.is-partial .cb {
+    background: var(--primary);
+    border-color: var(--primary);
+  }
+  .check-row.is-partial .cb::after {
+    content: "";
+    width: 8px; height: 1.5px;
+    background: white;
+    border-radius: 1px;
+  }
+  .check-row.is-partial .cb svg { display: none; }
+  .check-row .label { flex: 1; font-size: 13px; font-weight: 500; color: var(--foreground); display: flex; align-items: center; gap: 7px; }
+  .check-row .label .ico { width: 13px; height: 13px; display: inline-flex; flex-shrink: 0; }
+  .check-row .label .ico svg { width: 13px; height: 13px; }
+  .check-row .label.wa .ico { color: var(--wa); }
+  .check-row .label.ig .ico { color: var(--ig); }
+  .check-row .n {
+    font-size: 11.5px;
+    color: var(--muted-foreground);
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  .check-row.all-row { font-weight: 600; }
+  .check-row.all-row .label { font-weight: 600; }
+
+  .popover-sep {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 14px;
+  }
+
+  .popover-foot {
+    border-top: 1px solid var(--border);
+    padding: 10px 14px;
+    font-size: 11.5px;
+    color: var(--muted-foreground);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: oklch(0.985 0.008 250);
+  }
+  .popover-foot strong { color: var(--foreground); font-weight: 600; }
+
+  /* Dim list when popover is open (for column B) */
+  .dimmed { opacity: 0.45; pointer-events: none; filter: saturate(0.6); }
+
+  /* Conversation list */
+  .list {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .item {
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    column-gap: 12px;
+    row-gap: 2px;
+    padding: 12px 18px;
+    border-bottom: 1px solid oklch(0.94 0.01 250 / 0.7);
+    align-items: start;
+    cursor: pointer;
+    transition: background .1s ease;
+  }
+  .item:hover { background: oklch(0.985 0.008 250); }
+  .item:last-child { border-bottom: 0; }
+  .item.is-selected { background: oklch(0.96 0.04 260 / 0.55); }
+  .item.is-selected:hover { background: oklch(0.95 0.05 260 / 0.6); }
+
+  .avatar {
+    grid-row: 1 / span 3;
+    width: 40px; height: 40px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.1px;
+    flex-shrink: 0;
+  }
+
+  .row-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    grid-column: 2 / 4;
+  }
+  .name { font-size: 14px; font-weight: 600; color: var(--foreground); letter-spacing: -0.15px; }
+  .time { font-size: 11px; font-weight: 500; color: oklch(0.62 0.03 250); white-space: nowrap; }
+
+  .row-msg {
+    grid-column: 2 / 4;
+    font-size: 13px;
+    color: var(--muted-foreground);
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .row-msg .check { color: var(--muted-foreground); display: inline-flex; flex-shrink: 0; }
+  .row-msg .check.read { color: var(--primary); }
+  .row-msg svg { width: 13px; height: 13px; }
+  .row-msg .preview { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .row-meta {
+    grid-column: 2 / 3;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .row-meta .ch-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 13px; height: 13px;
+    flex-shrink: 0;
+  }
+  .row-meta .ch-ico svg { width: 13px; height: 13px; }
+  .row-meta.wa .ch-ico { color: var(--wa); }
+  .row-meta.ig .ch-ico { color: var(--ig); }
+  .row-meta .handle {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: oklch(0.58 0.03 250);
+    letter-spacing: -0.05px;
+  }
+
+  .row-trail {
+    grid-column: 3 / 4;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  .unread {
+    min-width: 18px; height: 18px;
+    padding: 0 6px;
+    background: var(--primary);
+    color: white;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  /* Tip / annotation under each mockup */
+  .tip {
+    padding: 12px 18px 16px;
+    font-size: 11.5px;
+    color: var(--muted-foreground);
+    line-height: 1.5;
+    border-top: 1px dashed oklch(0.90 0.012 250);
+    background: oklch(0.985 0.008 250);
+  }
+  .tip b { color: var(--foreground); font-weight: 600; }
+  .tip kbd {
+    font-family: "Plus Jakarta Sans", sans-serif;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 10.5px;
+    color: var(--foreground);
+  }
+
+  @media (max-width: 1180px) {
+    .grid { grid-template-columns: 1fr; max-width: 480px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <h1>V3 · Filtro acumulativo de bandejas</h1>
+  <p>El handle del inbox vive en la 3a línea de cada conversación. El filtro vive en un único botón que abre un checklist agrupado por canal: el agente puede activar las bandejas que quiera al mismo tiempo (p. ej. <strong style="color:var(--foreground)">ventia + @senelstudio</strong>) sin tener que pivotar entre vistas.</p>
+  <span class="legend">
+    <span><span class="legend-dot wa"></span><strong>WhatsApp</strong> · sin @</span>
+    <span><span class="legend-dot ig"></span><strong>Instagram</strong> · con @</span>
+  </span>
+</header>
+
+<main class="grid">
+
+  <!-- ============================================== -->
+  <!-- COLUMN A · Estado por defecto (todas activas)   -->
+  <!-- ============================================== -->
+  <section class="mock" aria-label="Estado por defecto">
+    <div class="mock-caption">
+      <span class="mock-eyebrow">A · Por defecto</span>
+      <span class="mock-desc">Todas las bandejas activas. El botón muestra "4". Cada item revela su bandeja en la 3a línea.</span>
+    </div>
+
+    <div class="toolbar">
+      <div class="search" role="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>
+        <span>Buscar…</span>
+      </div>
+      <button class="filter-btn" type="button">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></span>
+        Bandejas
+        <span class="badge-n">4</span>
+        <svg class="caret" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+    </div>
+
+    <div class="list">
+      <div class="item is-selected">
+        <div class="avatar" style="background: var(--avatar-1)">MG</div>
+        <div class="row-top"><span class="name">María González</span><span class="time">14:32</span></div>
+        <div class="row-msg"><span class="preview">Sí, listo el pago. ¿Cuándo llega el envío?</span></div>
+        <div class="row-meta wa">
+          <span class="ch-ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 6.32A7.85 7.85 0 0012.06 4C7.71 4 4.16 7.55 4.16 11.9c0 1.4.36 2.74 1.05 3.93L4 20l4.28-1.18a7.83 7.83 0 003.78.96h.01c4.36 0 7.91-3.55 7.91-7.9 0-2.12-.82-4.1-2.38-5.56zm-5.54 12.16c-1.18 0-2.34-.32-3.35-.92l-.24-.14-2.55.7.7-2.48-.16-.26a6.5 6.5 0 01-.99-3.48c0-3.62 2.95-6.57 6.59-6.57 1.76 0 3.41.69 4.66 1.94a6.52 6.52 0 011.93 4.65c.01 3.62-2.95 6.56-6.59 6.56z"/></svg></span>
+          <span class="handle">ventia</span>
+        </div>
+        <div class="row-trail"><span class="unread">3</span></div>
+      </div>
+
+      <div class="item">
+        <div class="avatar" style="background: var(--avatar-3)">RL</div>
+        <div class="row-top"><span class="name">Renzo Lenes</span><span class="time">14:18</span></div>
+        <div class="row-msg"><span class="preview">Hola, vi tu post del nuevo polo. ¿Aún tienes en talla M?</span></div>
+        <div class="row-meta ig">
+          <span class="ch-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></span>
+          <span class="handle">@senelstudio</span>
+        </div>
+        <div class="row-trail"><span class="unread">1</span></div>
+      </div>
+
+      <div class="item">
+        <div class="avatar" style="background: var(--avatar-2)">CM</div>
+        <div class="row-top"><span class="name">Carlos Mendoza</span><span class="time">13:55</span></div>
+        <div class="row-msg"><span class="preview">Tengo una consulta sobre mi pedido #4421</span></div>
+        <div class="row-meta wa">
+          <span class="ch-ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 6.32A7.85 7.85 0 0012.06 4C7.71 4 4.16 7.55 4.16 11.9c0 1.4.36 2.74 1.05 3.93L4 20l4.28-1.18a7.83 7.83 0 003.78.96h.01c4.36 0 7.91-3.55 7.91-7.9 0-2.12-.82-4.1-2.38-5.56z"/></svg></span>
+          <span class="handle">soporte</span>
+        </div>
+        <div class="row-trail"><span class="unread">5</span></div>
+      </div>
+
+      <div class="item">
+        <div class="avatar" style="background: var(--avatar-4)">AL</div>
+        <div class="row-top"><span class="name">@andrea.lima</span><span class="time">13:30</span></div>
+        <div class="row-msg"><span class="preview">¿Hacen envío a Arequipa? Vi el set de cerámicas</span></div>
+        <div class="row-meta ig">
+          <span class="ch-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></span>
+          <span class="handle">@mitienda</span>
+        </div>
+        <div class="row-trail"><span class="unread">2</span></div>
+      </div>
+
+      <div class="item">
+        <div class="avatar" style="background: var(--avatar-6)">RC</div>
+        <div class="row-top"><span class="name">Roberto Castillo</span><span class="time">12:08</span></div>
+        <div class="row-msg">
+          <span class="check read"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span class="preview">Perfecto, te confirmo la transferencia esta tarde.</span>
+        </div>
+        <div class="row-meta wa">
+          <span class="ch-ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 6.32A7.85 7.85 0 0012.06 4C7.71 4 4.16 7.55 4.16 11.9c0 1.4.36 2.74 1.05 3.93L4 20l4.28-1.18a7.83 7.83 0 003.78.96h.01c4.36 0 7.91-3.55 7.91-7.9 0-2.12-.82-4.1-2.38-5.56z"/></svg></span>
+          <span class="handle">ventia</span>
+        </div>
+        <div class="row-trail"></div>
+      </div>
+
+      <div class="item">
+        <div class="avatar" style="background: var(--avatar-5)">LV</div>
+        <div class="row-top"><span class="name">Laura Vargas</span><span class="time">11:45</span></div>
+        <div class="row-msg">
+          <span class="check read"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span class="preview">Perfecto, ya te confirmé el pedido por DM.</span>
+        </div>
+        <div class="row-meta ig">
+          <span class="ch-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></span>
+          <span class="handle">@senelstudio</span>
+        </div>
+        <div class="row-trail"></div>
+      </div>
+    </div>
+
+    <div class="tip">
+      Estado por defecto: <b>Bandejas (4)</b>. Todo activo. La meta-línea identifica cada conversación sin importar el filtro.
+    </div>
+  </section>
+
+  <!-- ============================================== -->
+  <!-- COLUMN B · Popover ABIERTO con checklist        -->
+  <!-- ============================================== -->
+  <section class="mock" aria-label="Filtro abierto">
+    <div class="mock-caption">
+      <span class="mock-eyebrow accent">B · Popover abierto</span>
+      <span class="mock-desc">Click en "Bandejas" → checklist agrupado por canal. El agente marca/desmarca y la lista se filtra en vivo.</span>
+    </div>
+
+    <div class="toolbar">
+      <div class="search" role="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>
+        <span>Buscar…</span>
+      </div>
+      <button class="filter-btn is-on" type="button">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></span>
+        Bandejas
+        <span class="badge-n">3</span>
+        <svg class="caret" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+      </button>
+    </div>
+
+    <!-- Popover anchored to filter button -->
+    <div class="popover" role="dialog" aria-label="Filtrar bandejas">
+      <div class="popover-head">
+        <h3>Mostrar de</h3>
+        <button class="clear" type="button">Restablecer</button>
+      </div>
+
+      <div class="popover-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>
+        <span>Buscar bandeja…</span>
+      </div>
+
+      <div class="popover-body">
+        <!-- Master toggle (partial state because @mitienda unchecked) -->
+        <div class="check-row is-partial all-row" role="checkbox" aria-checked="mixed">
+          <span class="cb"></span>
+          <span class="label">Todas las bandejas</span>
+          <span class="n">87</span>
+        </div>
+
+        <div class="popover-sep"></div>
+
+        <div class="group-label wa">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 6.32A7.85 7.85 0 0012.06 4C7.71 4 4.16 7.55 4.16 11.9c0 1.4.36 2.74 1.05 3.93L4 20l4.28-1.18a7.83 7.83 0 003.78.96h.01c4.36 0 7.91-3.55 7.91-7.9 0-2.12-.82-4.1-2.38-5.56z"/></svg></span>
+          WhatsApp
+        </div>
+        <div class="check-row is-checked" role="checkbox" aria-checked="true">
+          <span class="cb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span class="label wa"><span class="ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 6.32A7.85 7.85 0 0012.06 4C7.71 4 4.16 7.55 4.16 11.9c0 1.4.36 2.74 1.05 3.93L4 20l4.28-1.18a7.83 7.83 0 003.78.96h.01c4.36 0 7.91-3.55 7.91-7.9 0-2.12-.82-4.1-2.38-5.56z"/></svg></span>ventia</span>
+          <span class="n">30</span>
+        </div>
+        <div class="check-row is-checked" role="checkbox" aria-checked="true">
+          <span class="cb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span class="label wa"><span class="ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 6.32A7.85 7.85 0 0012.06 4C7.71 4 4.16 7.55 4.16 11.9c0 1.4.36 2.74 1.05 3.93L4 20l4.28-1.18a7.83 7.83 0 003.78.96h.01c4.36 0 7.91-3.55 7.91-7.9 0-2.12-.82-4.1-2.38-5.56z"/></svg></span>soporte</span>
+          <span class="n">30</span>
+        </div>
+
+        <div class="group-label ig" style="margin-top: 4px">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></span>
+          Instagram
+        </div>
+        <div class="check-row is-checked" role="checkbox" aria-checked="true">
+          <span class="cb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span class="label ig"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></span>@senelstudio</span>
+          <span class="n">17</span>
+        </div>
+        <div class="check-row" role="checkbox" aria-checked="false">
+          <span class="cb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span class="label ig"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></span>@mitienda</span>
+          <span class="n">10</span>
+        </div>
+      </div>
+
+      <div class="popover-foot">
+        <span><strong>3 de 4</strong> bandejas</span>
+        <span><strong>77</strong> conversaciones</span>
+      </div>
+    </div>
+
+    <!-- Dimmed list behind popover -->
+    <div class="list dimmed">
+      <div class="item">
+        <div class="avatar" style="background: var(--avatar-1)">MG</div>
+        <div class="row-top"><span class="name">María González</span><span class="time">14:32</span></div>
+        <div class="row-msg"><span class="preview">Sí, listo el pago. ¿Cuándo llega el envío?</span></div>
+        <div class="row-meta wa">
+          <span class="ch-ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 6.32A7.85 7.85 0 0012.06 4C7.71 4 4.16 7.55 4.16 11.9c0 1.4.36 2.74 1.05 3.93L4 20l4.28-1.18a7.83 7.83 0 003.78.96h.01c4.36 0 7.91-3.55 7.91-7.9 0-2.12-.82-4.1-2.38-5.56z"/></svg></span>
+          <span class="handle">ventia</span>
+        </div>
+        <div class="row-trail"><span class="unread">3</span></div>
+      </div>
+      <div class="item">
+        <div class="avatar" style="background: var(--avatar-3)">RL</div>
+        <div class="row-top"><span class="name">Renzo Lenes</span><span class="time">14:18</span></div>
+        <div class="row-msg"><span class="preview">Hola, vi tu post del nuevo polo…</span></div>
+        <div class="row-meta ig">
+          <span class="ch-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></span>
+          <span class="handle">@senelstudio</span>
+        </div>
+        <div class="row-trail"><span class="unread">1</span></div>
+      </div>
+      <div class="item">
+        <div class="avatar" style="background: var(--avatar-2)">CM</div>
+        <div class="row-top"><span class="name">Carlos Mendoza</span><span class="time">13:55</span></div>
+        <div class="row-msg"><span class="preview">Tengo una consulta sobre mi pedido #4421</span></div>
+        <div class="row-meta wa">
+          <span class="ch-ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 6.32A7.85 7.85 0 0012.06 4C7.71 4 4.16 7.55 4.16 11.9c0 1.4.36 2.74 1.05 3.93L4 20l4.28-1.18a7.83 7.83 0 003.78.96h.01c4.36 0 7.91-3.55 7.91-7.9 0-2.12-.82-4.1-2.38-5.56z"/></svg></span>
+          <span class="handle">soporte</span>
+        </div>
+        <div class="row-trail"><span class="unread">5</span></div>
+      </div>
+      <div class="item">
+        <div class="avatar" style="background: var(--avatar-6)">RC</div>
+        <div class="row-top"><span class="name">Roberto Castillo</span><span class="time">12:08</span></div>
+        <div class="row-msg"><span class="preview">Perfecto, te confirmo la transferencia…</span></div>
+        <div class="row-meta wa">
+          <span class="ch-ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 6.32A7.85 7.85 0 0012.06 4C7.71 4 4.16 7.55 4.16 11.9c0 1.4.36 2.74 1.05 3.93L4 20l4.28-1.18a7.83 7.83 0 003.78.96h.01c4.36 0 7.91-3.55 7.91-7.9 0-2.12-.82-4.1-2.38-5.56z"/></svg></span>
+          <span class="handle">ventia</span>
+        </div>
+        <div class="row-trail"></div>
+      </div>
+    </div>
+
+    <div class="tip">
+      <b>3 de 4</b> activas → <b>77 conversaciones</b>. El check master arriba pasa a estado <b>parcial</b> (− en vez de ✓) cuando hay selección mixta. Toggleas en vivo, no hay "Aplicar".
+    </div>
+  </section>
+
+  <!-- ============================================== -->
+  <!-- COLUMN C · Selección parcial (acumulativa)      -->
+  <!-- ============================================== -->
+  <section class="mock" aria-label="Selección parcial">
+    <div class="mock-caption">
+      <span class="mock-eyebrow accent">C · Selección parcial</span>
+      <span class="mock-desc">El agente eligió 2 bandejas mixtas (1 WA + 1 IG). Ve solo lo de ellas, sigue sabiendo cuál es cuál gracias a la meta-línea.</span>
+    </div>
+
+    <div class="toolbar">
+      <div class="search" role="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.65" y2="16.65"/></svg>
+        <span>Buscar en bandejas activas…</span>
+      </div>
+      <button class="filter-btn is-on" type="button">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></span>
+        Bandejas
+        <span class="badge-n">2</span>
+        <svg class="caret" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+    </div>
+
+    <div class="active-summary">
+      <strong>ventia</strong>
+      <span style="opacity:0.55">+</span>
+      <strong>@senelstudio</strong>
+      <span class="x">Limpiar</span>
+    </div>
+
+    <div class="list">
+      <div class="item is-selected">
+        <div class="avatar" style="background: var(--avatar-1)">MG</div>
+        <div class="row-top"><span class="name">María González</span><span class="time">14:32</span></div>
+        <div class="row-msg"><span class="preview">Sí, listo el pago. ¿Cuándo llega el envío?</span></div>
+        <div class="row-meta wa">
+          <span class="ch-ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 6.32A7.85 7.85 0 0012.06 4C7.71 4 4.16 7.55 4.16 11.9c0 1.4.36 2.74 1.05 3.93L4 20l4.28-1.18a7.83 7.83 0 003.78.96h.01c4.36 0 7.91-3.55 7.91-7.9 0-2.12-.82-4.1-2.38-5.56z"/></svg></span>
+          <span class="handle">ventia</span>
+        </div>
+        <div class="row-trail"><span class="unread">3</span></div>
+      </div>
+
+      <div class="item">
+        <div class="avatar" style="background: var(--avatar-3)">RL</div>
+        <div class="row-top"><span class="name">Renzo Lenes</span><span class="time">14:18</span></div>
+        <div class="row-msg"><span class="preview">Hola, vi tu post del nuevo polo. ¿Aún tienes en talla M?</span></div>
+        <div class="row-meta ig">
+          <span class="ch-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></span>
+          <span class="handle">@senelstudio</span>
+        </div>
+        <div class="row-trail"><span class="unread">1</span></div>
+      </div>
+
+      <div class="item">
+        <div class="avatar" style="background: var(--avatar-6)">RC</div>
+        <div class="row-top"><span class="name">Roberto Castillo</span><span class="time">12:08</span></div>
+        <div class="row-msg">
+          <span class="check read"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span class="preview">Perfecto, te confirmo la transferencia esta tarde.</span>
+        </div>
+        <div class="row-meta wa">
+          <span class="ch-ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 6.32A7.85 7.85 0 0012.06 4C7.71 4 4.16 7.55 4.16 11.9c0 1.4.36 2.74 1.05 3.93L4 20l4.28-1.18a7.83 7.83 0 003.78.96h.01c4.36 0 7.91-3.55 7.91-7.9 0-2.12-.82-4.1-2.38-5.56z"/></svg></span>
+          <span class="handle">ventia</span>
+        </div>
+        <div class="row-trail"></div>
+      </div>
+
+      <div class="item">
+        <div class="avatar" style="background: var(--avatar-5)">LV</div>
+        <div class="row-top"><span class="name">Laura Vargas</span><span class="time">11:45</span></div>
+        <div class="row-msg">
+          <span class="check read"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span class="preview">Perfecto, ya te confirmé el pedido por DM.</span>
+        </div>
+        <div class="row-meta ig">
+          <span class="ch-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></span>
+          <span class="handle">@senelstudio</span>
+        </div>
+        <div class="row-trail"></div>
+      </div>
+
+      <div class="item">
+        <div class="avatar" style="background: var(--avatar-4)">PG</div>
+        <div class="row-top"><span class="name">Patricia Gómez</span><span class="time">11:02</span></div>
+        <div class="row-msg"><span class="preview">¿Aún tienen el modelo XL en stock?</span></div>
+        <div class="row-meta wa">
+          <span class="ch-ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 6.32A7.85 7.85 0 0012.06 4C7.71 4 4.16 7.55 4.16 11.9c0 1.4.36 2.74 1.05 3.93L4 20l4.28-1.18a7.83 7.83 0 003.78.96h.01c4.36 0 7.91-3.55 7.91-7.9 0-2.12-.82-4.1-2.38-5.56z"/></svg></span>
+          <span class="handle">ventia</span>
+        </div>
+        <div class="row-trail"><span class="unread">1</span></div>
+      </div>
+    </div>
+
+    <div class="tip">
+      Selección activa visible en un <b>chip resumen</b> bajo el toolbar — <kbd>Limpiar</kbd> vuelve al estado por defecto. Si solo quedara <b>1</b> bandeja, ese chip podría reemplazarse por un header tipo "Estás en @senelstudio".
+    </div>
+  </section>
+
+</main>
+
+</body>
+</html>
