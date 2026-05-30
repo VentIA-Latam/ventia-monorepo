@@ -583,8 +583,9 @@ export const MessageBubble = memo(function MessageBubble({
         ) : null}
 
         {/* Timestamp + checkmarks (skip for CTA / template-with-buttons — already rendered above) */}
-        {message.content_attributes?.cta_url || templateHasButtons ? null : hasOtherAttachment || hasCards ? (
-          /* Flow-based timestamp below non-media attachments (audio/file/location/contact) or carousel */
+        {message.content_attributes?.cta_url || templateHasButtons ? null : hasOtherAttachment || hasCards || (hasMediaAttachment && !message.content) ? (
+          /* Flow timestamp below non-media attachments, carousel, or media without caption
+             (an absolute timestamp would overlap an edge-to-edge image) */
           <div
             className={cn(
               "flex items-center justify-end gap-0.5 text-[11px] mt-1",
