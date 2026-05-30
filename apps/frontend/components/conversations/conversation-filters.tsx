@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback, useTransition } from "react";
+import { useState, useCallback, useMemo, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { InstagramLogo, WhatsAppLogo } from "@/components/icons/channel-logos";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,24 +21,27 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { Tag, CalendarDays, SlidersHorizontal, Thermometer, X, Trash2, Lock, Plus } from "lucide-react";
+import { Tag, CalendarDays, SlidersHorizontal, Thermometer, X, Trash2, Lock, Plus, Inbox as InboxIcon, ChevronDown, Check, Minus } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { createLabel, deleteLabel } from "@/lib/api-client/messaging";
 import { TEMPERATURE_ICON_MAP } from "@/lib/utils/temperature-icons";
 import { useToast } from "@/hooks/use-toast";
 import type { DateRange } from "react-day-picker";
-import type { Label, ConversationTemperature, TemperatureDefinition } from "@/lib/types/messaging";
+import type { Inbox, Label, ConversationTemperature, TemperatureDefinition } from "@/lib/types/messaging";
+import { getChannelKind, getInboxDisplayLabel } from "@/lib/utils/inbox";
 
 export interface ActiveFilters {
   label?: string;
   temperature?: ConversationTemperature;
   dateRange?: { from: string; to: string };
   unread?: boolean;
+  inboxIds?: number[];
 }
 
 interface ConversationFiltersProps {
   allLabels: Label[];
+  allInboxes?: Inbox[];
   filters: ActiveFilters;
   temperatureConfig?: TemperatureDefinition[];
   onChange: (filters: ActiveFilters) => void;
@@ -53,11 +57,13 @@ const PRESET_COLORS = [
 
 const RESERVED_LABEL_NAMES = ["soporte-humano", "en-revisión"];
 
-export function ConversationFilters({ allLabels, filters, temperatureConfig = [], onChange, onLabelCreated, onLabelDeleted, tenantId }: ConversationFiltersProps) {
+export function ConversationFilters({ allLabels, allInboxes = [], filters, temperatureConfig = [], onChange, onLabelCreated, onLabelDeleted, tenantId }: ConversationFiltersProps) {
   const { toast } = useToast();
   const [labelOpen, setLabelOpen] = useState(false);
   const [dateOpen, setDateOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [inboxOpen, setInboxOpen] = useState(false);
+  const [inboxSearch, setInboxSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newColor, setNewColor] = useState(PRESET_COLORS[0]);
@@ -71,7 +77,79 @@ export function ConversationFilters({ allLabels, filters, temperatureConfig = []
       : undefined
   );
 
-  const hasActiveFilters = filters.label || filters.temperature || filters.dateRange || filters.unread;
+  const hasInboxFilter = (filters.inboxIds?.length ?? 0) > 0;
+  const hasActiveFilters = filters.label || filters.temperature || filters.dateRange || filters.unread || hasInboxFilter;
+
+  const groupedInboxes = useMemo(() => {
+    const wa: Inbox[] = [];
+    const ig: Inbox[] = [];
+    const other: Inbox[] = [];
+    const source = Array.isArray(allInboxes) ? allInboxes : [];
+    for (const inbox of source) {
+      const kind = getChannelKind(inbox.channel_type);
+      if (kind === "whatsapp") wa.push(inbox);
+      else if (kind === "instagram") ig.push(inbox);
+      else other.push(inbox);
+    }
+    return { wa, ig, other };
+  }, [allInboxes]);
+
+  const matchesSearch = useCallback((inbox: Inbox) => {
+    const q = inboxSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (inbox.name ?? "").toLowerCase().includes(q);
+  }, [inboxSearch]);
+
+  const visibleInboxes = useMemo(
+    () => ({
+      wa: groupedInboxes.wa.filter(matchesSearch),
+      ig: groupedInboxes.ig.filter(matchesSearch),
+      other: groupedInboxes.other.filter(matchesSearch),
+    }),
+    [groupedInboxes, matchesSearch]
+  );
+
+  const effectiveSelectedIds = useMemo(() => {
+    if (!filters.inboxIds || filters.inboxIds.length === 0) {
+      return new Set<number>(allInboxes.map((i) => i.id));
+    }
+    return new Set<number>(filters.inboxIds);
+  }, [filters.inboxIds, allInboxes]);
+
+  const totalInboxes = allInboxes.length;
+  const selectedCount = effectiveSelectedIds.size;
+  const isAllInboxesSelected = selectedCount === totalInboxes && totalInboxes > 0;
+  const isPartialInboxSelection = selectedCount > 0 && selectedCount < totalInboxes;
+
+  const applyInboxSelection = useCallback((next: Set<number>) => {
+    if (next.size === 0) return; // never empty
+    if (next.size === totalInboxes) {
+      onChange({ ...filters, inboxIds: undefined });
+    } else {
+      onChange({ ...filters, inboxIds: Array.from(next).sort((a, b) => a - b) });
+    }
+  }, [filters, onChange, totalInboxes]);
+
+  const toggleInbox = useCallback((id: number) => {
+    const next = new Set(effectiveSelectedIds);
+    if (next.has(id)) {
+      if (next.size === 1) return;
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    applyInboxSelection(next);
+  }, [effectiveSelectedIds, applyInboxSelection]);
+
+  const selectAllInboxes = useCallback(() => {
+    onChange({ ...filters, inboxIds: undefined });
+  }, [filters, onChange]);
+
+  const inboxButtonLabel = isAllInboxesSelected
+    ? "Bandejas"
+    : selectedCount === 1
+      ? getInboxDisplayLabel(allInboxes.find((i) => effectiveSelectedIds.has(i.id)))
+      : `Bandejas (${selectedCount})`;
   const isReservedName = RESERVED_LABEL_NAMES.includes(newTitle.trim().toLowerCase());
 
   const handleLabelSelect = (title: string) => {
@@ -149,7 +227,7 @@ export function ConversationFilters({ allLabels, filters, temperatureConfig = []
   return (
     <>
       <div className="pb-2">
-      <div className="px-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+      <div className="px-3 flex flex-wrap items-center gap-x-1.5 gap-y-1.5">
         {/* Label filter + management */}
         <Popover open={labelOpen} onOpenChange={(open) => { setLabelOpen(open); if (!open) setShowCreate(false); }}>
           <PopoverTrigger asChild>
@@ -364,6 +442,191 @@ export function ConversationFilters({ allLabels, filters, temperatureConfig = []
             </div>
           </PopoverContent>
         </Popover>
+
+        {/* Inbox (channel) filter — multi-select checklist grouped by channel type */}
+        {totalInboxes > 1 && (
+          <Popover open={inboxOpen} onOpenChange={(open) => { setInboxOpen(open); if (!open) setInboxSearch(""); }}>
+            <PopoverTrigger asChild>
+              <Button
+                data-testid="inbox-filter-trigger"
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "h-7 px-2.5 text-xs gap-1.5 shrink-0 rounded-full",
+                  hasInboxFilter && "bg-primary/10 border-primary/30 text-primary"
+                )}
+              >
+                <InboxIcon className="h-3 w-3" />
+                <span className="truncate max-w-[120px]">{inboxButtonLabel}</span>
+                <ChevronDown className="h-3 w-3 opacity-60" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-72 p-0">
+              <div className="px-3 pt-3 pb-2 flex items-center justify-between">
+                <span className="text-xs font-semibold text-foreground">Mostrar de</span>
+                {hasInboxFilter && (
+                  <button
+                    onClick={selectAllInboxes}
+                    className="text-[11px] text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded transition-colors"
+                  >
+                    Restablecer
+                  </button>
+                )}
+              </div>
+
+              {totalInboxes >= 6 && (
+                <div className="px-3 pb-2">
+                  <Input
+                    value={inboxSearch}
+                    onChange={(e) => setInboxSearch(e.target.value)}
+                    placeholder="Buscar bandeja…"
+                    className="h-7 text-xs"
+                  />
+                </div>
+              )}
+
+              <div className="max-h-72 overflow-y-auto pb-1">
+                {/* Master toggle */}
+                <button
+                  data-testid="inbox-filter-all"
+                  onClick={selectAllInboxes}
+                  role="menuitemcheckbox"
+                  aria-checked={isAllInboxesSelected ? "true" : isPartialInboxSelection ? "mixed" : "false"}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs hover:bg-muted/50 transition-colors text-left"
+                >
+                  <span
+                    className={cn(
+                      "h-4 w-4 rounded-[5px] border-[1.5px] flex items-center justify-center shrink-0 transition-colors",
+                      isAllInboxesSelected
+                        ? "bg-primary border-primary"
+                        : isPartialInboxSelection
+                          ? "bg-primary border-primary"
+                          : "border-input bg-background"
+                    )}
+                  >
+                    {isAllInboxesSelected && <Check className="h-2.5 w-2.5 text-primary-foreground" strokeWidth={3.5} />}
+                    {isPartialInboxSelection && <Minus className="h-2.5 w-2.5 text-primary-foreground" strokeWidth={3.5} />}
+                  </span>
+                  <span className="font-medium">Todas las bandejas</span>
+                  <span className="ml-auto text-[11px] text-muted-foreground">{totalInboxes}</span>
+                </button>
+
+                <div className="h-px bg-border mx-3 my-1" />
+
+                {/* WhatsApp group */}
+                {visibleInboxes.wa.length > 0 && (
+                  <>
+                    <div className="px-3 pt-1.5 pb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <WhatsAppLogo className="h-3 w-3" />
+                      WhatsApp
+                    </div>
+                    {visibleInboxes.wa.map((inbox) => {
+                      const checked = effectiveSelectedIds.has(inbox.id);
+                      return (
+                        <button
+                          key={inbox.id}
+                          data-testid="inbox-filter-option"
+                          data-inbox-id={inbox.id}
+                          data-channel-kind="whatsapp"
+                          onClick={() => toggleInbox(inbox.id)}
+                          role="menuitemcheckbox"
+                          aria-checked={checked}
+                          className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs hover:bg-muted/50 transition-colors text-left"
+                        >
+                          <span
+                            className={cn(
+                              "h-4 w-4 rounded-[5px] border-[1.5px] flex items-center justify-center shrink-0 transition-colors",
+                              checked ? "bg-primary border-primary" : "border-input bg-background"
+                            )}
+                          >
+                            {checked && <Check className="h-2.5 w-2.5 text-primary-foreground" strokeWidth={3.5} />}
+                          </span>
+                          <WhatsAppLogo className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{getInboxDisplayLabel(inbox) || `Bandeja ${inbox.id}`}</span>
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
+
+                {/* Instagram group */}
+                {visibleInboxes.ig.length > 0 && (
+                  <>
+                    <div className="px-3 pt-2 pb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <InstagramLogo className="h-3 w-3" />
+                      Instagram
+                    </div>
+                    {visibleInboxes.ig.map((inbox) => {
+                      const checked = effectiveSelectedIds.has(inbox.id);
+                      return (
+                        <button
+                          key={inbox.id}
+                          data-testid="inbox-filter-option"
+                          data-inbox-id={inbox.id}
+                          data-channel-kind="instagram"
+                          onClick={() => toggleInbox(inbox.id)}
+                          role="menuitemcheckbox"
+                          aria-checked={checked}
+                          className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs hover:bg-muted/50 transition-colors text-left"
+                        >
+                          <span
+                            className={cn(
+                              "h-4 w-4 rounded-[5px] border-[1.5px] flex items-center justify-center shrink-0 transition-colors",
+                              checked ? "bg-primary border-primary" : "border-input bg-background"
+                            )}
+                          >
+                            {checked && <Check className="h-2.5 w-2.5 text-primary-foreground" strokeWidth={3.5} />}
+                          </span>
+                          <InstagramLogo className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{getInboxDisplayLabel(inbox) || `Bandeja ${inbox.id}`}</span>
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
+
+                {/* Other channels */}
+                {visibleInboxes.other.length > 0 && (
+                  <>
+                    <div className="px-3 pt-2 pb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Otros
+                    </div>
+                    {visibleInboxes.other.map((inbox) => {
+                      const checked = effectiveSelectedIds.has(inbox.id);
+                      return (
+                        <button
+                          key={inbox.id}
+                          data-testid="inbox-filter-option"
+                          data-inbox-id={inbox.id}
+                          data-channel-kind="other"
+                          onClick={() => toggleInbox(inbox.id)}
+                          role="menuitemcheckbox"
+                          aria-checked={checked}
+                          className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs hover:bg-muted/50 transition-colors text-left"
+                        >
+                          <span
+                            className={cn(
+                              "h-4 w-4 rounded-[5px] border-[1.5px] flex items-center justify-center shrink-0 transition-colors",
+                              checked ? "bg-primary border-primary" : "border-input bg-background"
+                            )}
+                          >
+                            {checked && <Check className="h-2.5 w-2.5 text-primary-foreground" strokeWidth={3.5} />}
+                          </span>
+                          <span className="truncate">{inbox.name ?? `Bandeja ${inbox.id}`}</span>
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="border-t px-3 py-2 text-[11px] text-muted-foreground bg-muted/30">
+                <span className="font-medium text-foreground">{selectedCount}</span> de {totalInboxes} bandejas activas
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
 
       </div>
       {/* Clear all — below filter row */}

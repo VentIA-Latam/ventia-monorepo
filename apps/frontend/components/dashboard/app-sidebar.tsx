@@ -23,12 +23,12 @@ import {
   MessageSquare,
   Clock,
   Ticket,
-  Instagram,
+  Radio,
 } from "lucide-react"
 import { usePathname, useSearchParams } from "next/navigation"
 import { useTheme } from "next-themes"
 import { getConversationCounts } from "@/lib/api-client/messaging"
-import { useMessagingEvent } from "@/components/conversations/messaging-provider"
+import { useMessagingEvent, useInboxFilter } from "@/components/conversations/messaging-provider"
 import type { ConversationCounts } from "@/lib/types/messaging"
 import Image from "next/image"
 import Link from "next/link"
@@ -94,14 +94,9 @@ const dataPlatform = [
     icon: Receipt,
   },
   {
-    title: "WhatsApp",
-    url: "/dashboard/whatsapp-connect",
-    icon: MessageSquare,
-  },
-  {
-    title: "Instagram",
-    url: "/dashboard/instagram-connect",
-    icon: Instagram,
+    title: "Canales",
+    url: "/dashboard/channels",
+    icon: Radio,
   },
   {
     title: "Campañas",
@@ -138,12 +133,14 @@ const REFETCH_EVENTS = new Set([
 const ConversationsNav = memo(function ConversationsNav({ pathname }: { pathname: string }) {
   const searchParams = useSearchParams()
   const lastEvent = useMessagingEvent()
+  const { inboxIds } = useInboxFilter()
   const [convCounts, setConvCounts] = useState<ConversationCounts | null>(null)
   const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isOpen, setIsOpen] = useState(false)
 
   const isConversationsPage = pathname.startsWith("/dashboard/conversations")
   const activeSection = searchParams.get("section")
+  const inboxIdsKey = inboxIds.join(",")
 
   // Auto-open when navigating to conversations, auto-close when leaving
   useEffect(() => {
@@ -152,14 +149,15 @@ const ConversationsNav = memo(function ConversationsNav({ pathname }: { pathname
 
   const fetchCounts = useCallback(async () => {
     try {
-      const result = await getConversationCounts()
+      const ids = inboxIdsKey ? inboxIdsKey.split(",").map(Number) : []
+      const result = await getConversationCounts(undefined, ids.length > 0 ? { inboxIds: ids } : undefined)
       setConvCounts(result.data)
     } catch {
       // silently fail
     }
-  }, [])
+  }, [inboxIdsKey])
 
-  // Fetch on navigation to conversations page
+  // Fetch on navigation to conversations page or when the active inbox filter changes
   useEffect(() => {
     if (isConversationsPage) fetchCounts()
   }, [isConversationsPage, fetchCounts])

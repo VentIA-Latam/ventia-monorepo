@@ -16,14 +16,15 @@ import {
 import { ConversationItem } from "./conversation-item";
 import { exportToCsv } from "@/lib/utils/messaging";
 import { ConversationFilters, type ActiveFilters } from "./conversation-filters";
-import { useMessagingEvent, useMessagingEmit, useMessagingReconnect } from "./messaging-provider";
+import { useMessagingEvent, useMessagingEmit, useMessagingReconnect, useInboxFilter } from "./messaging-provider";
 import {
   getConversations,
   deleteConversation,
   exportConversations,
+  getInboxes,
   type ConversationFilters as ConversationFilterParams,
 } from "@/lib/api-client/messaging";
-import type { Conversation, Label, TemperatureDefinition } from "@/lib/types/messaging";
+import type { Conversation, Inbox, Label, TemperatureDefinition } from "@/lib/types/messaging";
 import { useToast } from "@/hooks/use-toast";
 
 interface ConversationListProps {
@@ -58,9 +59,11 @@ export function ConversationList({
   const lastEvent = useMessagingEvent();
   const emitEvent = useMessagingEmit();
   const reconnectedAt = useMessagingReconnect();
+  const { setInboxIds: publishInboxIds } = useInboxFilter();
   const { toast } = useToast();
   const sectionFilter = (section === "sale" || section === "unattended" ? section : "all") as SectionValue;
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
+  const [inboxes, setInboxes] = useState<Inbox[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSelectMode, setIsSelectMode] = useState(false);
@@ -94,6 +97,9 @@ export function ConversationList({
         params.created_before = filters.dateRange.to;
       }
       if (filters.unread) params.unread = "true";
+      if (filters.inboxIds && filters.inboxIds.length > 0) {
+        params.inbox_ids = filters.inboxIds.join(",");
+      }
       const trimmed = search?.trim();
       if (trimmed) params.search = trimmed;
       return params;
@@ -145,6 +151,27 @@ export function ConversationList({
       searchAbortRef.current?.abort();
     };
   }, []);
+
+  // Publish the active inbox filter to the messaging context so the sidebar's
+  // conversation counts stay in sync with the filtered list. Clears on unmount.
+  useEffect(() => {
+    publishInboxIds(activeFilters.inboxIds ?? []);
+    return () => {
+      publishInboxIds([]);
+    };
+  }, [activeFilters.inboxIds, publishInboxIds]);
+
+  // Load inboxes once for the channel filter. Aborts on tenantId change / unmount.
+  useEffect(() => {
+    const controller = new AbortController();
+    getInboxes(tenantId, controller.signal)
+      .then((res) => setInboxes(res?.data ?? []))
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        console.error("Error loading inboxes:", err);
+      });
+    return () => controller.abort();
+  }, [tenantId]);
 
   // Load more conversations on scroll (rerender-move-effect-to-event)
   const loadMoreConversations = useCallback(() => {
@@ -455,6 +482,7 @@ export function ConversationList({
       {/* Filters */}
       <ConversationFilters
         allLabels={allLabels}
+        allInboxes={inboxes}
         filters={activeFilters}
         temperatureConfig={temperatureConfig}
         onChange={handleFiltersChange}
