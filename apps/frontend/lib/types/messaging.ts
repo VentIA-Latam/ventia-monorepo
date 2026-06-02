@@ -127,9 +127,31 @@ export interface ReferralData {
   image_url?: string;
 }
 
+export interface StoryReplyData {
+  id: string;
+}
+
+export interface CarouselCardButton {
+  type: "web_url" | "postback";
+  title: string;
+  url?: string; // web_url
+  payload?: string; // postback
+}
+
+export interface CarouselCard {
+  title: string;
+  subtitle?: string;
+  image_url?: string;
+  default_action_url?: string;
+  buttons?: CarouselCardButton[];
+}
+
 export interface MessageContentAttributes {
   cta_url?: CtaUrlData;
   referral?: ReferralData;
+  reply_to_story?: StoryReplyData;
+  cards?: CarouselCard[];
+  postback_payload?: string;
   items?: Array<{ title: string; value: string }>;
   contacts?: unknown[];
   in_reply_to?: string;
@@ -326,5 +348,14 @@ export interface WhatsAppChannel {
   inbox_name: string;
   templates_count: number;
   last_template_sync: string | null;
+  reauthorization_required: boolean;
+}
+
+export interface InstagramChannel {
+  id: number;
+  instagram_id: string;
+  username: string | null;
+  inbox_id: number | null;
+  inbox_name: string | null;
   reauthorization_required: boolean;
 }

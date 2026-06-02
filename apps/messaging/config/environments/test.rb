@@ -14,6 +14,9 @@ Rails.application.configure do
   # Active Storage
   config.active_storage.service = :test
 
+  # Host for URL generation (rails_blob_url in serializers/broadcasts), mirroring dev/prod.
+  Rails.application.routes.default_url_options = { host: 'http://localhost:3000' }
+
   # Disable request forgery protection in test environment
   config.action_controller.allow_forgery_protection = false
 

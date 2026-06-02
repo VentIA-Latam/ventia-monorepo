@@ -16,6 +16,13 @@ Rails.application.routes.draw do
   get 'webhooks/whatsapp/:phone_number', to: 'webhooks/whatsapp#verify'
   post 'webhooks/whatsapp/:phone_number', to: 'webhooks/whatsapp#process_payload'
 
+  # Instagram webhooks (public, app-level single URL)
+  get 'webhooks/instagram', to: 'webhooks/instagram#verify'
+  post 'webhooks/instagram', to: 'webhooks/instagram#process_payload'
+
+  # Instagram OAuth callback (public, browser redirect from Meta)
+  get 'instagram/callback', to: 'instagram/oauth#callback'
+
   # API routes
   namespace :api do
     namespace :v1 do
@@ -154,6 +161,12 @@ Rails.application.routes.draw do
         post 'embedded_signup', to: 'embedded_signup#create'
         get 'embedded_signup/status', to: 'embedded_signup#status'
         get 'health/:inbox_id', to: 'embedded_signup#health'
+      end
+
+      # Instagram (authenticated OAuth initiation + status)
+      namespace :instagram do
+        get 'authorize', to: 'authorizations#authorize'
+        get 'status', to: 'authorizations#status'
       end
 
       # Analytics (KPIs agregados por periodo)

@@ -15,16 +15,12 @@ function getDomain(url?: string): string | null {
 export function ReferralBubble({ referral }: { referral: ReferralData }) {
   const hasContent = referral.headline || referral.body;
   const domain = getDomain(referral.source_url);
+  // Instagram CTD ads don't send a landing URL; only wrap in a link when there's a real
+  // destination, otherwise `href="#"` would hijack the SPA route on click.
+  const hasLink = !!referral.source_url;
 
-  return (
-    <a
-      href={referral.source_url || "#"}
-      target="_blank"
-      rel="noopener noreferrer"
-      title={referral.source_url || "Ver anuncio"}
-      className="block -mx-3 -mt-1.5 mb-1.5 cursor-pointer hover:opacity-95 transition-opacity overflow-hidden"
-    >
-      <div className="bg-muted/40 overflow-hidden">
+  const inner = (
+    <div className="bg-muted/40 overflow-hidden">
         {referral.image_url ? (
           <img
             src={referral.image_url}
@@ -58,6 +54,23 @@ export function ReferralBubble({ referral }: { referral: ReferralData }) {
           </span>
         </div>
       </div>
+  );
+
+  if (!hasLink) {
+    return (
+      <div className="-mx-3 -mt-1.5 mb-1.5 overflow-hidden">{inner}</div>
+    );
+  }
+
+  return (
+    <a
+      href={referral.source_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={referral.source_url}
+      className="block -mx-3 -mt-1.5 mb-1.5 cursor-pointer hover:opacity-95 transition-opacity overflow-hidden"
+    >
+      {inner}
     </a>
   );
 }

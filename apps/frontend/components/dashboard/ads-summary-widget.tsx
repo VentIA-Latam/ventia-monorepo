@@ -156,6 +156,27 @@ function SortButton({
   );
 }
 
+const CHANNEL_ICONS: Record<string, { src: string; label: string }> = {
+  instagram: { src: "/external-icons/instagram-icon.svg", label: "Instagram" },
+  whatsapp: { src: "/external-icons/whatsapp-icon.svg", label: "WhatsApp" },
+};
+
+function ChannelIcon({ channel }: { channel: AdSummaryItem["channel"] }) {
+  const icon = channel ? CHANNEL_ICONS[channel] : null;
+  if (!icon) return null;
+  return (
+    <Image
+      src={icon.src}
+      alt={icon.label}
+      title={icon.label}
+      width={14}
+      height={14}
+      unoptimized
+      className="shrink-0"
+    />
+  );
+}
+
 function AdRow({ ad }: { ad: AdSummaryItem }) {
   const [imgError, setImgError] = useState(false);
   const showImage = ad.image_url && !imgError;
@@ -185,8 +206,9 @@ function AdRow({ ad }: { ad: AdSummaryItem }) {
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-foreground">
-          {ad.headline ?? "Anuncio sin título"}
+        <p className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+          <ChannelIcon channel={ad.channel} />
+          <span className="truncate">{ad.headline ?? "Anuncio sin título"}</span>
         </p>
         {ad.source_url ? (
           <a

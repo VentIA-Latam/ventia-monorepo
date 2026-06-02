@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { InstagramLogo, WhatsAppLogo } from "@/components/icons/channel-logos";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -50,6 +51,7 @@ import {
 import { TEMPERATURE_ICON_MAP } from "@/lib/utils/temperature-icons";
 import type { Conversation, TemperatureDefinition, MessageStatus } from "@/lib/types/messaging";
 import { getInitials, getWhatsAppTime } from "@/lib/utils/messaging";
+import { getChannelKind, getInboxDisplayLabel } from "@/lib/utils/inbox";
 import { formatWhatsAppText } from "@/lib/utils/whatsapp-format";
 import {
   updateConversationStage,
@@ -192,6 +194,8 @@ export const ConversationItem = memo(function ConversationItem({
       <ContextMenu>
         <ContextMenuTrigger asChild>
       <div
+        data-testid="conversation-item"
+        data-conversation-id={conversation.id}
         className={cn(
           "group w-full flex items-center gap-3 py-3 px-4 text-left transition-colors cursor-pointer border-b border-border/30",
           isSelectMode && isChecked
@@ -305,6 +309,23 @@ export const ConversationItem = memo(function ConversationItem({
               )}
             </div>
           </div>
+          {/* Inbox meta line — channel logo + inbox name */}
+          {conversation.inbox && (() => {
+            const kind = getChannelKind(conversation.inbox.channel_type);
+            const label = getInboxDisplayLabel(conversation.inbox);
+            if (!label) return null;
+            return (
+              <div
+                data-testid="conversation-channel-meta"
+                data-channel-kind={kind}
+                className="flex items-center gap-1.5 mt-0.5 text-[11.5px] text-muted-foreground"
+              >
+                {kind === "whatsapp" && <WhatsAppLogo className="h-3 w-3 shrink-0" />}
+                {kind === "instagram" && <InstagramLogo className="h-3 w-3 shrink-0" />}
+                <span className="truncate font-medium">{label}</span>
+              </div>
+            );
+          })()}
           {/* Label badges */}
           {conversation.labels && conversation.labels.length > 0 && (
             <div className="flex items-center gap-1 mt-1 overflow-hidden">

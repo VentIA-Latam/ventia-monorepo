@@ -38,9 +38,10 @@ interface MessageComposerProps {
   onSend: (content: string, file?: File) => void;
   disabled?: boolean;
   onOpenTemplates?: () => void;
+  audioFormat?: "mp3" | "wav";
 }
 
-export function MessageComposer({ onSend, disabled, onOpenTemplates }: MessageComposerProps) {
+export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat = "mp3" }: MessageComposerProps) {
   const [content, setContent] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -130,7 +131,11 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates }: MessageCo
   const hasContent = content.trim().length > 0 || selectedFile !== null;
 
   return (
-    <div className="relative bg-muted/30 px-4 py-2.5 border-t border-border/30">
+    <div
+      data-testid="message-composer"
+      data-audio-format={audioFormat}
+      className="relative bg-muted/30 px-4 py-2.5 border-t border-border/30"
+    >
       {/* Emoji picker */}
       {showEmoji && (
         <div className="absolute bottom-full left-3 mb-2 z-[60]">
@@ -186,6 +191,7 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates }: MessageCo
 
       {isRecording ? (
         <AudioRecorder
+          audioFormat={audioFormat}
           onSend={(file) => {
             onSend("", file);
             setIsRecording(false);

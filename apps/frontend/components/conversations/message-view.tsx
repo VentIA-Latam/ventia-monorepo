@@ -764,7 +764,11 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
                     </div>
                   ) : null}
                   <div className={`rounded-lg transition-colors duration-300 ${isHighlighted ? "bg-volt/15" : ""}`} style={MESSAGE_ITEM_STYLE}>
-                    <MessageBubble message={msg} showAvatar={isLastInCluster} />
+                    <MessageBubble
+                      message={msg}
+                      showAvatar={isLastInCluster}
+                      channelType={conversation.inbox?.channel_type}
+                    />
                   </div>
                 </div>
               );
@@ -803,6 +807,9 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
       <MessageComposer
         onSend={handleSend}
         disabled={loading || conversation.can_reply === false}
+        audioFormat={
+          conversation.inbox?.channel_type === "Channel::Instagram" ? "wav" : "mp3"
+        }
         onOpenTemplates={
           conversation.inbox?.channel_type === "Channel::Whatsapp"
             ? () => setShowTemplatePicker(true)
