@@ -34,7 +34,9 @@ RSpec.describe 'Api::V1::NotificationSettings', type: :request do
       data = response.parsed_body['data']
       expect(data['email_flags']['human_support']).to be true
       expect(data['email_flags']['payment_review']).to be true
-      expect(data['push_flags']['human_support']).to be false
+      # human_support y payment_review ahora también están activos en push por defecto.
+      expect(data['push_flags']['human_support']).to be true
+      expect(data['push_flags']['payment_review']).to be true
       expect(data['push_flags']['message_ai_off']).to be true
     end
   end
@@ -44,35 +46,60 @@ RSpec.describe 'Api::V1::NotificationSettings', type: :request do
       get '/api/v1/notification_settings', headers: headers
     end
 
-    it 'updates email flags for human_support' do
-      put '/api/v1/notification_settings',
-        params: { notification_settings: { human_support: false } }.to_json,
-        headers: headers
+    context 'con channel explícito' do
+      it 'channel=email modifica solo email_flags, no push_flags' do
+        put '/api/v1/notification_settings',
+          params: { notification_settings: { human_support: false, channel: 'email' } }.to_json,
+          headers: headers
 
-      expect(response).to have_http_status(:ok)
-      data = response.parsed_body['data']
-      expect(data['email_flags']['human_support']).to be false
-      expect(data['email_flags']['payment_review']).to be true
+        expect(response).to have_http_status(:ok)
+        setting = NotificationSetting.find_by(user: user, account: account)
+        expect(setting.email_enabled?(:human_support)).to be false
+        expect(setting.push_enabled?(:human_support)).to be true
+      end
+
+      it 'channel=push modifica solo push_flags, no email_flags' do
+        put '/api/v1/notification_settings',
+          params: { notification_settings: { human_support: false, channel: 'push' } }.to_json,
+          headers: headers
+
+        expect(response).to have_http_status(:ok)
+        setting = NotificationSetting.find_by(user: user, account: account)
+        expect(setting.push_enabled?(:human_support)).to be false
+        expect(setting.email_enabled?(:human_support)).to be true
+      end
+
+      it 'channel=email ignora flags sin template de email (message_ai_off)' do
+        put '/api/v1/notification_settings',
+          params: { notification_settings: { message_ai_off: false, channel: 'email' } }.to_json,
+          headers: headers
+
+        expect(response).to have_http_status(:ok)
+        setting = NotificationSetting.find_by(user: user, account: account)
+        # push de message_ai_off se mantiene intacto porque el canal email no aplica.
+        expect(setting.push_enabled?(:message_ai_off)).to be true
+      end
     end
 
-    it 'updates push flags for message_ai_off' do
-      put '/api/v1/notification_settings',
-        params: { notification_settings: { message_ai_off: false } }.to_json,
-        headers: headers
+    context 'sin channel (compatibilidad legacy por nombre)' do
+      it 'rutea human_support a email_flags' do
+        put '/api/v1/notification_settings',
+          params: { notification_settings: { human_support: false } }.to_json,
+          headers: headers
 
-      expect(response).to have_http_status(:ok)
-      data = response.parsed_body['data']
-      expect(data['push_flags']['message_ai_off']).to be false
-    end
+        setting = NotificationSetting.find_by(user: user, account: account)
+        expect(setting.email_enabled?(:human_support)).to be false
+        expect(setting.push_enabled?(:human_support)).to be true
+      end
 
-    it 'routes human_support to email_flags not push_flags' do
-      put '/api/v1/notification_settings',
-        params: { notification_settings: { human_support: false } }.to_json,
-        headers: headers
+      it 'rutea message_ai_off a push_flags' do
+        put '/api/v1/notification_settings',
+          params: { notification_settings: { message_ai_off: false } }.to_json,
+          headers: headers
 
-      setting = NotificationSetting.find_by(user: user, account: account)
-      expect(setting.email_enabled?(:human_support)).to be false
-      expect(setting.push_flags).to eq(NotificationSetting::DEFAULT_PUSH_FLAGS)
+        setting = NotificationSetting.find_by(user: user, account: account)
+        expect(setting.push_enabled?(:message_ai_off)).to be false
+      end
     end
   end
 end

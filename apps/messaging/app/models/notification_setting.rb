@@ -5,8 +5,8 @@
 #  id          :bigint           not null, primary key
 #  account_id  :bigint           not null
 #  user_id     :bigint           not null
-#  email_flags :integer          default(0), not null
-#  push_flags  :integer          default(0), not null
+#  email_flags :integer          default(3), not null
+#  push_flags  :integer          default(7), not null
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
 #
@@ -17,11 +17,11 @@ class NotificationSetting < ApplicationRecord
 
   validates :user_id, uniqueness: { scope: :account_id }
 
-  # Bitmask flags for push notifications
-  # Bit 1: human_support — conversación derivada a soporte humano
-  # Bit 2: payment_review — pago pendiente de validar
-  # Bit 4: message_ai_off — mensaje nuevo con IA desactivada
-  # Bit 8: message_ai_on — mensaje nuevo con IA activada
+  # Bitmask flags — aplican a push_flags y email_flags de forma independiente
+  # Bit 1: human_support  — conversación derivada a soporte humano (push + email)
+  # Bit 2: payment_review — pago pendiente de validar              (push + email)
+  # Bit 4: message_ai_off — mensaje nuevo con IA desactivada       (solo push)
+  # Bit 8: message_ai_on  — mensaje nuevo con IA activada          (solo push)
 
   FLAGS = {
     human_support: 1,
@@ -30,7 +30,7 @@ class NotificationSetting < ApplicationRecord
     message_ai_on: 8
   }.freeze
 
-  DEFAULT_PUSH_FLAGS = FLAGS[:message_ai_off] # 4
+  DEFAULT_PUSH_FLAGS  = FLAGS[:human_support] | FLAGS[:payment_review] | FLAGS[:message_ai_off] # 7
   DEFAULT_EMAIL_FLAGS = FLAGS[:human_support] | FLAGS[:payment_review] # 3
 
   def email_enabled?(flag_name)

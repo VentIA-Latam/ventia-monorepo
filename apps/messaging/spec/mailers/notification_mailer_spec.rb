@@ -21,7 +21,8 @@ RSpec.describe NotificationMailer, type: :mailer do
     end
 
     it 'sets the correct from address' do
-      expect(mail.from).to include('noreply@ventia.pe')
+      expected_from = ENV.fetch('RESEND_FROM_EMAIL', 'noreply@ventia.pe')
+      expect(mail.from).to include(expected_from)
     end
 
     it 'includes the contact name in the body' do
@@ -110,7 +111,8 @@ RSpec.describe NotificationMailer, type: :mailer do
     end
 
     it 'sets the correct from address' do
-      expect(mail.from).to include('noreply@ventia.pe')
+      expected_from = ENV.fetch('RESEND_FROM_EMAIL', 'noreply@ventia.pe')
+      expect(mail.from).to include(expected_from)
     end
 
     it 'includes the contact name in the body' do
@@ -146,6 +148,16 @@ RSpec.describe NotificationMailer, type: :mailer do
       )
       expect(injected_mail.body.encoded).to include('href="#"')
       expect(injected_mail.body.encoded).not_to include('javascript:')
+    end
+
+    it 'sanitizes CRLF in contact_name to prevent header injection' do
+      injected_mail = NotificationMailer.payment_review(
+        emails: ['agent@test.com'],
+        contact_name: "Nombre\r\nBcc: attacker@evil.com",
+        conversation_url: 'https://app.ventia-latam.com',
+        account_name: 'Test'
+      )
+      expect(injected_mail.subject).not_to include("\r\n")
     end
   end
 end

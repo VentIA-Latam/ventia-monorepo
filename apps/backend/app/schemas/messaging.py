@@ -356,6 +356,9 @@ class NotificationSettingsPayload(BaseModel):
     payment_review: Optional[bool] = None
     message_ai_off: Optional[bool] = None
     message_ai_on: Optional[bool] = None
+    # Canal al que aplica el toggle: "email" o "push". human_support y
+    # payment_review existen en ambos, por eso se necesita el discriminador.
+    channel: Optional[str] = None
 
 
 # --- Messages Response ---
@@ -527,8 +530,8 @@ class NotificationsResponse(BaseModel):
 # --- Notification Settings Response ---
 
 class PushFlags(BaseModel):
-    human_support: bool = False
-    payment_review: bool = False
+    human_support: bool = True
+    payment_review: bool = True
     message_ai_off: bool = True
     message_ai_on: bool = False
 

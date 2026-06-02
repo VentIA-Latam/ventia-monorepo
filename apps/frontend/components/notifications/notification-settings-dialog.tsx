@@ -35,6 +35,18 @@ const EMAIL_CATEGORIES = [
 
 const PUSH_CATEGORIES = [
   {
+    key: "human_support" as const,
+    label: "Soporte humano",
+    description: "Cuando una conversación requiere atención humana",
+    icon: Users,
+  },
+  {
+    key: "payment_review" as const,
+    label: "Pago pendiente",
+    description: "Cuando un cliente envía comprobante de pago",
+    icon: CreditCard,
+  },
+  {
     key: "message_ai_off" as const,
     label: "Mensajes (IA apagada)",
     description: "Mensajes en conversaciones sin agente IA",
@@ -56,8 +68,8 @@ const DEFAULT_EMAIL_FLAGS: NotificationFlags = {
 };
 
 const DEFAULT_PUSH_FLAGS: NotificationFlags = {
-  human_support: false,
-  payment_review: false,
+  human_support: true,
+  payment_review: true,
   message_ai_off: true,
   message_ai_on: false,
 };
@@ -97,7 +109,12 @@ export function NotificationSettingsDialog({
   }, [fetched]);
 
   useEffect(() => {
-    if (open) fetchSettings();
+    if (open) {
+      fetchSettings();
+    } else {
+      // Permite recargar datos frescos la próxima vez que se abra el diálogo.
+      setFetched(false);
+    }
   }, [open, fetchSettings]);
 
   const handleToggle = useCallback(
@@ -112,7 +129,7 @@ export function NotificationSettingsDialog({
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ [key]: checked }),
+          body: JSON.stringify({ [key]: checked, channel }),
         });
         if (!res.ok) {
           setFlags(prev);
