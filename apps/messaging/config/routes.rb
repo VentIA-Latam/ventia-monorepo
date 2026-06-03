@@ -175,6 +175,7 @@ Rails.application.routes.draw do
         get 'no_purchase_reasons', to: 'conversations#no_purchase_reasons'
         post 'ads_summary', to: 'conversations#ads_summary'
         get 'activity_by_hour', to: 'conversations#activity_by_hour'
+        get 'conversation_distribution', to: 'conversations#conversation_distribution'
       end
 
       # Reports

@@ -23,6 +23,7 @@ from app.services.messaging_service import messaging_service
 logger = logging.getLogger(__name__)
 
 _activity_cache: TTLCache = TTLCache(maxsize=100, ttl=900)
+_distribution_cache: TTLCache = TTLCache(maxsize=100, ttl=900)  # 15 min
 
 
 class MetricsService:
@@ -410,6 +411,76 @@ class MetricsService:
         logger.info(
             f"activity_by_hour_computed: tenant_id={tenant_id} period={query.period} "
             f"max_count={result['max_count']}"
+        )
+
+        return result
+
+    async def get_conversation_distribution(
+        self,
+        tenant_id: int | None,
+        query: MetricsQuery,
+        tz_name: str = "America/Lima",
+        cross_tenant: bool = False,
+    ) -> dict:
+        start_utc, end_utc = metrics_repository._get_date_range(
+            query.period, query.start_date, query.end_date, tz_name
+        )
+
+        # Para períodos rolling, usar solo días completos (sin incluir hoy) para
+        # que el cache key sea estable durante el día. Sin esto, end_utc=now_local
+        # cambia cada microsegundo y la cache nunca hace hit. Mismo patrón que
+        # get_activity_by_hour.
+        if query.period in ("last_7_days", "last_30_days"):
+            tz = ZoneInfo(tz_name)
+            yesterday_end = (datetime.now(tz) - timedelta(days=1)).replace(
+                hour=23, minute=59, second=59, microsecond=999999
+            )
+            end_utc = yesterday_end.astimezone(timezone.utc).replace(tzinfo=None)
+
+        cache_key = (tenant_id, cross_tenant, str(start_utc), str(end_utc))
+        if cache_key in _distribution_cache:
+            logger.info(f"conversation_distribution_cache_hit: tenant_id={tenant_id}")
+            return _distribution_cache[cache_key]
+
+        effective_tenant_id = tenant_id or 1
+        messaging_result, status_code = await messaging_service.get_conversation_distribution(
+            tenant_id=effective_tenant_id,
+            start_date=start_utc.isoformat(),
+            end_date=end_utc.isoformat(),
+            cross_tenant=cross_tenant,
+        )
+
+        if status_code == 0:
+            logger.error(f"conversation_distribution_messaging_unavailable: tenant_id={tenant_id}")
+            raise RuntimeError("Messaging service unavailable")
+
+        if status_code >= 500:
+            logger.error(
+                f"conversation_distribution_messaging_error: tenant_id={tenant_id} status={status_code}"
+            )
+            raise RuntimeError(f"Messaging service error (status {status_code})")
+
+        if status_code not in (200, 201):
+            logger.error(
+                f"conversation_distribution_unexpected_status: tenant_id={tenant_id} status={status_code}"
+            )
+            raise RuntimeError(f"Unexpected status from messaging service: {status_code}")
+
+        if not messaging_result or "data" not in messaging_result:
+            logger.error(f"conversation_distribution_invalid_response: tenant_id={tenant_id}")
+            raise RuntimeError("Invalid response from messaging service")
+
+        data = messaging_result["data"]
+        result = {
+            "distribution": data.get("distribution", []),
+            "total_conversations": data.get("total_conversations", 0),
+        }
+
+        _distribution_cache[cache_key] = result
+
+        logger.info(
+            f"conversation_distribution_computed: tenant_id={tenant_id} "
+            f"total={result['total_conversations']}"
         )
 
         return result

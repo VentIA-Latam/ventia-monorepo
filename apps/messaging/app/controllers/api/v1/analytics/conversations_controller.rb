@@ -111,6 +111,24 @@ module Api
           render_success({ matrix: matrix, max_count: matrix.flatten.max || 0 })
         end
 
+        def conversation_distribution
+          start_date, end_date = parse_date_range
+          return if performed?
+
+          # cross_tenant solo es enviado por el backend Python tras verificar rol SUPERADMIN
+          scope = if params[:cross_tenant] == 'true'
+                    Conversation
+                  else
+                    current_account.conversations
+                  end
+
+          result = ::Analytics::DistributionService.new(
+            scope: scope, start_date: start_date, end_date: end_date
+          ).perform
+
+          render_success(result)
+        end
+
         private
 
         def parse_date_range

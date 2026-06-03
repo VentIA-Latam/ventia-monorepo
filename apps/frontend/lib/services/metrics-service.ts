@@ -361,6 +361,22 @@ export interface ActivityByHourResponse {
   timezone_note?: string;
 }
 
+// --- Conversation Distribution (IA / Humano / Abandonadas) ---
+
+export type DistributionCategoryKey = "agent_ai" | "human_support" | "abandoned";
+
+export interface DistributionCategory {
+  category: DistributionCategoryKey;
+  count: number;
+  percentage: number;
+  total_hours: number;
+}
+
+export interface ConversationDistributionResponse {
+  distribution: DistributionCategory[];
+  total_conversations: number;
+}
+
 export async function fetchActivityByHour(
   accessToken: string,
   query?: MetricsQuery,

@@ -785,6 +785,24 @@ class MessagingService:
             timeout=15.0,
         )
 
+    async def get_conversation_distribution(
+        self,
+        tenant_id: int,
+        start_date: str,
+        end_date: str,
+        cross_tenant: bool = False,
+    ) -> tuple[Optional[dict], int]:
+        params: dict = {"start_date": start_date, "end_date": end_date}
+        if cross_tenant:
+            params["cross_tenant"] = "true"
+        return await self._request_with_status(
+            "GET",
+            "/api/v1/analytics/conversation_distribution",
+            tenant_id,
+            params=params,
+            timeout=15.0,
+        )
+
 
 # Global service instance
 messaging_service = MessagingService()
