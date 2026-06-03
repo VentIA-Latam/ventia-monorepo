@@ -23,22 +23,12 @@ class FcmListener < BaseListener
 
     if label_titles.include?('soporte-humano')
       contact_name = conversation.contact&.name || 'Cliente'
-      send_push_to_offline_agents(
-        account, conversation,
-        'Conversación requiere soporte humano',
-        "#{contact_name} necesita atención humana",
-        flag_name: :human_support
-      )
+      NotificationDispatcher.new(account, conversation, contact_name, :human_support).perform
     end
 
     if label_titles.include?('en-revisión')
       contact_name = conversation.contact&.name || 'Cliente'
-      send_push_to_offline_agents(
-        account, conversation,
-        'Pago pendiente de validar',
-        "#{contact_name} envió un comprobante de pago",
-        flag_name: :payment_review
-      )
+      NotificationDispatcher.new(account, conversation, contact_name, :payment_review).perform
     end
   rescue StandardError => e
     Rails.logger.error "[FcmListener] Error in conversation_labels_updated: #{e.message}"

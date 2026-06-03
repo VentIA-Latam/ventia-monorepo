@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_27_000001) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_02_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -352,7 +352,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_27_000001) do
   create_table "notification_settings", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "user_id", null: false
-    t.integer "email_flags", default: 0, null: false
+    t.integer "email_flags", default: 3, null: false
     t.integer "push_flags", default: 7, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
