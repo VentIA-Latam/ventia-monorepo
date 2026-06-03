@@ -63,7 +63,10 @@ class NotificationDispatcher
   end
 
   def fetch_offline_ids
-    all_ids    = @account.account_users.pluck(:user_id).map(&:to_s)
+    # SUPERADMINs son operadores de la plataforma, no agentes del tenant.
+    # Aunque estén enrolados en cada account_user (necesario para autorización
+    # cross-tenant), no deben recibir notificaciones de soporte de cada cuenta.
+    all_ids    = @account.account_users.where.not(role: :superadmin).pluck(:user_id).map(&:to_s)
     online_ids = OnlineStatusTracker.get_available_user_ids(@account.id).map(&:to_s)
     all_ids - online_ids
   end

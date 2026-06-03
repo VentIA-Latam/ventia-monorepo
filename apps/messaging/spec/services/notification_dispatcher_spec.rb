@@ -146,6 +146,29 @@ RSpec.describe NotificationDispatcher do
       end
     end
 
+    context 'SUPERADMIN enrolado en la cuenta' do
+      let(:superadmin_user) { create(:user, email: "sa-#{SecureRandom.hex(4)}@test.com", ventia_user_id: rand(100_000..999_999)) }
+      let!(:superadmin_au)  { AccountUser.create!(account: account, user: superadmin_user, role: :superadmin) }
+
+      before do
+        set_flags(push_flags: 7, email_flags: 3)
+        PushSubscriptionToken.create!(account: account, user: superadmin_user, token: "fcm-sa-#{SecureRandom.hex(4)}")
+      end
+
+      it 'no incluye al SUPERADMIN en push (solo notifica al agente)' do
+        dispatcher.perform
+        job = enqueued_jobs.find { |j| j[:job] == Notifications::SendFcmJob }
+        expect(job[:args].first['tokens']).not_to include(a_string_starting_with('fcm-sa-'))
+      end
+
+      it 'no incluye al SUPERADMIN en email' do
+        dispatcher.perform
+        mail_job = enqueued_jobs.find { |j| j[:job].to_s.include?('MailDeliveryJob') }
+        emails_sent = mail_job[:args].last['args'].first['emails']
+        expect(emails_sent).not_to include(superadmin_user.email)
+      end
+    end
+
     context 'account sin agentes (account_users vacío)' do
       before { AccountUser.where(account: account).destroy_all }
 
