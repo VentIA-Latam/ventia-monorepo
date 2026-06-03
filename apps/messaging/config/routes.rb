@@ -176,6 +176,7 @@ Rails.application.routes.draw do
         post 'ads_summary', to: 'conversations#ads_summary'
         get 'activity_by_hour', to: 'conversations#activity_by_hour'
         get 'conversation_distribution', to: 'conversations#conversation_distribution'
+        get 'chats_started', to: 'conversations#chats_started'
       end
 
       # Reports

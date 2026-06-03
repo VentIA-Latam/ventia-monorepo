@@ -8,12 +8,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_database, require_permission_dual
+from app.core.permissions import Role
 from app.models.tenant import Tenant
 from app.models.user import User
-from app.core.permissions import Role
 from app.schemas.metrics import (
     ActivityByHourResponse,
     AdsSummaryResponse,
+    ChatsStartedResponse,
     ConversationDistributionResponse,
     ConversionRateResponse,
     DashboardMetrics,
@@ -384,4 +385,56 @@ async def get_conversation_distribution(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve conversation distribution: {e}",
+        )
+
+
+@router.get(
+    "/chats-started",
+    response_model=ChatsStartedResponse,
+    summary="Chats (conversaciones) iniciados por día",
+    tags=["metrics"],
+)
+async def get_chats_started(
+    period: PeriodType = Query("last_30_days"),
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
+    tenant_id: int | None = Query(None, description="Tenant ID (SUPERADMIN only)"),
+    inbox_id: int | None = Query(None, description="Filtrar por inbox (canal: WhatsApp, Instagram)"),
+    current_user: User = Depends(require_permission_dual("GET", "/metrics/*")),
+    db: Session = Depends(get_database),
+) -> ChatsStartedResponse:
+    """Serie diaria de chats iniciados, con filtros por tenant e inbox."""
+    try:
+        query = MetricsQuery(period=period, start_date=start_date, end_date=end_date)
+
+        cross_tenant = False
+
+        if current_user.role == Role.SUPERADMIN:
+            target_tenant = tenant_id
+            if target_tenant is None:
+                cross_tenant = True
+                tz_name = "UTC"
+            else:
+                tz_name = _get_tenant_timezone(db, target_tenant)
+        else:
+            target_tenant = current_user.tenant_id
+            tz_name = _get_tenant_timezone(db, target_tenant)
+
+        result = await metrics_service.get_chats_started(
+            tenant_id=target_tenant,
+            query=query,
+            tz_name=tz_name,
+            inbox_id=inbox_id,
+            cross_tenant=cross_tenant,
+        )
+
+        return ChatsStartedResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve chats started: {e}",
         )

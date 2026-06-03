@@ -803,6 +803,32 @@ class MessagingService:
             timeout=15.0,
         )
 
+    async def get_chats_started(
+        self,
+        tenant_id: int,
+        start_date: str,
+        end_date: str,
+        timezone: str = "America/Lima",
+        inbox_id: Optional[int] = None,
+        cross_tenant: bool = False,
+    ) -> tuple[Optional[dict], int]:
+        params: dict = {
+            "start_date": start_date,
+            "end_date": end_date,
+            "timezone": timezone,
+        }
+        if inbox_id is not None:
+            params["inbox_id"] = str(inbox_id)
+        if cross_tenant:
+            params["cross_tenant"] = "true"
+        return await self._request_with_status(
+            "GET",
+            "/api/v1/analytics/chats_started",
+            tenant_id,
+            params=params,
+            timeout=15.0,
+        )
+
 
 # Global service instance
 messaging_service = MessagingService()

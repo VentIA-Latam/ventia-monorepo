@@ -330,7 +330,7 @@ export async function fetchChatsStarted(
 - **Dropdown "Número de WhatsApp":** `Select` de shadcn poblado con `available_inboxes` de la respuesta; opción por defecto "Todos los números". Al cambiar → refetch de la serie. En cross-tenant `available_inboxes` llega `[]` → solo "Todos".
 - **Botón "Exportar CSV":** genera en cliente un `Blob` `text/csv` con cabecera `fecha,chats` + una fila por día del `results` cargado; nombre `chats-iniciados_{from}_{to}.csv`. Deshabilitado si no hay datos.
 - **Estados:** loading (spinner) / error / vacío (`total === 0` → "Sin chats en el período seleccionado"), igual que los otros widgets.
-- **Selector de tenant (solo SUPERADMIN):** se incluye, mismo patrón que `conversation-distribution-widget`/heatmap; por defecto "Todos los tenants" (cross-tenant), y al elegir un tenant se pasa `tenant_id` al fetch. Para roles no-SUPERADMIN no se renderiza.
+- **Sin selector de tenant en el frontend.** Al implementar se verificó que **ningún** widget del dashboard expone un selector de tenant; todos dependen del rol del usuario en el backend. Se mantiene esa consistencia: el backend ya entrega cross-tenant por defecto a SUPERADMIN y su-tenant a ADMIN. (El endpoint igualmente acepta `tenant_id` para uso futuro.)
 
 ### Integración en el dashboard
 

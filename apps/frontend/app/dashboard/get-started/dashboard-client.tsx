@@ -11,6 +11,7 @@ import { NoPurchaseReasonsRanking } from "@/components/dashboard/no-purchase-rea
 import { AdsSummaryWidget } from "@/components/dashboard/ads-summary-widget";
 import { ActivityHeatmapWidget } from "@/components/dashboard/activity-heatmap-widget";
 import { ConversationDistributionWidget } from "@/components/dashboard/conversation-distribution-widget";
+import { ChatsStartedWidget } from "@/components/dashboard/chats-started-widget";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -443,6 +444,14 @@ export function DashboardClient({ initialMetrics, recentOrders, topProducts, ord
       <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ActivityHeatmapWidget />
         <ConversationDistributionWidget
+          startDate={fromDate ? toLocalDateStr(fromDate) : startDate}
+          endDate={toDate ? toLocalDateStr(toDate) : endDate}
+        />
+      </motion.div>
+
+      {/* Chats iniciados por día */}
+      <motion.div variants={fadeUp}>
+        <ChatsStartedWidget
           startDate={fromDate ? toLocalDateStr(fromDate) : startDate}
           endDate={toDate ? toLocalDateStr(toDate) : endDate}
         />
