@@ -377,6 +377,26 @@ export interface ConversationDistributionResponse {
   total_conversations: number;
 }
 
+// --- Chats iniciados por día (US-AUDIT-003) ---
+
+export interface DailyChatCount {
+  date: string; // "YYYY-MM-DD" en la zona horaria del tenant
+  count: number;
+}
+
+export interface InboxOption {
+  id: number;
+  name: string;
+  channel_type: string;
+  identifier: string | null;
+}
+
+export interface ChatsStartedResponse {
+  results: DailyChatCount[];
+  total: number;
+  available_inboxes: InboxOption[];
+}
+
 export async function fetchActivityByHour(
   accessToken: string,
   query?: MetricsQuery,

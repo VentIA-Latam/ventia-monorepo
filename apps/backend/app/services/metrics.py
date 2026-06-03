@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 _activity_cache: TTLCache = TTLCache(maxsize=100, ttl=900)
 _distribution_cache: TTLCache = TTLCache(maxsize=100, ttl=900)  # 15 min
+_chats_started_cache: TTLCache = TTLCache(maxsize=100, ttl=300)  # 5 min (AC US-AUDIT-003)
 
 
 class MetricsService:
@@ -481,6 +482,84 @@ class MetricsService:
         logger.info(
             f"conversation_distribution_computed: tenant_id={tenant_id} "
             f"total={result['total_conversations']}"
+        )
+
+        return result
+
+    async def get_chats_started(
+        self,
+        tenant_id: int | None,
+        query: MetricsQuery,
+        tz_name: str = "America/Lima",
+        inbox_id: int | None = None,
+        cross_tenant: bool = False,
+    ) -> dict:
+        start_utc, end_utc = metrics_repository._get_date_range(
+            query.period, query.start_date, query.end_date, tz_name
+        )
+
+        # Para períodos rolling, usar solo días completos (sin incluir hoy) para
+        # que el cache key sea estable durante el día. Sin esto, end_utc=now_local
+        # cambia cada microsegundo y la cache nunca hace hit. Mismo patrón que
+        # get_activity_by_hour y get_conversation_distribution.
+        if query.period in ("last_7_days", "last_30_days"):
+            tz = ZoneInfo(tz_name)
+            yesterday_end = (datetime.now(tz) - timedelta(days=1)).replace(
+                hour=23, minute=59, second=59, microsecond=999999
+            )
+            end_utc = yesterday_end.astimezone(timezone.utc).replace(tzinfo=None)
+
+        # tz_name forma parte de la key: la salida son días en zona local, así que
+        # un cambio de timezone del tenant debe invalidar la entrada cacheada.
+        cache_key = (tenant_id, cross_tenant, inbox_id, tz_name, str(start_utc), str(end_utc))
+        if cache_key in _chats_started_cache:
+            logger.info(f"chats_started_cache_hit: tenant_id={tenant_id}")
+            return _chats_started_cache[cache_key]
+
+        effective_tenant_id = tenant_id or 1
+        # _get_date_range devuelve UTC *naive*; se marca como UTC-aware antes de
+        # serializar para que Rails (Time.iso8601) no lo interprete como hora local
+        # del contenedor si TZ != UTC.
+        messaging_result, status_code = await messaging_service.get_chats_started(
+            tenant_id=effective_tenant_id,
+            start_date=start_utc.replace(tzinfo=timezone.utc).isoformat(),
+            end_date=end_utc.replace(tzinfo=timezone.utc).isoformat(),
+            timezone="UTC" if cross_tenant else tz_name,
+            inbox_id=inbox_id,
+            cross_tenant=cross_tenant,
+        )
+
+        if status_code == 0:
+            logger.error(f"chats_started_messaging_unavailable: tenant_id={tenant_id}")
+            raise RuntimeError("Messaging service unavailable")
+
+        if status_code >= 500:
+            logger.error(
+                f"chats_started_messaging_error: tenant_id={tenant_id} status={status_code}"
+            )
+            raise RuntimeError(f"Messaging service error (status {status_code})")
+
+        if status_code not in (200, 201):
+            logger.error(
+                f"chats_started_unexpected_status: tenant_id={tenant_id} status={status_code}"
+            )
+            raise RuntimeError(f"Unexpected status from messaging service: {status_code}")
+
+        if not messaging_result or "data" not in messaging_result:
+            logger.error(f"chats_started_invalid_response: tenant_id={tenant_id}")
+            raise RuntimeError("Invalid response from messaging service")
+
+        data = messaging_result["data"]
+        result = {
+            "results": data.get("results", []),
+            "total": data.get("total", 0),
+            "available_inboxes": data.get("available_inboxes", []),
+        }
+
+        _chats_started_cache[cache_key] = result
+
+        logger.info(
+            f"chats_started_computed: tenant_id={tenant_id} total={result['total']}"
         )
 
         return result

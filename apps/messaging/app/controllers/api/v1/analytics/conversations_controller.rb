@@ -90,6 +90,9 @@ module Api
                     current_account.messages.where(created_at: start_date..end_date)
                   end
 
+          # created_at es `timestamp without time zone` almacenado en UTC: conversión
+          # doble (interpretar como UTC y llevar a la tz local) para que DOW/HORA
+          # cuadren con el día/hora local del negocio. Mismo patrón que chats_started.
           tz_quoted = ActiveRecord::Base.connection.quote(tz)
           # `messages.created_at` es `timestamp without time zone` con valor en UTC
           # (convención Rails). Para extraer DOW/HOUR en la tz del tenant, primero
@@ -124,6 +127,38 @@ module Api
 
           result = ::Analytics::DistributionService.new(
             scope: scope, start_date: start_date, end_date: end_date
+          ).perform
+
+          render_success(result)
+        end
+
+        # GET /api/v1/analytics/chats_started
+        # Cuenta chats (conversaciones) iniciados por día en el rango.
+        # Params: start_date, end_date (ISO 8601), timezone, inbox_id, cross_tenant
+        # Respuesta: { success: true,
+        #   data: { results: [{ date:, count: }], total:, available_inboxes: } }
+        def chats_started
+          start_date, end_date = parse_date_range
+          return if performed?
+
+          tz = params[:timezone].presence || 'America/Lima'
+          begin
+            TZInfo::Timezone.get(tz)
+          rescue TZInfo::InvalidTimezoneIdentifier
+            return render_error('Invalid timezone identifier', status: :bad_request)
+          end
+
+          # cross_tenant solo es enviado por el backend Python tras verificar rol SUPERADMIN
+          cross = params[:cross_tenant] == 'true'
+          scope = cross ? Conversation : current_account.conversations
+
+          result = ::Analytics::ChatsStartedService.new(
+            scope: scope,
+            account: cross ? nil : current_account,
+            start_date: start_date,
+            end_date: end_date,
+            timezone: cross ? 'UTC' : tz,
+            inbox_id: params[:inbox_id].presence
           ).perform
 
           render_success(result)
