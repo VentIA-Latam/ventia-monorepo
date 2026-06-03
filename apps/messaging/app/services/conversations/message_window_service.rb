@@ -17,6 +17,8 @@ class Conversations::MessageWindowService
     case @conversation.inbox.channel_type
     when 'Channel::Whatsapp'
       MESSAGING_WINDOW_24_HOURS
+    when 'Channel::Instagram'
+      MESSAGING_WINDOW_24_HOURS
     end
   end
 
