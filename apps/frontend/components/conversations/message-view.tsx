@@ -799,7 +799,11 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
       {conversation.can_reply === false && (
         <div className="flex items-center gap-2 px-4 py-2.5 bg-warning-bg border-t border-warning/30 text-warning text-sm">
           <AlertTriangle className="h-4 w-4 shrink-0" />
-          <p className="flex-1">La ventana de 24 horas ha expirado. Solo puedes enviar plantillas de WhatsApp.</p>
+          <p className="flex-1">
+            {conversation.inbox?.channel_type === "Channel::Whatsapp"
+              ? "La ventana de 24 horas ha expirado. Solo puedes enviar plantillas de WhatsApp."
+              : "La ventana de 24 horas ha expirado. No es posible responder en este momento."}
+          </p>
         </div>
       )}
 
