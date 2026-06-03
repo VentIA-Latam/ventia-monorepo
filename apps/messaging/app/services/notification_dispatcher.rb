@@ -1,22 +1,35 @@
 class NotificationDispatcher
   PUSH_TITLES = {
     human_support:  'Conversación requiere soporte humano',
-    payment_review: 'Pago pendiente de validar'
+    payment_review: 'Pago pendiente de validar',
+    message_ai_on:  'Nuevo mensaje',
+    message_ai_off: 'Nuevo mensaje'
   }.freeze
 
-  def initialize(account, conversation, contact_name, flag_name)
+  # Detalle textual fijo para los flags de etiqueta. Para los flags de mensaje
+  # el detalle se toma dinámicamente del propio `message` (ver #push_body).
+  PUSH_DETAILS = {
+    human_support:  'necesita atención humana',
+    payment_review: 'envió un comprobante de pago'
+  }.freeze
+
+  # Solo estos flags soportan canal email. Los flags de mensaje son push-only
+  # por decisión de producto (evitar saturar inbox con cada mensaje entrante).
+  EMAIL_FLAGS = %i[human_support payment_review].freeze
+
+  def initialize(account, conversation, contact_name, flag_name, message: nil)
+    unless PUSH_TITLES.key?(flag_name)
+      raise ArgumentError, "[NotificationDispatcher] flag_name no soportado: #{flag_name.inspect}"
+    end
+
     @account      = account
     @conversation = conversation
     @contact_name = contact_name
     @flag_name    = flag_name
+    @message      = message
   end
 
   def perform
-    unless PUSH_TITLES.key?(@flag_name)
-      Rails.logger.error "[NotificationDispatcher] flag_name no soportado: #{@flag_name.inspect}"
-      return
-    end
-
     offline_ids = fetch_offline_ids
     return if offline_ids.blank?
 
@@ -38,6 +51,15 @@ class NotificationDispatcher
     Rails.logger.error "[NotificationDispatcher] Error en #{channel} " \
                        "(account_id=#{@account.id}, conversation_id=#{@conversation.id}, " \
                        "flag=#{@flag_name}): #{e.message}"
+
+    return unless defined?(Sentry) && Sentry.initialized?
+
+    Sentry.capture_exception(e, extra: {
+      account_id:      @account.id,
+      conversation_id: @conversation.id,
+      flag:            @flag_name,
+      channel:         channel
+    })
   end
 
   def fetch_offline_ids
@@ -47,7 +69,11 @@ class NotificationDispatcher
   end
 
   def push_enabled?(setting) = setting.nil? || setting.push_enabled?(@flag_name)
-  def email_enabled?(setting) = setting.nil? || setting.email_enabled?(@flag_name)
+
+  def email_enabled?(setting)
+    return false unless EMAIL_FLAGS.include?(@flag_name)
+    setting.nil? || setting.email_enabled?(@flag_name)
+  end
 
   def dispatch_push(eligible_ids)
     return if eligible_ids.blank?
@@ -60,7 +86,7 @@ class NotificationDispatcher
     Notifications::SendFcmJob.perform_later(
       tokens: tokens,
       title:  PUSH_TITLES[@flag_name],
-      body:   "#{@contact_name}: #{push_body}",
+      body:   push_body,
       data: {
         conversation_id: @conversation.id.to_s,
         account_id:      @account.id.to_s,
@@ -72,7 +98,10 @@ class NotificationDispatcher
   def dispatch_email(eligible_ids)
     return if eligible_ids.blank?
 
+    # Filtramos formato válido antes del envío para que una dirección malformada
+    # en DB no haga rechazar todo el batch de BCC en Resend.
     emails = User.where(id: eligible_ids).pluck(:email).compact
+    emails = emails.select { |e| e =~ URI::MailTo::EMAIL_REGEXP }
     return if emails.blank?
 
     channel_name = @conversation.inbox&.channel_type&.split('::')&.last
@@ -88,7 +117,8 @@ class NotificationDispatcher
   end
 
   def push_body
-    @flag_name == :human_support ? 'necesita atención humana' : 'envió un comprobante de pago'
+    detail = PUSH_DETAILS[@flag_name] || @message&.content&.truncate(100).to_s
+    "#{@contact_name}: #{detail}"
   end
 
   def conversation_url

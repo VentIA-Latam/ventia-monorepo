@@ -1,6 +1,8 @@
 class NotificationMailer < ApplicationMailer
   default from: "VentIA - Notificaciones <#{ENV.fetch('RESEND_FROM_EMAIL', 'noreply@ventia.pe')}>"
 
+  # BCC para evitar exponer la lista de agentes destinatarios entre sí.
+  # `to:` lleva la dirección noreply como placeholder visible.
   def human_support(emails:, contact_name:, conversation_url:, account_name:, channel_name: nil)
     @contact_name = sanitize_name(contact_name)
     @conversation_url = safe_url(conversation_url)
@@ -8,7 +10,8 @@ class NotificationMailer < ApplicationMailer
     @channel_name = format_channel(channel_name)
 
     mail(
-      to: emails,
+      to: noreply_address,
+      bcc: emails,
       subject: "[VentIA] #{@contact_name} necesita atención humana"
     )
   end
@@ -20,12 +23,17 @@ class NotificationMailer < ApplicationMailer
     @channel_name = format_channel(channel_name)
 
     mail(
-      to: emails,
+      to: noreply_address,
+      bcc: emails,
       subject: "[VentIA] #{@contact_name} envió un comprobante de pago"
     )
   end
 
   private
+
+  def noreply_address
+    ENV.fetch('RESEND_FROM_EMAIL', 'noreply@ventia.pe')
+  end
 
   def sanitize_name(name)
     name.to_s.gsub(/[\r\n]/, ' ').strip

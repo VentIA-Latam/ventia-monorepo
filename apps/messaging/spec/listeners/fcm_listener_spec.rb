@@ -9,6 +9,73 @@ RSpec.describe FcmListener do
 
   let(:listener) { described_class.instance }
 
+  describe '#message_created' do
+    let(:inbox) { create(:inbox, account: account) }
+    let(:incoming_message) do
+      conversation.update!(inbox: inbox)
+      conversation.messages.create!(
+        account: account, inbox: inbox, sender: contact,
+        message_type: :incoming, content: 'hola'
+      )
+    end
+    let(:event) { { data: { message: incoming_message } } }
+
+    context 'when conversation has AI agent enabled' do
+      before { conversation.update!(ai_agent_enabled: true) }
+
+      it 'delegates to NotificationDispatcher with :message_ai_on and the message' do
+        dispatcher_double = instance_double(NotificationDispatcher)
+        expect(NotificationDispatcher).to receive(:new)
+          .with(account, conversation, 'Juan Pérez', :message_ai_on, message: incoming_message)
+          .and_return(dispatcher_double)
+        expect(dispatcher_double).to receive(:perform)
+
+        listener.message_created(event)
+      end
+    end
+
+    context 'when conversation has AI agent disabled' do
+      before { conversation.update!(ai_agent_enabled: false) }
+
+      it 'delegates to NotificationDispatcher with :message_ai_off and the message' do
+        dispatcher_double = instance_double(NotificationDispatcher)
+        expect(NotificationDispatcher).to receive(:new)
+          .with(account, conversation, 'Juan Pérez', :message_ai_off, message: incoming_message)
+          .and_return(dispatcher_double)
+        expect(dispatcher_double).to receive(:perform)
+
+        listener.message_created(event)
+      end
+    end
+
+    context 'when the message is outgoing' do
+      let(:outgoing_message) do
+        conversation.update!(inbox: inbox)
+        conversation.messages.create!(
+          account: account, inbox: inbox, sender: contact,
+          message_type: :outgoing, content: 'respuesta'
+        )
+      end
+      let(:event) { { data: { message: outgoing_message } } }
+
+      it 'does not instantiate NotificationDispatcher' do
+        expect(NotificationDispatcher).not_to receive(:new)
+        listener.message_created(event)
+      end
+    end
+
+    context 'when NotificationDispatcher raises' do
+      before do
+        conversation.update!(ai_agent_enabled: true)
+        allow_any_instance_of(NotificationDispatcher).to receive(:perform).and_raise(RuntimeError, 'boom')
+      end
+
+      it 'rescues the error and does not propagate it' do
+        expect { listener.message_created(event) }.not_to raise_error
+      end
+    end
+  end
+
   describe '#conversation_labels_updated' do
     context 'when label soporte-humano is added' do
       let(:event) do

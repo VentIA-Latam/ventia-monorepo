@@ -12,8 +12,12 @@ RSpec.describe NotificationMailer, type: :mailer do
       )
     end
 
-    it 'sends to the correct recipients' do
-      expect(mail.to).to eq(['agent@test.com'])
+    it 'sends to the noreply address (recipients go in bcc)' do
+      expect(mail.to).to eq([ENV.fetch('RESEND_FROM_EMAIL', 'noreply@ventia.pe')])
+    end
+
+    it 'puts the actual recipients in bcc to keep them hidden from each other' do
+      expect(mail.bcc).to eq(['agent@test.com'])
     end
 
     it 'sets the correct subject' do
@@ -59,14 +63,15 @@ RSpec.describe NotificationMailer, type: :mailer do
       expect(mail.body.encoded).to include('ventia-logo-primary.png')
     end
 
-    it 'sends to multiple recipients' do
+    it 'sends to multiple recipients via bcc' do
       multi_mail = NotificationMailer.human_support(
         emails: ['agent1@test.com', 'agent2@test.com'],
         contact_name: 'Test',
         conversation_url: 'https://example.com',
         account_name: 'Test'
       )
-      expect(multi_mail.to).to eq(['agent1@test.com', 'agent2@test.com'])
+      expect(multi_mail.to).to eq([ENV.fetch('RESEND_FROM_EMAIL', 'noreply@ventia.pe')])
+      expect(multi_mail.bcc).to eq(['agent1@test.com', 'agent2@test.com'])
     end
 
     it 'sanitizes CRLF in contact_name to prevent header injection' do
@@ -102,8 +107,12 @@ RSpec.describe NotificationMailer, type: :mailer do
       )
     end
 
-    it 'sends to the correct recipients' do
-      expect(mail.to).to eq(['agent@test.com'])
+    it 'sends to the noreply address (recipients go in bcc)' do
+      expect(mail.to).to eq([ENV.fetch('RESEND_FROM_EMAIL', 'noreply@ventia.pe')])
+    end
+
+    it 'puts the actual recipients in bcc to keep them hidden from each other' do
+      expect(mail.bcc).to eq(['agent@test.com'])
     end
 
     it 'sets the correct subject' do

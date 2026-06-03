@@ -120,6 +120,17 @@ RSpec.describe NotificationDispatcher do
       end
     end
 
+    context 'email-eligible con dirección malformada en DB' do
+      before do
+        set_flags(push_flags: 0, email_flags: 3)
+        user.update_columns(email: 'no-es-un-email-valido')
+      end
+
+      it 'no encola mailer cuando el único email es inválido' do
+        expect { dispatcher.perform }.not_to have_enqueued_mail(NotificationMailer)
+      end
+    end
+
     context 'push-eligible sin tokens FCM' do
       before do
         set_flags(push_flags: 7, email_flags: 3)
@@ -156,12 +167,43 @@ RSpec.describe NotificationDispatcher do
     end
 
     context 'flag_name no soportado' do
-      before { set_flags(push_flags: 7, email_flags: 3) }
+      it 'raises ArgumentError en el constructor (fail fast)' do
+        expect {
+          described_class.new(account, conversation, 'Ana Torres', :flag_inexistente)
+        }.to raise_error(ArgumentError, /flag_name no soportado/)
+      end
+    end
 
-      it 'no encola push ni email' do
-        bad = described_class.new(account, conversation, 'Ana Torres', :message_ai_off)
-        expect { bad.perform }.not_to have_enqueued_job(Notifications::SendFcmJob)
-        expect { bad.perform }.not_to have_enqueued_mail(NotificationMailer)
+    context 'cuando dispatch_push lanza una excepción' do
+      before do
+        set_flags(push_flags: 7, email_flags: 3)
+        allow(Notifications::SendFcmJob).to receive(:perform_later).and_raise(RuntimeError, 'boom')
+      end
+
+      it 'sigue intentando email (el rescue del canal no detiene el otro)' do
+        expect { dispatcher.perform }.to have_enqueued_mail(NotificationMailer, :human_support)
+      end
+
+      it 'reporta a Sentry con extras estructurados cuando Sentry está inicializado' do
+        stub_const('Sentry', class_double('Sentry'))
+        allow(Sentry).to receive(:initialized?).and_return(true)
+
+        expect(Sentry).to receive(:capture_exception).with(
+          instance_of(RuntimeError),
+          extra: hash_including(
+            account_id:      account.id,
+            conversation_id: conversation.id,
+            flag:            :human_support,
+            channel:         'push'
+          )
+        )
+
+        dispatcher.perform
+      end
+
+      it 'no falla si Sentry no está disponible' do
+        hide_const('Sentry')
+        expect { dispatcher.perform }.not_to raise_error
       end
     end
   end
@@ -179,6 +221,83 @@ RSpec.describe NotificationDispatcher do
       it 'encola NotificationMailer#payment_review' do
         expect { dispatcher(:payment_review).perform }
           .to have_enqueued_mail(NotificationMailer, :payment_review)
+      end
+    end
+  end
+
+  describe '#perform — flags de mensaje (push-only)' do
+    let(:inbox)   { create(:inbox, account: account) }
+    let(:message) do
+      conversation.update!(inbox: inbox)
+      conversation.messages.create!(
+        account: account, inbox: inbox, sender: contact,
+        message_type: :incoming, content: 'Hola, necesito ayuda con mi pedido'
+      )
+    end
+
+    def dispatcher_for_message(flag)
+      described_class.new(account, conversation, 'Ana Torres', flag, message: message)
+    end
+
+    context ':message_ai_on con push habilitado' do
+      before { set_flags(push_flags: 8, email_flags: 3) }
+
+      it 'encola SendFcmJob con título "Nuevo mensaje" y body desde el contenido' do
+        dispatcher_for_message(:message_ai_on).perform
+        job = enqueued_jobs.find { |j| j[:job] == Notifications::SendFcmJob }
+        expect(job[:args].first['title']).to eq('Nuevo mensaje')
+        expect(job[:args].first['body']).to eq('Ana Torres: Hola, necesito ayuda con mi pedido')
+      end
+
+      it 'no intenta enviar email aunque email_flags lo permita (flag push-only)' do
+        expect { dispatcher_for_message(:message_ai_on).perform }
+          .not_to have_enqueued_mail(NotificationMailer)
+      end
+    end
+
+    context ':message_ai_off con push habilitado (default)' do
+      before { set_flags(push_flags: 4, email_flags: 3) }
+
+      it 'encola SendFcmJob' do
+        expect { dispatcher_for_message(:message_ai_off).perform }
+          .to have_enqueued_job(Notifications::SendFcmJob)
+      end
+
+      it 'no intenta enviar email' do
+        expect { dispatcher_for_message(:message_ai_off).perform }
+          .not_to have_enqueued_mail(NotificationMailer)
+      end
+    end
+
+    context 'mensaje con contenido muy largo' do
+      let(:long_content) { 'a' * 250 }
+      let(:long_message) do
+        conversation.update!(inbox: inbox)
+        conversation.messages.create!(
+          account: account, inbox: inbox, sender: contact,
+          message_type: :incoming, content: long_content
+        )
+      end
+
+      before { set_flags(push_flags: 8, email_flags: 0) }
+
+      it 'trunca el body a 100 caracteres' do
+        described_class.new(account, conversation, 'Ana Torres', :message_ai_on, message: long_message).perform
+        job = enqueued_jobs.find { |j| j[:job] == Notifications::SendFcmJob }
+        # 100 chars del content + 3 del ellipsis de truncate(100) = 100
+        expect(job[:args].first['body']).to start_with('Ana Torres: ')
+        expect(job[:args].first['body'].length).to be <= ('Ana Torres: '.length + 100)
+      end
+    end
+
+    context 'flag de mensaje sin message:' do
+      before { set_flags(push_flags: 8, email_flags: 0) }
+
+      it 'no rompe, manda body vacío después del contact_name' do
+        no_msg = described_class.new(account, conversation, 'Ana Torres', :message_ai_on)
+        expect { no_msg.perform }.not_to raise_error
+        job = enqueued_jobs.find { |j| j[:job] == Notifications::SendFcmJob }
+        expect(job[:args].first['body']).to eq('Ana Torres: ')
       end
     end
   end
