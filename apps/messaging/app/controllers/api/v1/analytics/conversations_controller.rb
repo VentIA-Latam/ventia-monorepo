@@ -91,9 +91,16 @@ module Api
                   end
 
           tz_quoted = ActiveRecord::Base.connection.quote(tz)
+          # `messages.created_at` es `timestamp without time zone` con valor en UTC
+          # (convención Rails). Para extraer DOW/HOUR en la tz del tenant, primero
+          # marcamos el timestamp como UTC y después convertimos a la tz local.
+          # Sin el `AT TIME ZONE 'UTC'` previo, Postgres asume que el naive está
+          # en la tz local y lo convierte a UTC, dando un desfase de 2× el offset.
+          dow_expr  = "EXTRACT(DOW  FROM (messages.created_at AT TIME ZONE 'UTC') AT TIME ZONE #{tz_quoted})"
+          hour_expr = "EXTRACT(HOUR FROM (messages.created_at AT TIME ZONE 'UTC') AT TIME ZONE #{tz_quoted})"
           counts = scope
-                   .group(Arel.sql("EXTRACT(DOW FROM messages.created_at AT TIME ZONE #{tz_quoted})"))
-                   .group(Arel.sql("EXTRACT(HOUR FROM messages.created_at AT TIME ZONE #{tz_quoted})"))
+                   .group(Arel.sql(dow_expr))
+                   .group(Arel.sql(hour_expr))
                    .count
 
           matrix = Array.new(7) { Array.new(24, 0) }
