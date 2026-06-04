@@ -55,6 +55,13 @@ export const fetchInboxes = cache(async (accessToken: string) => {
   return fetchWithAuth<unknown[]>("/inboxes", accessToken);
 });
 
+export const fetchInboxTemplates = cache(async (accessToken: string, inboxId: number) => {
+  return fetchWithAuth<{ success: boolean; data: unknown[] }>(
+    `/inboxes/${inboxId}/templates`,
+    accessToken
+  );
+});
+
 export const fetchLabels = cache(async (accessToken: string) => {
   return fetchWithAuth<{ success: boolean; data: unknown[] }>("/labels", accessToken);
 });
