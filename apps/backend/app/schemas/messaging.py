@@ -300,6 +300,62 @@ class SendByPhoneResponse(BaseModel):
     message: Optional[str] = None
 
 
+# === Campaigns (Módulo 6) ===
+
+class CampaignVariableMapping(BaseModel):
+    """Mapping de una variable {{N}} a su fuente."""
+    source: str = Field(..., description="csv_column | contact_attribute")
+    key: Optional[str] = Field(None, description="Nombre de la columna CSV (cuando source=csv_column)")
+    path: Optional[str] = Field(None, description="Path dot-separated (cuando source=contact_attribute)")
+
+
+class CampaignTemplateParams(BaseModel):
+    name: str
+    language: str
+    variables: dict[str, CampaignVariableMapping] = Field(default_factory=dict)
+
+
+class CampaignCreate(BaseModel):
+    title: str
+    inbox_id: int
+    template_params: Optional[CampaignTemplateParams] = None
+    header_media_url: Optional[str] = None
+    enabled: Optional[bool] = True
+
+
+class CampaignUpdate(BaseModel):
+    title: Optional[str] = None
+    template_params: Optional[CampaignTemplateParams] = None
+    header_media_url: Optional[str] = None
+    enabled: Optional[bool] = None
+
+
+class CampaignLabelsAudienceRequest(BaseModel):
+    label_ids: list[int]
+
+
+class CampaignTriggerRequest(BaseModel):
+    scheduled_at: Optional[str] = Field(None, description="ISO8601; si futuro, programa; si nil/pasado, dispara ahora")
+
+
+class CampaignDetailResponse(BaseModel):
+    success: bool
+    data: dict
+    message: Optional[str] = None
+
+
+class CampaignRecipientsResponse(BaseModel):
+    success: bool
+    data: list[dict]
+    meta: Optional[dict] = None
+
+
+class CampaignCsvUploadResponse(BaseModel):
+    success: bool
+    data: dict  # { recipients_count, columns, phone_column, skipped_rows }
+    message: Optional[str] = None
+
+
 class AssignConversationRequest(BaseModel):
     assignee_id: Optional[str] = None
     team_id: Optional[str] = None

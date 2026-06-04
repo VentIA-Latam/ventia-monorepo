@@ -29,6 +29,13 @@ from app.schemas.messaging import (
     NotificationSettingsResponse,
     NotificationsResponse,
     PushTokenRequest,
+    CampaignCreate,
+    CampaignCsvUploadResponse,
+    CampaignDetailResponse,
+    CampaignLabelsAudienceRequest,
+    CampaignRecipientsResponse,
+    CampaignTriggerRequest,
+    CampaignUpdate,
     SendByPhoneRequest,
     SendByPhoneResponse,
     SendMessageRequest,
@@ -2053,6 +2060,214 @@ async def update_notification_settings(
     tenant_id = _resolve_tenant_id(current_user, tenant_id)
     result = await messaging_service.update_notification_settings(
         tenant_id, str(current_user.id), payload.model_dump(exclude_none=True)
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+# --- Campaigns (Módulo 6) ---
+
+@router.get("/campaigns", tags=["messaging", "campaigns"])
+async def list_campaigns(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.list_campaigns(tenant_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.post(
+    "/campaigns",
+    response_model=CampaignDetailResponse,
+    status_code=201,
+    tags=["messaging", "campaigns"],
+    responses={422: {"model": MessagingError}, 503: {"model": MessagingError}},
+)
+async def create_campaign(
+    payload: CampaignCreate,
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.create_campaign(
+        tenant_id, payload.model_dump(exclude_none=True)
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.get(
+    "/campaigns/{campaign_id}",
+    response_model=CampaignDetailResponse,
+    tags=["messaging", "campaigns"],
+)
+async def get_campaign(
+    campaign_id: int,
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.get_campaign(tenant_id, campaign_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.patch(
+    "/campaigns/{campaign_id}",
+    response_model=CampaignDetailResponse,
+    tags=["messaging", "campaigns"],
+)
+async def update_campaign(
+    campaign_id: int,
+    payload: CampaignUpdate,
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("PATCH", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.update_campaign(
+        tenant_id, campaign_id, payload.model_dump(exclude_none=True)
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.delete("/campaigns/{campaign_id}", tags=["messaging", "campaigns"])
+async def delete_campaign(
+    campaign_id: int,
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("DELETE", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.delete_campaign(tenant_id, campaign_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.post(
+    "/campaigns/{campaign_id}/audience/csv",
+    response_model=CampaignCsvUploadResponse,
+    status_code=201,
+    tags=["messaging", "campaigns"],
+)
+async def upload_campaign_csv(
+    campaign_id: int,
+    file: UploadFile = File(..., description="CSV audiencia (max 5MB)"),
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.upload_campaign_csv(tenant_id, campaign_id, file)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.post(
+    "/campaigns/{campaign_id}/audience/labels",
+    response_model=CampaignDetailResponse,
+    status_code=201,
+    tags=["messaging", "campaigns"],
+)
+async def set_campaign_labels_audience(
+    campaign_id: int,
+    payload: CampaignLabelsAudienceRequest,
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.set_campaign_labels_audience(
+        tenant_id, campaign_id, payload.label_ids
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.get("/campaigns/{campaign_id}/preview", tags=["messaging", "campaigns"])
+async def preview_campaign(
+    campaign_id: int,
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.preview_campaign(tenant_id, campaign_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.post("/campaigns/{campaign_id}/trigger", tags=["messaging", "campaigns"])
+async def trigger_campaign(
+    campaign_id: int,
+    payload: CampaignTriggerRequest | None = None,
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    scheduled_at = payload.scheduled_at if payload else None
+    result = await messaging_service.trigger_campaign(tenant_id, campaign_id, scheduled_at)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.post("/campaigns/{campaign_id}/retry-failed", tags=["messaging", "campaigns"])
+async def retry_failed_campaign(
+    campaign_id: int,
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.retry_failed_campaign(tenant_id, campaign_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.get(
+    "/campaigns/{campaign_id}/recipients",
+    response_model=CampaignRecipientsResponse,
+    tags=["messaging", "campaigns"],
+)
+async def list_campaign_recipients(
+    campaign_id: int,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(25, ge=1, le=100),
+    status: str | None = Query(None, description="csv: failed,omitted,sent"),
+    search: str | None = Query(None),
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.list_campaign_recipients(
+        tenant_id, campaign_id, page, per_page, status, search
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.delete(
+    "/campaigns/{campaign_id}/recipients/{recipient_id}",
+    tags=["messaging", "campaigns"],
+)
+async def delete_campaign_recipient(
+    campaign_id: int,
+    recipient_id: int,
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("DELETE", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.delete_campaign_recipient(
+        tenant_id, campaign_id, recipient_id
     )
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")

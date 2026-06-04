@@ -398,6 +398,130 @@ class MessagingService:
             json_data=payload,
         )
 
+    # --- Campaigns (Módulo 6) ---
+
+    async def create_campaign(self, tenant_id: int, payload: dict) -> Optional[dict]:
+        """Create a campaign in :draft. Frontend then uploads CSV/labels and configures vars."""
+        return await self._request(
+            "POST", "/api/v1/campaigns", tenant_id, json_data={"campaign": payload}
+        )
+
+    async def update_campaign(
+        self, tenant_id: int, campaign_id: int, payload: dict
+    ) -> Optional[dict]:
+        """Update campaign (only allowed in :draft)."""
+        return await self._request(
+            "PATCH",
+            f"/api/v1/campaigns/{campaign_id}",
+            tenant_id,
+            json_data={"campaign": payload},
+        )
+
+    async def get_campaign(self, tenant_id: int, campaign_id: int) -> Optional[dict]:
+        """Get campaign detail (includes stats)."""
+        return await self._request("GET", f"/api/v1/campaigns/{campaign_id}", tenant_id)
+
+    async def list_campaigns(self, tenant_id: int) -> Optional[dict]:
+        return await self._request("GET", "/api/v1/campaigns", tenant_id)
+
+    async def delete_campaign(self, tenant_id: int, campaign_id: int) -> Optional[dict]:
+        return await self._request(
+            "DELETE", f"/api/v1/campaigns/{campaign_id}", tenant_id
+        )
+
+    async def upload_campaign_csv(
+        self,
+        tenant_id: int,
+        campaign_id: int,
+        file: Any,
+    ) -> Optional[dict]:
+        """Multipart upload del CSV de audiencia (espejo de send_message_with_file)."""
+        url = f"{self.base_url}/api/v1/campaigns/{campaign_id}/audience/csv"
+        headers: dict[str, str] = {"X-Tenant-Id": str(tenant_id)}
+        if self.api_key:
+            headers["X-API-Key"] = self.api_key
+
+        try:
+            file_content = await file.read()
+            files = {"file": (file.filename, file_content, file.content_type or "text/csv")}
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(url, headers=headers, files=files)
+            if response.status_code in (200, 201):
+                return response.json()
+            logger.error(
+                f"Messaging CSV upload error: POST {url} -> {response.status_code} - {response.text[:500]}"
+            )
+            return None
+        except httpx.RequestError as e:
+            logger.error(f"Messaging CSV upload request failed: {e}")
+            return None
+
+    async def set_campaign_labels_audience(
+        self, tenant_id: int, campaign_id: int, label_ids: list[int]
+    ) -> Optional[dict]:
+        return await self._request(
+            "POST",
+            f"/api/v1/campaigns/{campaign_id}/audience/labels",
+            tenant_id,
+            json_data={"label_ids": label_ids},
+        )
+
+    async def preview_campaign(self, tenant_id: int, campaign_id: int) -> Optional[dict]:
+        return await self._request(
+            "GET", f"/api/v1/campaigns/{campaign_id}/preview", tenant_id
+        )
+
+    async def trigger_campaign(
+        self, tenant_id: int, campaign_id: int, scheduled_at: Optional[str] = None
+    ) -> Optional[dict]:
+        payload = {"scheduled_at": scheduled_at} if scheduled_at else {}
+        return await self._request(
+            "POST",
+            f"/api/v1/campaigns/{campaign_id}/trigger",
+            tenant_id,
+            json_data=payload,
+        )
+
+    async def retry_failed_campaign(
+        self, tenant_id: int, campaign_id: int
+    ) -> Optional[dict]:
+        return await self._request(
+            "POST",
+            f"/api/v1/campaigns/{campaign_id}/retry-failed",
+            tenant_id,
+            json_data={},
+        )
+
+    async def list_campaign_recipients(
+        self,
+        tenant_id: int,
+        campaign_id: int,
+        page: int = 1,
+        per_page: int = 25,
+        status: Optional[str] = None,
+        search: Optional[str] = None,
+    ) -> Optional[dict]:
+        params: dict[str, Any] = {"page": page, "per_page": per_page}
+        if status:
+            params["status"] = status
+        if search:
+            params["search"] = search
+        return await self._request(
+            "GET",
+            f"/api/v1/campaigns/{campaign_id}/recipients",
+            tenant_id,
+            params=params,
+        )
+
+    async def delete_campaign_recipient(
+        self, tenant_id: int, campaign_id: int, recipient_id: int
+    ) -> Optional[dict]:
+        return await self._request(
+            "DELETE",
+            f"/api/v1/campaigns/{campaign_id}/recipients/{recipient_id}",
+            tenant_id,
+        )
+
     async def send_message_with_file(
         self,
         tenant_id: int,
