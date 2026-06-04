@@ -140,27 +140,31 @@ class Conversations::EnsureFromPhoneService
       language:         tp[:language],
       processed_params: tp[:processed_params]&.to_h
     ).build
+    # build devuelve { content:, message_type: :template, additional_attributes: }
+    # Mantenemos message_type :template — Base::SendOnChannelService#outgoing_message?
+    # acepta tanto :outgoing como :template.
 
     Message.create!(
       built.merge(
         account:      @account,
         inbox:        @inbox,
-        conversation: conversation,
-        message_type: :outgoing
+        conversation: conversation
       )
     )
   end
 
-  def send_via_whatsapp(conversation, message)
-    Whatsapp::SendOnWhatsappService.new(
-      conversation: conversation,
-      message:      message
-    ).perform
+  def send_via_whatsapp(_conversation, message)
+    # Base::SendOnChannelService.new(message:) — la conversación se deriva via
+    # delegate :conversation, to: :message. NO pasar `conversation:` kwarg.
+    # El send service captura StandardError internamente (whatsapp/send_on_whatsapp_service.rb
+    # líneas 14-18) y marca message.status = :failed con external_error. Nuestro rescue
+    # extra es defensa-en-profundidad para errores antes de tocar perform_reply.
+    Whatsapp::SendOnWhatsappService.new(message: message).perform
   rescue StandardError => e
     Rails.logger.error "[EnsureFromPhone] Send failed " \
-                       "(account_id=#{@account.id}, conversation_id=#{conversation.id}, " \
+                       "(account_id=#{@account.id}, conversation_id=#{message.conversation_id}, " \
                        "message_id=#{message.id}): #{e.message}"
-    # No re-raise: el message queda con status pendiente/failed según el caller
+    # No re-raise: el caller ya tiene el message creado en el Result
   end
 
   def bsuid_sending_enabled?
@@ -197,15 +201,22 @@ require 'rails_helper'
 
 RSpec.describe Conversations::EnsureFromPhoneService do
   let(:account)         { create(:account) }
-  let(:whatsapp_inbox)  { create(:inbox, :whatsapp, account: account) }
+  let(:whatsapp_inbox)  { create(:inbox, account: account) }  # default trait usa channel_whatsapp
+  let(:instagram_inbox) do
+    create(:inbox, account: account, channel: create(:channel_instagram, account: account))
+  end
   let(:template_params) do
     { name: 'promo_junio', language: 'es', processed_params: { '1' => 'Juan' } }
   end
 
   before do
-    # Stub el template builder y send service en escenarios donde no son foco del test
+    # Stub builder y send service para aislar el servicio bajo test
     allow_any_instance_of(Whatsapp::TemplateMessageBuilder).to receive(:build)
-      .and_return(content: 'Hola Juan', content_type: 'template', content_attributes: {})
+      .and_return(
+        content:               'Hola Juan',
+        message_type:          :template,
+        additional_attributes: { 'template_params' => { 'name' => 'promo_junio' } }
+      )
     allow_any_instance_of(Whatsapp::SendOnWhatsappService).to receive(:perform)
   end
 
@@ -329,8 +340,21 @@ require 'rails_helper'
 
 RSpec.describe 'POST /api/v1/messages/send_by_phone', type: :request do
   let(:account)        { create(:account) }
-  let(:whatsapp_inbox) { create(:inbox, :whatsapp, account: account) }
-  let(:headers)        { api_v1_headers(account) }  # helper existente
+  let(:whatsapp_inbox) { create(:inbox, account: account) }
+
+  # Patrón de headers existente en messaging (ver spec/requests/.../no_purchase_reason_spec.rb)
+  let(:api_key) { 'test-messaging-service-api-key-abc123' }
+  let(:headers) do
+    {
+      'X-Tenant-Id'  => account.ventia_tenant_id.to_s,
+      'X-API-Key'    => api_key,
+      'Content-Type' => 'application/json'
+    }
+  end
+
+  before { ENV['MESSAGING_SERVICE_API_KEY'] = api_key }
+  after  { ENV.delete('MESSAGING_SERVICE_API_KEY') }
+
   let(:valid_payload) do
     {
       phone:    '+51999888777',
@@ -345,12 +369,17 @@ RSpec.describe 'POST /api/v1/messages/send_by_phone', type: :request do
 
   before do
     allow_any_instance_of(Whatsapp::TemplateMessageBuilder).to receive(:build)
-      .and_return(content: 'Hola Juan', content_type: 'template', content_attributes: {})
+      .and_return(
+        content: 'Hola Juan', message_type: :template,
+        additional_attributes: { 'template_params' => { 'name' => 'promo_junio' } }
+      )
     allow_any_instance_of(Whatsapp::SendOnWhatsappService).to receive(:perform)
   end
 
   it 'devuelve 201 y crea contact + conversation + message' do
-    post '/api/v1/messages/send_by_phone', params: valid_payload, headers: headers, as: :json
+    post '/api/v1/messages/send_by_phone',
+         params: valid_payload.to_json, headers: headers
+
     expect(response).to have_http_status(:created)
     body = JSON.parse(response.body)
     expect(body['data']).to include('conversation_id', 'message_id', 'contact_id')
@@ -398,25 +427,22 @@ Reusar `TemplateParamsRequest` existente (línea 271 según grep).
 
 **Archivo:** `apps/backend/app/services/messaging_service.py`
 
-Agregar método siguiendo el patrón de `send_message`:
+El helper real se llama `_request(method, path, tenant_id, ..., json_data=...)`. Patrón espejo de `send_message` (línea 372) pero **sin envolver el payload en `{"message": ...}`** porque el endpoint Rails recibe params planos (`phone`, `inbox_id`, `template_params`), no anidados bajo `:message`:
 
 ```python
 async def send_by_phone(
-    self,
-    tenant_id: int,
-    payload: dict,
-) -> dict | None:
-    """
-    Proxy POST /api/v1/messages/send_by_phone hacia Rails messaging.
-    """
-    return await self._post(
-        tenant_id=tenant_id,
-        path="/api/v1/messages/send_by_phone",
-        json=payload,
+    self, tenant_id: int, payload: dict
+) -> Optional[dict]:
+    """Send a WhatsApp template to a phone, creating contact/conversation if needed."""
+    return await self._request(
+        "POST",
+        "/api/v1/messages/send_by_phone",
+        tenant_id,
+        json_data=payload,
     )
 ```
 
-(Si el helper `_post` no acepta este path exacto, ajustar siguiendo el patrón existente de otros endpoints messaging — verificar el código actual antes de codear.)
+Ubicar este método cerca de `send_message` y `send_message_with_file` para mantener agrupación lógica.
 
 ### 3.3 — Endpoint en `messaging.py`
 
@@ -475,8 +501,8 @@ class TestMessagingServiceSendByPhone:
     @pytest.mark.asyncio
     async def test_send_by_phone_forwards_payload(self):
         """Verifica que el payload se forwarda intacto al Rails endpoint."""
-        with patch.object(messaging_service, "_post", new_callable=AsyncMock) as mock_post:
-            mock_post.return_value = {
+        with patch.object(messaging_service, "_request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = {
                 "success": True,
                 "data": {
                     "conversation_id": 456, "message_id": 789, "contact_id": 123,
@@ -490,10 +516,11 @@ class TestMessagingServiceSendByPhone:
             }
             result = await messaging_service.send_by_phone(tenant_id=1, payload=payload)
 
-            mock_post.assert_awaited_once_with(
-                tenant_id=1,
-                path="/api/v1/messages/send_by_phone",
-                json=payload,
+            mock_request.assert_awaited_once_with(
+                "POST",
+                "/api/v1/messages/send_by_phone",
+                1,
+                json_data=payload,
             )
             assert result["data"]["contact_created"] is True
 ```
