@@ -381,6 +381,23 @@ class MessagingService:
             json_data={"message": payload},
         )
 
+    async def send_by_phone(
+        self, tenant_id: int, payload: dict, user_id: Optional[str] = None
+    ) -> Optional[dict]:
+        """Send a WhatsApp template to a phone number.
+
+        Creates contact/conversation if needed; reuses open conversation otherwise.
+        Payload goes flat (phone, inbox_id, template_params, contact_name) — NOT wrapped
+        in {"message": ...} because the Rails endpoint receives flat params.
+        """
+        return await self._request(
+            "POST",
+            "/api/v1/messages/send_by_phone",
+            tenant_id,
+            user_id=user_id,
+            json_data=payload,
+        )
+
     async def send_message_with_file(
         self,
         tenant_id: int,

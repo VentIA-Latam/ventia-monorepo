@@ -93,6 +93,9 @@ Rails.application.routes.draw do
         resources :labels, only: [:index, :create, :destroy], controller: 'conversations/labels'
       end
 
+      # Send message by phone (no requiere conversation_id existente)
+      post 'messages/send_by_phone', to: 'messages#send_by_phone'
+
       # Contacts
       resources :contacts, only: [:index, :show, :create, :update, :destroy] do
         collection do
