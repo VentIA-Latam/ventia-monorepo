@@ -278,8 +278,8 @@ Este servicio fue diseñado anticipando su uso por el Módulo 6. Cuando se const
    - Propagación 422 / 404 / 5xx
 
 4. **`apps/backend/tests/integration/test_send_by_phone_endpoint.py`**
-   - Auth: sin token → 401; sin permiso → 403; con permiso → llama proxy
-   - Permiso `POST /messaging/messages/send-by-phone` registrado en `permissions.py`
+   - Auth: sin token → 401; con rol LOGISTICA o VIEWER → 403; con ADMIN o VENTAS → llama proxy
+   - Confirma que el wildcard `POST /messaging/*` cubre la ruta nueva sin necesidad de regla específica
 
 ### Fuera de scope
 
@@ -300,7 +300,7 @@ Este servicio fue diseñado anticipando su uso por el Módulo 6. Cuando se const
 - `apps/messaging/app/controllers/api/v1/messages_controller.rb` (acción `send_by_phone` + rescue de errores del servicio)
 - `apps/messaging/config/routes.rb` (ruta nueva fuera del scope `:conversations`)
 - `apps/backend/app/api/v1/endpoints/messaging.py` (proxy `send-by-phone`)
-- `apps/backend/app/core/permissions.py` (registrar permiso `POST /messaging/messages/send-by-phone` para roles ADMIN y LOGISTICA; VENTAS y VIEWER quedan fuera por ahora)
+- `apps/backend/app/core/permissions.py` — **no requiere cambios**: el endpoint cae bajo el wildcard existente `POST /messaging/*` que ya está en `[SUPERADMIN, ADMIN, VENTAS]`. LOGISTICA y VIEWER quedan fuera por el wildcard. Si en M6 se decide restringir más (ej. campañas solo ADMIN), se puede agregar una regla específica más restrictiva.
 
 **No modificados (intencional, se hace en M6):**
 - `apps/messaging/app/services/campaigns/trigger_service.rb` — el refactor depende de migración `add_template_params_to_campaigns`.
