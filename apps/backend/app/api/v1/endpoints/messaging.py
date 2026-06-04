@@ -29,11 +29,15 @@ from app.schemas.messaging import (
     NotificationSettingsResponse,
     NotificationsResponse,
     PushTokenRequest,
+    CampaignAudienceResponse,
     CampaignCreate,
     CampaignCsvUploadResponse,
     CampaignDetailResponse,
     CampaignLabelsAudienceRequest,
+    CampaignPreviewResponse,
     CampaignRecipientsResponse,
+    CampaignRetryResponse,
+    CampaignsListResponse,
     CampaignTriggerRequest,
     CampaignUpdate,
     SendByPhoneRequest,
@@ -2068,7 +2072,23 @@ async def update_notification_settings(
 
 # --- Campaigns (Módulo 6) ---
 
-@router.get("/campaigns", tags=["messaging", "campaigns"])
+CAMPAIGN_TAGS = ["messaging", "campaigns"]
+CAMPAIGN_ERROR_RESPONSES = {
+    404: {"model": MessagingError, "description": "Campaign not found in tenant"},
+    422: {"model": MessagingError, "description": "Validation error or invalid state transition"},
+    503: {"model": MessagingError, "description": "Messaging service unavailable"},
+}
+
+
+@router.get(
+    "/campaigns",
+    response_model=CampaignsListResponse,
+    summary="List campaigns with stats",
+    description="Lista todas las campañas del tenant ordenadas por created_at DESC. "
+                "Incluye stats agregadas per-campaña en una sola query (sin N+1).",
+    tags=CAMPAIGN_TAGS,
+    responses={503: CAMPAIGN_ERROR_RESPONSES[503]},
+)
 async def list_campaigns(
     tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN)"),
     current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
@@ -2084,8 +2104,11 @@ async def list_campaigns(
     "/campaigns",
     response_model=CampaignDetailResponse,
     status_code=201,
-    tags=["messaging", "campaigns"],
-    responses={422: {"model": MessagingError}, 503: {"model": MessagingError}},
+    summary="Create campaign (status :draft)",
+    description="Crea una campaña en estado :draft. Después: configurar audiencia "
+                "(CSV o labels), variables del template, y dispararla via /trigger.",
+    tags=CAMPAIGN_TAGS,
+    responses={422: CAMPAIGN_ERROR_RESPONSES[422], 503: CAMPAIGN_ERROR_RESPONSES[503]},
 )
 async def create_campaign(
     payload: CampaignCreate,
@@ -2104,7 +2127,10 @@ async def create_campaign(
 @router.get(
     "/campaigns/{campaign_id}",
     response_model=CampaignDetailResponse,
-    tags=["messaging", "campaigns"],
+    summary="Get campaign detail with stats",
+    description="Detalle de campaña con stats per-status (pending/queued/sent/delivered/read/failed/omitted).",
+    tags=CAMPAIGN_TAGS,
+    responses={404: CAMPAIGN_ERROR_RESPONSES[404], 503: CAMPAIGN_ERROR_RESPONSES[503]},
 )
 async def get_campaign(
     campaign_id: int,
@@ -2121,7 +2147,10 @@ async def get_campaign(
 @router.patch(
     "/campaigns/{campaign_id}",
     response_model=CampaignDetailResponse,
-    tags=["messaging", "campaigns"],
+    summary="Update campaign (only in :draft)",
+    description="Actualiza title/template_params/header_media_url/enabled. Solo permitido en :draft.",
+    tags=CAMPAIGN_TAGS,
+    responses=CAMPAIGN_ERROR_RESPONSES,
 )
 async def update_campaign(
     campaign_id: int,
@@ -2138,7 +2167,13 @@ async def update_campaign(
     return result
 
 
-@router.delete("/campaigns/{campaign_id}", tags=["messaging", "campaigns"])
+@router.delete(
+    "/campaigns/{campaign_id}",
+    summary="Delete campaign",
+    description="Borra campaña y todos sus campaign_recipients (cascade).",
+    tags=CAMPAIGN_TAGS,
+    responses={404: CAMPAIGN_ERROR_RESPONSES[404], 503: CAMPAIGN_ERROR_RESPONSES[503]},
+)
 async def delete_campaign(
     campaign_id: int,
     tenant_id: int | None = Query(None),
@@ -2155,14 +2190,38 @@ async def delete_campaign(
     "/campaigns/{campaign_id}/audience/csv",
     response_model=CampaignCsvUploadResponse,
     status_code=201,
-    tags=["messaging", "campaigns"],
+    summary="Upload CSV audience (multipart, max 5MB)",
+    description="Sube CSV con columna phone obligatoria + hasta 10 columnas variables. "
+                "Reemplaza recipients previos (solo en :draft).",
+    tags=CAMPAIGN_TAGS,
+    responses=CAMPAIGN_ERROR_RESPONSES,
 )
 async def upload_campaign_csv(
     campaign_id: int,
-    file: UploadFile = File(..., description="CSV audiencia (max 5MB)"),
+    file: UploadFile = File(..., description="CSV audiencia (max 5MB, content-type text/csv)"),
     tenant_id: int | None = Query(None),
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
+    """Sube CSV de audiencia para una campaña en :draft.
+
+    Validaciones a nivel proxy (antes de cargar a memoria):
+    - Tamaño ≤ 5MB (Rails también valida; doble defensa evita OOM si Rails responde tarde)
+    - content_type debe ser text/csv o application/vnd.ms-excel
+    """
+    # Validar tamaño antes de await file.read() (que carga TODO a memoria)
+    max_bytes = 5 * 1024 * 1024
+    if file.size is not None and file.size > max_bytes:
+        raise HTTPException(
+            status_code=422,
+            detail=f"CSV file too large: {file.size} bytes (max {max_bytes})"
+        )
+    accepted_types = {"text/csv", "application/vnd.ms-excel", "application/octet-stream"}
+    if file.content_type and file.content_type not in accepted_types:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid content_type '{file.content_type}'. Expected: text/csv"
+        )
+
     tenant_id = _resolve_tenant_id(current_user, tenant_id)
     result = await messaging_service.upload_campaign_csv(tenant_id, campaign_id, file)
     if result is None:
@@ -2172,9 +2231,12 @@ async def upload_campaign_csv(
 
 @router.post(
     "/campaigns/{campaign_id}/audience/labels",
-    response_model=CampaignDetailResponse,
-    status_code=201,
-    tags=["messaging", "campaigns"],
+    response_model=CampaignAudienceResponse,
+    summary="Set audience by labels (snapshot)",
+    description="Snapshot de contactos con al menos una conversation etiquetada con los "
+                "label_ids. Excluye contactos sin phone. Reemplaza audiencia previa (solo :draft).",
+    tags=CAMPAIGN_TAGS,
+    responses=CAMPAIGN_ERROR_RESPONSES,
 )
 async def set_campaign_labels_audience(
     campaign_id: int,
@@ -2191,7 +2253,15 @@ async def set_campaign_labels_audience(
     return result
 
 
-@router.get("/campaigns/{campaign_id}/preview", tags=["messaging", "campaigns"])
+@router.get(
+    "/campaigns/{campaign_id}/preview",
+    response_model=CampaignPreviewResponse,
+    summary="Preview rendered template for sample recipients",
+    description="Renderiza el template con datos reales para 3 recipients sample. "
+                "También devuelve hasta 3 ejemplos de recipients que serían omitidos por falta de attr.",
+    tags=CAMPAIGN_TAGS,
+    responses={404: CAMPAIGN_ERROR_RESPONSES[404], 503: CAMPAIGN_ERROR_RESPONSES[503]},
+)
 async def preview_campaign(
     campaign_id: int,
     tenant_id: int | None = Query(None),
@@ -2204,22 +2274,37 @@ async def preview_campaign(
     return result
 
 
-@router.post("/campaigns/{campaign_id}/trigger", tags=["messaging", "campaigns"])
+@router.post(
+    "/campaigns/{campaign_id}/trigger",
+    response_model=CampaignDetailResponse,
+    summary="Trigger campaign (now or scheduled)",
+    description="Si scheduled_at en futuro → marca :active, cron lo recoge. Si nil/pasado → "
+                "marca :active y encola TriggerJob inmediatamente. Solo permitido en :draft.",
+    tags=CAMPAIGN_TAGS,
+    responses=CAMPAIGN_ERROR_RESPONSES,
+)
 async def trigger_campaign(
     campaign_id: int,
-    payload: CampaignTriggerRequest | None = None,
+    payload: CampaignTriggerRequest = CampaignTriggerRequest(),
     tenant_id: int | None = Query(None),
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
     tenant_id = _resolve_tenant_id(current_user, tenant_id)
-    scheduled_at = payload.scheduled_at if payload else None
-    result = await messaging_service.trigger_campaign(tenant_id, campaign_id, scheduled_at)
+    result = await messaging_service.trigger_campaign(tenant_id, campaign_id, payload.scheduled_at)
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")
     return result
 
 
-@router.post("/campaigns/{campaign_id}/retry-failed", tags=["messaging", "campaigns"])
+@router.post(
+    "/campaigns/{campaign_id}/retry-failed",
+    response_model=CampaignRetryResponse,
+    summary="Retry failed recipients",
+    description="Resetea recipients en status :failed a :pending y encola TriggerJob de nuevo. "
+                "Solo permitido en :completed. Recipients :omitted NO se reintentan.",
+    tags=CAMPAIGN_TAGS,
+    responses=CAMPAIGN_ERROR_RESPONSES,
+)
 async def retry_failed_campaign(
     campaign_id: int,
     tenant_id: int | None = Query(None),
@@ -2235,14 +2320,17 @@ async def retry_failed_campaign(
 @router.get(
     "/campaigns/{campaign_id}/recipients",
     response_model=CampaignRecipientsResponse,
-    tags=["messaging", "campaigns"],
+    summary="List campaign recipients (paginated, filterable)",
+    description="Lista paginada de recipients. Filtros: status (CSV: 'failed,omitted'), search (phone o contact name).",
+    tags=CAMPAIGN_TAGS,
+    responses={404: CAMPAIGN_ERROR_RESPONSES[404], 503: CAMPAIGN_ERROR_RESPONSES[503]},
 )
 async def list_campaign_recipients(
     campaign_id: int,
     page: int = Query(1, ge=1),
     per_page: int = Query(25, ge=1, le=100),
-    status: str | None = Query(None, description="csv: failed,omitted,sent"),
-    search: str | None = Query(None),
+    status: str | None = Query(None, description="CSV de status: 'failed' o 'failed,omitted'"),
+    search: str | None = Query(None, description="Match contra phone o contact name"),
     tenant_id: int | None = Query(None),
     current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
 ):
@@ -2257,7 +2345,10 @@ async def list_campaign_recipients(
 
 @router.delete(
     "/campaigns/{campaign_id}/recipients/{recipient_id}",
-    tags=["messaging", "campaigns"],
+    summary="Exclude single recipient",
+    description="Borra un recipient antes de trigger (solo en :draft). Decrementa recipients_count.",
+    tags=CAMPAIGN_TAGS,
+    responses=CAMPAIGN_ERROR_RESPONSES,
 )
 async def delete_campaign_recipient(
     campaign_id: int,

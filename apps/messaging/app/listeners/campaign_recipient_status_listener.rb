@@ -30,5 +30,11 @@ class CampaignRecipientStatusListener < BaseListener
     end
 
     Campaigns::CompletionChecker.new(recipient.campaign).maybe_complete!
+  rescue StandardError => e
+    # Patrón estándar de listeners (ver FcmListener): no propagar a otros listeners
+    # ni romper el evento. Log para diagnóstico.
+    msg_id = event.dig(:data, :message)&.id
+    Rails.logger.error "[CampaignRecipientStatusListener] message_updated failed " \
+                       "(message_id=#{msg_id}): #{e.class.name}: #{e.message}"
   end
 end

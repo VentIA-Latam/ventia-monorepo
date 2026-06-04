@@ -12,7 +12,8 @@ class Api::V1::CampaignsController < Api::V1::BaseController
     campaigns = current_account.campaigns
                                .includes(:inbox)
                                .order(created_at: :desc)
-    render_success(campaigns.map { |c| campaign_json(c) })
+    stats_by_id = batch_recipient_stats(campaigns.map(&:id))
+    render_success(campaigns.map { |c| campaign_json(c, stats: stats_by_id[c.id] || empty_stats_hash) })
   end
 
   def show
@@ -205,8 +206,7 @@ class Api::V1::CampaignsController < Api::V1::BaseController
     if params[:search].present?
       term = "%#{ActiveRecord::Base.sanitize_sql_like(params[:search])}%"
       base = base.references(:contact)
-                 .where('contact_recipients.phone ILIKE ? OR contacts.name ILIKE ?', term, term)
-                 .or(base.where('campaign_recipients.phone ILIKE ?', term))
+                 .where('campaign_recipients.phone ILIKE ? OR contacts.name ILIKE ?', term, term)
     end
     base
   end
@@ -273,7 +273,7 @@ class Api::V1::CampaignsController < Api::V1::BaseController
     samples
   end
 
-  def campaign_json(campaign, with_stats: false)
+  def campaign_json(campaign, with_stats: false, stats: nil)
     base = {
       id:               campaign.id,
       title:            campaign.title,
@@ -291,8 +291,27 @@ class Api::V1::CampaignsController < Api::V1::BaseController
       failed_count:     campaign.failed_count,
       inbox: { id: campaign.inbox.id, name: campaign.inbox.name }
     }
-    base[:stats] = compute_stats(campaign) if with_stats
+    base[:stats] = stats if stats # batch-precomputed
+    base[:stats] = compute_stats(campaign) if with_stats && base[:stats].nil?
     base
+  end
+
+  # Stats per-campaign con una sola query SQL para evitar N+1 en el index.
+  def batch_recipient_stats(campaign_ids)
+    return {} if campaign_ids.empty?
+
+    raw = CampaignRecipient.where(campaign_id: campaign_ids).group(:campaign_id, :status).count
+    result = {}
+    raw.each do |(cid, status_int), count|
+      result[cid] ||= empty_stats_hash
+      key = CampaignRecipient.statuses.key(status_int)&.to_sym
+      result[cid][key] = count if key
+    end
+    result
+  end
+
+  def empty_stats_hash
+    %i[pending queued sent delivered read failed omitted].index_with { 0 }
   end
 
   def compute_stats(campaign)

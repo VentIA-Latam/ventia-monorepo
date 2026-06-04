@@ -10,6 +10,11 @@
 class Campaigns::TriggerJob < ApplicationJob
   queue_as :campaigns
 
+  # Sidekiq por defecto reintenta StandardError. NO marcamos campaign :failed en el
+  # rescue — eso bloquearía retries útiles (ej. ActiveRecord::Deadlocked transient).
+  # Si Sidekiq agota retries, el job va al dead set y un admin investiga.
+  # Para errores fatales explícitos (ej. campaña en estado inválido), preferí raisar
+  # ArgumentError o validar antes de encolar.
   def perform(campaign_id)
     Campaign.transaction do
       campaign = Campaign.lock('FOR UPDATE').find_by(id: campaign_id)
@@ -23,8 +28,7 @@ class Campaigns::TriggerJob < ApplicationJob
       end
     end
   rescue StandardError => e
-    Rails.logger.error "[Campaigns] TriggerJob failed for campaign #{campaign_id}: #{e.message}"
-    Campaign.where(id: campaign_id).update_all(campaign_status: Campaign.campaign_statuses[:failed])
-    raise
+    Rails.logger.error "[Campaigns] TriggerJob failed for campaign #{campaign_id}: #{e.class.name}: #{e.message}"
+    raise # deja que Sidekiq haga retry
   end
 end

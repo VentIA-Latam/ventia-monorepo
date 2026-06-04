@@ -51,12 +51,14 @@ RSpec.describe Campaigns::TriggerJob do
       expect { described_class.perform_now(999_999) }.not_to raise_error
     end
 
-    it 'crash interno: marca campaign :failed y re-raisea' do
+    it 'crash interno: re-raisea (Sidekiq hace retry; NO marca :failed para no bloquear retries)' do
       campaign.campaign_recipients.create!(phone: '+51900000001', status: :pending)
       allow_any_instance_of(CampaignRecipient).to receive(:update!).and_raise(StandardError, 'boom')
 
       expect { described_class.perform_now(campaign.id) }.to raise_error(StandardError, 'boom')
-      expect(campaign.reload.campaign_status).to eq('failed')
+      # Transacción rollback → campaign sigue :active, no :failed
+      expect(campaign.reload.campaign_status).to eq('active')
+      expect(campaign.triggered_at).to be_nil
     end
   end
 end

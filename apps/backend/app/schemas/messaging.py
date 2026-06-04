@@ -338,21 +338,153 @@ class CampaignTriggerRequest(BaseModel):
     scheduled_at: Optional[str] = Field(None, description="ISO8601; si futuro, programa; si nil/pasado, dispara ahora")
 
 
+class CampaignInboxSummary(BaseModel):
+    id: int
+    name: str
+
+
+class CampaignStatsBreakdown(BaseModel):
+    """Conteo por status enum del CampaignRecipient. Sum debería == recipients_count."""
+    pending: int = 0
+    queued: int = 0
+    sent: int = 0
+    delivered: int = 0
+    read: int = 0
+    failed: int = 0
+    omitted: int = 0
+
+
+class CampaignData(BaseModel):
+    """Shape exacto del campaign_json del Rails controller."""
+    id: int
+    title: str
+    message: Optional[str] = None
+    campaign_type: str
+    campaign_status: str
+    audience_type: Optional[str] = None
+    header_media_url: Optional[str] = None
+    template_params: Optional[dict] = None
+    enabled: bool
+    scheduled_at: Optional[str] = None
+    triggered_at: Optional[str] = None
+    recipients_count: int = 0
+    sent_count: int = 0
+    failed_count: int = 0
+    inbox: CampaignInboxSummary
+    stats: Optional[CampaignStatsBreakdown] = None
+
+
 class CampaignDetailResponse(BaseModel):
     success: bool
-    data: dict
+    data: CampaignData
     message: Optional[str] = None
+
+
+class CampaignsListResponse(BaseModel):
+    success: bool
+    data: list[CampaignData]
+
+
+class CampaignRecipientData(BaseModel):
+    id: int
+    phone: str
+    contact_id: Optional[int] = None
+    contact_name: Optional[str] = None
+    conversation_id: Optional[int] = None
+    message_id: Optional[int] = None
+    status: str
+    external_error: Optional[str] = None
+    sent_at: Optional[str] = None
+    delivered_at: Optional[str] = None
+    read_at: Optional[str] = None
+
+
+class PaginationMeta(BaseModel):
+    current_page: int
+    next_page: Optional[int] = None
+    prev_page: Optional[int] = None
+    total_pages: int
+    total_count: int
 
 
 class CampaignRecipientsResponse(BaseModel):
     success: bool
-    data: list[dict]
-    meta: Optional[dict] = None
+    data: list[CampaignRecipientData]
+    meta: Optional[PaginationMeta] = None
+
+
+class CampaignCsvSkippedRow(BaseModel):
+    row: int
+    phone: Optional[str] = None
+    reason: str
+
+
+class CampaignCsvUploadData(BaseModel):
+    recipients_count: int
+    columns: list[str]
+    phone_column: Optional[str] = None
+    skipped_rows: list[CampaignCsvSkippedRow] = Field(default_factory=list)
 
 
 class CampaignCsvUploadResponse(BaseModel):
     success: bool
-    data: dict  # { recipients_count, columns, phone_column, skipped_rows }
+    data: CampaignCsvUploadData
+    message: Optional[str] = None
+
+
+class CampaignAudienceCountData(BaseModel):
+    recipients_count: int
+
+
+class CampaignAudienceResponse(BaseModel):
+    success: bool
+    data: CampaignAudienceCountData
+    message: Optional[str] = None
+
+
+class CampaignPreviewSample(BaseModel):
+    recipient_id: int
+    phone: str
+    contact_name: Optional[str] = None
+    rendered_body: Optional[str] = None
+    header_media: Optional[str] = None
+    omitted: Optional[bool] = None
+    reason: Optional[str] = None
+    error: Optional[str] = None
+
+
+class CampaignPreviewOmittedSample(BaseModel):
+    phone: str
+    reason: str
+
+
+class CampaignPreviewData(BaseModel):
+    template_name: Optional[str] = None
+    recipients_count: int
+    samples: list[CampaignPreviewSample]
+    omitted_samples: list[CampaignPreviewOmittedSample]
+
+
+class CampaignPreviewResponse(BaseModel):
+    success: bool
+    data: CampaignPreviewData
+
+
+class CampaignTriggerData(BaseModel):
+    """Response de POST /campaigns/:id/trigger — el campaign actualizado."""
+    id: int
+    campaign_status: str
+    scheduled_at: Optional[str] = None
+    triggered_at: Optional[str] = None
+
+
+class CampaignRetryData(BaseModel):
+    retrying: int
+
+
+class CampaignRetryResponse(BaseModel):
+    success: bool
+    data: CampaignRetryData
     message: Optional[str] = None
 
 

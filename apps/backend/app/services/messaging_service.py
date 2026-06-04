@@ -444,7 +444,9 @@ class MessagingService:
         try:
             file_content = await file.read()
             files = {"file": (file.filename, file_content, file.content_type or "text/csv")}
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            # Timeout 90s: Rails parsea el CSV completo (5MB ~ 10-50k filas), normaliza
+            # phones, dedupea, y crea N CampaignRecipient. 30s era insuficiente.
+            async with httpx.AsyncClient(timeout=90.0) as client:
                 response = await client.post(url, headers=headers, files=files)
             if response.status_code in (200, 201):
                 return response.json()
