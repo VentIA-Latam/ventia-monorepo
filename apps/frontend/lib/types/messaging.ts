@@ -146,6 +146,17 @@ export interface CarouselCard {
   buttons?: CarouselCardButton[];
 }
 
+/** Lightweight snapshot of the replied-to message, resolved by the backend (US-UX-002),
+ * so the quote renders even when the original isn't in the loaded window. */
+export interface QuotedMessageSnapshot {
+  id: number;
+  message_type?: MessageType;
+  content_type?: string;
+  content?: string | null;
+  sender_name?: string | null;
+  attachment_type?: string | null;
+}
+
 export interface MessageContentAttributes {
   cta_url?: CtaUrlData;
   referral?: ReferralData;
@@ -155,6 +166,7 @@ export interface MessageContentAttributes {
   items?: Array<{ title: string; value: string }>;
   contacts?: unknown[];
   in_reply_to?: string;
+  quoted?: QuotedMessageSnapshot;
   is_unavailable?: boolean;
   unavailable_reason?: string;
   automated?: boolean;
@@ -166,6 +178,7 @@ export type MessageStatus = "sent" | "delivered" | "read" | "failed";
 
 export interface Message {
   id: string | number;
+  source_id?: string | null;
   content: string | null;
   message_type: MessageType | null;
   status?: MessageStatus;

@@ -387,6 +387,7 @@ class MessagingService:
         conversation_id: str,
         content: str,
         file: Any,
+        content_attributes: Optional[str] = None,
         user_id: Optional[str] = None,
     ) -> Optional[dict]:
         """Send a message with a file attachment via multipart/form-data."""
@@ -407,6 +408,10 @@ class MessagingService:
             data = {
                 "message[content]": content,
             }
+            # Forward reply context (US-UX-002): Rails extract_content_attributes JSON.parses
+            # this string, so a reply WITH a file keeps its quoted message.
+            if content_attributes:
+                data["message[content_attributes]"] = content_attributes
 
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(

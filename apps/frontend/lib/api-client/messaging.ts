@@ -168,6 +168,10 @@ export async function sendMessage(
     const formData = new FormData();
     formData.append("content", payload.content || "");
     formData.append("file", file);
+    // Reply context (US-UX-002): backend extract_content_attributes JSON.parses string values.
+    if (payload.content_attributes) {
+      formData.append("content_attributes", JSON.stringify(payload.content_attributes));
+    }
 
     const response = await fetch(
       `/api/messaging/conversations/${conversationId}/messages${qs}`,

@@ -979,6 +979,7 @@ async def send_message_with_attachment(
     conversation_id: str,
     content: str = Form(""),
     file: UploadFile = File(...),
+    content_attributes: str | None = Form(None),
     tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
     current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
 ):
@@ -1023,6 +1024,7 @@ async def send_message_with_attachment(
         conversation_id,
         content=content,
         file=file,
+        content_attributes=content_attributes,
         user_id=current_user.id,
     )
     if result is None:

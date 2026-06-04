@@ -11,6 +11,7 @@ import type { Message, AttachmentBrief, CtaUrlData } from "@/lib/types/messaging
 import { ReferralBubble } from "./referral-bubble";
 import { StoryReplyBubble } from "./story-reply-bubble";
 import { CarouselBubble } from "./carousel-bubble";
+import { QuotedMessagePreview } from "./quoted-message-preview";
 import { formatTime, getSenderRole, getInitials } from "@/lib/utils/messaging";
 import { formatWhatsAppText } from "@/lib/utils/whatsapp-format";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -339,12 +340,20 @@ interface MessageBubbleProps {
   message: Message;
   showAvatar?: boolean;
   channelType?: string | null;
+  onReply?: (message: Message) => void;
+  /** Mensaje citado ya resuelto (US-UX-002); undefined si está fuera de la ventana cargada. */
+  quotedMessage?: Message;
+  /** Salta al mensaje original al hacer click en el quote. */
+  onQuotedClick?: (message: Message) => void;
 }
 
 export const MessageBubble = memo(function MessageBubble({
   message,
   showAvatar = true,
   channelType,
+  onReply,
+  quotedMessage,
+  onQuotedClick,
 }: MessageBubbleProps) {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const closeLightbox = useCallback(() => setLightboxSrc(null), []);
@@ -437,10 +446,13 @@ export const MessageBubble = memo(function MessageBubble({
   const carouselCards = message.content_attributes?.cards;
   const hasCards = !!carouselCards && carouselCards.length > 0;
 
+  // Quoted reply (US-UX-002): hasQuote drives rendering; quotedMessage is resolved by the parent.
+  const hasQuote = !!message.content_attributes?.in_reply_to;
+
   return (
     <div
       className={cn(
-        "relative flex",
+        "group relative flex",
         hasCards
           ? "max-w-[min(80%,520px)]"
           : isTemplate || hasMediaAttachment
@@ -464,6 +476,16 @@ export const MessageBubble = memo(function MessageBubble({
               )
         )}
       >
+        {/* Quoted reply context (US-UX-002) — shown at the top of the bubble, WhatsApp-style */}
+        {hasQuote ? (
+          <QuotedMessagePreview
+            variant="bubble"
+            message={quotedMessage}
+            isOutgoing={isOutgoing}
+            onClick={quotedMessage && onQuotedClick ? () => onQuotedClick(quotedMessage) : undefined}
+          />
+        ) : null}
+
         {/* Template header media (image/video/doc) — rendered edge-to-edge above content */}
         {templateHasHeaderMedia && templateHeader ? (
           <TemplateHeader header={templateHeader} onImageClick={setLightboxSrc} />
@@ -608,6 +630,21 @@ export const MessageBubble = memo(function MessageBubble({
           </span>
         )}
       </div>
+
+      {/* Reply action — appears on hover (US-UX-002) */}
+      {onReply && (
+        <button
+          type="button"
+          onClick={() => onReply(message)}
+          aria-label="Responder"
+          className={cn(
+            "absolute top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-card text-muted-foreground shadow-sm opacity-0 transition-opacity duration-150 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100",
+            isOutgoing ? "-left-9" : "-right-9"
+          )}
+        >
+          <Reply className="h-4 w-4" />
+        </button>
+      )}
 
       {/* Image Lightbox */}
       {lightboxSrc && (
