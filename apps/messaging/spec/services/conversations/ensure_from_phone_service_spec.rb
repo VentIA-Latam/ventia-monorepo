@@ -176,6 +176,20 @@ RSpec.describe Conversations::EnsureFromPhoneService do
         expect(result.contact.phone_number).to eq('+51999888777')
       end
 
+      it 'encuentra contacto existente aunque el caller mande phone con espacios/guiones' do
+        # Contact ya guardado con formato normalizado (lo hace el callback
+        # Contact#prepare_contact_attributes); el caller manda phone con whitespace.
+        # El normalize_phone! del servicio debe matchear ambos al mismo string.
+        existing = create(:contact, account: account, phone_number: '+51999888777', name: 'Juan')
+
+        expect { build_service(phone: ' +51 999-888-777 ').perform }
+          .to change { account.contacts.count }.by(0)
+
+        result = build_service(phone: ' +51 999-888-777 ').perform
+        expect(result.contact.id).to eq(existing.id)
+        expect(result.contact_created).to be false
+      end
+
       it 'raisea InvalidInboxChannelError cuando el inbox es Instagram' do
         expect { build_service(inbox: instagram_inbox).perform }
           .to raise_error(described_class::InvalidInboxChannelError, /WhatsApp/)

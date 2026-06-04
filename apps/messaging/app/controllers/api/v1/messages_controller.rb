@@ -157,7 +157,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
       account:         current_account,
       inbox:           inbox,
       phone:           params[:phone],
-      template_params: params[:template_params]&.to_unsafe_h,
+      template_params: extract_template_params,
       contact_name:    params[:contact_name]
     ).perform
 
@@ -181,6 +181,20 @@ class Api::V1::MessagesController < Api::V1::BaseController
   end
 
   private
+
+  # Mismo patrón que extract_content_attributes (líneas 169-178): acepta Hash,
+  # ActionController::Parameters, o JSON string; cualquier otra cosa → nil para
+  # que el servicio raisee ArgumentError mapeado a 422 (no NoMethodError → 500).
+  def extract_template_params
+    raw = params[:template_params]
+    return nil if raw.blank?
+    return JSON.parse(raw) if raw.is_a?(String)
+    return raw.to_unsafe_h if raw.respond_to?(:to_unsafe_h)
+
+    raw.is_a?(Hash) ? raw : nil
+  rescue JSON::ParserError
+    nil
+  end
 
   def set_conversation
     @conversation = current_account.conversations.find(params[:conversation_id])

@@ -104,6 +104,14 @@ RSpec.describe 'POST /api/v1/messages/send_by_phone', type: :request do
       expect(JSON.parse(response.body)['error']).to include('template_params')
     end
 
+    it 'devuelve 422 cuando template_params llega como string mal formado (no JSON)' do
+      # Evita NoMethodError 500 cuando un caller manda algo que no es Hash ni JSON válido.
+      post_send_by_phone(valid_payload.merge(template_params: 'not-json-{{{'))
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(JSON.parse(response.body)['error']).to include('template_params')
+    end
+
     it 'devuelve 422 cuando el template no existe' do
       allow_any_instance_of(Whatsapp::TemplateMessageBuilder).to receive(:build)
         .and_raise(Whatsapp::TemplateMessageBuilder::TemplateNotFound, "Template 'x' not found")
