@@ -386,7 +386,7 @@ export const MessageBubble = memo(function MessageBubble({
             <AlertCircle className="h-3.5 w-3.5 shrink-0" />
             <span className="text-[13px]">
               Mensaje no disponible
-              <span className="inline-block w-[70px]" />
+              <span className="inline-block w-[76px]" />
             </span>
           </div>
 
@@ -468,7 +468,7 @@ export const MessageBubble = memo(function MessageBubble({
           hasCards
             ? ""
             : cn(
-                "rounded-lg px-3 py-1.5 shadow-sm overflow-hidden",
+                "rounded-lg px-3 py-1.5 shadow-sm overflow-hidden min-w-[120px]",
                 hasReferral && "w-[280px]",
                 isOutgoing
                   ? "bg-chat-outgoing rounded-tr-[4px]"
@@ -525,7 +525,7 @@ export const MessageBubble = memo(function MessageBubble({
           <p className="whitespace-pre-wrap break-words" style={{ overflowWrap: "anywhere" }}>
             {formatWhatsAppText(message.content)}
             {/* Invisible spacer so time+check don't overlap text (skip for CTA/template-buttons — flow timestamp) */}
-            {!message.content_attributes?.cta_url && !templateHasButtons && <span className="inline-block w-[70px]" />}
+            {!message.content_attributes?.cta_url && !templateHasButtons && <span className="inline-block w-[76px]" />}
           </p>
         ) : null}
 
