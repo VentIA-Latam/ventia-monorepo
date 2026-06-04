@@ -27,7 +27,10 @@ class Conversations::EnsureFromPhoneService
     contact_inbox               = ensure_contact_inbox(contact, normalized)
     conversation, convo_created = ensure_conversation(contact, contact_inbox)
     message                     = build_and_save_message(conversation)
-    send_via_whatsapp(message)
+    # NO llamamos a Whatsapp::SendOnWhatsappService directamente: el callback
+    # after_create_commit :send_reply en Message ya encola SendReplyJob que lo
+    # hace. Llamarlo manualmente duplica el envío (doble facturación a Meta).
+    # Ver Message#send_reply en apps/messaging/app/models/message.rb:135.
 
     Result.new(
       contact:              contact,
@@ -133,18 +136,6 @@ class Conversations::EnsureFromPhoneService
         conversation: conversation
       )
     )
-  end
-
-  # SendOnWhatsappService hereda Base::SendOnChannelService#initialize(message:) — solo message kwarg.
-  # El servicio captura StandardError internamente y marca message.status = :failed con external_error,
-  # entonces nuestro rescue extra es defensa-en-profundidad para errores antes de perform_reply.
-  def send_via_whatsapp(message)
-    Whatsapp::SendOnWhatsappService.new(message: message).perform
-  rescue StandardError => e
-    Rails.logger.error "[EnsureFromPhone] Send failed " \
-                       "(account_id=#{@account.id}, conversation_id=#{message.conversation_id}, " \
-                       "message_id=#{message.id}): #{e.message}"
-    # no re-raise: el message queda en DB con status correspondiente
   end
 
   def bsuid_sending_enabled?

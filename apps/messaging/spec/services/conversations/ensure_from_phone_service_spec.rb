@@ -19,7 +19,9 @@ RSpec.describe Conversations::EnsureFromPhoneService do
 
   before do
     allow_any_instance_of(Whatsapp::TemplateMessageBuilder).to receive(:build).and_return(built_attrs)
-    allow_any_instance_of(Whatsapp::SendOnWhatsappService).to receive(:perform)
+    # El envío real lo hace el callback after_create_commit :send_reply de Message
+    # vía SendReplyJob (async, Sidekiq). En tests no ejecutamos el job real.
+    ActiveJob::Base.queue_adapter = :test
   end
 
   def build_service(overrides = {})
@@ -55,9 +57,12 @@ RSpec.describe Conversations::EnsureFromPhoneService do
         expect(result.contact.contact_type).to eq('lead')
       end
 
-      it 'invoca a SendOnWhatsappService con el message creado' do
-        expect_any_instance_of(Whatsapp::SendOnWhatsappService).to receive(:perform)
-        build_service.perform
+      it 'encola SendReplyJob vía callback (no llama SendOnWhatsappService directamente)' do
+        # Crítico: este test bloquea el bug de doble envío. El servicio NO debe
+        # invocar SendOnWhatsappService directamente — el callback after_create_commit
+        # de Message ya hace eso. Hacer ambos dispara dos sends a Meta (doble cobro).
+        expect_any_instance_of(Whatsapp::SendOnWhatsappService).not_to receive(:perform)
+        expect { build_service.perform }.to have_enqueued_job(SendReplyJob)
       end
     end
 
@@ -239,16 +244,10 @@ RSpec.describe Conversations::EnsureFromPhoneService do
       end
     end
 
-    describe 'fallo en SendOnWhatsappService' do
-      it 'no raisea — el message queda creado y el caller lo ve en el Result' do
-        allow_any_instance_of(Whatsapp::SendOnWhatsappService).to receive(:perform)
-          .and_raise(StandardError, 'meta down')
-
-        result = nil
-        expect { result = build_service.perform }.not_to raise_error
-        expect(result.message).to be_persisted
-      end
-    end
+    # NOTA: el envío real lo hace SendReplyJob async vía el callback after_create_commit.
+    # Si Meta falla, SendOnWhatsappService internamente marca message.status = :failed con
+    # external_error (ver whatsapp/send_on_whatsapp_service.rb líneas 13-18). El endpoint
+    # ya devolvió 201 al caller con el conversation_id/message_id antes de que el job corra.
 
     describe 'campaign opcional' do
       # No existe factory para Campaign, se crea inline (account + inbox WhatsApp + title bastan)
