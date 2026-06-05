@@ -11,6 +11,7 @@ import type { Message, AttachmentBrief, CtaUrlData } from "@/lib/types/messaging
 import { ReferralBubble } from "./referral-bubble";
 import { StoryReplyBubble } from "./story-reply-bubble";
 import { CarouselBubble } from "./carousel-bubble";
+import { QuotedMessagePreview } from "./quoted-message-preview";
 import { formatTime, getSenderRole, getInitials } from "@/lib/utils/messaging";
 import { formatWhatsAppText } from "@/lib/utils/whatsapp-format";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -339,12 +340,20 @@ interface MessageBubbleProps {
   message: Message;
   showAvatar?: boolean;
   channelType?: string | null;
+  onReply?: (message: Message) => void;
+  /** Mensaje citado ya resuelto (US-UX-002); undefined si está fuera de la ventana cargada. */
+  quotedMessage?: Message;
+  /** Salta al mensaje original al hacer click en el quote. */
+  onQuotedClick?: (message: Message) => void;
 }
 
 export const MessageBubble = memo(function MessageBubble({
   message,
   showAvatar = true,
   channelType,
+  onReply,
+  quotedMessage,
+  onQuotedClick,
 }: MessageBubbleProps) {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const closeLightbox = useCallback(() => setLightboxSrc(null), []);
@@ -377,7 +386,7 @@ export const MessageBubble = memo(function MessageBubble({
             <AlertCircle className="h-3.5 w-3.5 shrink-0" />
             <span className="text-[13px]">
               Mensaje no disponible
-              <span className="inline-block w-[70px]" />
+              <span className="inline-block w-[76px]" />
             </span>
           </div>
 
@@ -437,10 +446,25 @@ export const MessageBubble = memo(function MessageBubble({
   const carouselCards = message.content_attributes?.cards;
   const hasCards = !!carouselCards && carouselCards.length > 0;
 
+  // Quoted reply (US-UX-002): hasQuote drives rendering; quotedMessage is resolved by the parent.
+  const hasQuote = !!message.content_attributes?.in_reply_to;
+  // Stable onClick para que el `memo()` de QuotedMessagePreview no se invalide
+  // cada vez que el padre re-renderiza por mensajes nuevos vía WS.
+  const onQuotedPreviewClick = useCallback(
+    () => {
+      if (quotedMessage && onQuotedClick) onQuotedClick(quotedMessage);
+    },
+    [quotedMessage, onQuotedClick]
+  );
+
   return (
     <div
       className={cn(
-        "relative flex",
+        // `w-fit` para que el container se ajuste al ancho real del bubble.
+        // Sin esto, el outer ocupaba todo el max-w y los elementos absolutos
+        // posicionados con -left-9 / -right-9 (botón Responder) quedaban
+        // colgando lejos del mensaje.
+        "group relative flex w-fit",
         hasCards
           ? "max-w-[min(80%,520px)]"
           : isTemplate || hasMediaAttachment
@@ -456,7 +480,7 @@ export const MessageBubble = memo(function MessageBubble({
           hasCards
             ? ""
             : cn(
-                "rounded-lg px-3 py-1.5 shadow-sm overflow-hidden",
+                "rounded-lg px-3 py-1.5 shadow-sm overflow-hidden min-w-[120px]",
                 hasReferral && "w-[280px]",
                 isOutgoing
                   ? "bg-chat-outgoing rounded-tr-[4px]"
@@ -464,6 +488,16 @@ export const MessageBubble = memo(function MessageBubble({
               )
         )}
       >
+        {/* Quoted reply context (US-UX-002) — shown at the top of the bubble, WhatsApp-style */}
+        {hasQuote ? (
+          <QuotedMessagePreview
+            variant="bubble"
+            message={quotedMessage}
+            isOutgoing={isOutgoing}
+            onClick={onQuotedPreviewClick}
+          />
+        ) : null}
+
         {/* Template header media (image/video/doc) — rendered edge-to-edge above content */}
         {templateHasHeaderMedia && templateHeader ? (
           <TemplateHeader header={templateHeader} onImageClick={setLightboxSrc} />
@@ -503,7 +537,7 @@ export const MessageBubble = memo(function MessageBubble({
           <p className="whitespace-pre-wrap break-words" style={{ overflowWrap: "anywhere" }}>
             {formatWhatsAppText(message.content)}
             {/* Invisible spacer so time+check don't overlap text (skip for CTA/template-buttons — flow timestamp) */}
-            {!message.content_attributes?.cta_url && !templateHasButtons && <span className="inline-block w-[70px]" />}
+            {!message.content_attributes?.cta_url && !templateHasButtons && <span className="inline-block w-[76px]" />}
           </p>
         ) : null}
 
@@ -608,6 +642,29 @@ export const MessageBubble = memo(function MessageBubble({
           </span>
         )}
       </div>
+
+      {/* Reply action — appears on hover (US-UX-002).
+          En touch (`hover: none`) no hay hover, así que el botón queda visible
+          siempre (sin esto, el feature es invisible en mobile/tablet).
+          `group-focus-within` lo expone también cuando hay focus dentro del bubble. */}
+      {onReply && (
+        <button
+          type="button"
+          onClick={() => onReply(message)}
+          aria-label="Responder"
+          className={cn(
+            "absolute top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-card text-muted-foreground shadow-sm",
+            "opacity-0 motion-safe:transition-opacity motion-safe:duration-150",
+            "group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100",
+            "[@media(hover:none)]:opacity-100",
+            "hover:text-foreground",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-volt/40",
+            isOutgoing ? "-left-9" : "-right-9"
+          )}
+        >
+          <Reply className="h-4 w-4" />
+        </button>
+      )}
 
       {/* Image Lightbox */}
       {lightboxSrc && (

@@ -20,15 +20,17 @@ class Api::V1::MessagesController < Api::V1::BaseController
                  [msgs, msgs.size == 20]
                elsif params[:after].present?
                  msgs = base.reorder(created_at: :asc).where('id > ?', params[:after].to_i).limit(100)
-                 [msgs, false]
+                 [msgs, msgs.size == 100]
                else
                  msgs = base.reorder(created_at: :desc).limit(20).reverse
                  [msgs, msgs.size == 20]
                end
 
+    quoted_lookup = build_quoted_lookup(messages)
+
     render json: {
       success: true,
-      data: messages.map { |m| message_json(m) },
+      data: messages.map { |m| message_json(m, quoted_lookup) },
       meta: { has_more: has_more }
     }
   end
@@ -232,13 +234,31 @@ class Api::V1::MessagesController < Api::V1::BaseController
     :file
   end
 
-  def message_json(message)
+  # Batch-resolve the replied-to messages for a list (US-UX-002), avoiding an N+1 lookup
+  # per message (which previously exhausted the small connection pool). Single query keyed
+  # by source_id; attachments/sender eager-loaded for the snapshot.
+  def build_quoted_lookup(messages)
+    ids = messages.filter_map { |m| m.content_attributes['in_reply_to'] }.uniq
+    return {} if ids.empty?
+
+    @conversation.messages.where(source_id: ids).includes(:attachments, :sender).index_by(&:source_id)
+  end
+
+  def message_json(message, quoted_lookup = nil)
+    attrs = message.content_attributes
+    if message.in_reply_to.present?
+      quoted = quoted_lookup ? quoted_lookup[message.in_reply_to] : @conversation.messages.find_by(source_id: message.in_reply_to)
+      snapshot = Message.build_quoted_snapshot(quoted)
+      attrs = attrs.merge('quoted' => snapshot) if snapshot
+    end
+
     {
       id: message.id,
+      source_id: message.source_id,
       content: message.content,
       message_type: message.message_type,
       content_type: message.content_type,
-      content_attributes: message.content_attributes,
+      content_attributes: attrs,
       additional_attributes: message.additional_attributes,
       status: message.status,
       created_at: message.created_at,

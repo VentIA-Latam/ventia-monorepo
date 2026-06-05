@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useRef, useCallback, memo } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, memo } from "react";
 import { flushSync } from "react-dom";
 import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -21,7 +21,7 @@ import { MessageComposer } from "./message-composer";
 import { TemplatePicker } from "./template-picker";
 import { useMessagingEvent, useMessagingReconnect } from "./messaging-provider";
 import { getMessages, sendMessage, updateConversation, markConversationRead } from "@/lib/api-client/messaging";
-import type { Conversation, Message, MessageType, MessageStatus, MessageContentAttributes, MessageAdditionalAttributes, AttachmentBrief, ContactBrief, AgentBrief } from "@/lib/types/messaging";
+import type { Conversation, Message, MessageType, MessageStatus, MessageContentAttributes, MessageAdditionalAttributes, AttachmentBrief, ContactBrief, AgentBrief, QuotedMessageSnapshot } from "@/lib/types/messaging";
 import { MessageSearchPanel } from "./message-search-panel";
 import { getInitials, getDateSeparatorLabel, parseTimestamp, getSenderKey } from "@/lib/utils/messaging";
 import { useAuth } from "@/hooks/use-auth";
@@ -56,6 +56,33 @@ function mapWebSocketSender(raw: unknown): ContactBrief | AgentBrief | null {
 
 const MESSAGE_ITEM_STYLE = {};
 
+// Build a minimal Message from the backend quoted snapshot (US-UX-002) so the quote renders
+// even when the original message isn't in the loaded window. The id is the real DB id, so
+// clicking the quote can still jump to it (loads context around it on demand).
+// Cached by snapshot identity so the same snapshot yields a stable Message instance — keeps
+// MessageBubble's memo intact for bubbles quoting out-of-window messages.
+const snapshotMessageCache = new WeakMap<QuotedMessageSnapshot, Message>();
+function snapshotToMessage(snap?: QuotedMessageSnapshot | null): Message | undefined {
+  if (!snap) return undefined;
+  const cached = snapshotMessageCache.get(snap);
+  if (cached) return cached;
+  const msg: Message = {
+    id: snap.id,
+    source_id: null,
+    content: snap.content ?? null,
+    message_type: snap.message_type ?? null,
+    content_attributes: null,
+    additional_attributes: null,
+    sender: snap.sender_name ? ({ id: 0, name: snap.sender_name } as AgentBrief) : null,
+    attachments: snap.attachment_type
+      ? [{ id: `quoted-att-${snap.id}`, file_type: snap.attachment_type } as AttachmentBrief]
+      : [],
+    created_at: null,
+  };
+  snapshotMessageCache.set(snap, msg);
+  return msg;
+}
+
 interface MessageViewProps {
   conversation: Conversation | null;
   tenantId?: number;
@@ -76,9 +103,17 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
   useEffect(() => { setMounted(true); }, []);
   const isDark = mounted && resolvedTheme === "dark";
   const [messages, setMessages] = useState<Message[]>([]);
+  const messagesRef = useRef<Message[]>([]);
+  messagesRef.current = messages;
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  // Forward pagination: true while there are newer messages below the loaded window (after a
+  // jump to an old message). Lets scroll-down load recent messages instead of dead-ending.
+  const [hasMoreNewer, setHasMoreNewer] = useState(false);
+  const hasMoreNewerRef = useRef(false);
+  const loadNewerRef = useRef<() => void>(() => {});
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -92,6 +127,9 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
   const showScrollDownRef = useRef(false);
   const [isNavigatingToMessage, setIsNavigatingToMessage] = useState(false);
   const isLoadingPreviousRef = useRef(false);
+  // Separate guard for forward pagination so an in-flight older load doesn't drop a newer
+  // load (and vice-versa). Both use functional setMessages updates, so concurrency is safe.
+  const isLoadingNewerRef = useRef(false);
   const isLoadingTargetRef = useRef(false);
   const navigateToMessageRef = useRef<(id: number) => Promise<void>>(async () => {});
   // Track if we should stay pinned to the bottom
@@ -104,6 +142,12 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
   const scrolledTargetRef = useRef<string | null>(null);
   // Tracks current conversation ID — used to detect stale navigateToMessage calls after await
   const currentConvIdRef = useRef<number | string | undefined>(conversation?.id);
+  // Timer del jump-to-message highlight (limpiado en reset por conversation switch).
+  // Declarado acá arriba para evitar TDZ con el effect que lo limpia.
+  const jumpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Live ref de `messages` para que loadOlder/loadNewer puedan leer el boundary id
+  // sin tener `messages` en sus deps. Sin esto, cada WS msg recreaba el useCallback
+  // y reasignaba refs en cada render.
 
   // Load messages when conversation changes
   useEffect(() => {
@@ -116,6 +160,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
     setMessages([]);
     setLoading(true);
     setHasMore(true);
+    setHasMoreNewer(false);
     messageIdsRef.current = new Set<string>();
 
     getMessages(conversation.id, { tenantId, signal: controller.signal })
@@ -151,19 +196,26 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
   useEffect(() => {
     if (!reconnectedAt || !conversation) return;
 
-    let cancelled = false;
-    getMessages(conversation.id, { tenantId })
+    // AbortController para que el fetch se cancele de verdad al cambiar de
+    // conversación (mirror del patrón del initial load — el `cancelled` flag
+    // anterior no cortaba el request en sí, solo el .then).
+    const controller = new AbortController();
+    getMessages(conversation.id, { tenantId, signal: controller.signal })
       .then((data) => {
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
         const msgs = data.data ?? [];
         messageIdsRef.current = new Set(msgs.map((m) => String(m.id)));
         scrollBehaviorRef.current = "instant";
         setMessages(msgs);
         setHasMore(Boolean(data.meta?.has_more));
+        setHasMoreNewer(false);
       })
-      .catch((err) => console.error("[reconnect] Error refreshing messages:", err));
+      .catch((err) => {
+        if (err?.name === "AbortError") return;
+        console.error("[reconnect] Error refreshing messages:", err);
+      });
 
-    return () => { cancelled = true; };
+    return () => { controller.abort(); };
   }, [reconnectedAt, conversation?.id, tenantId]);
 
   // Append new messages from WebSocket events
@@ -200,6 +252,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
           const updated = [...prev];
           updated[lastTempIdx] = {
             id: msgId,
+            source_id: (msgData.source_id as string) ?? null,
             content: (msgData.content as string) ?? "",
             message_type: msgType as MessageType,
             status: (msgData.status as MessageStatus) ?? undefined,
@@ -215,6 +268,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
 
       return [...prev, {
         id: msgId,
+        source_id: (msgData.source_id as string) ?? null,
         content: (msgData.content as string) ?? "",
         message_type: msgType as MessageType,
         status: (msgData.status as MessageStatus) ?? undefined,
@@ -239,20 +293,27 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
     }
   }, [lastEvent, conversation?.id]);
 
-  // Update message status from WebSocket events (sent → delivered → read)
+  // Update message from WebSocket events (message.updated):
+  // - status (sent → delivered → read)
+  // - source_id (US-UX-002): outgoing messages are broadcast on creation with source_id=null,
+  //   then the wamid is assigned after Meta confirms and only arrives via this event. Without
+  //   merging it here, quoting/replying to a just-sent message can't resolve its source_id.
   useEffect(() => {
     if (!lastEvent || !conversation) return;
     if (lastEvent.event !== "message.updated") return;
 
     const msgData = lastEvent.data;
     if (String(msgData.conversation_id) !== String(conversation.id)) return;
-    if (!msgData.status) return;
 
     const msgId = String(msgData.id);
     setMessages((prev) =>
-      prev.map((m) =>
-        String(m.id) === msgId ? { ...m, status: msgData.status as MessageStatus } : m
-      )
+      prev.map((m) => {
+        if (String(m.id) !== msgId) return m;
+        const next = { ...m };
+        if (msgData.status) next.status = msgData.status as MessageStatus;
+        if (msgData.source_id) next.source_id = msgData.source_id as string;
+        return next;
+      })
     );
   }, [lastEvent, conversation?.id]);
 
@@ -299,7 +360,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const oldestId = messages[0]?.id;
+    const oldestId = messagesRef.current[0]?.id;
     if (!oldestId || String(oldestId).startsWith("temp-")) return;
 
     // Chatwoot: setScrollParams — save scroll state before fetch
@@ -322,7 +383,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
         flushSync(() => {
           setMessages((prev) =>
             [...olderMessages, ...prev].sort(
-              (a, b) => new Date(String(a.created_at)).getTime() - new Date(String(b.created_at)).getTime()
+              (a, b) => (parseTimestamp(a.created_at)?.getTime() ?? 0) - (parseTimestamp(b.created_at)?.getTime() ?? 0)
             )
           );
           setHasMore(Boolean(data.meta?.has_more));
@@ -342,10 +403,55 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
       isLoadingPreviousRef.current = false;
       setLoadingMore(false);
     }
-  }, [conversation?.id, messages, hasMore, tenantId]);
+  }, [conversation?.id, hasMore, tenantId]);
+
+  // Load newer messages (forward pagination) — used after jumping to an old message so the
+  // user can scroll down toward the present. Appends at the bottom; since the user is scrolled
+  // mid-history (not pinned), the view stays put while content grows below.
+  const loadNewerMessages = useCallback(async () => {
+    if (!conversation || isLoadingNewerRef.current || !hasMoreNewer) return;
+
+    // Use the newest persisted id as the cursor — skip optimistic temp messages so a pending
+    // (or failed) send at the bottom doesn't block forward pagination.
+    const messagesNow = messagesRef.current;
+    let newestId: string | number | undefined;
+    for (let i = messagesNow.length - 1; i >= 0; i--) {
+      if (!String(messagesNow[i].id).startsWith("temp-")) {
+        newestId = messagesNow[i].id;
+        break;
+      }
+    }
+    if (!newestId) return;
+
+    isLoadingNewerRef.current = true;
+    setLoadingMore(true);
+    try {
+      const data = await getMessages(conversation.id, { after: Number(newestId), tenantId });
+      const newer = (data.data ?? []).filter((m) => !messageIdsRef.current.has(String(m.id)));
+      newer.forEach((m) => messageIdsRef.current.add(String(m.id)));
+
+      if (newer.length === 0) {
+        setHasMoreNewer(false);
+      } else {
+        setMessages((prev) =>
+          [...prev, ...newer].sort(
+            (a, b) => (parseTimestamp(a.created_at)?.getTime() ?? 0) - (parseTimestamp(b.created_at)?.getTime() ?? 0)
+          )
+        );
+        setHasMoreNewer(Boolean(data.meta?.has_more));
+      }
+    } catch (err) {
+      console.error("Error loading newer messages:", err);
+    } finally {
+      isLoadingNewerRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [conversation?.id, hasMoreNewer, tenantId]);
 
   // Keep stable ref for scroll handler (avoids re-attaching listener on every render)
   loadOlderRef.current = loadOlderMessages;
+  loadNewerRef.current = loadNewerMessages;
+  hasMoreNewerRef.current = hasMoreNewer;
   // Always reflects the current conversation ID — checked in navigateToMessage after await
   currentConvIdRef.current = conversation?.id;
 
@@ -366,6 +472,9 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
       flushSync(() => {
         setMessages(msgs);
         setHasMore(Boolean(data.meta?.has_more));
+        // We loaded a window around an old message — there are (almost certainly) newer
+        // messages below. Enable forward pagination; loadNewer self-corrects to false at the end.
+        setHasMoreNewer(true);
         setIsJumpMode(true);
       });
       isPinnedToBottomRef.current = false;
@@ -395,14 +504,22 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
     if (!container || !conversation || loading) return;
 
     const handleScroll = () => {
-      if (isLoadingPreviousRef.current) return;
-
+      // No shared early-return guard: loadOlder/loadNewer each guard themselves with their own
+      // ref, so a backward load in flight no longer suppresses a forward load (and vice-versa).
       const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
       const isNearBottom = distanceFromBottom < 150;
-      isPinnedToBottomRef.current = isNearBottom;
-      if (isNearBottom) setIsJumpMode(false);
 
-      const shouldShow = !isNearBottom;
+      if (isNearBottom && hasMoreNewerRef.current) {
+        // Bottom of a jump window, but newer messages exist — load forward instead of
+        // treating this as the real bottom (don't pin / don't exit jump mode yet).
+        loadNewerRef.current();
+      } else {
+        isPinnedToBottomRef.current = isNearBottom;
+        if (isNearBottom) setIsJumpMode(false);
+      }
+
+      // Keep the down-arrow visible while not at the real bottom OR while newer messages remain.
+      const shouldShow = !isNearBottom || hasMoreNewerRef.current;
       if (showScrollDownRef.current !== shouldShow) {
         showScrollDownRef.current = shouldShow;
         setShowScrollDown(shouldShow);
@@ -418,10 +535,24 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
     return () => container.removeEventListener("scroll", handleScroll);
   }, [conversation?.id, loading]);
 
+  // Quoted reply (US-UX-002): map source_id (wamid) → message to resolve quoted bubbles.
+  // The resolved message is passed as a prop per-bubble (computed in the render map below),
+  // so MessageBubble's memo only re-renders quoting bubbles whose target actually changed.
+  const sourceIdMap = useMemo(() => {
+    const map = new Map<string, Message>();
+    for (const m of messages) {
+      if (m.source_id) map.set(String(m.source_id), m);
+    }
+    return map;
+  }, [messages]);
+
   // Send message
   const handleSend = useCallback(
     async (content: string, file?: File) => {
       if (!conversation) return;
+
+      const inReplyTo = replyingTo?.source_id ?? null;
+      const replyAttrs = inReplyTo ? { in_reply_to: inReplyTo } : undefined;
 
       // Build temp attachment preview for optimistic UI
       const tempAttachments: AttachmentBrief[] = [];
@@ -448,6 +579,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
         id: `temp-${Date.now()}`,
         content,
         message_type: "outgoing",
+        content_attributes: replyAttrs,
         sender: userDetails
           ? { id: userDetails.id, name: userDetails.name, email: userDetails.email }
           : null,
@@ -458,9 +590,15 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
       scrollBehaviorRef.current = "smooth";
       messageIdsRef.current.add(String(tempMessage.id));
       setMessages((prev) => [...prev, tempMessage]);
+      setReplyingTo(null);
 
       try {
-        const result = await sendMessage(conversation.id, { content }, file, tenantId);
+        const result = await sendMessage(
+          conversation.id,
+          { content, ...(replyAttrs ? { content_attributes: replyAttrs } : {}) },
+          file,
+          tenantId
+        );
         if (result && typeof result === "object" && "id" in result) {
           const realId = String((result as Message).id);
           messageIdsRef.current.add(realId);
@@ -472,12 +610,17 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
         }
       } catch (err) {
         console.error("Error sending message:", err);
+        // Revert the optimistic message to a visible failed state so it isn't left as a
+        // phantom "sent" bubble (and doesn't linger at the bottom blocking pagination).
+        setMessages((prev) =>
+          prev.map((m) => (m.id === tempMessage.id ? { ...m, status: "failed" as MessageStatus } : m))
+        );
         toast({ title: "Error al enviar mensaje", description: "Verifica tu conexión e intenta de nuevo", variant: "destructive" });
       } finally {
         if (previewUrl) URL.revokeObjectURL(previewUrl);
       }
     },
-    [conversation?.id, tenantId, userDetails]
+    [conversation?.id, tenantId, userDetails, replyingTo]
   );
 
   // Toggle AI agent
@@ -512,6 +655,11 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
 
     if (!el) {
       if (!isLoadingTargetRef.current) {
+        // Marcá scrolled ANTES de dispatchear nav. Sin esto, cada WS msg que
+        // llegue durante el await re-dispara el effect, hace un querySelector
+        // y queda colgado en el guard `isLoadingTargetRef`. navigateToMessage
+        // re-setea esta misma key al completar (no-op).
+        scrolledTargetRef.current = key;
         navigateToMessageRef.current(targetMessageId);
       }
       return;
@@ -530,8 +678,10 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
   // Reset search when conversation changes
   useEffect(() => {
     setIsSearchOpen(false);
+    setReplyingTo(null);
     setJumpHighlightId(null);
     setIsJumpMode(false);
+    setHasMoreNewer(false);
     setShowScrollDown(false);
     showScrollDownRef.current = false;
     setIsNavigatingToMessage(false);
@@ -542,8 +692,6 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
       jumpTimerRef.current = null;
     }
   }, [conversation?.id]);
-
-  const jumpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleResultClick = useCallback((messageId: number | string) => {
     scrolledTargetRef.current = null;
@@ -562,6 +710,12 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
     }
   }, [conversation?.id]);
 
+  // Jump to the original message when a quoted preview is clicked (US-UX-002).
+  const handleQuotedClick = useCallback(
+    (m: Message) => handleResultClick(m.id),
+    [handleResultClick]
+  );
+
   const handleToggleSearch = useCallback(() => {
     setIsSearchOpen((prev) => !prev);
   }, []);
@@ -569,12 +723,18 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
   const handleBackToBottom = useCallback(() => {
     if (!conversation) return;
     setIsJumpMode(false);
+    setHasMoreNewer(false);
     scrolledTargetRef.current = null;
     setLoading(true);
     setHasMore(true);
     messageIdsRef.current = new Set();
+    // Capturá el conv.id antes del await para detectar cambio de conversación
+    // mid-fetch; sin esto, el fetch de la conv vieja sobrescribe los mensajes
+    // de la nueva.
+    const capturedConvId = conversation.id;
     getMessages(conversation.id, { tenantId })
       .then((data) => {
+        if (currentConvIdRef.current !== capturedConvId) return;
         const msgs = data.data ?? [];
         messageIdsRef.current = new Set(msgs.map((m) => String(m.id)));
         scrollBehaviorRef.current = "instant";
@@ -582,7 +742,9 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
         setHasMore(Boolean(data.meta?.has_more));
       })
       .catch((err) => console.error("[back-to-bottom]", err))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (currentConvIdRef.current === capturedConvId) setLoading(false);
+      });
   }, [conversation?.id, tenantId]);
 
   // No conversation selected
@@ -751,6 +913,13 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
 
               const isHighlighted = jumpHighlightId !== null && String(jumpHighlightId) === String(msg.id);
 
+              // Prefer the live loaded message (freshest); fall back to the backend snapshot
+              // so quotes to old/unloaded messages still show real content (US-UX-002).
+              const quotedSourceId = msg.content_attributes?.in_reply_to;
+              const quotedMessage =
+                (quotedSourceId ? sourceIdMap.get(String(quotedSourceId)) : undefined) ??
+                snapshotToMessage(msg.content_attributes?.quoted);
+
               return (
                 <div
                   key={msg.id}
@@ -763,11 +932,14 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
                       </span>
                     </div>
                   ) : null}
-                  <div className={`rounded-lg transition-colors duration-300 ${isHighlighted ? "bg-volt/15" : ""}`} style={MESSAGE_ITEM_STYLE}>
+                  <div className={`rounded-lg motion-safe:transition-colors motion-safe:duration-300 ${isHighlighted ? "bg-volt/15" : ""}`} style={MESSAGE_ITEM_STYLE}>
                     <MessageBubble
                       message={msg}
                       showAvatar={isLastInCluster}
                       channelType={conversation.inbox?.channel_type}
+                      onReply={setReplyingTo}
+                      quotedMessage={quotedMessage}
+                      onQuotedClick={handleQuotedClick}
                     />
                   </div>
                 </div>
@@ -811,6 +983,8 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
       <MessageComposer
         onSend={handleSend}
         disabled={loading || conversation.can_reply === false}
+        replyingTo={replyingTo}
+        onCancelReply={() => setReplyingTo(null)}
         audioFormat={
           conversation.inbox?.channel_type === "Channel::Instagram" ? "wav" : "mp3"
         }

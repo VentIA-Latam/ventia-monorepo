@@ -194,6 +194,7 @@ class ConversationResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     id: int
+    source_id: Optional[str] = None
     content: Optional[str] = None
     message_type: Optional[str] = None
     content_type: Optional[str] = None
