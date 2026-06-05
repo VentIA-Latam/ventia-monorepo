@@ -44,7 +44,7 @@ export function RetryFailedDialog({
     } catch (e) {
       toast({
         title: "No se pudo reintentar",
-        description: e instanceof Error ? e.message : "Intentá de nuevo",
+        description: e instanceof Error ? e.message : "Inténtalo de nuevo",
         variant: "destructive",
       });
     } finally {

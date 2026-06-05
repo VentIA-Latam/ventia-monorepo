@@ -1,15 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAccessToken } from "@/hooks/use-access-token";
-import {
-  fetchCampaignRecipients,
-  updateCampaign,
-} from "@/lib/services/campaigns-service";
+import { updateCampaign } from "@/lib/services/campaigns-service";
 import {
   CONTACT_BUILT_IN_ATTRIBUTES,
   type Campaign,
@@ -31,6 +28,8 @@ function isTemplate(x: unknown): x is WhatsAppTemplate {
 interface Props {
   campaign: Campaign;
   templates: unknown[];
+  /** CSV columns liftadas al WizardClient; vacío si audience !== csv. */
+  csvColumns: string[];
   onSaved: (updated: Campaign) => void;
   onBack: () => void;
 }
@@ -53,11 +52,16 @@ function hasHeaderImage(template?: WhatsAppTemplate): boolean {
   );
 }
 
-export function Step4Variables({ campaign, templates, onSaved, onBack }: Props) {
+export function Step4Variables({
+  campaign,
+  templates,
+  csvColumns,
+  onSaved,
+  onBack,
+}: Props) {
   const { toast } = useToast();
   const accessToken = useAccessToken();
   const [submitting, setSubmitting] = useState(false);
-  const [csvColumns, setCsvColumns] = useState<string[]>([]);
 
   const template = useMemo(() => {
     if (!campaign.template_params?.name) return undefined;
@@ -78,24 +82,6 @@ export function Step4Variables({ campaign, templates, onSaved, onBack }: Props) 
     () => campaign.template_params?.variables ?? {}
   );
   const [headerUrl, setHeaderUrl] = useState(campaign.header_media_url ?? "");
-
-  // Para CSV: detectar columnas inspeccionando el primer recipient.
-  useEffect(() => {
-    if (!isCsv || !accessToken) return;
-    fetchCampaignRecipients(accessToken, campaign.id, { page: 1, per_page: 1 })
-      .then((res) => {
-        const first = res.data[0];
-        if (!first) return;
-        // Vars del recipient son { columna: valor }, las columnas son las keys.
-        // Hacemos otro fetch a la rama de recipients para inferir (TODO: backend podría
-        // devolver columnas en /campaigns/:id pero por ahora inferimos).
-        const cols = Object.keys((first as { vars?: Record<string, unknown> }).vars ?? {});
-        setCsvColumns(cols);
-      })
-      .catch(() => {
-        // sin info — el usuario tendrá fallback a free-text
-      });
-  }, [isCsv, accessToken, campaign.id]);
 
   const updateVar = (idx: string, mapping: CampaignVariableMapping) => {
     setVariables((prev) => ({ ...prev, [idx]: mapping }));
@@ -127,7 +113,7 @@ export function Step4Variables({ campaign, templates, onSaved, onBack }: Props) 
     } catch (e) {
       toast({
         title: "No se pudieron guardar las variables",
-        description: e instanceof Error ? e.message : "Intentá de nuevo",
+        description: e instanceof Error ? e.message : "Inténtalo de nuevo",
         variant: "destructive",
       });
     } finally {
@@ -166,8 +152,8 @@ export function Step4Variables({ campaign, templates, onSaved, onBack }: Props) 
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           {isCsv
-            ? "Mapeá cada variable a una columna del CSV."
-            : "Mapeá cada variable a un atributo del Contact."}
+            ? "Mapea cada variable a una columna del CSV."
+            : "Mapea cada variable a un atributo del Contact."}
         </p>
       </header>
 

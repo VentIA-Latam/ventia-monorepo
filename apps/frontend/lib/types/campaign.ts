@@ -70,6 +70,8 @@ export interface Campaign {
   failed_count: number;
   inbox: CampaignInboxSummary;
   stats?: CampaignStats;
+  /** Columnas detectadas del CSV (vacío si audience=labels o sin upload). */
+  csv_columns?: string[];
 }
 
 export interface CampaignRecipient {

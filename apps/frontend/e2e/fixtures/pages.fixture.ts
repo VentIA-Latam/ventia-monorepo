@@ -4,6 +4,7 @@ import { MessageViewPage } from "../pages/message-view.page";
 import { MessageSearchPage } from "../pages/message-search.page";
 import { ChannelsPage } from "../pages/channels.page";
 import { InstagramConsentPage } from "../pages/instagram-consent.page";
+import { CampaignsPage } from "../pages/campaigns.page";
 
 interface PageFixtures {
   conversationsPage: ConversationsPage;
@@ -11,6 +12,7 @@ interface PageFixtures {
   messageSearchPage: MessageSearchPage;
   channelsPage: ChannelsPage;
   instagramConsentPage: InstagramConsentPage;
+  campaignsPage: CampaignsPage;
 }
 
 export const test = base.extend<PageFixtures>({
@@ -28,6 +30,9 @@ export const test = base.extend<PageFixtures>({
   },
   instagramConsentPage: async ({ page }, use) => {
     await use(new InstagramConsentPage(page));
+  },
+  campaignsPage: async ({ page }, use) => {
+    await use(new CampaignsPage(page));
   },
 });
 

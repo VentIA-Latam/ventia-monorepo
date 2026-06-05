@@ -53,7 +53,7 @@ export function DeleteCampaignDialog({
     } catch (e) {
       toast({
         title: "No se pudo borrar",
-        description: e instanceof Error ? e.message : "Intentá de nuevo",
+        description: e instanceof Error ? e.message : "Inténtalo de nuevo",
         variant: "destructive",
       });
     } finally {
@@ -70,7 +70,7 @@ export function DeleteCampaignDialog({
       }}
     >
       <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
-      <AlertDialogContent>
+      <AlertDialogContent data-testid="delete-campaign-dialog">
         <AlertDialogHeader>
           <AlertDialogTitle>Borrar campaña</AlertDialogTitle>
           <AlertDialogDescription>
@@ -95,6 +95,7 @@ export function DeleteCampaignDialog({
         <AlertDialogFooter>
           <AlertDialogCancel disabled={submitting}>Cancelar</AlertDialogCancel>
           <AlertDialogAction
+            data-testid="delete-campaign-confirm"
             onClick={onConfirm}
             disabled={!canSubmit || submitting}
             className="bg-[var(--danger)] text-background hover:bg-[var(--danger)]/90"

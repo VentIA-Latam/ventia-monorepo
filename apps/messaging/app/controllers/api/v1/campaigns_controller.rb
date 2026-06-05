@@ -127,12 +127,12 @@ class Api::V1::CampaignsController < Api::V1::BaseController
     sample_ids = pick_sample_ids(recipients)
     samples = recipients.where(id: sample_ids).map { |r| render_preview(r) }
 
-    render_success(
+    render_success({
       template_name:    @campaign.template_params&.dig('name'),
       recipients_count: recipients.count,
       omitted_samples:  preview_omitted_samples(recipients),
       samples:          samples
-    )
+    })
   end
 
   # POST /campaigns/:id/retry-failed
@@ -289,11 +289,22 @@ class Api::V1::CampaignsController < Api::V1::BaseController
       recipients_count: campaign.recipients_count,
       sent_count:       campaign.sent_count,
       failed_count:     campaign.failed_count,
-      inbox: { id: campaign.inbox.id, name: campaign.inbox.name }
+      inbox:            { id: campaign.inbox.id, name: campaign.inbox.name },
+      # Columnas del CSV (derivadas de las keys de `vars` del primer recipient).
+      # El frontend las usa en step 4 del wizard para popular el dropdown de
+      # mapeo "{{1}} → columna". Persiste a refresh sin necesidad de re-upload.
+      csv_columns:      campaign_csv_columns(campaign)
     }
     base[:stats] = stats if stats # batch-precomputed
     base[:stats] = compute_stats(campaign) if with_stats && base[:stats].nil?
     base
+  end
+
+  def campaign_csv_columns(campaign)
+    return [] unless campaign.audience_type == 'csv'
+
+    first = campaign.campaign_recipients.where.not(vars: nil).order(:id).first
+    first&.vars&.keys || []
   end
 
   # Stats per-campaign con una sola query SQL para evitar N+1 en el index.
@@ -333,7 +344,11 @@ class Api::V1::CampaignsController < Api::V1::BaseController
       external_error:  recipient.external_error,
       sent_at:         recipient.sent_at,
       delivered_at:    recipient.delivered_at,
-      read_at:         recipient.read_at
+      read_at:         recipient.read_at,
+      # `vars` (jsonb) son las columnas del CSV. Frontend las usa en step 4 del
+      # wizard para popular el dropdown "mapeá variable a columna" — sin esto
+      # el picker cae a free-text y el usuario tipea ciego.
+      vars:            recipient.vars
     }
   end
 end

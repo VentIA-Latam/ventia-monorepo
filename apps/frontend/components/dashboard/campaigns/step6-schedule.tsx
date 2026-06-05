@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, Calendar, Zap } from "lucide-react";
+import { AlertTriangle, Calendar, Check, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,7 +48,7 @@ export function Step6Schedule({ campaign, onTriggered, onBack }: Props) {
     } catch (e) {
       toast({
         title: "No se pudo disparar",
-        description: e instanceof Error ? e.message : "Intentá de nuevo",
+        description: e instanceof Error ? e.message : "Inténtalo de nuevo",
         variant: "destructive",
       });
       setSubmitting(false);
@@ -127,11 +127,12 @@ export function Step6Schedule({ campaign, onTriggered, onBack }: Props) {
           ← Atrás
         </Button>
         <Button onClick={onSubmit} disabled={!canSubmit || submitting}>
+          {!submitting && <Check className="h-4 w-4" />}
           {submitting
             ? "Disparando..."
             : mode === "now"
-              ? "✓ Enviar ahora"
-              : "✓ Programar"}
+              ? "Enviar ahora"
+              : "Programar"}
         </Button>
       </footer>
     </div>

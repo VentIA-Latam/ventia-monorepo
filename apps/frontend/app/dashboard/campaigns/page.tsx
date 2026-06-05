@@ -8,9 +8,9 @@ export const dynamic = "force-dynamic";
 
 const ERROR_MESSAGES: Record<string, string> = {
   no_whatsapp_inbox:
-    "Para crear campañas, primero configurá un inbox de WhatsApp en Configuración → Canales.",
+    "Para crear campañas, primero configura un inbox de WhatsApp en Configuración → Canales.",
   create_failed:
-    "No pudimos crear la campaña. Verificá tu conexión e intentalo de nuevo.",
+    "No pudimos crear la campaña. Verifica tu conexión e inténtalo de nuevo.",
   load_failed: "No pudimos cargar los inboxes disponibles.",
 };
 
@@ -31,7 +31,7 @@ export default async function CampaignsPage({
       const response = await fetchCampaigns(token);
       initialCampaigns = response.data ?? [];
     } else {
-      loadError = "Sesión expirada. Iniciá sesión nuevamente.";
+      loadError = "Sesión expirada. Inicia sesión nuevamente.";
     }
   } catch (e) {
     loadError = e instanceof Error ? e.message : "No se pudieron cargar las campañas.";

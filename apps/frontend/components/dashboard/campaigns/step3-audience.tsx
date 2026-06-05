@@ -12,10 +12,7 @@ import {
   setLabelsAudience,
   uploadCampaignCsv,
 } from "@/lib/services/campaigns-service";
-import type {
-  Campaign,
-  CampaignCsvUploadResult,
-} from "@/lib/types/campaign";
+import type { Campaign, CampaignCsvUploadResult } from "@/lib/types/campaign";
 
 interface LabelOption {
   id: number;
@@ -33,42 +30,99 @@ interface Props {
   labels: unknown[];
   onSaved: (updated: Campaign) => void;
   onBack: () => void;
+  /** Update del campaign en el parent SIN avanzar de step (a diferencia de
+   *  onSaved que sí avanza). Usado por CsvUploader post-upload así "Siguiente"
+   *  se habilita sin click adicional. */
+  onCampaignChanged: (updated: Campaign) => void;
+  /** Push de columnas detectadas al WizardClient para que step 4 las tenga
+   *  inmediatamente sin esperar a un refetch + sin depender de que el backend
+   *  devuelva `vars` en /recipients. */
+  onCsvColumnsDetected: (columns: string[]) => void;
 }
 
 type Mode = "csv" | "labels";
 
-export function Step3Audience({ campaign, labels, onSaved, onBack }: Props) {
+export function Step3Audience({
+  campaign,
+  labels,
+  onSaved,
+  onBack,
+  onCampaignChanged,
+  onCsvColumnsDetected,
+}: Props) {
   const { toast } = useToast();
   const accessToken = useAccessToken();
   const [mode, setMode] = useState<Mode>(
     campaign.audience_type === "csv" ? "csv" : "labels"
   );
   const [submitting, setSubmitting] = useState(false);
+  // Lifted del LabelsPicker: el parent necesita saber qué labels eligió el usuario
+  // para que "Siguiente →" pueda auto-aplicar el snapshot si todavía no se aplicó.
+  // Antes esto vivía como state local del picker → el botón Siguiente quedaba ciego.
+  const [selectedLabelIds, setSelectedLabelIds] = useState<number[]>([]);
+  const [appliedLabelCount, setAppliedLabelCount] = useState<number | null>(null);
+
+  const toggleLabel = (id: number) => {
+    setSelectedLabelIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
 
   const onNext = async () => {
     if (!accessToken) return;
-    if (campaign.recipients_count === 0) {
-      toast({
-        title: "Sin destinatarios",
-        description: "Cargá un CSV o seleccioná etiquetas con al menos 1 contacto.",
-        variant: "destructive",
-      });
-      return;
-    }
     setSubmitting(true);
     try {
+      if (mode === "labels") {
+        if (selectedLabelIds.length === 0) {
+          toast({
+            title: "Selecciona al menos una etiqueta",
+            variant: "destructive",
+          });
+          return;
+        }
+        // Auto-aplicar el snapshot con la selección actual. Es idempotente: si el
+        // usuario ya tocó "Aplicar etiquetas" antes, se regenera (rápido), pero le
+        // ahorra el segundo click — selección visible == intent.
+        const applyRes = await setLabelsAudience(
+          accessToken,
+          campaign.id,
+          selectedLabelIds
+        );
+        setAppliedLabelCount(applyRes.data.recipients_count);
+        if (applyRes.data.recipients_count === 0) {
+          toast({
+            title: "Sin destinatarios",
+            description: "Las etiquetas seleccionadas no tienen contactos.",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else if (campaign.recipients_count === 0) {
+        toast({
+          title: "Sin destinatarios",
+          description: "Sube un CSV con al menos 1 fila válida.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const response = await fetchCampaign(accessToken, campaign.id);
       onSaved(response.data);
     } catch (e) {
       toast({
         title: "Error",
-        description: e instanceof Error ? e.message : "Intentá de nuevo",
+        description: e instanceof Error ? e.message : "Inténtalo de nuevo",
         variant: "destructive",
       });
     } finally {
       setSubmitting(false);
     }
   };
+
+  const nextDisabled =
+    submitting ||
+    (mode === "csv" && campaign.recipients_count === 0) ||
+    (mode === "labels" && selectedLabelIds.length === 0);
 
   return (
     <div className="space-y-6">
@@ -77,7 +131,7 @@ export function Step3Audience({ campaign, labels, onSaved, onBack }: Props) {
           ¿De dónde sale la audiencia?
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Subí un CSV con teléfonos y datos, o seleccioná etiquetas existentes.
+          Sube un CSV con teléfonos y datos, o selecciona etiquetas existentes.
         </p>
       </header>
 
@@ -87,6 +141,7 @@ export function Step3Audience({ campaign, labels, onSaved, onBack }: Props) {
           label="CSV"
           desc="Subir archivo"
           active={mode === "csv"}
+          testId="audience-mode-csv"
           onClick={() => setMode("csv")}
         />
         <ModeButton
@@ -94,6 +149,7 @@ export function Step3Audience({ campaign, labels, onSaved, onBack }: Props) {
           label="Etiquetas"
           desc="Contactos por label"
           active={mode === "labels"}
+          testId="audience-mode-labels"
           onClick={() => setMode("labels")}
         />
       </div>
@@ -103,22 +159,34 @@ export function Step3Audience({ campaign, labels, onSaved, onBack }: Props) {
           campaignId={campaign.id}
           accessToken={accessToken}
           recipientsCount={campaign.recipients_count}
+          onColumnsDetected={onCsvColumnsDetected}
+          onCampaignChanged={onCampaignChanged}
         />
       ) : (
         <LabelsPicker
           campaignId={campaign.id}
           accessToken={accessToken}
           labels={labels.filter(isLabel)}
+          selectedIds={selectedLabelIds}
+          appliedCount={appliedLabelCount}
+          onToggle={toggleLabel}
+          onApplied={setAppliedLabelCount}
         />
       )}
 
       <footer className="flex justify-between">
-        <Button variant="outline" onClick={onBack} disabled={submitting}>
+        <Button
+          variant="outline"
+          data-testid="wizard-back-button"
+          onClick={onBack}
+          disabled={submitting}
+        >
           ← Atrás
         </Button>
         <Button
+          data-testid="wizard-next-button"
           onClick={onNext}
-          disabled={submitting || campaign.recipients_count === 0}
+          disabled={nextDisabled}
         >
           {submitting ? "Cargando..." : "Siguiente →"}
         </Button>
@@ -134,17 +202,21 @@ function ModeButton({
   label,
   desc,
   active,
+  testId,
   onClick,
 }: {
   icon: React.ReactNode;
   label: string;
   desc: string;
   active: boolean;
+  testId: string;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
+      data-testid={testId}
+      data-active={active}
       onClick={onClick}
       className={`flex items-center gap-3 rounded-lg border p-4 text-left transition ${
         active ? "border-volt bg-volt/5" : "border-border hover:bg-muted"
@@ -165,10 +237,14 @@ function CsvUploader({
   campaignId,
   accessToken,
   recipientsCount,
+  onColumnsDetected,
+  onCampaignChanged,
 }: {
   campaignId: number;
   accessToken: string | null;
   recipientsCount: number;
+  onColumnsDetected: (columns: string[]) => void;
+  onCampaignChanged: (updated: Campaign) => void;
 }) {
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
@@ -187,6 +263,14 @@ function CsvUploader({
       try {
         const response = await uploadCampaignCsv(accessToken, campaignId, file);
         setResult(response.data);
+        // Push de columnas al wizard parent → step 4 las usa para el dropdown.
+        onColumnsDetected(response.data.columns ?? []);
+        // Re-fetch del campaign para que el parent sepa que recipients_count > 0
+        // y "Siguiente →" se habilite sin click adicional. Importante que sea
+        // el campaign completo (no solo el count) para mantener csv_columns,
+        // audience_type, stats coherentes.
+        const campaignRes = await fetchCampaign(accessToken, campaignId);
+        onCampaignChanged(campaignRes.data);
         toast({
           title: "CSV procesado",
           description: `${response.data.recipients_count} destinatarios cargados.`,
@@ -194,7 +278,7 @@ function CsvUploader({
       } catch (e) {
         toast({
           title: "Error al subir CSV",
-          description: e instanceof Error ? e.message : "Intentá de nuevo",
+          description: e instanceof Error ? e.message : "Inténtalo de nuevo",
           variant: "destructive",
         });
       } finally {
@@ -217,8 +301,8 @@ function CsvUploader({
           {uploading
             ? "Subiendo..."
             : isDragActive
-              ? "Soltá el archivo aquí"
-              : "Arrastrá tu CSV o hacé click para seleccionar"}
+              ? "Suelta el archivo aquí"
+              : "Arrastra tu CSV o haz click para seleccionar"}
         </div>
         <div className="text-xs text-muted-foreground">
           Máximo 5MB. Requiere columna <code>phone</code> o <code>telefono</code>.
@@ -274,28 +358,29 @@ function LabelsPicker({
   campaignId,
   accessToken,
   labels,
+  selectedIds,
+  appliedCount,
+  onToggle,
+  onApplied,
 }: {
   campaignId: number;
   accessToken: string | null;
   labels: LabelOption[];
+  selectedIds: number[];
+  appliedCount: number | null;
+  onToggle: (id: number) => void;
+  onApplied: (count: number) => void;
 }) {
   const { toast } = useToast();
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [count, setCount] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const toggle = (id: number) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  };
-
+  // Preview opcional: muestra el conteo sin avanzar. "Siguiente →" igual auto-aplica.
   const onApply = async () => {
     if (selectedIds.length === 0 || !accessToken) return;
     setSubmitting(true);
     try {
       const response = await setLabelsAudience(accessToken, campaignId, selectedIds);
-      setCount(response.data.recipients_count);
+      onApplied(response.data.recipients_count);
       toast({
         title: "Audiencia actualizada",
         description: `${response.data.recipients_count} contactos coinciden.`,
@@ -303,7 +388,7 @@ function LabelsPicker({
     } catch (e) {
       toast({
         title: "Error",
-        description: e instanceof Error ? e.message : "Intentá de nuevo",
+        description: e instanceof Error ? e.message : "Inténtalo de nuevo",
         variant: "destructive",
       });
     } finally {
@@ -319,13 +404,20 @@ function LabelsPicker({
         </div>
       ) : (
         <>
-          <ul className="max-h-72 space-y-1 overflow-y-auto rounded-lg border border-border p-2">
+          <ul
+            data-testid="labels-picker"
+            className="max-h-72 space-y-1 overflow-y-auto rounded-lg border border-border p-2"
+          >
             {labels.map((label) => (
               <li key={label.id}>
-                <label className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted">
+                <label
+                  data-testid={`label-row-${label.id}`}
+                  className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted"
+                >
                   <Checkbox
+                    data-testid={`label-checkbox-${label.id}`}
                     checked={selectedIds.includes(label.id)}
-                    onCheckedChange={() => toggle(label.id)}
+                    onCheckedChange={() => onToggle(label.id)}
                   />
                   <Tag className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-sm text-foreground">{label.title}</span>
@@ -338,14 +430,18 @@ function LabelsPicker({
             <Button
               size="sm"
               variant="outline"
+              data-testid="labels-preview-button"
               onClick={onApply}
               disabled={selectedIds.length === 0 || submitting}
             >
-              {submitting ? "Calculando..." : "Aplicar etiquetas"}
+              {submitting ? "Calculando..." : "Previsualizar conteo"}
             </Button>
-            {count !== null && (
-              <span className="text-sm font-medium text-foreground tabular-nums">
-                {count} destinatarios
+            {appliedCount !== null && (
+              <span
+                data-testid="labels-applied-count"
+                className="text-sm font-medium text-foreground tabular-nums"
+              >
+                {appliedCount} destinatarios
               </span>
             )}
           </div>

@@ -37,6 +37,51 @@ RSpec.describe Campaigns::CsvParser do
       expect(result.phone_column).to eq('telefono')
     end
 
+    # Variantes comunes en CSVs LATAM/ES/EN — regresión del bug donde solo
+    # se aceptaba phone/telefono/tel/celular.
+    %w[number numero número nro celular movil móvil mobile whatsapp wa wsp phone_number].each do |header|
+      it "acepta '#{header}' como columna de phone" do
+        result = parse("#{header},cliente\n+51999888777,Juan\n")
+        expect(result.phone_column).to eq(header)
+        expect(result.rows.size).to eq(1)
+      end
+    end
+
+    it 'maneja contenido en ASCII-8BIT (file uploads via multipart)' do
+      # Regresión: el regex con chars UTF-8 (móvil, número) rompía con
+      # "incompatible encoding regexp match" sobre strings en ASCII-8BIT.
+      binary_content = "number,cliente\n+51999888777,Juan\n".dup.force_encoding('ASCII-8BIT')
+      expect { parse(binary_content) }.not_to raise_error
+      result = parse(binary_content)
+      expect(result.rows.size).to eq(1)
+      expect(result.phone_column).to eq('number')
+    end
+
+    it 'tolera headers con acentos (UTF-8 válido)' do
+      result = parse("número,cliente\n+51999888777,Juan\n")
+      expect(result.phone_column).to eq('número')
+      expect(result.rows.size).to eq(1)
+    end
+
+    it 'remueve UTF-8 BOM al inicio del archivo (CSVs exportados de Excel)' do
+      # Regresión: Excel/Google Sheets agregan BOM (EF BB BF) al exportar UTF-8.
+      # `.strip` no lo saca → primer header quedaba "﻿number" y el regex
+      # fallaba silenciosamente.
+      bom_content = "﻿number,name\n+51999888777,Juan\n"
+      result = parse(bom_content)
+      expect(result.phone_column).to eq('number')
+      expect(result.rows.size).to eq(1)
+    end
+
+    it 'remueve BOM aunque el contenido venga en ASCII-8BIT (multipart upload real)' do
+      # Combinación del bug del usuario: file binario con BOM al inicio.
+      raw_bytes = [0xEF, 0xBB, 0xBF].pack('C*') + "number,name\n+51999888777,Juan\n"
+      binary = raw_bytes.dup.force_encoding('ASCII-8BIT')
+      result = parse(binary)
+      expect(result.phone_column).to eq('number')
+      expect(result.rows.size).to eq(1)
+    end
+
     it 'normaliza espacios y guiones en phone' do
       result = parse("phone,cliente\n +51-999 888 777 ,Juan\n")
       expect(result.rows.first[:phone]).to eq('+51999888777')

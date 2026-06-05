@@ -1,12 +1,32 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AlertCircle, Megaphone, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAccessToken } from "@/hooks/use-access-token";
+import { useToast } from "@/hooks/use-toast";
+import { createCampaign } from "@/lib/services/campaigns-service";
+import { fetchInboxes } from "@/lib/services/messaging-service";
 import { cn } from "@/lib/utils";
 import type { Campaign } from "@/lib/types/campaign";
-import { CampaignCard } from "./_components/campaign-card";
+import { CampaignCard } from "@/components/dashboard/campaigns/campaign-card";
+
+interface InboxShape {
+  id: number;
+  name: string;
+  channel_type?: string;
+}
+
+function isWhatsAppInbox(inbox: unknown): inbox is InboxShape {
+  if (!inbox || typeof inbox !== "object") return false;
+  const i = inbox as Record<string, unknown>;
+  return (
+    typeof i.id === "number" &&
+    typeof i.name === "string" &&
+    (i.channel_type === undefined || i.channel_type === "Channel::Whatsapp")
+  );
+}
 
 type StatusFilter = "all" | "draft" | "scheduled" | "sent" | "in_progress";
 
@@ -52,7 +72,57 @@ interface Props {
 }
 
 export function CampaignsListClient({ initialCampaigns, loadError }: Props) {
+  const accessToken = useAccessToken();
+  const router = useRouter();
+  const { toast } = useToast();
   const [activeFilter, setActiveFilter] = useState<StatusFilter>("all");
+  const [creating, setCreating] = useState(false);
+
+  // Crear draft on-click. Antes vivía en un Server Action (actions.ts) por el bug de
+  // RSC + prefetch: el `new/page.tsx` original disparaba `createCampaign` al hacer
+  // prefetch del Link, generando drafts huérfanos. Acá no hay Link a /new ni RSC →
+  // el handler corre solo cuando el usuario clickea. Match con el patrón del resto
+  // del dashboard (useAccessToken + fetch + router.push).
+  const onCreateClick = useCallback(async () => {
+    if (!accessToken || creating) return;
+    setCreating(true);
+    try {
+      const result = await fetchInboxes(accessToken);
+      const data = Array.isArray(result)
+        ? result
+        : ((result as { data?: unknown }).data ?? []);
+      const inboxes = Array.isArray(data)
+        ? data.filter(isWhatsAppInbox)
+        : [];
+
+      if (inboxes.length === 0) {
+        toast({
+          title: "Sin inbox de WhatsApp",
+          description: "Configura un inbox de WhatsApp antes de crear campañas.",
+          variant: "destructive",
+        });
+        setCreating(false);
+        return;
+      }
+
+      const response = await createCampaign(accessToken, {
+        title: "Nueva campaña sin nombre",
+        inbox_id: inboxes[0].id,
+      });
+      // NO resetear `creating` acá. El componente queda montado hasta que el
+      // RSC del wizard llega — si resetea, el button vuelve a "Crear primera
+      // campaña" por unos ms antes de navegar (flicker). Dejar en `true` para
+      // que diga "Creando..." continuo hasta el unmount.
+      router.push(`/dashboard/campaigns/${response.data.id}/edit?step=1`);
+    } catch (e) {
+      toast({
+        title: "No se pudo crear la campaña",
+        description: e instanceof Error ? e.message : "Inténtalo de nuevo",
+        variant: "destructive",
+      });
+      setCreating(false);
+    }
+  }, [accessToken, creating, router, toast]);
 
   // Contadores per-filter para los badges en los tabs
   const counts = useMemo(() => {
@@ -89,30 +159,40 @@ export function CampaignsListClient({ initialCampaigns, loadError }: Props) {
   }
 
   if (initialCampaigns.length === 0) {
-    return <EmptyState />;
+    return (
+      <EmptyState onCreate={onCreateClick} creating={creating} disabled={!accessToken} />
+    );
   }
 
   return (
     <div className="space-y-4">
       {/* Filter row + CTA */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div
+          data-testid="campaigns-filter-pills"
+          className="flex flex-wrap items-center gap-1.5"
+        >
           {FILTERS.map((f) => (
             <FilterPill
               key={f.key}
               active={activeFilter === f.key}
               count={counts[f.key]}
+              filterKey={f.key}
               onClick={() => setActiveFilter(f.key)}
             >
               {f.label}
             </FilterPill>
           ))}
         </div>
-        <Button asChild size="sm">
-          <Link href="/dashboard/campaigns/new">
-            <Plus className="h-4 w-4" />
-            Nueva campaña
-          </Link>
+        <Button
+          type="button"
+          size="sm"
+          data-testid="campaigns-new-button"
+          onClick={onCreateClick}
+          disabled={creating || !accessToken}
+        >
+          <Plus className="h-4 w-4" />
+          {creating ? "Creando..." : "Nueva campaña"}
         </Button>
       </div>
 
@@ -137,56 +217,77 @@ export function CampaignsListClient({ initialCampaigns, loadError }: Props) {
 function FilterPill({
   active,
   count,
+  filterKey,
   onClick,
   children,
 }: {
   active: boolean;
   count: number;
+  filterKey: StatusFilter;
   onClick: () => void;
   children: React.ReactNode;
 }) {
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="sm"
+      data-testid={`filter-pill-${filterKey}`}
+      data-active={active}
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium transition",
+        "h-auto rounded-full px-3 py-1 text-sm font-medium",
         active
-          ? "bg-foreground text-background"
+          ? "bg-volt text-primary-foreground hover:bg-volt/90 hover:text-primary-foreground"
           : "bg-muted text-muted-foreground hover:bg-muted/70 hover:text-foreground"
       )}
     >
       {children}
       <span
         className={cn(
-          "rounded-full px-1.5 py-0 text-xs tabular-nums",
-          active ? "bg-background/15" : "bg-background"
+          "ml-1.5 rounded-full px-1.5 py-0 text-xs tabular-nums",
+          active ? "bg-background/15 text-primary-foreground" : "bg-background"
         )}
       >
         {count}
       </span>
-    </button>
+    </Button>
   );
 }
 
-function EmptyState() {
+function EmptyState({
+  onCreate,
+  creating,
+  disabled,
+}: {
+  onCreate: () => void;
+  creating: boolean;
+  disabled: boolean;
+}) {
   return (
-    <div className="rounded-xl border border-border bg-card p-10 text-center">
+    <div
+      data-testid="campaigns-empty-state"
+      className="rounded-xl border border-border bg-card p-10 text-center"
+    >
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-volt/10">
         <Megaphone className="h-6 w-6 text-volt" />
       </div>
       <h3 className="mt-4 font-heading text-lg font-semibold text-foreground">
-        Aún no tenés campañas
+        Aún no tienes campañas
       </h3>
       <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
         Las campañas masivas te permiten enviar templates de WhatsApp a un grupo
         de contactos en pocos pasos.
       </p>
-      <Button asChild className="mt-5">
-        <Link href="/dashboard/campaigns/new">
-          <Plus className="h-4 w-4" />
-          Crear primera campaña
-        </Link>
+      <Button
+        type="button"
+        data-testid="campaigns-empty-state-create-button"
+        onClick={onCreate}
+        disabled={creating || disabled}
+        className="mt-5"
+      >
+        <Plus className="h-4 w-4" />
+        {creating ? "Creando..." : "Crear primera campaña"}
       </Button>
     </div>
   );

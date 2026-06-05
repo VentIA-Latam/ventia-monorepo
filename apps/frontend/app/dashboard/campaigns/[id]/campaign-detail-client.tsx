@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Calendar, FileText, Inbox, RefreshCcw, Trash2 } from "lucide-react";
+import { Calendar, FileText, Inbox, Megaphone, RefreshCcw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAccessToken } from "@/hooks/use-access-token";
 import { useToast } from "@/hooks/use-toast";
@@ -15,12 +15,12 @@ import type {
   CampaignStats,
   PaginationMeta,
 } from "@/lib/types/campaign";
-import { CampaignStatusPill } from "../_components/campaign-status-pill";
-import { StatsRatios } from "../_components/stats-ratios";
-import { CampaignPipelineBar } from "../_components/campaign-pipeline-bar";
-import { RecipientsTable } from "../_components/recipients-table";
-import { RetryFailedDialog } from "../_components/retry-failed-dialog";
-import { DeleteCampaignDialog } from "../_components/delete-campaign-dialog";
+import { CampaignStatusPill } from "@/components/dashboard/campaigns/campaign-status-pill";
+import { StatsRatios } from "@/components/dashboard/campaigns/stats-ratios";
+import { CampaignPipelineBar } from "@/components/dashboard/campaigns/campaign-pipeline-bar";
+import { RecipientsTable } from "@/components/dashboard/campaigns/recipients-table";
+import { RetryFailedDialog } from "@/components/dashboard/campaigns/retry-failed-dialog";
+import { DeleteCampaignDialog } from "@/components/dashboard/campaigns/delete-campaign-dialog";
 
 interface Props {
   initialCampaign: Campaign;
@@ -48,12 +48,17 @@ export function CampaignDetailClient({
   const { toast } = useToast();
   const [campaign, setCampaign] = useState(initialCampaign);
 
-  // Polling cuando :running para refrescar stats. Cleanup on unmount.
+  // Polling cuando :running para refrescar stats.
+  // - Cleanup on unmount.
+  // - Pausa cuando la pestaña no es visible (document.visibilityState) para no gastar
+  //   recursos ni cuota de API.
   useEffect(() => {
     if (!accessToken) return;
     if (campaign.campaign_status !== "running") return;
 
     const tick = async () => {
+      // Skip si la pestaña no está visible — el usuario no ve el resultado igual.
+      if (document.visibilityState !== "visible") return;
       try {
         const res = await fetchCampaign(accessToken, campaign.id);
         setCampaign(res.data);
@@ -62,15 +67,36 @@ export function CampaignDetailClient({
       }
     };
     const interval = setInterval(tick, 3000);
-    return () => clearInterval(interval);
+    // Dispará un tick inmediato al volver a foco para refrescar sin esperar 3s.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [accessToken, campaign.campaign_status, campaign.id]);
 
   const stats = campaign.stats ?? EMPTY_STATS;
+
+  // `now` se actualiza cada 60s mientras la campaña esté `:active` con scheduled_at
+  // futuro — así el banner "Programada para…" desaparece sin esperar a polling
+  // (que recién arranca cuando el cron flipea status a :running).
+  const [now, setNow] = useState(() => Date.now());
+  const scheduledMs = campaign.scheduled_at
+    ? new Date(campaign.scheduled_at).getTime()
+    : null;
   const isScheduledFuture =
     campaign.campaign_status === "active" &&
-    campaign.scheduled_at &&
-    // eslint-disable-next-line react-hooks/purity
-    new Date(campaign.scheduled_at).getTime() > Date.now();
+    scheduledMs !== null &&
+    scheduledMs > now;
+
+  useEffect(() => {
+    if (!isScheduledFuture) return;
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, [isScheduledFuture]);
 
   const onRetried = async (count: number) => {
     toast({
@@ -81,21 +107,28 @@ export function CampaignDetailClient({
       const res = await fetchCampaign(accessToken, campaign.id);
       setCampaign(res.data);
     }
+    // Invalidá la RSC payload de la lista para que reflejé el nuevo status al volver.
+    router.refresh();
   };
 
   const onDeleted = () => {
     toast({ title: "Campaña borrada" });
     router.push("/dashboard/campaigns");
+    router.refresh();
   };
 
   return (
     <div className="space-y-4">
       {/* Crumb */}
-      <div className="text-sm text-muted-foreground">
-        <Link href="/dashboard/campaigns" className="hover:text-foreground">
-          📢 Campañas
-        </Link>{" "}
-        <span className="text-border">/</span>{" "}
+      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <Link
+          href="/dashboard/campaigns"
+          className="inline-flex items-center gap-1.5 hover:text-foreground"
+        >
+          <Megaphone className="h-3.5 w-3.5" />
+          Campañas
+        </Link>
+        <span className="text-muted-foreground/50">/</span>
         <strong className="text-foreground">{campaign.title}</strong>
       </div>
 
@@ -163,7 +196,7 @@ export function CampaignDetailClient({
 
         {campaign.campaign_status === "failed" && (
           <div className="mx-5 mb-4 rounded-lg border border-[var(--danger)]/30 bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger)]">
-            <strong>La campaña falló durante el disparo.</strong> Revisá logs y reintentá.
+            <strong>La campaña falló durante el disparo.</strong> Revisa los logs e intenta de nuevo.
           </div>
         )}
 

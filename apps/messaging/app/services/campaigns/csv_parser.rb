@@ -7,13 +7,22 @@ require 'csv'
 #
 # Reglas:
 # - Header en primera fila, auto-detect delimitador `,` vs `;`.
-# - Una columna debe matchear /^(phone|telefono|tel|celular)$/i (es la phone).
+# - Una columna debe matchear PHONE_COLUMN_REGEX (es la phone).
 # - Máx 10 columnas no-phone (sino raise TooManyColumnsError).
 # - Phone E.164 valid (reusa EnsureFromPhoneService::E164_REGEX).
 # - Duplicados intra-CSV: mantiene primero, descarta el resto.
 class Campaigns::CsvParser
   MAX_VARIABLE_COLUMNS = 10
-  PHONE_COLUMN_REGEX = /\A(phone|telefono|tel|celular)\z/i
+  # Variantes comunes en CSVs LATAM/ES/EN. Underscores/espacios opcionales:
+  # "phone_number", "phone number", "numero de telefono", etc.
+  PHONE_COLUMN_REGEX = /\A(
+    phone(?:[_\s-]?number)? | number |
+    telefono | tel(?:efono)? |
+    celular | celphone |
+    movil | móvil | mobile |
+    numero | número | nro |
+    whatsapp | wa | wsp
+  )\z/ix
 
   Result = Struct.new(:rows, :skipped, :detected_columns, :phone_column, keyword_init: true)
 
@@ -23,7 +32,21 @@ class Campaigns::CsvParser
   class ParseError          < StandardError; end
 
   def initialize(content)
-    @content = content.to_s
+    # Files uploadeados via multipart llegan como ASCII-8BIT (binary). El regex
+    # de PHONE_COLUMN_REGEX usa chars UTF-8 (`móvil`, `número`) → Ruby rechaza
+    # match cross-encoding. Forzamos UTF-8 + `scrub` para reemplazar bytes
+    # inválidos (CSVs exportados de Excel a veces son Latin-1, mejor ser
+    # tolerantes que romper).
+    #
+    # `delete_prefix("﻿")` saca el BOM (EF BB BF) que Excel/Google Sheets
+    # agregan al inicio de CSVs UTF-8. `.strip` no lo remueve (BOM no es
+    # whitespace) → el primer header quedaba "﻿number" y el regex fallaba.
+    @content = content
+      .to_s
+      .dup
+      .force_encoding('UTF-8')
+      .scrub
+      .delete_prefix("﻿")
   end
 
   def parse
@@ -35,7 +58,12 @@ class Campaigns::CsvParser
 
     normalized_headers = table.headers.map { |h| h.to_s.strip }
     phone_column = detect_phone_column(normalized_headers)
-    raise NoPhoneColumnError, "El CSV debe tener una columna 'phone' o 'telefono'" unless phone_column
+    unless phone_column
+      raise NoPhoneColumnError,
+            "El CSV debe tener una columna de teléfono. Acepta: phone, phone_number, " \
+            "number, telefono, celular, movil, numero, whatsapp (y variantes). " \
+            "Encontradas: #{normalized_headers.inspect}"
+    end
 
     variable_columns = normalized_headers.reject { |h| h == phone_column }
     if variable_columns.size > MAX_VARIABLE_COLUMNS

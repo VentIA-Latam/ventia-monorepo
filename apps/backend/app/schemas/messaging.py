@@ -372,6 +372,7 @@ class CampaignData(BaseModel):
     failed_count: int = 0
     inbox: CampaignInboxSummary
     stats: Optional[CampaignStatsBreakdown] = None
+    csv_columns: list[str] = []  # columnas detectadas del CSV (vacío si labels)
 
 
 class CampaignDetailResponse(BaseModel):

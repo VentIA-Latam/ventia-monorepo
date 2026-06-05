@@ -76,7 +76,7 @@ export function Step1Basics({ campaign, inboxes, onSaved }: Props) {
         toast({
           title: "Cambio de inbox no soportado",
           description:
-            "Para cambiar el inbox, cancelá esta campaña y creá una nueva. Los templates dependen del inbox.",
+            "Para cambiar el inbox, cancela esta campaña y crea una nueva. Los templates dependen del inbox.",
           variant: "destructive",
         });
         setSubmitting(false);
@@ -90,7 +90,7 @@ export function Step1Basics({ campaign, inboxes, onSaved }: Props) {
     } catch (e) {
       toast({
         title: "No se pudo guardar",
-        description: e instanceof Error ? e.message : "Intentá de nuevo",
+        description: e instanceof Error ? e.message : "Inténtalo de nuevo",
         variant: "destructive",
       });
     } finally {
@@ -113,6 +113,7 @@ export function Step1Basics({ campaign, inboxes, onSaved }: Props) {
         <Label htmlFor="title">Nombre de la campaña</Label>
         <Input
           id="title"
+          data-testid="step1-title-input"
           {...register("title")}
           placeholder="Ej. Recordatorio entregas Mayo"
           autoFocus
@@ -152,7 +153,11 @@ export function Step1Basics({ campaign, inboxes, onSaved }: Props) {
       </div>
 
       <footer className="flex justify-end">
-        <Button type="submit" disabled={!isValid || submitting}>
+        <Button
+          type="submit"
+          data-testid="wizard-next-button"
+          disabled={!isValid || submitting}
+        >
           {submitting ? "Guardando..." : "Siguiente →"}
         </Button>
       </footer>

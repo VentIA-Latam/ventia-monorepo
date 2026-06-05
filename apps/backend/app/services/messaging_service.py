@@ -435,7 +435,15 @@ class MessagingService:
         campaign_id: int,
         file: Any,
     ) -> Optional[dict]:
-        """Multipart upload del CSV de audiencia (espejo de send_message_with_file)."""
+        """Multipart upload del CSV de audiencia (espejo de send_message_with_file).
+
+        Manejo de errores alineado con `_request`:
+        - 2xx → devuelve body
+        - 4xx → raise MessagingClientError con el detail real (ej. "el CSV debe
+          tener una columna phone") en vez de devolver None y que el endpoint
+          mapee a 503 "service unavailable" misleading
+        - 5xx / RequestError → None (legítimo "service unavailable")
+        """
         url = f"{self.base_url}/api/v1/campaigns/{campaign_id}/audience/csv"
         headers: dict[str, str] = {"X-Tenant-Id": str(tenant_id)}
         if self.api_key:
@@ -450,8 +458,16 @@ class MessagingService:
                 response = await client.post(url, headers=headers, files=files)
             if response.status_code in (200, 201):
                 return response.json()
+
+            if 400 <= response.status_code < 500:
+                detail = self._extract_error_detail(response)
+                logger.warning(
+                    f"Messaging CSV upload client error: POST {url} -> {response.status_code} - {detail}"
+                )
+                raise MessagingClientError(response.status_code, detail)
+
             logger.error(
-                f"Messaging CSV upload error: POST {url} -> {response.status_code} - {response.text[:500]}"
+                f"Messaging CSV upload server error: POST {url} -> {response.status_code} - {response.text[:500]}"
             )
             return None
         except httpx.RequestError as e:

@@ -172,7 +172,7 @@ export function RecipientsTable({
 function Row({ recipient: r }: { recipient: CampaignRecipient }) {
   const attention: RecipientStatus[] = ["failed", "omitted"];
   const rowClass = attention.includes(r.status)
-    ? "border-b border-border bg-[color-mix(in_oklch,var(--danger-bg)_30%,white)]"
+    ? "border-b border-border bg-[color-mix(in_oklch,var(--danger-bg)_30%,var(--card))]"
     : "border-b border-border";
 
   return (
@@ -181,20 +181,20 @@ function Row({ recipient: r }: { recipient: CampaignRecipient }) {
         <div className="font-medium text-foreground">
           {r.contact_name ?? "Sin nombre"}
         </div>
-        <div className="font-mono text-xs tabular-nums text-muted-foreground">
+        <div className="text-xs tabular-nums text-muted-foreground">
           {r.phone}
         </div>
       </td>
       <td className="px-5 py-3 align-top">
         <RecipientStatusPill status={r.status} />
       </td>
-      <td className="px-5 py-3 align-top font-mono text-xs tabular-nums text-muted-foreground">
+      <td className="px-5 py-3 align-top text-xs tabular-nums text-muted-foreground">
         {fmt(r.sent_at)}
       </td>
-      <td className="px-5 py-3 align-top font-mono text-xs tabular-nums text-muted-foreground">
+      <td className="px-5 py-3 align-top text-xs tabular-nums text-muted-foreground">
         {fmt(r.delivered_at)}
       </td>
-      <td className="px-5 py-3 align-top font-mono text-xs tabular-nums text-muted-foreground">
+      <td className="px-5 py-3 align-top text-xs tabular-nums text-muted-foreground">
         {fmt(r.read_at)}
       </td>
       <td className="px-5 py-3 align-top">

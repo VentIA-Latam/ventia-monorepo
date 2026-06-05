@@ -69,7 +69,7 @@ export function Step2Template({ campaign, templates, onSaved, onBack }: Props) {
     } catch (e) {
       toast({
         title: "No se pudo guardar el template",
-        description: e instanceof Error ? e.message : "Intentá de nuevo",
+        description: e instanceof Error ? e.message : "Inténtalo de nuevo",
         variant: "destructive",
       });
     } finally {

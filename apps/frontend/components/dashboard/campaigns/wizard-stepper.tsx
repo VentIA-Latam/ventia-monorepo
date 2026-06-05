@@ -23,7 +23,7 @@ export function WizardStepper({
   onStepClick,
 }: Props) {
   return (
-    <ol className="flex w-full items-center gap-2">
+    <ol data-testid="wizard-stepper" className="flex w-full items-center gap-2">
       {steps.map((step, i) => {
         const status: "completed" | "current" | "upcoming" =
           step.index < currentStep
@@ -37,6 +37,8 @@ export function WizardStepper({
           <li key={step.index} className="flex flex-1 items-center gap-2">
             <button
               type="button"
+              data-testid={`wizard-step-${step.index}`}
+              data-status={status}
               disabled={!clickable}
               onClick={() => clickable && onStepClick(step.index)}
               className={cn(

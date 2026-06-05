@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useAccessToken } from "@/hooks/use-access-token";
 import { previewCampaign } from "@/lib/services/campaigns-service";
 import type { Campaign, CampaignPreview } from "@/lib/types/campaign";
+import { formatWhatsAppText } from "@/lib/utils/whatsapp-format";
 
 interface Props {
   campaign: Campaign;
@@ -93,12 +94,12 @@ export function Step5Preview({ campaign, onContinue, onBack }: Props) {
             {preview.samples.map((sample) => (
               <div
                 key={sample.recipient_id}
-                className="rounded-lg border border-border bg-[color-mix(in_oklch,var(--success-bg)_60%,white)] p-4"
+                className="rounded-lg border border-border bg-[color-mix(in_oklch,var(--success-bg)_60%,var(--card))] p-4"
               >
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
                   <span>{sample.contact_name ?? "Sin nombre"}</span>
-                  <span className="font-mono text-xs text-muted-foreground tabular-nums">
+                  <span className="text-xs text-muted-foreground tabular-nums">
                     {sample.phone}
                   </span>
                 </div>
@@ -111,7 +112,9 @@ export function Step5Preview({ campaign, onContinue, onBack }: Props) {
                   />
                 )}
                 <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
-                  {sample.rendered_body ?? sample.error ?? "(sin contenido)"}
+                  {sample.rendered_body
+                    ? formatWhatsAppText(sample.rendered_body)
+                    : (sample.error ?? "(sin contenido)")}
                 </p>
               </div>
             ))}
@@ -124,7 +127,7 @@ export function Step5Preview({ campaign, onContinue, onBack }: Props) {
               </summary>
               <ul className="mt-2 space-y-0.5 text-xs">
                 {preview.omitted_samples.map((s, i) => (
-                  <li key={i} className="font-mono tabular-nums text-muted-foreground">
+                  <li key={i} className="tabular-nums text-muted-foreground">
                     {s.phone} — {s.reason}
                   </li>
                 ))}

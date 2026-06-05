@@ -21,9 +21,22 @@ export default async function CampaignDetailPage({
   const token = await getAccessToken();
   if (!token) redirect("/api/auth/login");
 
+  // Disparar ambas requests en paralelo — `recipients` no depende del payload de campaña.
+  // Attacheamos un `.catch` no-op a `recipientsPromise` para que la rejection quede
+  // "handled" en caso de redirect a :draft (evita unhandled promise rejection warning).
+  // El await final de recipientsPromise SÍ lanza el error real si la request falló.
+  const campaignPromise = fetchCampaign(token, id);
+  const recipientsPromise = fetchCampaignRecipients(token, id, {
+    page: 1,
+    per_page: 25,
+  });
+  recipientsPromise.catch(() => {
+    /* handled below or discarded on redirect */
+  });
+
   let campaign;
   try {
-    const res = await fetchCampaign(token, id);
+    const res = await campaignPromise;
     campaign = res.data;
   } catch (e) {
     if (e instanceof CampaignApiError && e.status === 404) notFound();
@@ -34,10 +47,7 @@ export default async function CampaignDetailPage({
     redirect(`/dashboard/campaigns/${id}/edit?step=1`);
   }
 
-  const recipientsRes = await fetchCampaignRecipients(token, id, {
-    page: 1,
-    per_page: 25,
-  });
+  const recipientsRes = await recipientsPromise;
 
   const meta = recipientsRes.meta ?? {
     current_page: 1,
