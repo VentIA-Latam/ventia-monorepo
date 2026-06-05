@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { SuperAdminSidebar } from "@/components/superadmin/superadmin-sidebar"
 import { Separator } from "@/components/ui/separator"
@@ -52,9 +53,9 @@ function SuperAdminLayoutInner({
 
   return (
     <MessagingProvider tenantId={selectedTenantId || undefined} key={selectedTenantId ?? "no-tenant"}>
-      <SidebarProvider>
+      <SidebarProvider style={{ "--sidebar-width-icon": "4.5rem" } as CSSProperties}>
         <SuperAdminSidebar />
-        <SidebarInset>
+        <SidebarInset className="min-w-0">
           <header className="flex h-14 md:h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 border-b border-border">
             <div className="flex items-center gap-2 px-3 md:px-4 w-full group-has-data-[collapsible=icon]/sidebar-wrapper:ml-5">
               <SidebarTrigger className="-ml-1" />
@@ -67,7 +68,7 @@ function SuperAdminLayoutInner({
               </h2>
             </div>
           </header>
-          <div className="flex flex-1 flex-col gap-4 md:gap-6 px-3 sm:px-4 md:px-6 lg:px-12 xl:px-16 py-4 md:py-6 min-h-0">
+          <div className="flex flex-1 flex-col gap-4 md:gap-6 px-3 sm:px-4 md:px-6 lg:px-12 xl:px-16 py-4 md:py-6 overflow-x-hidden min-h-0 min-w-0">
             {children}
           </div>
         </SidebarInset>

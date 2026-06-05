@@ -11,6 +11,7 @@ import { ChevronRight, Home } from "lucide-react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import dynamic from "next/dynamic"
+import type { CSSProperties } from "react"
 
 const NotificationSetup = dynamic(
   () => import("@/components/notifications/notification-setup"),
@@ -69,7 +70,7 @@ export default function DashboardLayoutClient({
   return (
     <TenantTimezoneProvider timezone={timezone}>
     <MessagingProvider tenantId={userDetails?.tenant_id ?? undefined}>
-    <SidebarProvider>
+    <SidebarProvider style={{ "--sidebar-width-icon": "4.5rem" } as CSSProperties}>
       <AppSidebar />
       <SidebarInset className="min-w-0">
         <header className="flex h-14 sm:h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 border-b bg-gradient-to-r from-cielo/10 to-transparent">

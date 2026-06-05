@@ -259,7 +259,7 @@ export function SuperAdminSidebar({ ...props }: React.ComponentProps<typeof Side
   };
 
   return (
-    <Sidebar collapsible="icon" className="bg-sidebar border-r border-sidebar-border [--sidebar-width-icon:4.5rem]" {...props}>
+    <Sidebar collapsible="icon" className="bg-sidebar border-r border-sidebar-border" {...props}>
 
       {/* --- HEADER con LOGO DINÁMICO --- */}
       <SidebarHeader className="h-16 flex items-center justify-between px-4 border-b border-transparent" suppressHydrationWarning>
