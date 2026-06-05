@@ -155,7 +155,8 @@ class Message < ApplicationRecord
       'content_type' => msg.content_type,
       'content' => msg.content&.truncate(120),
       'sender_name' => msg.sender.try(:name),
-      'attachment_type' => msg.attachments.first&.file_type
+      'attachment_type' => msg.attachments.first&.file_type,
+      'attachments' => msg.attachments.map(&:push_event_data).presence
     }.compact
   end
 

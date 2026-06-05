@@ -155,6 +155,7 @@ export interface QuotedMessageSnapshot {
   content?: string | null;
   sender_name?: string | null;
   attachment_type?: string | null;
+  attachments?: AttachmentBrief[];
 }
 
 export interface MessageContentAttributes {
