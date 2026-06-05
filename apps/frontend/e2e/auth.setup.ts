@@ -21,7 +21,9 @@ setup("autenticar usuario de test", async ({ page }) => {
   await page.locator('input[type="password"]').fill(process.env.TEST_USER_PASSWORD!);
   await page.getByRole("button", { name: /continuar/i }).click();
 
-  await page.waitForURL("**/dashboard/**", { timeout: 15_000 });
+  // Acepta tanto /dashboard como /dashboard/sub-route (el redirect puede no
+  // tener trailing slash dependiendo de la versión del middleware).
+  await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
   await expect(page).toHaveURL(/\/dashboard/);
 
   await page.context().storageState({ path: authFile });

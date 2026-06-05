@@ -381,6 +381,23 @@ class MessagingService:
             json_data={"message": payload},
         )
 
+    async def send_by_phone(
+        self, tenant_id: int, payload: dict, user_id: Optional[str] = None
+    ) -> Optional[dict]:
+        """Send a WhatsApp template to a phone number.
+
+        Creates contact/conversation if needed; reuses open conversation otherwise.
+        Payload goes flat (phone, inbox_id, template_params, contact_name) — NOT wrapped
+        in {"message": ...} because the Rails endpoint receives flat params.
+        """
+        return await self._request(
+            "POST",
+            "/api/v1/messages/send_by_phone",
+            tenant_id,
+            user_id=user_id,
+            json_data=payload,
+        )
+
     async def send_message_with_file(
         self,
         tenant_id: int,
@@ -762,6 +779,75 @@ class MessagingService:
                 "end_date": end_date,
                 "converted_conversation_ids": converted_conversation_ids,
             },
+            timeout=15.0,
+        )
+
+    # --- Activity by hour (heatmap) ---
+
+    async def get_activity_by_hour(
+        self,
+        tenant_id: int,
+        start_date: str,
+        end_date: str,
+        timezone: str = "America/Lima",
+        cross_tenant: bool = False,
+    ) -> tuple[Optional[dict], int]:
+        params: dict = {
+            "start_date": start_date,
+            "end_date": end_date,
+            "timezone": timezone,
+        }
+        if cross_tenant:
+            params["cross_tenant"] = "true"
+        return await self._request_with_status(
+            "GET",
+            "/api/v1/analytics/activity_by_hour",
+            tenant_id,
+            params=params,
+            timeout=15.0,
+        )
+
+    async def get_conversation_distribution(
+        self,
+        tenant_id: int,
+        start_date: str,
+        end_date: str,
+        cross_tenant: bool = False,
+    ) -> tuple[Optional[dict], int]:
+        params: dict = {"start_date": start_date, "end_date": end_date}
+        if cross_tenant:
+            params["cross_tenant"] = "true"
+        return await self._request_with_status(
+            "GET",
+            "/api/v1/analytics/conversation_distribution",
+            tenant_id,
+            params=params,
+            timeout=15.0,
+        )
+
+    async def get_chats_started(
+        self,
+        tenant_id: int,
+        start_date: str,
+        end_date: str,
+        timezone: str = "America/Lima",
+        inbox_id: Optional[int] = None,
+        cross_tenant: bool = False,
+    ) -> tuple[Optional[dict], int]:
+        params: dict = {
+            "start_date": start_date,
+            "end_date": end_date,
+            "timezone": timezone,
+        }
+        if inbox_id is not None:
+            params["inbox_id"] = str(inbox_id)
+        if cross_tenant:
+            params["cross_tenant"] = "true"
+        return await self._request_with_status(
+            "GET",
+            "/api/v1/analytics/chats_started",
+            tenant_id,
+            params=params,
             timeout=15.0,
         )
 

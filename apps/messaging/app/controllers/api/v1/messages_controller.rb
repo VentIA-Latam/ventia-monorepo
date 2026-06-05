@@ -1,7 +1,7 @@
 class Api::V1::MessagesController < Api::V1::BaseController
   include SearchSnippetSafety
 
-  before_action :set_conversation
+  before_action :set_conversation, except: [:send_by_phone]
 
   def index
     base = @conversation.messages.includes(attachments: { file_attachment: :blob })
@@ -149,7 +149,54 @@ class Api::V1::MessagesController < Api::V1::BaseController
     end
   end
 
+  # Envío de template a un teléfono sin requerir conversation_id existente.
+  # Crea contact + conversation si no existen, reusa conversación open si la hay.
+  # Ver spec: docs/superpowers/specs/2026-06-03-send-by-phone-endpoint-design.md
+  def send_by_phone
+    inbox = current_account.inboxes.find(params[:inbox_id])
+
+    result = Conversations::EnsureFromPhoneService.new(
+      account:         current_account,
+      inbox:           inbox,
+      phone:           params[:phone],
+      template_params: extract_template_params,
+      contact_name:    params[:contact_name]
+    ).perform
+
+    render_success(
+      {
+        conversation_id:      result.conversation.id,
+        message_id:           result.message.id,
+        contact_id:           result.contact.id,
+        contact_created:      result.contact_created,
+        conversation_created: result.conversation_created
+      },
+      message: 'Message sent',
+      status:  :created
+    )
+  rescue Conversations::EnsureFromPhoneService::InvalidPhoneError,
+         Conversations::EnsureFromPhoneService::InvalidInboxChannelError,
+         Whatsapp::TemplateMessageBuilder::TemplateNotFound,
+         Whatsapp::TemplateMessageBuilder::MissingBodyVariables,
+         ArgumentError => e
+    render_error(e.message, status: :unprocessable_entity)
+  end
+
   private
+
+  # Mismo patrón que extract_content_attributes (líneas 169-178): acepta Hash,
+  # ActionController::Parameters, o JSON string; cualquier otra cosa → nil para
+  # que el servicio raisee ArgumentError mapeado a 422 (no NoMethodError → 500).
+  def extract_template_params
+    raw = params[:template_params]
+    return nil if raw.blank?
+    return JSON.parse(raw) if raw.is_a?(String)
+    return raw.to_unsafe_h if raw.respond_to?(:to_unsafe_h)
+
+    raw.is_a?(Hash) ? raw : nil
+  rescue JSON::ParserError
+    nil
+  end
 
   def set_conversation
     @conversation = current_account.conversations.find(params[:conversation_id])

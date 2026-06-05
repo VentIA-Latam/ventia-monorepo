@@ -29,6 +29,8 @@ from app.schemas.messaging import (
     NotificationSettingsResponse,
     NotificationsResponse,
     PushTokenRequest,
+    SendByPhoneRequest,
+    SendByPhoneResponse,
     SendMessageRequest,
     SendMessageResponse,
     SendTemplateMessageRequest,
@@ -1276,6 +1278,63 @@ async def send_template_message(
         tenant_id,
         conversation_id,
         message_data,
+        user_id=current_user.id,
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/messages/send-by-phone",
+    response_model=SendByPhoneResponse,
+    summary="Send a WhatsApp template by phone (creates contact/conversation if needed)",
+    tags=["messaging", "whatsapp"],
+    status_code=201,
+    responses={
+        404: {"model": MessagingError, "description": "Inbox not found in tenant"},
+        422: {
+            "model": MessagingError,
+            "description": "Phone invalid, inbox not WhatsApp, or template invalid",
+        },
+        503: {"model": MessagingError, "description": "Messaging service unavailable"},
+    },
+)
+async def send_message_by_phone(
+    payload: SendByPhoneRequest,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    """
+    Envía un mensaje template de WhatsApp a un número telefónico. Si el contacto no
+    existe, lo crea; si no hay conversación abierta con ese número en el inbox
+    especificado, crea una nueva. Reusa la conversación open existente cuando aplica.
+
+    Solo aplica a inboxes de **WhatsApp**. Instagram queda fuera (usa otro identificador).
+
+    El template debe estar aprobado en Meta y existir en el inbox indicado.
+
+    **Example response:**
+    ```json
+    {
+      "success": true,
+      "message": "Message sent",
+      "data": {
+        "conversation_id": 456,
+        "message_id": 789,
+        "contact_id": 123,
+        "contact_created": true,
+        "conversation_created": true
+      }
+    }
+    ```
+    """
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.send_by_phone(
+        tenant_id,
+        payload.model_dump(exclude_none=True),
         user_id=current_user.id,
     )
     if result is None:

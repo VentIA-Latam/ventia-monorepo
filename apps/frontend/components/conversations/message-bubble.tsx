@@ -448,11 +448,23 @@ export const MessageBubble = memo(function MessageBubble({
 
   // Quoted reply (US-UX-002): hasQuote drives rendering; quotedMessage is resolved by the parent.
   const hasQuote = !!message.content_attributes?.in_reply_to;
+  // Stable onClick para que el `memo()` de QuotedMessagePreview no se invalide
+  // cada vez que el padre re-renderiza por mensajes nuevos vía WS.
+  const onQuotedPreviewClick = useCallback(
+    () => {
+      if (quotedMessage && onQuotedClick) onQuotedClick(quotedMessage);
+    },
+    [quotedMessage, onQuotedClick]
+  );
 
   return (
     <div
       className={cn(
-        "group relative flex",
+        // `w-fit` para que el container se ajuste al ancho real del bubble.
+        // Sin esto, el outer ocupaba todo el max-w y los elementos absolutos
+        // posicionados con -left-9 / -right-9 (botón Responder) quedaban
+        // colgando lejos del mensaje.
+        "group relative flex w-fit",
         hasCards
           ? "max-w-[min(80%,520px)]"
           : isTemplate || hasMediaAttachment
@@ -482,7 +494,7 @@ export const MessageBubble = memo(function MessageBubble({
             variant="bubble"
             message={quotedMessage}
             isOutgoing={isOutgoing}
-            onClick={quotedMessage && onQuotedClick ? () => onQuotedClick(quotedMessage) : undefined}
+            onClick={onQuotedPreviewClick}
           />
         ) : null}
 
@@ -631,14 +643,22 @@ export const MessageBubble = memo(function MessageBubble({
         )}
       </div>
 
-      {/* Reply action — appears on hover (US-UX-002) */}
+      {/* Reply action — appears on hover (US-UX-002).
+          En touch (`hover: none`) no hay hover, así que el botón queda visible
+          siempre (sin esto, el feature es invisible en mobile/tablet).
+          `group-focus-within` lo expone también cuando hay focus dentro del bubble. */}
       {onReply && (
         <button
           type="button"
           onClick={() => onReply(message)}
           aria-label="Responder"
           className={cn(
-            "absolute top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-card text-muted-foreground shadow-sm opacity-0 transition-opacity duration-150 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100",
+            "absolute top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-card text-muted-foreground shadow-sm",
+            "opacity-0 motion-safe:transition-opacity motion-safe:duration-150",
+            "group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100",
+            "[@media(hover:none)]:opacity-100",
+            "hover:text-foreground",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-volt/40",
             isOutgoing ? "-left-9" : "-right-9"
           )}
         >

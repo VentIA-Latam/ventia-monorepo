@@ -349,3 +349,92 @@ export async function fetchAdsSummary(
 
   return response.json();
 }
+
+// --- Activity by Hour (Heatmap) ---
+
+export interface ActivityByHourResponse {
+  matrix: number[][];
+  max_count: number;
+  period: PeriodType;
+  start_date: string;
+  end_date: string;
+  timezone_note?: string;
+}
+
+// --- Conversation Distribution (IA / Humano / Abandonadas) ---
+
+export type DistributionCategoryKey = "agent_ai" | "human_support" | "abandoned";
+
+export interface DistributionCategory {
+  category: DistributionCategoryKey;
+  count: number;
+  percentage: number;
+  total_hours: number;
+}
+
+export interface ConversationDistributionResponse {
+  distribution: DistributionCategory[];
+  total_conversations: number;
+}
+
+// --- Chats iniciados por día (US-AUDIT-003) ---
+
+export interface DailyChatCount {
+  date: string; // "YYYY-MM-DD" en la zona horaria del tenant
+  count: number;
+}
+
+export interface InboxOption {
+  id: number;
+  name: string;
+  channel_type: string;
+  identifier: string | null;
+}
+
+export interface ChatsStartedResponse {
+  results: DailyChatCount[];
+  total: number;
+  available_inboxes: InboxOption[];
+}
+
+export async function fetchActivityByHour(
+  accessToken: string,
+  query?: MetricsQuery,
+  tenantId?: number,
+): Promise<ActivityByHourResponse> {
+  const params = new URLSearchParams();
+
+  if (query?.period) {
+    params.append('period', query.period);
+  }
+
+  if (query?.start_date && query.period === 'custom') {
+    params.append('start_date', query.start_date);
+  }
+
+  if (query?.end_date && query.period === 'custom') {
+    params.append('end_date', query.end_date);
+  }
+
+  if (tenantId !== undefined) {
+    params.append('tenant_id', tenantId.toString());
+  }
+
+  const url = `${API_URL}/metrics/activity-by-hour${params.toString() ? '?' + params.toString() : ''}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Failed to fetch activity by hour' }));
+    throw new Error(error.detail || 'Failed to fetch activity by hour');
+  }
+
+  return response.json();
+}

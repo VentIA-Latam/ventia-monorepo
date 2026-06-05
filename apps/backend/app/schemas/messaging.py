@@ -5,7 +5,7 @@ Pydantic schemas for the messaging service API.
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # --- Temperature config models ---
@@ -272,6 +272,33 @@ class TemplateParamsRequest(BaseModel):
 class SendTemplateMessageRequest(BaseModel):
     template_params: TemplateParamsRequest
     # content lo interpola el backend Rails desde el BODY del template.
+
+
+class SendByPhoneRequest(BaseModel):
+    """Send a WhatsApp template to a phone number, creating contact/conversation if needed."""
+
+    phone: str = Field(..., description="Teléfono en formato E.164 (+...)")
+    inbox_id: int = Field(..., description="ID del inbox WhatsApp del tenant")
+    template_params: TemplateParamsRequest = Field(
+        ..., description="Template aprobado con parámetros resueltos"
+    )
+    contact_name: Optional[str] = Field(
+        None, description="Nombre para el contact si se crea nuevo (ignorado si ya existe)"
+    )
+
+
+class SendByPhoneData(BaseModel):
+    conversation_id: int
+    message_id: int
+    contact_id: int
+    contact_created: bool
+    conversation_created: bool
+
+
+class SendByPhoneResponse(BaseModel):
+    success: bool
+    data: SendByPhoneData
+    message: Optional[str] = None
 
 
 class AssignConversationRequest(BaseModel):

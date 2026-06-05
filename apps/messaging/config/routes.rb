@@ -93,6 +93,9 @@ Rails.application.routes.draw do
         resources :labels, only: [:index, :create, :destroy], controller: 'conversations/labels'
       end
 
+      # Send message by phone (no requiere conversation_id existente)
+      post 'messages/send_by_phone', to: 'messages#send_by_phone'
+
       # Contacts
       resources :contacts, only: [:index, :show, :create, :update, :destroy] do
         collection do
@@ -174,6 +177,9 @@ Rails.application.routes.draw do
         get 'conversations_count', to: 'conversations#count'
         get 'no_purchase_reasons', to: 'conversations#no_purchase_reasons'
         post 'ads_summary', to: 'conversations#ads_summary'
+        get 'activity_by_hour', to: 'conversations#activity_by_hour'
+        get 'conversation_distribution', to: 'conversations#conversation_distribution'
+        get 'chats_started', to: 'conversations#chats_started'
       end
 
       # Reports

@@ -103,6 +103,8 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
   useEffect(() => { setMounted(true); }, []);
   const isDark = mounted && resolvedTheme === "dark";
   const [messages, setMessages] = useState<Message[]>([]);
+  const messagesRef = useRef<Message[]>([]);
+  messagesRef.current = messages;
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -140,6 +142,12 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
   const scrolledTargetRef = useRef<string | null>(null);
   // Tracks current conversation ID — used to detect stale navigateToMessage calls after await
   const currentConvIdRef = useRef<number | string | undefined>(conversation?.id);
+  // Timer del jump-to-message highlight (limpiado en reset por conversation switch).
+  // Declarado acá arriba para evitar TDZ con el effect que lo limpia.
+  const jumpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Live ref de `messages` para que loadOlder/loadNewer puedan leer el boundary id
+  // sin tener `messages` en sus deps. Sin esto, cada WS msg recreaba el useCallback
+  // y reasignaba refs en cada render.
 
   // Load messages when conversation changes
   useEffect(() => {
@@ -188,10 +196,13 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
   useEffect(() => {
     if (!reconnectedAt || !conversation) return;
 
-    let cancelled = false;
-    getMessages(conversation.id, { tenantId })
+    // AbortController para que el fetch se cancele de verdad al cambiar de
+    // conversación (mirror del patrón del initial load — el `cancelled` flag
+    // anterior no cortaba el request en sí, solo el .then).
+    const controller = new AbortController();
+    getMessages(conversation.id, { tenantId, signal: controller.signal })
       .then((data) => {
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
         const msgs = data.data ?? [];
         messageIdsRef.current = new Set(msgs.map((m) => String(m.id)));
         scrollBehaviorRef.current = "instant";
@@ -199,9 +210,12 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
         setHasMore(Boolean(data.meta?.has_more));
         setHasMoreNewer(false);
       })
-      .catch((err) => console.error("[reconnect] Error refreshing messages:", err));
+      .catch((err) => {
+        if (err?.name === "AbortError") return;
+        console.error("[reconnect] Error refreshing messages:", err);
+      });
 
-    return () => { cancelled = true; };
+    return () => { controller.abort(); };
   }, [reconnectedAt, conversation?.id, tenantId]);
 
   // Append new messages from WebSocket events
@@ -346,7 +360,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const oldestId = messages[0]?.id;
+    const oldestId = messagesRef.current[0]?.id;
     if (!oldestId || String(oldestId).startsWith("temp-")) return;
 
     // Chatwoot: setScrollParams — save scroll state before fetch
@@ -389,7 +403,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
       isLoadingPreviousRef.current = false;
       setLoadingMore(false);
     }
-  }, [conversation?.id, messages, hasMore, tenantId]);
+  }, [conversation?.id, hasMore, tenantId]);
 
   // Load newer messages (forward pagination) — used after jumping to an old message so the
   // user can scroll down toward the present. Appends at the bottom; since the user is scrolled
@@ -399,10 +413,11 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
 
     // Use the newest persisted id as the cursor — skip optimistic temp messages so a pending
     // (or failed) send at the bottom doesn't block forward pagination.
+    const messagesNow = messagesRef.current;
     let newestId: string | number | undefined;
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (!String(messages[i].id).startsWith("temp-")) {
-        newestId = messages[i].id;
+    for (let i = messagesNow.length - 1; i >= 0; i--) {
+      if (!String(messagesNow[i].id).startsWith("temp-")) {
+        newestId = messagesNow[i].id;
         break;
       }
     }
@@ -431,7 +446,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
       isLoadingNewerRef.current = false;
       setLoadingMore(false);
     }
-  }, [conversation?.id, messages, hasMoreNewer, tenantId]);
+  }, [conversation?.id, hasMoreNewer, tenantId]);
 
   // Keep stable ref for scroll handler (avoids re-attaching listener on every render)
   loadOlderRef.current = loadOlderMessages;
@@ -640,6 +655,11 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
 
     if (!el) {
       if (!isLoadingTargetRef.current) {
+        // Marcá scrolled ANTES de dispatchear nav. Sin esto, cada WS msg que
+        // llegue durante el await re-dispara el effect, hace un querySelector
+        // y queda colgado en el guard `isLoadingTargetRef`. navigateToMessage
+        // re-setea esta misma key al completar (no-op).
+        scrolledTargetRef.current = key;
         navigateToMessageRef.current(targetMessageId);
       }
       return;
@@ -672,8 +692,6 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
       jumpTimerRef.current = null;
     }
   }, [conversation?.id]);
-
-  const jumpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleResultClick = useCallback((messageId: number | string) => {
     scrolledTargetRef.current = null;
@@ -710,8 +728,13 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
     setLoading(true);
     setHasMore(true);
     messageIdsRef.current = new Set();
+    // Capturá el conv.id antes del await para detectar cambio de conversación
+    // mid-fetch; sin esto, el fetch de la conv vieja sobrescribe los mensajes
+    // de la nueva.
+    const capturedConvId = conversation.id;
     getMessages(conversation.id, { tenantId })
       .then((data) => {
+        if (currentConvIdRef.current !== capturedConvId) return;
         const msgs = data.data ?? [];
         messageIdsRef.current = new Set(msgs.map((m) => String(m.id)));
         scrollBehaviorRef.current = "instant";
@@ -719,7 +742,9 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
         setHasMore(Boolean(data.meta?.has_more));
       })
       .catch((err) => console.error("[back-to-bottom]", err))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (currentConvIdRef.current === capturedConvId) setLoading(false);
+      });
   }, [conversation?.id, tenantId]);
 
   // No conversation selected
@@ -907,7 +932,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
                       </span>
                     </div>
                   ) : null}
-                  <div className={`rounded-lg transition-colors duration-300 ${isHighlighted ? "bg-volt/15" : ""}`} style={MESSAGE_ITEM_STYLE}>
+                  <div className={`rounded-lg motion-safe:transition-colors motion-safe:duration-300 ${isHighlighted ? "bg-volt/15" : ""}`} style={MESSAGE_ITEM_STYLE}>
                     <MessageBubble
                       message={msg}
                       showAvatar={isLastInCluster}

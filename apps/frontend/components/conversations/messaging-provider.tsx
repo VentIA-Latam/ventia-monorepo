@@ -69,6 +69,7 @@ export function useInboxFilter() {
 }
 
 const WS_URL = process.env.NEXT_PUBLIC_MESSAGING_WS_URL || "ws://localhost:3001/cable";
+const STALE_THRESHOLD_MS = 3 * 60 * 60 * 1000; // 3 horas
 
 interface MessagingProviderProps {
   children: React.ReactNode;
@@ -91,6 +92,37 @@ export function MessagingProvider({ children, tenantId }: MessagingProviderProps
     () => ({ inboxIds: inboxFilterIds, setInboxIds }),
     [inboxFilterIds, setInboxIds]
   );
+  // Detect long inactivity (PC suspend, tab hidden >3h) and reload to avoid
+  // stale WebSocket state. Uses two signals:
+  // - setInterval: measures real elapsed time. When the PC suspends, JS pauses;
+  //   on wake the next tick fires with a large gap → reload. Covers the case
+  //   where this tab was foreground when the laptop was closed.
+  // - visibilitychange: triggers an immediate check when returning to the tab,
+  //   so we don't have to wait up to 60s for the next interval.
+  useEffect(() => {
+    let lastTick = Date.now();
+
+    const checkStale = () => {
+      const now = Date.now();
+      const elapsed = now - lastTick;
+      lastTick = now;
+      if (elapsed > STALE_THRESHOLD_MS) {
+        window.location.reload();
+      }
+    };
+
+    const interval = setInterval(checkStale, 60_000);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) checkStale();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
   // Fetch WS token on mount or when tenantId changes
   useEffect(() => {
