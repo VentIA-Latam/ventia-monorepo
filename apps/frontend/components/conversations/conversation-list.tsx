@@ -2,18 +2,30 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Search, MessageSquare, Loader2 } from "lucide-react";
+import { Search, MessageSquare, Loader2, CheckSquare, Download, X, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ConversationItem } from "./conversation-item";
+import { exportToCsv } from "@/lib/utils/messaging";
 import { ConversationFilters, type ActiveFilters } from "./conversation-filters";
-import { useMessagingEvent, useMessagingEmit, useMessagingReconnect } from "./messaging-provider";
+import { useMessagingEvent, useMessagingEmit, useMessagingReconnect, useInboxFilter } from "./messaging-provider";
 import {
   getConversations,
   deleteConversation,
+  exportConversations,
+  getInboxes,
   type ConversationFilters as ConversationFilterParams,
 } from "@/lib/api-client/messaging";
-import type { Conversation, Label, TemperatureDefinition } from "@/lib/types/messaging";
+import type { Conversation, Inbox, Label, TemperatureDefinition } from "@/lib/types/messaging";
+import { useToast } from "@/hooks/use-toast";
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -22,7 +34,7 @@ interface ConversationListProps {
   temperatureConfig?: TemperatureDefinition[];
   section?: string;
   tenantId?: number;
-  onSelect: (id: number) => void;
+  onSelect: (id: number, targetMessageId?: number) => void;
   onConversationsChange: (conversations: Conversation[]) => void;
   onDeleteConversation?: (id: number) => void;
   onLabelCreated?: (label: Label) => void;
@@ -47,10 +59,16 @@ export function ConversationList({
   const lastEvent = useMessagingEvent();
   const emitEvent = useMessagingEmit();
   const reconnectedAt = useMessagingReconnect();
+  const { setInboxIds: publishInboxIds } = useInboxFilter();
+  const { toast } = useToast();
   const sectionFilter = (section === "sale" || section === "unattended" ? section : "all") as SectionValue;
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
+  const [inboxes, setInboxes] = useState<Inbox[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [isExportingAll, setIsExportingAll] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   // Refs for transient pagination state (rerender-use-ref-transient-values)
   const loadingMoreRef = useRef(false);
@@ -79,6 +97,9 @@ export function ConversationList({
         params.created_before = filters.dateRange.to;
       }
       if (filters.unread) params.unread = "true";
+      if (filters.inboxIds && filters.inboxIds.length > 0) {
+        params.inbox_ids = filters.inboxIds.join(",");
+      }
       const trimmed = search?.trim();
       if (trimmed) params.search = trimmed;
       return params;
@@ -101,6 +122,7 @@ export function ConversationList({
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
         console.error("Error fetching conversations:", error);
+        toast({ title: "Error al cargar conversaciones", variant: "destructive" });
       } finally {
         if (!signal?.aborted) setLoading(false);
       }
@@ -130,6 +152,27 @@ export function ConversationList({
     };
   }, []);
 
+  // Publish the active inbox filter to the messaging context so the sidebar's
+  // conversation counts stay in sync with the filtered list. Clears on unmount.
+  useEffect(() => {
+    publishInboxIds(activeFilters.inboxIds ?? []);
+    return () => {
+      publishInboxIds([]);
+    };
+  }, [activeFilters.inboxIds, publishInboxIds]);
+
+  // Load inboxes once for the channel filter. Aborts on tenantId change / unmount.
+  useEffect(() => {
+    const controller = new AbortController();
+    getInboxes(tenantId, controller.signal)
+      .then((res) => setInboxes(res?.data ?? []))
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        console.error("Error loading inboxes:", err);
+      });
+    return () => controller.abort();
+  }, [tenantId]);
+
   // Load more conversations on scroll (rerender-move-effect-to-event)
   const loadMoreConversations = useCallback(() => {
     // js-early-exit: skip if already loading or no more pages
@@ -146,7 +189,9 @@ export function ConversationList({
         if (newConversations.length === 0) {
           hasMoreRef.current = false;
         } else {
-          onConversationsChange([...conversationsRef.current, ...newConversations]);
+          const existingIds = new Set(conversationsRef.current.map((c) => c.id));
+          const deduped = newConversations.filter((c) => !existingIds.has(c.id));
+          onConversationsChange([...conversationsRef.current, ...deduped]);
           currentPageRef.current = nextPage;
           hasMoreRef.current = data.meta?.next_page != null;
         }
@@ -175,9 +220,10 @@ export function ConversationList({
         emitEvent({ event: "conversation.deleted", data: { id } });
       } catch (error) {
         console.error("Error deleting conversation:", error);
+        toast({ title: "Error al eliminar conversación", variant: "destructive" });
       }
     },
-    [onConversationsChange, onDeleteConversation, emitEvent]
+    [onConversationsChange, onDeleteConversation, emitEvent, toast]
   );
 
   // Debounced full refetch (fallback for events we can't handle locally)
@@ -208,8 +254,13 @@ export function ConversationList({
       const msgType = (data.message_type as string) ?? "incoming";
       const msgStatus = (data.status as string) ?? undefined;
       const createdAt = data.created_at ?? new Date().toISOString();
-      const attachments = Array.isArray(data.attachments) && data.attachments.length > 0
-        ? data.attachments[0] : null;
+      // Skip story-reply previews (quoted context) so the list shows the text reply, not "Foto"
+      // — mirrors the backend REST logic in conversations_controller#last_message.
+      const attachments = Array.isArray(data.attachments)
+        ? (data.attachments as Array<Record<string, unknown>>).find(
+            (a) => (a.meta as Record<string, unknown> | null)?.story_reply !== true,
+          ) ?? null
+        : null;
 
       // Activity messages (etiquetas, IA toggle, asignaciones) son eventos
       // del sistema — no deben aparecer como preview en la lista ni mover
@@ -314,11 +365,94 @@ export function ConversationList({
     return () => el.removeEventListener("scroll", handleScroll);
   }, [loadMoreConversations]);
 
+  const toggleSelectMode = useCallback(() => {
+    setIsSelectMode((prev) => {
+      if (prev) setSelectedIds(new Set());
+      return !prev;
+    });
+  }, []);
+
+  const toggleSelect = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleExportAll = useCallback(async () => {
+    setIsExportingAll(true);
+    try {
+      await exportConversations(buildParams(sectionFilterRef.current, activeFiltersRef.current, searchQueryRef.current));
+    } catch (error) {
+      console.error("Error exporting conversations:", error);
+      toast({ title: "Error al exportar conversaciones", variant: "destructive" });
+    } finally {
+      setIsExportingAll(false);
+    }
+  }, [buildParams]);
+
+  const handleExportCsv = useCallback(() => {
+    const selected = conversations.filter((c) => selectedIds.has(c.id));
+    exportToCsv(selected);
+    setIsSelectMode(false);
+    setSelectedIds(new Set());
+  }, [conversations, selectedIds]);
+
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <div className="px-4 pt-4 pb-2">
-        <h2 className="text-xl font-bold">Chats</h2>
+        {isSelectMode ? (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" onClick={toggleSelectMode} className="h-7 w-7 shrink-0">
+                <X className="h-4 w-4" />
+              </Button>
+              <span className="text-sm font-semibold text-foreground">
+                {selectedIds.size} seleccionadas
+              </span>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" disabled={isExportingAll} className="h-7 text-xs px-2 gap-1 shrink-0">
+                  {isExportingAll
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <Download className="h-3.5 w-3.5" />}
+                  Exportar
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-60">
+                <DropdownMenuItem onClick={handleExportAll} className="flex flex-col items-start gap-0.5 py-2 cursor-pointer">
+                  <span className="text-sm font-medium">Todos los resultados</span>
+                  <span className="text-xs text-muted-foreground">Con filtros activos · hasta 5,000</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={selectedIds.size > 0 ? handleExportCsv : undefined}
+                  disabled={selectedIds.size === 0}
+                  className="flex flex-col items-start gap-0.5 py-2 cursor-pointer"
+                >
+                  <span className="text-sm font-medium">Exportar selección</span>
+                  <span className="text-xs text-muted-foreground">
+                    {selectedIds.size > 0
+                      ? `${selectedIds.size} ${selectedIds.size === 1 ? "conversación" : "conversaciones"}`
+                      : "Ninguna conversación seleccionada"}
+                  </span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold">Chats</h2>
+            <Button variant="ghost" size="icon" onClick={toggleSelectMode} className="h-8 w-8 text-muted-foreground" aria-label="Seleccionar conversaciones">
+              <CheckSquare className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Search */}
@@ -333,14 +467,27 @@ export function ConversationList({
               setSearchQuery(value);
               debouncedSearch(value);
             }}
-            className="pl-9 h-9 text-sm rounded-full bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/30"
+            className={`pl-9 h-9 text-sm rounded-full bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary/30 ${searchQuery ? "pr-8" : ""}`}
           />
+          {searchQuery && (
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                debouncedSearch("");
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Limpiar búsqueda"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Filters */}
       <ConversationFilters
         allLabels={allLabels}
+        allInboxes={inboxes}
         filters={activeFilters}
         temperatureConfig={temperatureConfig}
         onChange={handleFiltersChange}
@@ -377,27 +524,47 @@ export function ConversationList({
                     : "No hay conversaciones."
             }
           />
-        ) : (
-          <>
-            {conversations.map((conversation) => (
-              <div key={conversation.id} style={{ contentVisibility: "auto", containIntrinsicSize: "auto 72px" }}>
-                <ConversationItem
-                  conversation={conversation}
-                  isSelected={selectedId === conversation.id}
-                  temperatureConfig={temperatureConfig}
-                  tenantId={tenantId}
-                  onClick={() => onSelect(conversation.id)}
-                  onDelete={handleDelete}
-                />
-              </div>
-            ))}
-            {loadingMore && (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              </div>
-            )}
-          </>
-        )}
+        ) : (() => {
+          const trimmed = searchQuery.trim();
+          const contactMatches = trimmed ? conversations.filter((c) => !c.message_snippet) : conversations;
+          const messageMatches = trimmed ? conversations.filter((c) => !!c.message_snippet) : [];
+
+          const renderItem = (conversation: Conversation, targetMessageId?: number, keyPrefix = "c") => (
+            <div key={`${keyPrefix}-${conversation.id}`} style={{ contentVisibility: "auto", containIntrinsicSize: "auto 72px" }}>
+              <ConversationItem
+                conversation={conversation}
+                isSelected={selectedId === conversation.id}
+                temperatureConfig={temperatureConfig}
+                tenantId={tenantId}
+                onClick={() => onSelect(conversation.id, targetMessageId)}
+                onDelete={handleDelete}
+                searchQuery={searchQuery}
+                isSelectMode={isSelectMode}
+                isChecked={selectedIds.has(conversation.id)}
+                onToggleSelect={toggleSelect}
+              />
+            </div>
+          );
+
+          return (
+            <>
+              {contactMatches.map((c) => renderItem(c, undefined, "c"))}
+              {messageMatches.length > 0 && (
+                <>
+                  <div className="px-4 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider bg-muted/20 border-y border-border/30">
+                    Mensajes
+                  </div>
+                  {messageMatches.map((c) => renderItem(c, c.matched_message_id ?? undefined, "m"))}
+                </>
+              )}
+              {loadingMore && (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
     </div>
   );

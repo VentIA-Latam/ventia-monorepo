@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 // Mp3Encoder loaded dynamically in convertToMp3() to reduce initial bundle
 
 export type RecorderStatus = "idle" | "recording" | "recorded";
+export type AudioFormat = "mp3" | "wav";
 
 interface UseAudioRecorderReturn {
   status: RecorderStatus;
@@ -58,11 +59,68 @@ async function convertToMp3(blob: Blob): Promise<Blob> {
   }
 }
 
-export function useAudioRecorder(): UseAudioRecorderReturn {
+// Encodes a decoded AudioBuffer (mono, channel 0) to a 16-bit PCM WAV blob.
+// Instagram accepts wav but not mp3, so we use this for non-WhatsApp channels.
+function encodeWav(audioBuffer: AudioBuffer): Blob {
+  const sampleRate = audioBuffer.sampleRate;
+  const samples = formatFloat32ToInt16(audioBuffer.getChannelData(0));
+  const dataLength = samples.length * 2;
+  const buffer = new ArrayBuffer(44 + dataLength);
+  const view = new DataView(buffer);
+
+  const writeString = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  };
+
+  writeString(0, "RIFF");
+  view.setUint32(4, 36 + dataLength, true);
+  writeString(8, "WAVE");
+  writeString(12, "fmt ");
+  view.setUint32(16, 16, true); // PCM chunk size
+  view.setUint16(20, 1, true); // PCM format
+  view.setUint16(22, 1, true); // mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true); // byte rate (mono, 2 bytes/sample)
+  view.setUint16(32, 2, true); // block align
+  view.setUint16(34, 16, true); // bits per sample
+  writeString(36, "data");
+  view.setUint32(40, dataLength, true);
+
+  let offset = 44;
+  for (let i = 0; i < samples.length; i++) {
+    view.setInt16(offset, samples[i], true);
+    offset += 2;
+  }
+
+  return new Blob([buffer], { type: "audio/wav" });
+}
+
+async function convertToWav(blob: Blob): Promise<Blob> {
+  const arrayBuffer = await blob.arrayBuffer();
+  const audioContext = new AudioContext();
+
+  try {
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    return encodeWav(audioBuffer);
+  } finally {
+    if (audioContext.state !== "closed") await audioContext.close();
+  }
+}
+
+export function useAudioRecorder(options?: { format?: AudioFormat }): UseAudioRecorderReturn {
+  const format: AudioFormat = options?.format ?? "mp3";
   const [status, setStatus] = useState<RecorderStatus>("idle");
   const [duration, setDuration] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+
+  // Refs so the record-end handler (set up once) reads the latest target format,
+  // and getAudioFile knows which format was actually produced.
+  const formatRef = useRef<AudioFormat>(format);
+  const recordedFormatRef = useRef<AudioFormat>("mp3");
+  useEffect(() => {
+    formatRef.current = format;
+  }, [format]);
 
   const recordWaveformRef = useRef<HTMLDivElement | null>(null);
   const wavesurferRef = useRef<unknown>(null);
@@ -169,18 +227,22 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     record.on("record-end", async (blob: Blob) => {
       if (!mountedRef.current) return;
 
+      const targetFormat = formatRef.current;
       try {
-        const mp3Blob = await convertToMp3(blob);
+        const converted =
+          targetFormat === "wav" ? await convertToWav(blob) : await convertToMp3(blob);
         if (!mountedRef.current) return;
 
-        const url = URL.createObjectURL(mp3Blob);
-        setAudioBlob(mp3Blob);
+        recordedFormatRef.current = targetFormat;
+        const url = URL.createObjectURL(converted);
+        setAudioBlob(converted);
         setAudioUrl(url);
         setStatus("recorded");
       } catch (err) {
-        console.error("Error converting audio to MP3:", err);
-        // Fallback: use original blob
+        console.error(`Error converting audio to ${targetFormat}:`, err);
+        // Fallback: use original blob (labeled as mp3 by getAudioFile)
         if (!mountedRef.current) return;
+        recordedFormatRef.current = "mp3";
         const url = URL.createObjectURL(blob);
         setAudioBlob(blob);
         setAudioUrl(url);
@@ -250,9 +312,10 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
   const getAudioFile = useCallback((): File | null => {
     if (!audioBlob) return null;
-    return new File([audioBlob], `audio-${Date.now()}.mp3`, {
-      type: "audio/mpeg",
-    });
+    const isWav = recordedFormatRef.current === "wav";
+    const ext = isWav ? "wav" : "mp3";
+    const type = isWav ? "audio/wav" : "audio/mpeg";
+    return new File([audioBlob], `audio-${Date.now()}.${ext}`, { type });
   }, [audioBlob]);
 
   return {

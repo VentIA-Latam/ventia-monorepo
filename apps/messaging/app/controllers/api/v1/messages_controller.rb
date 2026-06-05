@@ -1,25 +1,69 @@
 class Api::V1::MessagesController < Api::V1::BaseController
-  before_action :set_conversation
+  include SearchSnippetSafety
+
+  before_action :set_conversation, except: [:send_by_phone]
 
   def index
     base = @conversation.messages.includes(attachments: { file_attachment: :blob })
 
-    messages = if params[:before].present?
-                 # Load older messages (scroll up)
-                 base.reorder(created_at: :desc).where('id < ?', params[:before].to_i).limit(20).reverse
+    messages, has_more = if params[:around].present?
+                 target = base.find_by(id: params[:around].to_i)
+                 if target
+                   before = base.where('created_at < ?', target.created_at).reorder(created_at: :desc).limit(10).reverse
+                   after  = base.where('created_at > ?', target.created_at).reorder(created_at: :asc).limit(10)
+                   [[*before, target, *after], before.size == 10]
+                 else
+                   [base.reorder(created_at: :desc).limit(20).reverse, true]
+                 end
+               elsif params[:before].present?
+                 msgs = base.reorder(created_at: :desc).where('id < ?', params[:before].to_i).limit(20).reverse
+                 [msgs, msgs.size == 20]
                elsif params[:after].present?
-                 # Load newer messages (real-time catch-up)
-                 base.reorder(created_at: :asc).where('id > ?', params[:after].to_i).limit(100)
+                 msgs = base.reorder(created_at: :asc).where('id > ?', params[:after].to_i).limit(100)
+                 [msgs, msgs.size == 100]
                else
-                 # Default: latest 20 messages in chronological order
-                 base.reorder(created_at: :desc).limit(20).reverse
+                 msgs = base.reorder(created_at: :desc).limit(20).reverse
+                 [msgs, msgs.size == 20]
                end
+
+    quoted_lookup = build_quoted_lookup(messages)
 
     render json: {
       success: true,
-      data: messages.map { |m| message_json(m) },
-      meta: { has_more: messages.size == 20 }
+      data: messages.map { |m| message_json(m, quoted_lookup) },
+      meta: { has_more: has_more }
     }
+  end
+
+  def search
+    query = params[:q].to_s.strip
+    return render json: { success: true, data: [] } if query.blank?
+
+    tsquery = build_snippet_tsquery(query)
+    snippet_expr = ActiveRecord::Base.sanitize_sql_array([
+      "ts_headline('simple', COALESCE(processed_message_content, content), to_tsquery('simple', ?), ?) AS snippet",
+      tsquery,
+      SNIPPET_HEADLINE_OPTIONS
+    ])
+
+    results = @conversation.messages
+      .where.not(message_type: :activity)
+      .where("COALESCE(processed_message_content, content) IS NOT NULL")
+      .fulltext_search(query)
+      .order(created_at: :desc)
+      .limit(50)
+      .select(:id, :created_at, :message_type, :status, Arel.sql(snippet_expr))
+      .map do |msg|
+        {
+          id: msg.id,
+          snippet: sanitize_snippet(msg['snippet']),
+          created_at: msg.created_at,
+          message_type: msg.message_type,
+          status: msg.status
+        }
+      end
+
+    render json: { success: true, data: results }
   end
 
   def create
@@ -27,6 +71,21 @@ class Api::V1::MessagesController < Api::V1::BaseController
     message.account = current_account
     message.inbox = @conversation.inbox
     message.sender = current_user if current_user
+
+    # Carousel (Instagram generic template) is channel-specific: only Instagram supports it.
+    # Validate up-front (fail-fast) so the caller gets a clear 422 and no orphan message is created.
+    if message.content_type == 'cards'
+      unless @conversation.inbox.channel.is_a?(Channel::Instagram)
+        return render_error('cards (carrusel) solo está soportado en Instagram',
+                            status: :unprocessable_entity)
+      end
+
+      cards = message.content_attributes&.dig('cards')
+      if cards.blank? || !cards.is_a?(Array)
+        return render_error('content_attributes.cards debe ser un array no vacío',
+                            status: :unprocessable_entity)
+      end
+    end
 
     # Template message: backend looks up template, interpolates body and builds the snapshot.
     # Client only sends { name, language, processed_params } — see Whatsapp::TemplateMessageBuilder.
@@ -90,10 +149,62 @@ class Api::V1::MessagesController < Api::V1::BaseController
     end
   end
 
+  # Envío de template a un teléfono sin requerir conversation_id existente.
+  # Crea contact + conversation si no existen, reusa conversación open si la hay.
+  # Ver spec: docs/superpowers/specs/2026-06-03-send-by-phone-endpoint-design.md
+  def send_by_phone
+    inbox = current_account.inboxes.find(params[:inbox_id])
+
+    result = Conversations::EnsureFromPhoneService.new(
+      account:         current_account,
+      inbox:           inbox,
+      phone:           params[:phone],
+      template_params: extract_template_params,
+      contact_name:    params[:contact_name]
+    ).perform
+
+    render_success(
+      {
+        conversation_id:      result.conversation.id,
+        message_id:           result.message.id,
+        contact_id:           result.contact.id,
+        contact_created:      result.contact_created,
+        conversation_created: result.conversation_created
+      },
+      message: 'Message sent',
+      status:  :created
+    )
+  rescue Conversations::EnsureFromPhoneService::InvalidPhoneError,
+         Conversations::EnsureFromPhoneService::InvalidInboxChannelError,
+         Whatsapp::TemplateMessageBuilder::TemplateNotFound,
+         Whatsapp::TemplateMessageBuilder::MissingBodyVariables,
+         ArgumentError => e
+    render_error(e.message, status: :unprocessable_entity)
+  end
+
   private
+
+  # Mismo patrón que extract_content_attributes (líneas 169-178): acepta Hash,
+  # ActionController::Parameters, o JSON string; cualquier otra cosa → nil para
+  # que el servicio raisee ArgumentError mapeado a 422 (no NoMethodError → 500).
+  def extract_template_params
+    raw = params[:template_params]
+    return nil if raw.blank?
+    return JSON.parse(raw) if raw.is_a?(String)
+    return raw.to_unsafe_h if raw.respond_to?(:to_unsafe_h)
+
+    raw.is_a?(Hash) ? raw : nil
+  rescue JSON::ParserError
+    nil
+  end
 
   def set_conversation
     @conversation = current_account.conversations.find(params[:conversation_id])
+  end
+
+  def build_snippet_tsquery(query)
+    terms = query.to_s.strip.split.map { |t| "'#{t.gsub("'", "''")}':*" }
+    terms.empty? ? "'':*" : terms.join(" & ")
   end
 
   def message_params
@@ -123,13 +234,31 @@ class Api::V1::MessagesController < Api::V1::BaseController
     :file
   end
 
-  def message_json(message)
+  # Batch-resolve the replied-to messages for a list (US-UX-002), avoiding an N+1 lookup
+  # per message (which previously exhausted the small connection pool). Single query keyed
+  # by source_id; attachments/sender eager-loaded for the snapshot.
+  def build_quoted_lookup(messages)
+    ids = messages.filter_map { |m| m.content_attributes['in_reply_to'] }.uniq
+    return {} if ids.empty?
+
+    @conversation.messages.where(source_id: ids).includes(:attachments, :sender).index_by(&:source_id)
+  end
+
+  def message_json(message, quoted_lookup = nil)
+    attrs = message.content_attributes
+    if message.in_reply_to.present?
+      quoted = quoted_lookup ? quoted_lookup[message.in_reply_to] : @conversation.messages.find_by(source_id: message.in_reply_to)
+      snapshot = Message.build_quoted_snapshot(quoted)
+      attrs = attrs.merge('quoted' => snapshot) if snapshot
+    end
+
     {
       id: message.id,
+      source_id: message.source_id,
       content: message.content,
       message_type: message.message_type,
       content_type: message.content_type,
-      content_attributes: message.content_attributes,
+      content_attributes: attrs,
       additional_attributes: message.additional_attributes,
       status: message.status,
       created_at: message.created_at,

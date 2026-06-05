@@ -38,8 +38,7 @@ class AccountUser < ApplicationRecord
   private
 
   def create_default_notification_setting
-    notification_settings = user.notification_settings.find_or_initialize_by(account_id: account_id)
-    notification_settings.save!
+    NotificationSetting.create_default_for(user: user, account: account)
   end
 
   def update_presence_in_redis

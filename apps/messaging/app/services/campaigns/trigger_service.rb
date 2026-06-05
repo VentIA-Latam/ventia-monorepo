@@ -72,7 +72,12 @@ class Campaigns::TriggerService
                     .order(Arel.sql('whatsapp_bsuid IS NULL ASC'))
                     .first
     bsuid     = existing_ci&.whatsapp_bsuid
-    source_id = bsuid.presence || contact.phone_number&.gsub(/[^\d]/, '')
+    phone     = contact.phone_number&.gsub(/[^\d]/, '')
+    source_id = if bsuid.present? && bsuid_sending_enabled?
+                  bsuid
+                else
+                  phone.presence || bsuid
+                end
 
     if source_id.blank?
       Rails.logger.warn "[Campaign] Contact #{contact.id} has no whatsapp_bsuid nor phone, skipping"
@@ -115,5 +120,9 @@ class Campaigns::TriggerService
 
   rescue StandardError => e
     Rails.logger.error "[Campaign] Failed to send to #{contact.phone_number || bsuid}: #{e.message}"
+  end
+
+  def bsuid_sending_enabled?
+    ENV.fetch('WHATSAPP_BSUID_SENDING', 'false') == 'true'
   end
 end

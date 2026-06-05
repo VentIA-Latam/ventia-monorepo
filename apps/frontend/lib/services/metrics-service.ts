@@ -210,3 +210,231 @@ export async function fetchConversionRate(
 
   return response.json();
 }
+
+// --- Conversation Count ---
+
+export async function fetchConversationCount(
+  accessToken: string,
+  query: { start_date: string; end_date: string },
+): Promise<number> {
+  const params = new URLSearchParams({
+    created_after: query.start_date,
+    created_before: query.end_date,
+  });
+
+  const url = `${API_URL}/messaging/conversations?${params.toString()}`;
+
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) return 0;
+
+  const json = await response.json().catch(() => null);
+  return json?.meta?.total_count ?? 0;
+}
+
+// --- No-Purchase Reasons ---
+
+export interface NoPurchaseReasonItem {
+  reason: string;
+  count: number;
+  percentage: number;
+}
+
+export interface NoPurchaseReasonsResponse {
+  total: number;
+  results: NoPurchaseReasonItem[];
+  // Campos extra que devuelve el backend por consistencia; el componente no los usa.
+  period?: PeriodType;
+  start_date?: string;
+  end_date?: string;
+}
+
+export async function fetchNoPurchaseReasons(
+  accessToken: string,
+  query?: MetricsQuery,
+): Promise<NoPurchaseReasonsResponse> {
+  const params = new URLSearchParams();
+
+  if (query?.period) {
+    params.append('period', query.period);
+  }
+
+  if (query?.start_date && query.period === 'custom') {
+    params.append('start_date', query.start_date);
+  }
+
+  if (query?.end_date && query.period === 'custom') {
+    params.append('end_date', query.end_date);
+  }
+
+  const url = `${API_URL}/metrics/no-purchase-reasons${params.toString() ? '?' + params.toString() : ''}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Failed to fetch no-purchase reasons' }));
+    throw new Error(error.detail || 'Failed to fetch no-purchase reasons');
+  }
+
+  return response.json();
+}
+
+// --- Ads Summary (Resumen por anuncio Meta) ---
+
+export interface AdSummaryItem {
+  ad_id: string;
+  headline: string | null;
+  image_url: string | null;
+  source_url: string | null;
+  channel: "instagram" | "whatsapp" | null;
+  conversations_started: number;
+  conversations_converted: number;
+  conversion_rate: number;
+}
+
+export interface AdsSummaryResponse {
+  ads: AdSummaryItem[];
+  total_ads: number;
+  period?: PeriodType;
+  start_date?: string;
+  end_date?: string;
+}
+
+export async function fetchAdsSummary(
+  accessToken: string,
+  query?: MetricsQuery,
+): Promise<AdsSummaryResponse> {
+  const params = new URLSearchParams();
+
+  if (query?.period) {
+    params.append('period', query.period);
+  }
+
+  if (query?.start_date && query.period === 'custom') {
+    params.append('start_date', query.start_date);
+  }
+
+  if (query?.end_date && query.period === 'custom') {
+    params.append('end_date', query.end_date);
+  }
+
+  const url = `${API_URL}/metrics/ads-summary${params.toString() ? '?' + params.toString() : ''}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Failed to fetch ads summary' }));
+    throw new Error(error.detail || 'Failed to fetch ads summary');
+  }
+
+  return response.json();
+}
+
+// --- Activity by Hour (Heatmap) ---
+
+export interface ActivityByHourResponse {
+  matrix: number[][];
+  max_count: number;
+  period: PeriodType;
+  start_date: string;
+  end_date: string;
+  timezone_note?: string;
+}
+
+// --- Conversation Distribution (IA / Humano / Abandonadas) ---
+
+export type DistributionCategoryKey = "agent_ai" | "human_support" | "abandoned";
+
+export interface DistributionCategory {
+  category: DistributionCategoryKey;
+  count: number;
+  percentage: number;
+  total_hours: number;
+}
+
+export interface ConversationDistributionResponse {
+  distribution: DistributionCategory[];
+  total_conversations: number;
+}
+
+// --- Chats iniciados por día (US-AUDIT-003) ---
+
+export interface DailyChatCount {
+  date: string; // "YYYY-MM-DD" en la zona horaria del tenant
+  count: number;
+}
+
+export interface InboxOption {
+  id: number;
+  name: string;
+  channel_type: string;
+  identifier: string | null;
+}
+
+export interface ChatsStartedResponse {
+  results: DailyChatCount[];
+  total: number;
+  available_inboxes: InboxOption[];
+}
+
+export async function fetchActivityByHour(
+  accessToken: string,
+  query?: MetricsQuery,
+  tenantId?: number,
+): Promise<ActivityByHourResponse> {
+  const params = new URLSearchParams();
+
+  if (query?.period) {
+    params.append('period', query.period);
+  }
+
+  if (query?.start_date && query.period === 'custom') {
+    params.append('start_date', query.start_date);
+  }
+
+  if (query?.end_date && query.period === 'custom') {
+    params.append('end_date', query.end_date);
+  }
+
+  if (tenantId !== undefined) {
+    params.append('tenant_id', tenantId.toString());
+  }
+
+  const url = `${API_URL}/metrics/activity-by-hour${params.toString() ? '?' + params.toString() : ''}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Failed to fetch activity by hour' }));
+    throw new Error(error.detail || 'Failed to fetch activity by hour');
+  }
+
+  return response.json();
+}

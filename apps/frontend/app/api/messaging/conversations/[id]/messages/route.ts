@@ -62,6 +62,11 @@ export async function POST(
       // Build new FormData for FastAPI
       const upstreamForm = new FormData();
       upstreamForm.append("content", content);
+      // Forward reply context (US-UX-002) so a reply WITH a file keeps its quoted message.
+      const contentAttributes = formData.get("content_attributes");
+      if (contentAttributes) {
+        upstreamForm.append("content_attributes", contentAttributes as string);
+      }
       if (file) {
         upstreamForm.append("file", file);
       }

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_13_000001) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_02_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -149,6 +149,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_13_000001) do
     t.index ["account_id", "short_code"], name: "index_canned_responses_on_account_id_and_short_code", unique: true
   end
 
+  create_table "channel_instagram", force: :cascade do |t|
+    t.string "instagram_id", null: false
+    t.string "username"
+    t.text "access_token", null: false
+    t.datetime "token_expires_at"
+    t.jsonb "provider_config", default: {}
+    t.bigint "account_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_channel_instagram_on_account_id"
+    t.index ["instagram_id"], name: "index_channel_instagram_on_instagram_id", unique: true
+  end
+
   create_table "channel_whatsapp", force: :cascade do |t|
     t.string "phone_number", null: false
     t.string "provider", default: "whatsapp_cloud"
@@ -238,6 +251,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_13_000001) do
     t.boolean "ai_agent_enabled", default: true, null: false
     t.integer "stage", default: 0, null: false
     t.string "temperature"
+    t.index "((custom_attributes ->> 'no_purchase_reason'::text))", name: "idx_conversations_no_purchase_reason"
+    t.index ["account_id", "created_at"], name: "index_conversations_on_account_id_and_created_at"
     t.index ["account_id"], name: "index_conversations_on_account_id"
     t.index ["assignee_id"], name: "index_conversations_on_assignee_id"
     t.index ["campaign_id"], name: "index_conversations_on_campaign_id"
@@ -325,10 +340,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_13_000001) do
     t.bigint "conversation_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.virtual "message_search_ts", type: :tsvector, as: "to_tsvector('simple'::regconfig, COALESCE(processed_message_content, ''::text))", stored: true
     t.index ["account_id"], name: "index_messages_on_account_id"
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
     t.index ["created_at"], name: "index_messages_on_created_at"
     t.index ["inbox_id"], name: "index_messages_on_inbox_id"
+    t.index ["message_search_ts"], name: "index_messages_on_message_search_ts", using: :gin
     t.index ["sender_type", "sender_id"], name: "index_messages_on_sender_type_and_sender_id"
     t.index ["source_id"], name: "index_messages_on_source_id"
   end
@@ -336,7 +353,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_13_000001) do
   create_table "notification_settings", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "user_id", null: false
-    t.integer "email_flags", default: 0, null: false
+    t.integer "email_flags", default: 3, null: false
     t.integer "push_flags", default: 7, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -430,6 +447,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_13_000001) do
   add_foreign_key "campaigns", "accounts"
   add_foreign_key "campaigns", "inboxes"
   add_foreign_key "canned_responses", "accounts"
+  add_foreign_key "channel_instagram", "accounts"
   add_foreign_key "channel_whatsapp", "accounts"
   add_foreign_key "contact_inboxes", "contacts"
   add_foreign_key "contact_inboxes", "inboxes"

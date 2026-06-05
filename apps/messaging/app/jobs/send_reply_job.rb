@@ -2,7 +2,8 @@ class SendReplyJob < ApplicationJob
   queue_as :default
 
   CHANNEL_SERVICES = {
-    'Channel::Whatsapp' => ::Whatsapp::SendOnWhatsappService
+    'Channel::Whatsapp'  => ::Whatsapp::SendOnWhatsappService,
+    'Channel::Instagram' => ::Instagram::SendOnInstagramService
   }.freeze
 
   def perform(message_id)

@@ -5,7 +5,7 @@ Pydantic schemas for the messaging service API.
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # --- Temperature config models ---
@@ -139,6 +139,8 @@ class ConversationListItem(BaseModel):
     team: Optional[TeamBrief] = None
     labels: list[LabelBrief] = []
     last_message: Optional[LastMessageBrief] = None
+    message_snippet: Optional[str] = None
+    matched_message_id: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -192,6 +194,7 @@ class ConversationResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     id: int
+    source_id: Optional[str] = None
     content: Optional[str] = None
     message_type: Optional[str] = None
     content_type: Optional[str] = None
@@ -269,6 +272,33 @@ class TemplateParamsRequest(BaseModel):
 class SendTemplateMessageRequest(BaseModel):
     template_params: TemplateParamsRequest
     # content lo interpola el backend Rails desde el BODY del template.
+
+
+class SendByPhoneRequest(BaseModel):
+    """Send a WhatsApp template to a phone number, creating contact/conversation if needed."""
+
+    phone: str = Field(..., description="Teléfono en formato E.164 (+...)")
+    inbox_id: int = Field(..., description="ID del inbox WhatsApp del tenant")
+    template_params: TemplateParamsRequest = Field(
+        ..., description="Template aprobado con parámetros resueltos"
+    )
+    contact_name: Optional[str] = Field(
+        None, description="Nombre para el contact si se crea nuevo (ignorado si ya existe)"
+    )
+
+
+class SendByPhoneData(BaseModel):
+    conversation_id: int
+    message_id: int
+    contact_id: int
+    contact_created: bool
+    conversation_created: bool
+
+
+class SendByPhoneResponse(BaseModel):
+    success: bool
+    data: SendByPhoneData
+    message: Optional[str] = None
 
 
 class AssignConversationRequest(BaseModel):
@@ -354,6 +384,9 @@ class NotificationSettingsPayload(BaseModel):
     payment_review: Optional[bool] = None
     message_ai_off: Optional[bool] = None
     message_ai_on: Optional[bool] = None
+    # Canal al que aplica el toggle: "email" o "push". human_support y
+    # payment_review existen en ambos, por eso se necesita el discriminador.
+    channel: Optional[str] = None
 
 
 # --- Messages Response ---
@@ -503,6 +536,34 @@ class WhatsAppHealthResponse(BaseModel):
     data: WhatsAppHealthData
 
 
+# --- Instagram Response ---
+
+class InstagramAuthorizeData(BaseModel):
+    authorize_url: str
+
+
+class InstagramAuthorizeResponse(BaseModel):
+    success: bool = True
+    data: InstagramAuthorizeData
+
+
+class InstagramChannel(BaseModel):
+    id: int
+    instagram_id: str
+    username: Optional[str] = None
+    inbox_id: Optional[int] = None
+    inbox_name: Optional[str] = None
+    reauthorization_required: bool = False
+
+    class Config:
+        from_attributes = True
+
+
+class InstagramStatusResponse(BaseModel):
+    success: bool = True
+    data: list[InstagramChannel] = []
+
+
 # --- Notifications Response ---
 
 class NotificationItem(BaseModel):
@@ -531,8 +592,16 @@ class PushFlags(BaseModel):
     message_ai_on: bool = False
 
 
+class EmailFlags(BaseModel):
+    human_support: bool = True
+    payment_review: bool = True
+    message_ai_off: bool = False
+    message_ai_on: bool = False
+
+
 class NotificationSettingsData(BaseModel):
     push_flags: PushFlags
+    email_flags: Optional[EmailFlags] = None
 
 
 class NotificationSettingsResponse(BaseModel):

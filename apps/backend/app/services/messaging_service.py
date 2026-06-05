@@ -116,6 +116,42 @@ class MessagingService:
 
         return (response.text or response.reason_phrase)[:500]
 
+    async def _request_with_status(
+        self,
+        method: str,
+        path: str,
+        tenant_id: int,
+        user_id: Optional[str] = None,
+        params: Optional[dict] = None,
+        json_data: Optional[dict] = None,
+        timeout: float = 10.0,
+    ) -> tuple[Optional[dict], int]:
+        """Like _request() but returns (response_data, status_code). status_code=0 on network error."""
+        url = f"{self.base_url}{path}"
+        headers = self._headers(tenant_id, user_id)
+
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                response = await client.request(
+                    method,
+                    url,
+                    headers=headers,
+                    params=params,
+                    json=json_data,
+                )
+
+                if response.status_code == 204:
+                    return {"success": True}, 204
+
+                try:
+                    return response.json(), response.status_code
+                except Exception:
+                    return None, response.status_code
+
+        except httpx.RequestError as e:
+            logger.error(f"Messaging service request failed: {method} {path} -> {e}")
+            return None, 0
+
     # --- Account provisioning ---
 
     async def create_account(self, tenant_id: int, account_data: dict) -> Optional[dict]:
@@ -225,6 +261,15 @@ class MessagingService:
             "GET", "/api/v1/conversations/counts", tenant_id, params=params
         )
 
+    async def export_conversations(
+        self, tenant_id: int, params: Optional[dict] = None
+    ) -> Optional[dict]:
+        """Export conversations filtered by active filters (no pagination)."""
+        return await self._request(
+            "GET", "/api/v1/conversations/export", tenant_id, params=params,
+            timeout=30.0,
+        )
+
     async def get_conversations_count_by_period(
         self,
         tenant_id: int,
@@ -312,6 +357,18 @@ class MessagingService:
             params=params,
         )
 
+    async def search_messages(
+        self, tenant_id: int, conversation_id: str, query: str
+    ) -> Optional[dict]:
+        """Search messages by content using full-text search."""
+        return await self._request(
+            "GET",
+            f"/api/v1/conversations/{conversation_id}/messages/search",
+            tenant_id,
+            params={"q": query},
+            timeout=15.0,
+        )
+
     async def send_message(
         self, tenant_id: int, conversation_id: str, payload: dict, user_id: Optional[str] = None
     ) -> Optional[dict]:
@@ -324,12 +381,30 @@ class MessagingService:
             json_data={"message": payload},
         )
 
+    async def send_by_phone(
+        self, tenant_id: int, payload: dict, user_id: Optional[str] = None
+    ) -> Optional[dict]:
+        """Send a WhatsApp template to a phone number.
+
+        Creates contact/conversation if needed; reuses open conversation otherwise.
+        Payload goes flat (phone, inbox_id, template_params, contact_name) — NOT wrapped
+        in {"message": ...} because the Rails endpoint receives flat params.
+        """
+        return await self._request(
+            "POST",
+            "/api/v1/messages/send_by_phone",
+            tenant_id,
+            user_id=user_id,
+            json_data=payload,
+        )
+
     async def send_message_with_file(
         self,
         tenant_id: int,
         conversation_id: str,
         content: str,
         file: Any,
+        content_attributes: Optional[str] = None,
         user_id: Optional[str] = None,
     ) -> Optional[dict]:
         """Send a message with a file attachment via multipart/form-data."""
@@ -350,6 +425,10 @@ class MessagingService:
             data = {
                 "message[content]": content,
             }
+            # Forward reply context (US-UX-002): Rails extract_content_attributes JSON.parses
+            # this string, so a reply WITH a file keeps its quoted message.
+            if content_attributes:
+                data["message[content_attributes]"] = content_attributes
 
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
@@ -512,6 +591,20 @@ class MessagingService:
             "POST", "/api/v1/inboxes", tenant_id, json_data=payload
         )
 
+    # --- Instagram ---
+
+    async def instagram_authorize(self, tenant_id: int) -> Optional[dict]:
+        """Get the Instagram Login authorize URL (with signed state) for the tenant."""
+        return await self._request(
+            "GET", "/api/v1/instagram/authorize", tenant_id
+        )
+
+    async def instagram_status(self, tenant_id: int) -> Optional[dict]:
+        """Get status of connected Instagram channels."""
+        return await self._request(
+            "GET", "/api/v1/instagram/status", tenant_id
+        )
+
     # --- Labels ---
 
     async def get_labels(self, tenant_id: int) -> Optional[dict]:
@@ -632,6 +725,132 @@ class MessagingService:
             user_id=user_id,
             json_data={"notification_settings": payload},
         )
+
+    # --- No purchase reason ---
+
+    async def get_no_purchase_reasons(
+        self,
+        tenant_id: int,
+        start_date: str,
+        end_date: str,
+    ) -> tuple[Optional[dict], int]:
+        return await self._request_with_status(
+            "GET",
+            "/api/v1/analytics/no_purchase_reasons",
+            tenant_id,
+            params={"start_date": start_date, "end_date": end_date},
+            timeout=15.0,
+        )
+
+    async def set_no_purchase_reason(
+        self,
+        tenant_id: int,
+        conversation_id: int,
+        reason: str,
+    ) -> tuple[Optional[dict], int]:
+        return await self._request_with_status(
+            "POST",
+            f"/api/v1/conversations/{conversation_id}/no_purchase_reason",
+            tenant_id,
+            json_data={"reason": reason},
+            timeout=15.0,
+        )
+
+    # --- Ads summary ---
+
+    async def get_ads_summary(
+        self,
+        tenant_id: int,
+        start_date: str,
+        end_date: str,
+        converted_conversation_ids: list[int],
+    ) -> tuple[Optional[dict], int]:
+        """Aggregate conversations by Meta ad in a period.
+
+        Sends the list of converted conversation_ids so Rails can compute
+        started and converted counts per ad in a single SQL pass.
+        """
+        return await self._request_with_status(
+            "POST",
+            "/api/v1/analytics/ads_summary",
+            tenant_id,
+            json_data={
+                "start_date": start_date,
+                "end_date": end_date,
+                "converted_conversation_ids": converted_conversation_ids,
+            },
+            timeout=15.0,
+        )
+
+    # --- Activity by hour (heatmap) ---
+
+    async def get_activity_by_hour(
+        self,
+        tenant_id: int,
+        start_date: str,
+        end_date: str,
+        timezone: str = "America/Lima",
+        cross_tenant: bool = False,
+    ) -> tuple[Optional[dict], int]:
+        params: dict = {
+            "start_date": start_date,
+            "end_date": end_date,
+            "timezone": timezone,
+        }
+        if cross_tenant:
+            params["cross_tenant"] = "true"
+        return await self._request_with_status(
+            "GET",
+            "/api/v1/analytics/activity_by_hour",
+            tenant_id,
+            params=params,
+            timeout=15.0,
+        )
+
+    async def get_conversation_distribution(
+        self,
+        tenant_id: int,
+        start_date: str,
+        end_date: str,
+        cross_tenant: bool = False,
+    ) -> tuple[Optional[dict], int]:
+        params: dict = {"start_date": start_date, "end_date": end_date}
+        if cross_tenant:
+            params["cross_tenant"] = "true"
+        return await self._request_with_status(
+            "GET",
+            "/api/v1/analytics/conversation_distribution",
+            tenant_id,
+            params=params,
+            timeout=15.0,
+        )
+
+    async def get_chats_started(
+        self,
+        tenant_id: int,
+        start_date: str,
+        end_date: str,
+        timezone: str = "America/Lima",
+        inbox_id: Optional[int] = None,
+        cross_tenant: bool = False,
+    ) -> tuple[Optional[dict], int]:
+        params: dict = {
+            "start_date": start_date,
+            "end_date": end_date,
+            "timezone": timezone,
+        }
+        if inbox_id is not None:
+            params["inbox_id"] = str(inbox_id)
+        if cross_tenant:
+            params["cross_tenant"] = "true"
+        return await self._request_with_status(
+            "GET",
+            "/api/v1/analytics/chats_started",
+            tenant_id,
+            params=params,
+            timeout=15.0,
+        )
+
 
 # Global service instance
 messaging_service = MessagingService()

@@ -118,6 +118,7 @@ services:
       FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET:-}
       WHATSAPP_CLOUD_BASE_URL: ${WHATSAPP_CLOUD_BASE_URL:-https://graph.facebook.com}
       WHATSAPP_API_VERSION: ${WHATSAPP_API_VERSION:-v22.0}
+      WHATSAPP_BSUID_SENDING: ${WHATSAPP_BSUID_SENDING:-false}
       # Active Storage
       ACTIVE_STORAGE_SERVICE: local
       # Firebase Admin (push notifications)
@@ -168,6 +169,7 @@ services:
       FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET:-}
       WHATSAPP_CLOUD_BASE_URL: ${WHATSAPP_CLOUD_BASE_URL:-https://graph.facebook.com}
       WHATSAPP_API_VERSION: ${WHATSAPP_API_VERSION:-v22.0}
+      WHATSAPP_BSUID_SENDING: ${WHATSAPP_BSUID_SENDING:-false}
       # Active Storage
       ACTIVE_STORAGE_SERVICE: local
       # Firebase Admin (push notifications)

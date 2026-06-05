@@ -4,6 +4,8 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Send, Smile, Plus, Mic, X, FileText, Image as ImageIcon } from "lucide-react";
 import dynamic from "next/dynamic";
+import type { Message } from "@/lib/types/messaging";
+import { QuotedMessagePreview } from "./quoted-message-preview";
 
 const importAudioRecorder = () => import("./audio-recorder").then((mod) => ({ default: mod.AudioRecorder }));
 const AudioRecorder = dynamic(importAudioRecorder, {
@@ -38,9 +40,12 @@ interface MessageComposerProps {
   onSend: (content: string, file?: File) => void;
   disabled?: boolean;
   onOpenTemplates?: () => void;
+  audioFormat?: "mp3" | "wav";
+  replyingTo?: Message | null;
+  onCancelReply?: () => void;
 }
 
-export function MessageComposer({ onSend, disabled, onOpenTemplates }: MessageComposerProps) {
+export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat = "mp3", replyingTo, onCancelReply }: MessageComposerProps) {
   const [content, setContent] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -113,10 +118,18 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates }: MessageCo
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         handleSend();
+      } else if (e.key === "Escape" && replyingTo) {
+        e.preventDefault();
+        onCancelReply?.();
       }
     },
-    [handleSend]
+    [handleSend, replyingTo, onCancelReply]
   );
+
+  // Focus the textarea when the user starts replying to a message (US-UX-002).
+  useEffect(() => {
+    if (replyingTo) textareaRef.current?.focus();
+  }, [replyingTo]);
 
   const handleEmojiClick = useCallback(
     (emojiData: { emoji: string }) => {
@@ -130,7 +143,11 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates }: MessageCo
   const hasContent = content.trim().length > 0 || selectedFile !== null;
 
   return (
-    <div className="relative bg-muted/30 px-4 py-2.5 border-t border-border/30">
+    <div
+      data-testid="message-composer"
+      data-audio-format={audioFormat}
+      className="relative bg-muted/30 px-4 py-2.5 border-t border-border/30"
+    >
       {/* Emoji picker */}
       {showEmoji && (
         <div className="absolute bottom-full left-3 mb-2 z-[60]">
@@ -140,6 +157,15 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates }: MessageCo
             height={400}
           />
         </div>
+      )}
+
+      {/* Quoted reply preview (US-UX-002) — above the input, dismissible */}
+      {replyingTo && (
+        <QuotedMessagePreview
+          variant="composer"
+          message={replyingTo}
+          onCancel={onCancelReply}
+        />
       )}
 
       {/* File preview area */}
@@ -186,6 +212,7 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates }: MessageCo
 
       {isRecording ? (
         <AudioRecorder
+          audioFormat={audioFormat}
           onSend={(file) => {
             onSend("", file);
             setIsRecording(false);

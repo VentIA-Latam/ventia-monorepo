@@ -7,20 +7,34 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_database
+from app.api.deps import get_current_user, get_database, require_permission_dual
+from app.core.permissions import Role
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.schemas.metrics import (
+    ActivityByHourResponse,
+    AdsSummaryResponse,
+    ChatsStartedResponse,
+    ConversationDistributionResponse,
     ConversionRateResponse,
     DashboardMetrics,
     MetricsQuery,
+    NoPurchaseReasonsResponse,
     OrdersByCityResponse,
     PeriodType,
+    SetNoPurchaseReasonRequest,
     TopProductsResponse,
 )
+from app.services.messaging_service import messaging_service
 from app.services.metrics import metrics_service
 
 router = APIRouter()
+
+
+def _resolve_tenant_id(current_user: User) -> int:
+    if not current_user.tenant_id:
+        raise HTTPException(status_code=400, detail="User has no tenant assigned")
+    return current_user.tenant_id
 
 
 def _get_tenant_timezone(db: Session, tenant_id: int) -> str:
@@ -171,4 +185,256 @@ async def get_conversion_rate(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve conversion rate: {e}",
+        )
+
+
+@router.post(
+    "/conversations/{conversation_id}/no-purchase-reason",
+    summary="Registrar motivo de no compra (n8n)",
+    status_code=200,
+    tags=["metrics"],
+)
+async def set_no_purchase_reason(
+    conversation_id: int,
+    body: SetNoPurchaseReasonRequest,
+    current_user: User = Depends(require_permission_dual("POST", "/metrics/*")),
+) -> dict:
+    tenant_id = _resolve_tenant_id(current_user)
+    data, status_code = await messaging_service.set_no_purchase_reason(
+        tenant_id=tenant_id,
+        conversation_id=conversation_id,
+        reason=body.reason,
+    )
+    if status_code == 0:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    if status_code == 404:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    if status_code == 422:
+        raise HTTPException(status_code=422, detail="Invalid reason")
+    return data
+
+
+@router.get(
+    "/no-purchase-reasons",
+    response_model=NoPurchaseReasonsResponse,
+    summary="KPI motivos de no compra por rango de fechas",
+    tags=["metrics"],
+)
+async def get_no_purchase_reasons(
+    period: PeriodType = Query("custom"),
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
+    current_user: User = Depends(require_permission_dual("GET", "/metrics/*")),
+    db: Session = Depends(get_database),
+) -> NoPurchaseReasonsResponse:
+    """Get no-purchase reasons KPI for the current user's tenant."""
+    try:
+        query = MetricsQuery(period=period, start_date=start_date, end_date=end_date)
+        tz_name = _get_tenant_timezone(db, current_user.tenant_id)
+        result = await metrics_service.get_no_purchase_reasons(
+            tenant_id=current_user.tenant_id,
+            query=query,
+            tz_name=tz_name,
+        )
+        return NoPurchaseReasonsResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve no-purchase reasons: {e}",
+        )
+
+
+@router.get(
+    "/ads-summary",
+    response_model=AdsSummaryResponse,
+    summary="Resumen de conversaciones agrupadas por anuncio Meta (click-to-WhatsApp)",
+    tags=["metrics"],
+)
+async def get_ads_summary(
+    period: PeriodType = Query("last_30_days"),
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
+    current_user: User = Depends(require_permission_dual("GET", "/metrics/*")),
+    db: Session = Depends(get_database),
+) -> AdsSummaryResponse:
+    """Get ads performance summary for the current user's tenant."""
+    try:
+        query = MetricsQuery(period=period, start_date=start_date, end_date=end_date)
+        tz_name = _get_tenant_timezone(db, current_user.tenant_id)
+        result = await metrics_service.get_ads_summary(
+            db=db,
+            tenant_id=current_user.tenant_id,
+            query=query,
+            tz_name=tz_name,
+        )
+        return AdsSummaryResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve ads summary: {e}",
+        )
+
+
+@router.get(
+    "/activity-by-hour",
+    response_model=ActivityByHourResponse,
+    summary="Distribución de mensajes por hora del día y día de semana (heatmap 7×24)",
+    tags=["metrics"],
+)
+async def get_activity_by_hour(
+    period: PeriodType = Query("custom"),
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
+    tenant_id: int | None = Query(None, description="Tenant ID (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/metrics/*")),
+    db: Session = Depends(get_database),
+) -> ActivityByHourResponse:
+    """Get message activity distribution by hour and day of week."""
+    try:
+        query = MetricsQuery(period=period, start_date=start_date, end_date=end_date)
+
+        cross_tenant = False
+        timezone_note = None
+
+        if current_user.role == Role.SUPERADMIN:
+            target_tenant = tenant_id
+            if target_tenant is None:
+                cross_tenant = True
+                tz_name = "UTC"
+                timezone_note = "UTC"
+            else:
+                tz_name = _get_tenant_timezone(db, target_tenant)
+        else:
+            target_tenant = current_user.tenant_id
+            tz_name = _get_tenant_timezone(db, target_tenant)
+
+        result = await metrics_service.get_activity_by_hour(
+            tenant_id=target_tenant,
+            query=query,
+            tz_name=tz_name,
+            cross_tenant=cross_tenant,
+        )
+
+        if timezone_note:
+            result["timezone_note"] = timezone_note
+
+        return ActivityByHourResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve activity by hour: {e}",
+        )
+
+
+@router.get(
+    "/conversation-distribution",
+    response_model=ConversationDistributionResponse,
+    summary="Distribución de conversaciones por tipo (IA / Humano / Abandonadas)",
+    tags=["metrics"],
+)
+async def get_conversation_distribution(
+    period: PeriodType = Query("last_30_days"),
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
+    tenant_id: int | None = Query(None, description="Tenant ID (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/metrics/*")),
+    db: Session = Depends(get_database),
+) -> ConversationDistributionResponse:
+    """Get conversation distribution by attention type: AI, human, or abandoned."""
+    try:
+        query = MetricsQuery(period=period, start_date=start_date, end_date=end_date)
+
+        cross_tenant = False
+
+        if current_user.role == Role.SUPERADMIN:
+            target_tenant = tenant_id
+            if target_tenant is None:
+                cross_tenant = True
+                tz_name = "UTC"
+            else:
+                tz_name = _get_tenant_timezone(db, target_tenant)
+        else:
+            target_tenant = current_user.tenant_id
+            tz_name = _get_tenant_timezone(db, target_tenant)
+
+        result = await metrics_service.get_conversation_distribution(
+            tenant_id=target_tenant,
+            query=query,
+            tz_name=tz_name,
+            cross_tenant=cross_tenant,
+        )
+
+        return ConversationDistributionResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve conversation distribution: {e}",
+        )
+
+
+@router.get(
+    "/chats-started",
+    response_model=ChatsStartedResponse,
+    summary="Chats (conversaciones) iniciados por día",
+    tags=["metrics"],
+)
+async def get_chats_started(
+    period: PeriodType = Query("last_30_days"),
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
+    tenant_id: int | None = Query(None, description="Tenant ID (SUPERADMIN only)"),
+    inbox_id: int | None = Query(None, description="Filtrar por inbox (canal: WhatsApp, Instagram)"),
+    current_user: User = Depends(require_permission_dual("GET", "/metrics/*")),
+    db: Session = Depends(get_database),
+) -> ChatsStartedResponse:
+    """Serie diaria de chats iniciados, con filtros por tenant e inbox."""
+    try:
+        query = MetricsQuery(period=period, start_date=start_date, end_date=end_date)
+
+        cross_tenant = False
+
+        if current_user.role == Role.SUPERADMIN:
+            target_tenant = tenant_id
+            if target_tenant is None:
+                cross_tenant = True
+                tz_name = "UTC"
+            else:
+                tz_name = _get_tenant_timezone(db, target_tenant)
+        else:
+            target_tenant = current_user.tenant_id
+            tz_name = _get_tenant_timezone(db, target_tenant)
+
+        result = await metrics_service.get_chats_started(
+            tenant_id=target_tenant,
+            query=query,
+            tz_name=tz_name,
+            inbox_id=inbox_id,
+            cross_tenant=cross_tenant,
+        )
+
+        return ChatsStartedResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve chats started: {e}",
         )

@@ -23,11 +23,12 @@ import {
   MessageSquare,
   Clock,
   Ticket,
+  Radio,
 } from "lucide-react"
 import { usePathname, useSearchParams } from "next/navigation"
 import { useTheme } from "next-themes"
 import { getConversationCounts } from "@/lib/api-client/messaging"
-import { useMessagingEvent } from "@/components/conversations/messaging-provider"
+import { useMessagingEvent, useInboxFilter } from "@/components/conversations/messaging-provider"
 import type { ConversationCounts } from "@/lib/types/messaging"
 import Image from "next/image"
 import Link from "next/link"
@@ -93,9 +94,9 @@ const dataPlatform = [
     icon: Receipt,
   },
   {
-    title: "WhatsApp",
-    url: "/dashboard/whatsapp-connect",
-    icon: MessageSquare,
+    title: "Canales",
+    url: "/dashboard/channels",
+    icon: Radio,
   },
   {
     title: "Campañas",
@@ -132,12 +133,14 @@ const REFETCH_EVENTS = new Set([
 const ConversationsNav = memo(function ConversationsNav({ pathname }: { pathname: string }) {
   const searchParams = useSearchParams()
   const lastEvent = useMessagingEvent()
+  const { inboxIds } = useInboxFilter()
   const [convCounts, setConvCounts] = useState<ConversationCounts | null>(null)
   const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isOpen, setIsOpen] = useState(false)
 
   const isConversationsPage = pathname.startsWith("/dashboard/conversations")
   const activeSection = searchParams.get("section")
+  const inboxIdsKey = inboxIds.join(",")
 
   // Auto-open when navigating to conversations, auto-close when leaving
   useEffect(() => {
@@ -146,14 +149,15 @@ const ConversationsNav = memo(function ConversationsNav({ pathname }: { pathname
 
   const fetchCounts = useCallback(async () => {
     try {
-      const result = await getConversationCounts()
+      const ids = inboxIdsKey ? inboxIdsKey.split(",").map(Number) : []
+      const result = await getConversationCounts(undefined, ids.length > 0 ? { inboxIds: ids } : undefined)
       setConvCounts(result.data)
     } catch {
       // silently fail
     }
-  }, [])
+  }, [inboxIdsKey])
 
-  // Fetch on navigation to conversations page
+  // Fetch on navigation to conversations page or when the active inbox filter changes
   useEffect(() => {
     if (isConversationsPage) fetchCounts()
   }, [isConversationsPage, fetchCounts])
@@ -359,6 +363,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <Link href="/dashboard/tickets" className="flex items-center w-full">
                       <Ticket className="w-5 h-5 mr-3 shrink-0" />
                       <span className="flex-1 truncate">Tickets</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {isAdmin && (
+                <SidebarMenuItem className="mb-1">
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive("/dashboard/plan")}
+                    tooltip="Mi Plan"
+                    className={`
+                        w-full justify-between h-10 px-3 rounded-lg transition-all duration-200
+                        ${isActive("/dashboard/plan")
+                          ? "bg-gradient-to-r from-volt/10 to-aqua/5 border-l-2 border-l-volt shadow-sm"
+                          : "hover:bg-muted/60"
+                        }
+                    `}
+                  >
+                    <Link href="/dashboard/plan" className="flex items-center w-full">
+                      <CreditCard className="w-5 h-5 mr-3 shrink-0" />
+                      <span className="flex-1 truncate">Mi Plan</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

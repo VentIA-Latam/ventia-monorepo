@@ -52,6 +52,7 @@ class Account < ApplicationRecord
   has_many :webhooks, dependent: :destroy
   has_many :push_subscription_tokens, dependent: :destroy
   has_many :whatsapp_channels, dependent: :destroy, class_name: 'Channel::Whatsapp'
+  has_many :instagram_channels, dependent: :destroy, class_name: 'Channel::Instagram'
   has_many :account_users, dependent: :destroy
   has_many :users, through: :account_users
   has_many :teams, dependent: :destroy

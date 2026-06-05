@@ -7,6 +7,11 @@ import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { StatsCard } from "@/components/dashboard/stats-card";
+import { NoPurchaseReasonsRanking } from "@/components/dashboard/no-purchase-reasons-ranking";
+import { AdsSummaryWidget } from "@/components/dashboard/ads-summary-widget";
+import { ActivityHeatmapWidget } from "@/components/dashboard/activity-heatmap-widget";
+import { ConversationDistributionWidget } from "@/components/dashboard/conversation-distribution-widget";
+import { ChatsStartedWidget } from "@/components/dashboard/chats-started-widget";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -21,9 +26,10 @@ import {
   MapPin,
   TrendingUp,
   RotateCcw,
+  MessageSquare,
 } from "lucide-react";
 import { DashboardMetrics, ConversionRate } from "@/lib/services/metrics-service";
-import type { TopProduct, CityOrderCount } from "@/lib/services/metrics-service";
+import type { TopProduct, CityOrderCount, NoPurchaseReasonsResponse, AdsSummaryResponse } from "@/lib/services/metrics-service";
 import type { Order } from "@/lib/services/order-service";
 import { formatDate, getEcommerceOrderId, getCurrencySymbol, cn, toLocalDateStr } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -48,6 +54,9 @@ interface DashboardClientProps {
   topProducts: TopProduct[];
   ordersByCity: CityOrderCount[];
   initialConversionRate: ConversionRate;
+  conversationCount: number;
+  noPurchaseReasons?: NoPurchaseReasonsResponse;
+  adsSummary?: AdsSummaryResponse;
   startDate: string;
   endDate: string;
   defaultStartDate: string;
@@ -243,7 +252,7 @@ function TopProductsRanking({ products }: { products: TopProduct[] }) {
 
 // --- Main Dashboard ---
 
-export function DashboardClient({ initialMetrics, recentOrders, topProducts, ordersByCity, initialConversionRate, startDate, endDate, defaultStartDate, defaultEndDate }: DashboardClientProps) {
+export function DashboardClient({ initialMetrics, recentOrders, topProducts, ordersByCity, initialConversionRate, conversationCount, noPurchaseReasons, adsSummary, startDate, endDate, defaultStartDate, defaultEndDate }: DashboardClientProps) {
   const router = useRouter();
   const timezone = useTenantTimezone();
   const [isPending, startTransition] = useTransition();
@@ -385,6 +394,13 @@ export function DashboardClient({ initialMetrics, recentOrders, topProducts, ord
               ? `${initialConversionRate.conversions.toLocaleString('es-PE')} conv. de ${initialConversionRate.total_conversations.toLocaleString('es-PE')}`
               : undefined,
           },
+          {
+            title: "Conversaciones",
+            value: conversationCount.toLocaleString('es-PE'),
+            icon: <MessageSquare className="w-5 h-5" />,
+            comparison: "iniciadas en el período",
+            accentColor: "cielo" as const,
+          },
         ].map((card, i) => (
           <motion.div key={i} variants={fadeUp}>
             <StatsCard {...card} />
@@ -417,6 +433,29 @@ export function DashboardClient({ initialMetrics, recentOrders, topProducts, ord
           <TopProductsRanking products={topProducts} />
         </motion.div>
       </div>
+
+      {/* No-purchase reasons + Ads summary */}
+      <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <NoPurchaseReasonsRanking data={noPurchaseReasons} />
+        <AdsSummaryWidget data={adsSummary} />
+      </motion.div>
+
+      {/* Activity Heatmap + Conversation Distribution */}
+      <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ActivityHeatmapWidget />
+        <ConversationDistributionWidget
+          startDate={fromDate ? toLocalDateStr(fromDate) : startDate}
+          endDate={toDate ? toLocalDateStr(toDate) : endDate}
+        />
+      </motion.div>
+
+      {/* Chats iniciados por día */}
+      <motion.div variants={fadeUp}>
+        <ChatsStartedWidget
+          startDate={fromDate ? toLocalDateStr(fromDate) : startDate}
+          endDate={toDate ? toLocalDateStr(toDate) : endDate}
+        />
+      </motion.div>
 
       {/* Sales Map */}
       <motion.div variants={fadeUp}>

@@ -249,6 +249,29 @@ html {
   --rdp-range_middle-background-color: oklch(0.21 0.001 0);
 }
 
+/* Libro de Reclamaciones — fuerza fondo blanco en inputs del formulario público */
+.reclamaciones-form {
+  color-scheme: light;
+}
+.reclamaciones-form input:not([type="radio"]):not([type="checkbox"]),
+.reclamaciones-form textarea,
+.reclamaciones-form select {
+  background-color: #ffffff !important;
+  background-image: none !important;
+}
+
+/* Override del autofill (Chrome/Edge pintan gris/amarillo los inputs con valores guardados) */
+.reclamaciones-form input:-webkit-autofill,
+.reclamaciones-form input:-webkit-autofill:hover,
+.reclamaciones-form input:-webkit-autofill:focus,
+.reclamaciones-form input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #182432 !important;
+  caret-color: #182432;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

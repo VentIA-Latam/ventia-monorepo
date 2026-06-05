@@ -92,6 +92,8 @@ export interface Conversation {
   last_message_at: string | number | null;
   last_message: LastMessageBrief | null;
   created_at: string | number | null;
+  message_snippet?: string | null;
+  matched_message_id?: number | null;
 }
 
 export interface ConversationCounts {
@@ -125,12 +127,47 @@ export interface ReferralData {
   image_url?: string;
 }
 
+export interface StoryReplyData {
+  id: string;
+}
+
+export interface CarouselCardButton {
+  type: "web_url" | "postback";
+  title: string;
+  url?: string; // web_url
+  payload?: string; // postback
+}
+
+export interface CarouselCard {
+  title: string;
+  subtitle?: string;
+  image_url?: string;
+  default_action_url?: string;
+  buttons?: CarouselCardButton[];
+}
+
+/** Lightweight snapshot of the replied-to message, resolved by the backend (US-UX-002),
+ * so the quote renders even when the original isn't in the loaded window. */
+export interface QuotedMessageSnapshot {
+  id: number;
+  message_type?: MessageType;
+  content_type?: string;
+  content?: string | null;
+  sender_name?: string | null;
+  attachment_type?: string | null;
+  attachments?: AttachmentBrief[];
+}
+
 export interface MessageContentAttributes {
   cta_url?: CtaUrlData;
   referral?: ReferralData;
+  reply_to_story?: StoryReplyData;
+  cards?: CarouselCard[];
+  postback_payload?: string;
   items?: Array<{ title: string; value: string }>;
   contacts?: unknown[];
   in_reply_to?: string;
+  quoted?: QuotedMessageSnapshot;
   is_unavailable?: boolean;
   unavailable_reason?: string;
   automated?: boolean;
@@ -142,6 +179,7 @@ export type MessageStatus = "sent" | "delivered" | "read" | "failed";
 
 export interface Message {
   id: string | number;
+  source_id?: string | null;
   content: string | null;
   message_type: MessageType | null;
   status?: MessageStatus;
@@ -156,6 +194,19 @@ export interface MessageListResponse {
   success: boolean;
   data: Message[];
   meta: Record<string, unknown> | null;
+}
+
+export interface MessageSearchResult {
+  id: number | string;
+  snippet: string | null;
+  created_at: string | number;
+  message_type: MessageType;
+  status?: MessageStatus;
+}
+
+export interface MessageSearchResponse {
+  success: boolean;
+  data: MessageSearchResult[];
 }
 
 // --- Inbox ---
@@ -311,5 +362,14 @@ export interface WhatsAppChannel {
   inbox_name: string;
   templates_count: number;
   last_template_sync: string | null;
+  reauthorization_required: boolean;
+}
+
+export interface InstagramChannel {
+  id: number;
+  instagram_id: string;
+  username: string | null;
+  inbox_id: number | null;
+  inbox_name: string | null;
   reauthorization_required: boolean;
 }

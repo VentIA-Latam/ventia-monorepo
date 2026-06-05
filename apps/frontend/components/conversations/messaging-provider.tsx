@@ -6,6 +6,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
 } from "react";
 import { useActionCable, type ConnectionStatus, type ActionCableEvent } from "@/hooks/use-action-cable";
 import { getWsToken, syncUser } from "@/lib/api-client/messaging";
@@ -19,6 +20,17 @@ const MessagingEmitContext = createContext<(event: ActionCableEvent) => void>(()
 // Timestamp (ms) of the most recent WebSocket reconnection; null until the first reconnect.
 // Components use this to trigger a data refresh after connection loss (e.g. sleep/wake).
 const MessagingReconnectContext = createContext<number | null>(null);
+
+// Inbox filter shared between conversation-list (producer) and app-sidebar (consumer
+// for counts). Empty array means "no filter" (all inboxes).
+interface InboxFilterValue {
+  inboxIds: number[];
+  setInboxIds: (ids: number[]) => void;
+}
+const InboxFilterContext = createContext<InboxFilterValue>({
+  inboxIds: [],
+  setInboxIds: () => {},
+});
 
 /** Subscribe to both status and events (backward compat) */
 export function useMessaging() {
@@ -48,7 +60,16 @@ export function useMessagingReconnect() {
   return useContext(MessagingReconnectContext);
 }
 
+/**
+ * Shared inbox filter state. The conversations list publishes which inboxes are
+ * currently selected so other components (sidebar counts) can stay in sync.
+ */
+export function useInboxFilter() {
+  return useContext(InboxFilterContext);
+}
+
 const WS_URL = process.env.NEXT_PUBLIC_MESSAGING_WS_URL || "ws://localhost:3001/cable";
+const STALE_THRESHOLD_MS = 3 * 60 * 60 * 1000; // 3 horas
 
 interface MessagingProviderProps {
   children: React.ReactNode;
@@ -63,6 +84,45 @@ export function MessagingProvider({ children, tenantId }: MessagingProviderProps
   } | null>(null);
   const [lastEvent, setLastEvent] = useState<ActionCableEvent | null>(null);
   const [reconnectedAt, setReconnectedAt] = useState<number | null>(null);
+  const [inboxFilterIds, setInboxFilterIdsState] = useState<number[]>([]);
+  const setInboxIds = useCallback((ids: number[]) => {
+    setInboxFilterIdsState(ids);
+  }, []);
+  const inboxFilterValue = useMemo<InboxFilterValue>(
+    () => ({ inboxIds: inboxFilterIds, setInboxIds }),
+    [inboxFilterIds, setInboxIds]
+  );
+  // Detect long inactivity (PC suspend, tab hidden >3h) and reload to avoid
+  // stale WebSocket state. Uses two signals:
+  // - setInterval: measures real elapsed time. When the PC suspends, JS pauses;
+  //   on wake the next tick fires with a large gap → reload. Covers the case
+  //   where this tab was foreground when the laptop was closed.
+  // - visibilitychange: triggers an immediate check when returning to the tab,
+  //   so we don't have to wait up to 60s for the next interval.
+  useEffect(() => {
+    let lastTick = Date.now();
+
+    const checkStale = () => {
+      const now = Date.now();
+      const elapsed = now - lastTick;
+      lastTick = now;
+      if (elapsed > STALE_THRESHOLD_MS) {
+        window.location.reload();
+      }
+    };
+
+    const interval = setInterval(checkStale, 60_000);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) checkStale();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
   // Fetch WS token on mount or when tenantId changes
   useEffect(() => {
@@ -112,7 +172,9 @@ export function MessagingProvider({ children, tenantId }: MessagingProviderProps
       <MessagingEventContext.Provider value={lastEvent}>
         <MessagingEmitContext.Provider value={emitEvent}>
           <MessagingReconnectContext.Provider value={reconnectedAt}>
-            {children}
+            <InboxFilterContext.Provider value={inboxFilterValue}>
+              {children}
+            </InboxFilterContext.Provider>
           </MessagingReconnectContext.Provider>
         </MessagingEmitContext.Provider>
       </MessagingEventContext.Provider>

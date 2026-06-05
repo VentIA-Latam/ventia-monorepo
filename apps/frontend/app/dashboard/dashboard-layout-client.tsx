@@ -24,7 +24,9 @@ const PAGE_META: Record<string, { title: string; breadcrumb: string[] }> = {
   '/campaigns': { title: 'Campañas', breadcrumb: ['Campañas'] },
   '/agent-customization': { title: 'Personalización del Agente', breadcrumb: ['Personalización'] },
   '/metrics': { title: 'Métricas', breadcrumb: ['Métricas'] },
-  '/whatsapp-connect': { title: 'Conectar WhatsApp', breadcrumb: ['WhatsApp'] },
+  '/channels': { title: 'Canales', breadcrumb: ['Canales'] },
+  '/whatsapp-connect': { title: 'Conectar WhatsApp', breadcrumb: ['Canales', 'WhatsApp'] },
+  '/instagram-connect': { title: 'Conectar Instagram', breadcrumb: ['Canales', 'Instagram'] },
   '/get-started': { title: 'Inicio', breadcrumb: [] },
   '/payments': { title: 'Pagos', breadcrumb: ['Pagos'] },
   '/invoices-series': { title: 'Series de facturación', breadcrumb: ['Facturación', 'Series'] },
@@ -32,6 +34,7 @@ const PAGE_META: Record<string, { title: string; breadcrumb: string[] }> = {
   '/invoices': { title: 'Facturación', breadcrumb: ['Facturación'] },
   '/orders': { title: 'Pedidos', breadcrumb: ['Pedidos'] },
   '/tickets': { title: 'Tickets de Soporte', breadcrumb: ['Tickets'] },
+  '/plan': { title: 'Mi Plan', breadcrumb: ['Plan & Facturación'] },
   '/settings/api-keys': { title: 'Credenciales (API Key)', breadcrumb: ['Configuración', 'API Keys'] },
 }
 

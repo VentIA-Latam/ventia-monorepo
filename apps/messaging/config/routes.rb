@@ -16,6 +16,13 @@ Rails.application.routes.draw do
   get 'webhooks/whatsapp/:phone_number', to: 'webhooks/whatsapp#verify'
   post 'webhooks/whatsapp/:phone_number', to: 'webhooks/whatsapp#process_payload'
 
+  # Instagram webhooks (public, app-level single URL)
+  get 'webhooks/instagram', to: 'webhooks/instagram#verify'
+  post 'webhooks/instagram', to: 'webhooks/instagram#process_payload'
+
+  # Instagram OAuth callback (public, browser redirect from Meta)
+  get 'instagram/callback', to: 'instagram/oauth#callback'
+
   # API routes
   namespace :api do
     namespace :v1 do
@@ -63,6 +70,7 @@ Rails.application.routes.draw do
       resources :conversations, only: [:index, :show, :update, :destroy] do
         collection do
           get :counts
+          get :export
         end
         member do
           post :toggle_status
@@ -75,10 +83,18 @@ Rails.application.routes.draw do
           post :assign_team
           patch :assign, controller: 'conversation_assignments'
           post :unassign, controller: 'conversation_assignments'
+          post :no_purchase_reason
         end
-        resources :messages, only: [:index, :create]
+        resources :messages, only: [:index, :create] do
+          collection do
+            get :search
+          end
+        end
         resources :labels, only: [:index, :create, :destroy], controller: 'conversations/labels'
       end
+
+      # Send message by phone (no requiere conversation_id existente)
+      post 'messages/send_by_phone', to: 'messages#send_by_phone'
 
       # Contacts
       resources :contacts, only: [:index, :show, :create, :update, :destroy] do
@@ -150,9 +166,20 @@ Rails.application.routes.draw do
         get 'health/:inbox_id', to: 'embedded_signup#health'
       end
 
+      # Instagram (authenticated OAuth initiation + status)
+      namespace :instagram do
+        get 'authorize', to: 'authorizations#authorize'
+        get 'status', to: 'authorizations#status'
+      end
+
       # Analytics (KPIs agregados por periodo)
       namespace :analytics do
         get 'conversations_count', to: 'conversations#count'
+        get 'no_purchase_reasons', to: 'conversations#no_purchase_reasons'
+        post 'ads_summary', to: 'conversations#ads_summary'
+        get 'activity_by_hour', to: 'conversations#activity_by_hour'
+        get 'conversation_distribution', to: 'conversations#conversation_distribution'
+        get 'chats_started', to: 'conversations#chats_started'
       end
 
       # Reports

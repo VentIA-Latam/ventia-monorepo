@@ -107,3 +107,128 @@ class ConversionRateResponse(BaseModel):
     end_date: date
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SetNoPurchaseReasonRequest(BaseModel):
+    reason: str = Field(..., min_length=1, description="Motivo de no compra (string libre, no vacío).")
+
+
+class NoPurchaseReasonItem(BaseModel):
+    """Item del ranking de motivos de no compra."""
+
+    reason: str = Field(..., description="Motivo de no compra")
+    count: int = Field(..., description="Conversaciones con este motivo")
+    percentage: float = Field(..., description="Porcentaje del total (0-100)")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NoPurchaseReasonsResponse(BaseModel):
+    """KPI motivos de no compra agrupados en un período."""
+
+    total: int = Field(..., description="Total conversaciones con motivo registrado")
+    results: list[NoPurchaseReasonItem] = Field(
+        default_factory=list, description="Motivos ordenados desc por count"
+    )
+    period: PeriodType
+    start_date: date
+    end_date: date
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ActivityByHourResponse(BaseModel):
+    """Distribución de mensajes por hora del día y día de semana (heatmap 7×24)."""
+
+    matrix: list[list[int]] = Field(
+        ..., description="Matriz 7×24: matrix[dow][hour] = count. dow 0=domingo, 6=sábado"
+    )
+    max_count: int = Field(..., description="Valor máximo en la matriz")
+    period: PeriodType
+    start_date: date
+    end_date: date
+    timezone_note: str | None = Field(
+        None, description="'UTC' cuando SUPERADMIN consulta cross-tenant"
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AdSummaryItem(BaseModel):
+    """Performance de un anuncio Meta (click-to-WhatsApp / click-to-Instagram)."""
+
+    ad_id: str = Field(..., description="Meta ad_id from referral.source_id")
+    headline: str | None = Field(None, description="Most recent ad headline")
+    image_url: str | None = Field(None, description="Most recent ad creative URL")
+    source_url: str | None = Field(None, description="Short link to ad (fb.me/...)")
+    channel: str | None = Field(None, description="Origin channel: 'instagram' | 'whatsapp'")
+    conversations_started: int = Field(..., description="Conversaciones iniciadas desde este anuncio en el periodo")
+    conversations_converted: int = Field(..., description="Conversaciones que generaron orden validada")
+    conversion_rate: float = Field(..., description="Porcentaje 0-100")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AdsSummaryResponse(BaseModel):
+    """Resumen de conversaciones agrupadas por anuncio de origen."""
+
+    ads: list[AdSummaryItem] = Field(default_factory=list, description="Anuncios ordenados desc por started")
+    total_ads: int = Field(..., description="Número de anuncios distintos en el periodo")
+    period: PeriodType
+    start_date: date
+    end_date: date
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DistributionCategory(BaseModel):
+    """Un bucket de la distribución de conversaciones por tipo de atención."""
+
+    category: Literal["agent_ai", "human_support", "abandoned"]
+    count: int = Field(..., description="Número de conversaciones en este bucket")
+    percentage: float = Field(..., description="Porcentaje 0-100 sobre el total")
+    total_hours: float = Field(..., description="Suma de duración de las conversaciones (horas)")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ConversationDistributionResponse(BaseModel):
+    """Distribución de conversaciones por tipo: IA / Humano / Abandonadas."""
+
+    distribution: list[DistributionCategory]
+    total_conversations: int = Field(..., description="Total de conversaciones clasificadas (excluye campañas)")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DailyChatCount(BaseModel):
+    """Conteo de chats iniciados en un día concreto."""
+
+    date: str = Field(..., description="Día en formato YYYY-MM-DD (zona horaria del tenant)")
+    count: int = Field(..., description="Chats (conversaciones) iniciados ese día")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class InboxOption(BaseModel):
+    """Inbox disponible para el filtro del widget (WhatsApp, Instagram, etc.)."""
+
+    id: int
+    name: str
+    channel_type: str
+    identifier: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ChatsStartedResponse(BaseModel):
+    """Serie diaria de chats iniciados, con los inboxes del tenant disponibles."""
+
+    results: list[DailyChatCount]
+    total: int = Field(..., description="Total de chats iniciados en el rango (excluye campañas)")
+    available_inboxes: list[InboxOption] = Field(
+        default_factory=list,
+        description="Inboxes del tenant (WhatsApp/Instagram) para el filtro (vacío en cross-tenant)",
+    )
+
+    model_config = ConfigDict(from_attributes=True)
