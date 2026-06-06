@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_06_04_174229) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_06_001924) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -377,6 +377,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_04_174229) do
     t.index ["source_id"], name: "index_messages_on_source_id"
   end
 
+  create_table "notes", force: :cascade do |t|
+    t.text "content", null: false
+    t.bigint "account_id", null: false
+    t.bigint "contact_id", null: false
+    t.bigint "user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_notes_on_account_id"
+    t.index ["contact_id", "created_at"], name: "index_notes_on_contact_id_and_created_at"
+    t.index ["contact_id"], name: "index_notes_on_contact_id"
+    t.index ["user_id"], name: "index_notes_on_user_id"
+  end
+
   create_table "notification_settings", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "user_id", null: false
@@ -500,6 +513,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_04_174229) do
   add_foreign_key "messages", "accounts"
   add_foreign_key "messages", "conversations"
   add_foreign_key "messages", "inboxes"
+  add_foreign_key "notes", "accounts"
+  add_foreign_key "notes", "contacts"
+  add_foreign_key "notes", "users"
   add_foreign_key "notification_settings", "accounts"
   add_foreign_key "notification_settings", "users"
   add_foreign_key "notifications", "accounts"

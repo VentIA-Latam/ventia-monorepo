@@ -13,7 +13,13 @@ from app.schemas.messaging import (
     AccountResponse,
     AssignConversationRequest,
     CannedResponsesListResponse,
+    ContactDetailResponse,
     ContactsListResponse,
+    ContactUpdate,
+    NoteCreate,
+    NoteResponse,
+    NotesListResponse,
+    NoteUpdate,
     ConversationCountsResponse,
     ConversationDetailResponse,
     ConversationLabelsListResponse,
@@ -1406,6 +1412,130 @@ async def list_contacts(
         if page:
             params["page"] = page
         result = await messaging_service.get_contacts(tenant_id, params or None)
+
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.patch(
+    "/contacts/{contact_id}",
+    response_model=ContactDetailResponse,
+    summary="Update a contact",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def update_contact(
+    contact_id: int,
+    payload: ContactUpdate,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("PATCH", "/messaging/*")),
+):
+    """Update contact fields (name, email, phone_number). Only fields present
+    in the payload are sent to Rails."""
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    # Strip unset fields so Rails only updates what the user actually sent.
+    body = payload.model_dump(exclude_unset=True)
+    result = await messaging_service.update_contact(tenant_id, contact_id, body)
+
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+# --- Contact notes (Module 7) ---
+
+@router.get(
+    "/contacts/{contact_id}/notes",
+    response_model=NotesListResponse,
+    summary="List notes for a contact",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def list_contact_notes(
+    contact_id: int,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    """List notes attached to a contact, most recent first."""
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.get_contact_notes(tenant_id, contact_id)
+
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/contacts/{contact_id}/notes",
+    response_model=NoteResponse,
+    status_code=201,
+    summary="Create a note for a contact",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def create_contact_note(
+    contact_id: int,
+    payload: NoteCreate,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    """Create a note. The author is the current user (forwarded via X-User-Id)."""
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.create_contact_note(tenant_id, contact_id, payload.content)
+
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.patch(
+    "/contacts/{contact_id}/notes/{note_id}",
+    response_model=NoteResponse,
+    summary="Update a note's content",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def update_contact_note(
+    contact_id: int,
+    note_id: int,
+    payload: NoteUpdate,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("PATCH", "/messaging/*")),
+):
+    """Update an existing note's content."""
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.update_contact_note(
+        tenant_id, contact_id, note_id, payload.content
+    )
+
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.delete(
+    "/contacts/{contact_id}/notes/{note_id}",
+    response_model=SuccessMessageResponse,
+    summary="Delete a note",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def delete_contact_note(
+    contact_id: int,
+    note_id: int,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("DELETE", "/messaging/*")),
+):
+    """Delete a note from a contact."""
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.delete_contact_note(tenant_id, contact_id, note_id)
 
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")

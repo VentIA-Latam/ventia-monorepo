@@ -3,8 +3,11 @@ import type {
   ConversationListResponse,
   ConversationCounts,
   Conversation,
+  ContactBrief,
+  ContactUpdatePayload,
   MessageListResponse,
   MessageSearchResponse,
+  Note,
   WebSocketToken,
   Inbox,
   Label,
@@ -294,4 +297,66 @@ export async function sendTemplateMessage(
     `/api/messaging/conversations/${conversationId}/messages/template${qs}`,
     payload
   );
+}
+
+// --- Contact edit + notes (Module 7) ---
+
+export async function updateContact(
+  id: number,
+  payload: ContactUpdatePayload,
+  tenantId?: number
+): Promise<ContactBrief> {
+  const qs = tenantId ? `?tenant_id=${tenantId}` : "";
+  const resp = await apiPatch<{ success: boolean; data: ContactBrief }>(
+    `/api/messaging/contacts/${id}${qs}`,
+    payload
+  );
+  return resp.data;
+}
+
+export async function getContactNotes(
+  contactId: number,
+  tenantId?: number
+): Promise<Note[]> {
+  const resp = await apiGet<{ success: boolean; data: Note[] }>(
+    `/api/messaging/contacts/${contactId}/notes`,
+    tenantId ? { tenant_id: tenantId } : undefined
+  );
+  return resp.data;
+}
+
+export async function createContactNote(
+  contactId: number,
+  content: string,
+  tenantId?: number
+): Promise<Note> {
+  const qs = tenantId ? `?tenant_id=${tenantId}` : "";
+  const resp = await apiPost<{ success: boolean; data: Note }>(
+    `/api/messaging/contacts/${contactId}/notes${qs}`,
+    { content }
+  );
+  return resp.data;
+}
+
+export async function updateContactNote(
+  contactId: number,
+  noteId: number,
+  content: string,
+  tenantId?: number
+): Promise<Note> {
+  const qs = tenantId ? `?tenant_id=${tenantId}` : "";
+  const resp = await apiPatch<{ success: boolean; data: Note }>(
+    `/api/messaging/contacts/${contactId}/notes/${noteId}${qs}`,
+    { content }
+  );
+  return resp.data;
+}
+
+export async function deleteContactNote(
+  contactId: number,
+  noteId: number,
+  tenantId?: number
+): Promise<void> {
+  const qs = tenantId ? `?tenant_id=${tenantId}` : "";
+  await apiDelete(`/api/messaging/contacts/${contactId}/notes/${noteId}${qs}`);
 }

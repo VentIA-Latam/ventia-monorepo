@@ -105,6 +105,59 @@ class ContactsListResponse(BaseModel):
     data: list[ContactDetails] = []
 
 
+# --- Contact edit + notes (Module 7) ---
+
+class ContactUpdate(BaseModel):
+    """Payload accepted by PATCH /messaging/contacts/{id}."""
+
+    name: Optional[str] = Field(None, max_length=255)
+    email: Optional[str] = Field(None, max_length=255)
+    phone_number: Optional[str] = Field(None, max_length=32)
+
+
+class ContactDetailResponse(BaseModel):
+    success: bool = True
+    data: dict
+
+
+class NoteCreate(BaseModel):
+    content: str = Field(..., min_length=1, max_length=2000)
+
+
+class NoteUpdate(BaseModel):
+    content: str = Field(..., min_length=1, max_length=2000)
+
+
+class NoteUser(BaseModel):
+    id: int
+    name: Optional[str] = None
+    email: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class NoteDetail(BaseModel):
+    id: int
+    content: str
+    created_at: datetime
+    updated_at: datetime
+    user: Optional[NoteUser] = None
+
+    class Config:
+        from_attributes = True
+
+
+class NoteResponse(BaseModel):
+    success: bool = True
+    data: NoteDetail
+
+
+class NotesListResponse(BaseModel):
+    success: bool = True
+    data: list[NoteDetail] = []
+
+
 class LabelBrief(BaseModel):
     id: int
     title: str

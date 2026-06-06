@@ -103,6 +103,9 @@ Rails.application.routes.draw do
           post :import
           get :find_by_phone
         end
+
+        resources :notes, controller: 'contacts/notes',
+                          only: [:index, :create, :update, :destroy]
       end
 
       # Labels

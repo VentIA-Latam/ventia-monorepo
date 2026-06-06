@@ -649,6 +649,61 @@ class MessagingService:
             "POST", "/api/v1/contacts/search", tenant_id, json_data={"query": query}
         )
 
+    async def update_contact(
+        self, tenant_id: int, contact_id: int, payload: dict
+    ) -> Optional[dict]:
+        """Update a contact (name, email, phone_number)."""
+        return await self._request(
+            "PATCH",
+            f"/api/v1/contacts/{contact_id}",
+            tenant_id,
+            json_data={"contact": payload},
+        )
+
+    # --- Contact notes (Module 7) ---
+
+    async def get_contact_notes(
+        self, tenant_id: int, contact_id: int
+    ) -> Optional[dict]:
+        """List notes for a contact (recent first)."""
+        return await self._request(
+            "GET",
+            f"/api/v1/contacts/{contact_id}/notes",
+            tenant_id,
+        )
+
+    async def create_contact_note(
+        self, tenant_id: int, contact_id: int, content: str
+    ) -> Optional[dict]:
+        """Create a note on a contact. user_id is taken from the X-User-Id header."""
+        return await self._request(
+            "POST",
+            f"/api/v1/contacts/{contact_id}/notes",
+            tenant_id,
+            json_data={"note": {"content": content}},
+        )
+
+    async def update_contact_note(
+        self, tenant_id: int, contact_id: int, note_id: int, content: str
+    ) -> Optional[dict]:
+        """Update a note's content."""
+        return await self._request(
+            "PATCH",
+            f"/api/v1/contacts/{contact_id}/notes/{note_id}",
+            tenant_id,
+            json_data={"note": {"content": content}},
+        )
+
+    async def delete_contact_note(
+        self, tenant_id: int, contact_id: int, note_id: int
+    ) -> Optional[dict]:
+        """Delete a note."""
+        return await self._request(
+            "DELETE",
+            f"/api/v1/contacts/{contact_id}/notes/{note_id}",
+            tenant_id,
+        )
+
     async def find_contact_by_phone(
         self, tenant_id: int, phone: str
     ) -> Optional[dict]:

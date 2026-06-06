@@ -38,6 +38,7 @@ export function ConversationsClient({
   const [targetMessageId, setTargetMessageId] = useState<number | null>(null);
   const [targetNonce, setTargetNonce] = useState(0);
   const [showInfo, setShowInfo] = useState(false);
+  const [contactEditing, setContactEditing] = useState(false);
   const [allLabels, setAllLabels] = useState<Label[]>(initialLabels as Label[]);
   const [temperatureConfig] = useState<TemperatureDefinition[]>(initialTemperatureConfig as TemperatureDefinition[]);
 
@@ -150,12 +151,14 @@ export function ConversationsClient({
             </SheetHeader>
             {selectedConversation && (
               <ContactInfoPanel
+                key={selectedConversation.contact?.id ?? selectedConversation.id}
                 conversation={selectedConversation}
                 allLabels={allLabels}
                 temperatureConfig={temperatureConfig}
                 onClose={handleCloseInfo}
                 onConversationUpdate={handleConversationUpdate}
                 onLabelCreated={handleLabelCreated}
+                onEditModeChange={setContactEditing}
               />
             )}
           </SheetContent>
@@ -196,15 +199,27 @@ export function ConversationsClient({
       {/* Contact info panel — overlay (Chatwoot pattern) */}
       {showInfo && selectedConversation && (
         <>
-          <div className="absolute inset-0 z-30" onClick={handleCloseInfo} />
+          <div
+            className="absolute inset-0 z-30"
+            onClick={contactEditing ? undefined : handleCloseInfo}
+            aria-hidden="true"
+          />
+          {contactEditing && (
+            <div
+              className="absolute inset-y-0 left-0 right-80 z-[35] bg-noche/15 backdrop-blur-[3px] backdrop-saturate-[0.92] pointer-events-none transition-opacity duration-200"
+              aria-hidden="true"
+            />
+          )}
           <div className="absolute top-0 right-0 z-40 h-full w-80 max-w-sm bg-background border-l shadow-lg overflow-hidden transition-transform duration-300 ease-in-out">
             <ContactInfoPanel
+              key={selectedConversation.contact?.id ?? selectedConversation.id}
               conversation={selectedConversation}
               allLabels={allLabels}
               temperatureConfig={temperatureConfig}
               onClose={handleCloseInfo}
               onConversationUpdate={handleConversationUpdate}
               onLabelCreated={handleLabelCreated}
+              onEditModeChange={setContactEditing}
             />
           </div>
         </>

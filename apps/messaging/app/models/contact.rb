@@ -43,6 +43,7 @@ class Contact < ApplicationRecord
   has_many :inboxes, through: :contact_inboxes
   has_many :conversations, dependent: :destroy
   has_many :messages, as: :sender, dependent: :destroy
+  has_many :notes, dependent: :destroy
 
   # Enums
   enum :contact_type, { visitor: 0, lead: 1, customer: 2 }

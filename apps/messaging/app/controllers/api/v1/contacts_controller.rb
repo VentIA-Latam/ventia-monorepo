@@ -97,9 +97,11 @@ class Api::V1::ContactsController < Api::V1::BaseController
       name: contact.name,
       email: contact.email,
       phone_number: contact.phone_number,
+      identifier: contact.identifier,
       contact_type: contact.contact_type,
       last_activity_at: contact.last_activity_at,
-      created_at: contact.created_at
+      created_at: contact.created_at,
+      notes_count: contact.notes.size
     }
   end
 end
