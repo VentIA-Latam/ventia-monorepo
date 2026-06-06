@@ -43,6 +43,19 @@ interface ConversationListProps {
 
 type SectionValue = "all" | "sale" | "unattended";
 
+// Determina si quedan más páginas. Prioriza current_page < total_pages (siempre
+// presentes) en vez de depender solo de next_page, que puede faltar si el backend
+// recorta el meta. Evita que el scroll infinito se rompa silenciosamente.
+function hasMorePages(
+  meta: { current_page?: number; total_pages?: number; next_page?: number | null } | null | undefined,
+): boolean {
+  if (!meta) return false;
+  if (meta.current_page != null && meta.total_pages != null) {
+    return meta.current_page < meta.total_pages;
+  }
+  return meta.next_page != null;
+}
+
 export function ConversationList({
   conversations,
   selectedId,
@@ -65,6 +78,7 @@ export function ConversationList({
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const [inboxes, setInboxes] = useState<Inbox[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [totalCount, setTotalCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -118,7 +132,8 @@ export function ConversationList({
       try {
         const data = await getConversations({ ...params, page: 1 }, signal);
         onConversationsChange(data.data ?? []);
-        hasMoreRef.current = data.meta?.next_page != null;
+        setTotalCount(data.meta?.total_count ?? null);
+        hasMoreRef.current = hasMorePages(data.meta);
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
         console.error("Error fetching conversations:", error);
@@ -193,7 +208,7 @@ export function ConversationList({
           const deduped = newConversations.filter((c) => !existingIds.has(c.id));
           onConversationsChange([...conversationsRef.current, ...deduped]);
           currentPageRef.current = nextPage;
-          hasMoreRef.current = data.meta?.next_page != null;
+          hasMoreRef.current = hasMorePages(data.meta);
         }
       })
       .catch((err) => console.error("Error loading more conversations:", err))
@@ -232,11 +247,22 @@ export function ConversationList({
     if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
     refetchTimerRef.current = setTimeout(() => {
       const params = buildParams(sectionFilterRef.current, activeFiltersRef.current, searchQueryRef.current);
-      currentPageRef.current = 1;
       getConversations({ ...params, page: 1 })
         .then((data) => {
-          onConversationsChange(data.data ?? []);
-          hasMoreRef.current = data.meta?.next_page != null;
+          // Merge la página 1 fresca con lo ya cargado por scroll en vez de
+          // reemplazar toda la lista. Si reemplazáramos, cada evento en tiempo
+          // real colapsaría la lista paginada a 25 items y se perderían los
+          // chats acumulados al scrollear (y el conteo dejaría de cuadrar).
+          const fresh = data.data ?? [];
+          const freshIds = new Set(fresh.map((c) => c.id));
+          const tail = conversationsRef.current.filter((c) => !freshIds.has(c.id));
+          const merged = [...fresh, ...tail];
+          onConversationsChange(merged);
+          const total = data.meta?.total_count ?? null;
+          setTotalCount(total);
+          // Quedan más por cargar si todavía no tenemos el total completo.
+          hasMoreRef.current =
+            total != null ? merged.length < total : data.meta?.next_page != null;
         })
         .catch((err) => console.error("Error refreshing conversations:", err));
     }, 500);
@@ -400,6 +426,19 @@ export function ConversationList({
     setSelectedIds(new Set());
   }, [conversations, selectedIds]);
 
+  const hasActiveFilters = !!(
+    activeFilters.label ||
+    activeFilters.temperature ||
+    activeFilters.dateRange ||
+    activeFilters.unread ||
+    activeFilters.inboxIds?.length
+  );
+  const showResultsCount =
+    !loading &&
+    (searchQuery.trim() !== "" || hasActiveFilters) &&
+    totalCount != null &&
+    totalCount > 0;
+
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
@@ -498,6 +537,11 @@ export function ConversationList({
 
       {/* List */}
       <div ref={listRef} className="flex-1 overflow-y-auto">
+        {showResultsCount && (
+          <div className="sticky top-0 z-10 px-4 py-1.5 text-xs text-muted-foreground bg-background/95 backdrop-blur border-b border-border/30">
+            {totalCount === 1 ? "1 resultado" : `${totalCount} resultados`}
+          </div>
+        )}
         {loading ? (
           <div className="space-y-0">
             {Array.from({ length: 6 }).map((_, i) => (

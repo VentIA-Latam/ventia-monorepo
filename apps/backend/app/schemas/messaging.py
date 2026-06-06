@@ -148,6 +148,11 @@ class ConversationListItem(BaseModel):
 
 class ConversationListMeta(BaseModel):
     current_page: int
+    # next_page/prev_page los envía Rails (Kaminari) y el frontend los usa para el
+    # scroll infinito. Sin declararlos, FastAPI los recorta del response y la
+    # paginación se rompe (hasMore siempre false → solo se ve la página 1).
+    next_page: Optional[int] = None
+    prev_page: Optional[int] = None
     total_pages: int
     total_count: int
 

@@ -70,7 +70,9 @@ class Conversation < ApplicationRecord
   # Scopes
   scope :unassigned, -> { where(assignee_id: nil) }
   scope :assigned, -> { where.not(assignee_id: nil) }
-  scope :recent, -> { order(last_activity_at: :desc) }
+  # id como desempate para que la paginación OFFSET sea estable: sin él, los
+  # chats con el mismo last_activity_at pueden repetirse o saltarse entre páginas.
+  scope :recent, -> { order(last_activity_at: :desc, id: :desc) }
   scope :with_label, ->(title) { joins(:labels).where(labels: { title: title }).distinct }
   scope :in_date_range, ->(from, to) { where(last_activity_at: from..to) }
   scope :created_in_range, ->(from, to) { where(created_at: from..to) }
