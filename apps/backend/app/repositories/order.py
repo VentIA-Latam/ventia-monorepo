@@ -66,6 +66,7 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         search: str | None = None,
         status: str | None = None,
         channel: str | None = None,
+        messaging_conversation_id: int | None = None,
         sort_by: str = "created_at",
         sort_order: str = "desc",
     ) -> list[Order]:
@@ -76,6 +77,8 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
             query = query.filter(Order.tenant_id == tenant_id)
         if validado is not None:
             query = query.filter(Order.validado == validado)
+        if messaging_conversation_id is not None:
+            query = query.filter(Order.messaging_conversation_id == messaging_conversation_id)
         if search:
             pattern = f"%{search}%"
             conditions = [
@@ -110,6 +113,7 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
         search: str | None = None,
         status: str | None = None,
         channel: str | None = None,
+        messaging_conversation_id: int | None = None,
     ) -> int:
         """Count all orders with same filters as get_all."""
         query = db.query(Order)
@@ -118,6 +122,8 @@ class OrderRepository(CRUDBase[Order, OrderCreate, OrderUpdate]):
             query = query.filter(Order.tenant_id == tenant_id)
         if validado is not None:
             query = query.filter(Order.validado == validado)
+        if messaging_conversation_id is not None:
+            query = query.filter(Order.messaging_conversation_id == messaging_conversation_id)
         if search:
             pattern = f"%{search}%"
             conditions = [

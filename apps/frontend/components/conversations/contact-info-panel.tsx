@@ -16,6 +16,7 @@ import {
 import { Phone, Mail, Fingerprint, X, ChevronDown, Check, AlertTriangle } from "lucide-react";
 import { TemperatureSelector } from "./temperature-selector";
 import { LabelManager } from "./label-manager";
+import { ConversationOrdersSection } from "./conversation-orders-section";
 import { updateConversation, updateConversationStage } from "@/lib/api-client/messaging";
 import type { Conversation, Label, ConversationTemperature, TemperatureDefinition } from "@/lib/types/messaging";
 import { getInitials } from "@/lib/utils/messaging";
@@ -174,6 +175,11 @@ export const ContactInfoPanel = memo(function ContactInfoPanel({
             onLabelsCreated={onLabelCreated}
           />
         </div>
+
+        <Separator />
+
+        {/* Linked orders */}
+        <ConversationOrdersSection conversationId={conversation.id} />
 
         <Separator />
 

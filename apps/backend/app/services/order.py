@@ -101,11 +101,18 @@ class OrderService:
         search: str | None = None,
         status: str | None = None,
         channel: str | None = None,
+        messaging_conversation_id: int | None = None,
         sort_by: str = "created_at",
         sort_order: str = "desc",
     ) -> OrderListResponse:
         """Get orders for a tenant with filters and pagination."""
-        filter_kwargs = dict(validado=validado, search=search, status=status, channel=channel)
+        filter_kwargs = dict(
+            validado=validado,
+            search=search,
+            status=status,
+            channel=channel,
+            messaging_conversation_id=messaging_conversation_id,
+        )
 
         orders = order_repository.get_all(
             db, skip=skip, limit=limit,
@@ -134,6 +141,7 @@ class OrderService:
         search: str | None = None,
         status: str | None = None,
         channel: str | None = None,
+        messaging_conversation_id: int | None = None,
         sort_by: str = "created_at",
         sort_order: str = "desc",
     ) -> OrderListResponse:
@@ -141,6 +149,7 @@ class OrderService:
         filter_kwargs = dict(
             tenant_id=tenant_id, validado=validado,
             search=search, status=status, channel=channel,
+            messaging_conversation_id=messaging_conversation_id,
         )
 
         orders = order_repository.get_all(

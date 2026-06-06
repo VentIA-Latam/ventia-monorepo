@@ -9,11 +9,13 @@
 
 import { apiGet, apiPost, apiPatch, apiDownload } from './client';
 import type { Order, OrderListResponse } from '@/lib/types/order';
+import type { OrderListResponse as RawOrderListResponse } from '@/lib/services/order-service';
 
 export interface FetchOrdersParams {
   skip?: number;
   limit?: number;
   validado?: boolean;
+  messaging_conversation_id?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
@@ -39,6 +41,22 @@ export async function getOrders(
   params?: FetchOrdersParams
 ): Promise<OrderListResponse> {
   return apiGet<OrderListResponse>('/api/orders', params as Record<string, string | number | boolean>);
+}
+
+/**
+ * Obtener las orders vinculadas a una conversación de messaging.
+ * GET /api/orders?messaging_conversation_id=...
+ *
+ * Devuelve la forma snake_case real del backend (RawOrderListResponse), no el
+ * tipo visual camelCase de lib/types/order, para consumirla directo en la UI.
+ */
+export async function getConversationOrders(
+  conversationId: number
+): Promise<RawOrderListResponse> {
+  return apiGet<RawOrderListResponse>('/api/orders', {
+    messaging_conversation_id: conversationId,
+    limit: 50,
+  });
 }
 
 /**
