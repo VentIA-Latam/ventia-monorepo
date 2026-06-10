@@ -232,6 +232,21 @@ class CannedResponsesListResponse(BaseModel):
     data: list[CannedResponseResponse] = []
 
 
+class CannedResponseDetailResponse(BaseModel):
+    success: bool = True
+    data: CannedResponseResponse
+
+
+class CannedResponseCreate(BaseModel):
+    short_code: str = Field(..., description="Short code used to trigger the response (e.g. 'thanks')")
+    content: str = Field(..., description="Message text inserted when the response is selected")
+
+
+class CannedResponseUpdate(BaseModel):
+    short_code: Optional[str] = Field(None, description="Updated short code")
+    content: Optional[str] = Field(None, description="Updated message text")
+
+
 class TeamResponse(BaseModel):
     id: int
     name: str

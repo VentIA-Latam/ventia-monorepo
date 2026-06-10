@@ -12,6 +12,9 @@ from app.models.user import User
 from app.schemas.messaging import (
     AccountResponse,
     AssignConversationRequest,
+    CannedResponseCreate,
+    CannedResponseDetailResponse,
+    CannedResponseUpdate,
     CannedResponsesListResponse,
     ContactsListResponse,
     ConversationCountsResponse,
@@ -1449,6 +1452,90 @@ async def list_canned_responses(
     tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     result = await messaging_service.get_canned_responses(tenant_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/canned-responses",
+    response_model=CannedResponseDetailResponse,
+    status_code=201,
+    summary="Create a canned response",
+    tags=["messaging"],
+    responses={403: {"model": MessagingError}, 503: {"model": MessagingError}},
+)
+async def create_canned_response(
+    payload: CannedResponseCreate,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    """
+    Creates a canned response for the tenant. Only account administrators and superadmins
+    may create canned responses; agents receive a 403 from the messaging service.
+    """
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.create_canned_response(
+        tenant_id, current_user.id, payload.model_dump()
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.patch(
+    "/canned-responses/{canned_response_id}",
+    response_model=CannedResponseDetailResponse,
+    summary="Update a canned response",
+    tags=["messaging"],
+    responses={403: {"model": MessagingError}, 503: {"model": MessagingError}},
+)
+async def update_canned_response(
+    canned_response_id: int,
+    payload: CannedResponseUpdate,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("PATCH", "/messaging/*")),
+):
+    """
+    Updates a canned response. Only account administrators and superadmins may update
+    canned responses; agents receive a 403 from the messaging service.
+    """
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.update_canned_response(
+        tenant_id, current_user.id, canned_response_id,
+        payload.model_dump(exclude_none=True),
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.delete(
+    "/canned-responses/{canned_response_id}",
+    response_model=SuccessMessageResponse,
+    summary="Delete a canned response",
+    tags=["messaging"],
+    responses={403: {"model": MessagingError}, 503: {"model": MessagingError}},
+)
+async def delete_canned_response(
+    canned_response_id: int,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("DELETE", "/messaging/*")),
+):
+    """
+    Deletes a canned response. Only account administrators and superadmins may delete
+    canned responses; agents receive a 403 from the messaging service.
+    """
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.delete_canned_response(
+        tenant_id, current_user.id, canned_response_id
+    )
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")
 

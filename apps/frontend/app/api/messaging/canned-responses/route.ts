@@ -31,3 +31,35 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Failed to fetch canned responses" }, { status: 500 });
   }
 }
+
+export async function POST(request: Request) {
+  try {
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const qs = searchParams.toString();
+    const body = await request.json();
+
+    const response = await fetch(`${API_URL}/messaging/canned-responses${qs ? `?${qs}` : ""}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: "Failed to create canned response" }));
+      return NextResponse.json({ error: error.detail }, { status: response.status });
+    }
+
+    return NextResponse.json(await response.json(), { status: response.status });
+  } catch (error) {
+    console.error("Error creating canned response:", error);
+    return NextResponse.json({ error: "Failed to create canned response" }, { status: 500 });
+  }
+}

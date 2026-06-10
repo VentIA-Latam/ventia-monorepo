@@ -204,8 +204,44 @@ export async function getInboxes(
   );
 }
 
-export async function getCannedResponses(tenantId?: number): Promise<CannedResponse[]> {
-  return apiGet("/api/messaging/canned-responses", tenantId ? { tenant_id: tenantId } : undefined);
+export interface CannedResponsePayload {
+  short_code: string;
+  content: string;
+}
+
+export async function getCannedResponses(
+  params?: { search?: string; tenantId?: number },
+  signal?: AbortSignal,
+): Promise<{ success: boolean; data: CannedResponse[] }> {
+  const query: Record<string, string | number> = {};
+  if (params?.search) query.search = params.search;
+  if (params?.tenantId) query.tenant_id = params.tenantId;
+  return apiGet("/api/messaging/canned-responses", Object.keys(query).length ? query : undefined, { signal });
+}
+
+export async function createCannedResponse(
+  payload: CannedResponsePayload,
+  tenantId?: number,
+): Promise<{ success: boolean; data: CannedResponse }> {
+  const qs = tenantId ? `?tenant_id=${tenantId}` : "";
+  return apiPost(`/api/messaging/canned-responses${qs}`, payload);
+}
+
+export async function updateCannedResponse(
+  id: number,
+  payload: Partial<CannedResponsePayload>,
+  tenantId?: number,
+): Promise<{ success: boolean; data: CannedResponse }> {
+  const qs = tenantId ? `?tenant_id=${tenantId}` : "";
+  return apiPatch(`/api/messaging/canned-responses/${id}${qs}`, payload);
+}
+
+export async function deleteCannedResponse(
+  id: number,
+  tenantId?: number,
+): Promise<{ success: boolean }> {
+  const qs = tenantId ? `?tenant_id=${tenantId}` : "";
+  return apiDelete(`/api/messaging/canned-responses/${id}${qs}`);
 }
 
 

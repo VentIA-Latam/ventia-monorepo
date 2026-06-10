@@ -543,6 +543,33 @@ class MessagingService:
         """List canned responses for an account."""
         return await self._request("GET", "/api/v1/canned_responses", tenant_id)
 
+    async def create_canned_response(
+        self, tenant_id: int, user_id: int, payload: dict
+    ) -> Optional[dict]:
+        """Create a canned response. Rails authorises by role via X-User-Id."""
+        return await self._request(
+            "POST", "/api/v1/canned_responses", tenant_id,
+            user_id=str(user_id), json_data={"canned_response": payload}
+        )
+
+    async def update_canned_response(
+        self, tenant_id: int, user_id: int, canned_response_id: int, payload: dict
+    ) -> Optional[dict]:
+        """Update a canned response. Rails authorises by role via X-User-Id."""
+        return await self._request(
+            "PATCH", f"/api/v1/canned_responses/{canned_response_id}", tenant_id,
+            user_id=str(user_id), json_data={"canned_response": payload}
+        )
+
+    async def delete_canned_response(
+        self, tenant_id: int, user_id: int, canned_response_id: int
+    ) -> Optional[dict]:
+        """Delete a canned response. Rails authorises by role via X-User-Id."""
+        return await self._request(
+            "DELETE", f"/api/v1/canned_responses/{canned_response_id}", tenant_id,
+            user_id=str(user_id)
+        )
+
     # --- Teams ---
 
     async def get_teams(self, tenant_id: int) -> Optional[dict]:
