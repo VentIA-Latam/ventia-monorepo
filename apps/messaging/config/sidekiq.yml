@@ -7,4 +7,8 @@
 :queues:
   - default
   - campaigns
+  # Cola del cron-dispatcher (Campaigns::TriggerScheduledJob, ver sidekiq-cron.yml).
+  # Aislada de :campaigns para que el dispatcher corra a tiempo aunque haya backlog
+  # de envíos. NO REMOVER sin actualizar también queue_as del job y sidekiq-cron.yml.
+  - scheduled
   - low

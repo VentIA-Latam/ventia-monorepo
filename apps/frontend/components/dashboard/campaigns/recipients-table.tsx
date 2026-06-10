@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -45,10 +45,18 @@ export function RecipientsTable({
     return () => clearTimeout(t);
   }, [search]);
 
+  // Saltamos UN fetch (el primero con accessToken válido) porque la página ya viene
+  // hidratada con initialRecipients/initialMeta. No podemos guardarnos por "filtros en
+  // default" porque al volver de un filtro a "Todos" estamos en default pero el estado
+  // en memoria refleja la query previa — hay que refetchar.
+  const didInitialFetch = useRef(false);
+
   useEffect(() => {
     if (!accessToken) return;
-    // Skip fetch on initial mount when filters/search are empty (already have data)
-    if (page === 1 && !status && !debouncedSearch) return;
+    if (!didInitialFetch.current) {
+      didInitialFetch.current = true;
+      return;
+    }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     fetchCampaignRecipients(accessToken, campaignId, {

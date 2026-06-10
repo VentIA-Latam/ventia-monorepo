@@ -308,15 +308,17 @@ class Api::V1::CampaignsController < Api::V1::BaseController
   end
 
   # Stats per-campaign con una sola query SQL para evitar N+1 en el index.
+  # NOTE: Rails 7+ devuelve el nombre del enum (string), NO el integer raw, en
+  # `.group(:enum_col).count`. Indexamos por nombre y no por valor numérico.
   def batch_recipient_stats(campaign_ids)
     return {} if campaign_ids.empty?
 
     raw = CampaignRecipient.where(campaign_id: campaign_ids).group(:campaign_id, :status).count
     result = {}
-    raw.each do |(cid, status_int), count|
+    raw.each do |(cid, status_name), count|
       result[cid] ||= empty_stats_hash
-      key = CampaignRecipient.statuses.key(status_int)&.to_sym
-      result[cid][key] = count if key
+      key = status_name.to_sym
+      result[cid][key] = count if result[cid].key?(key)
     end
     result
   end
@@ -328,7 +330,7 @@ class Api::V1::CampaignsController < Api::V1::BaseController
   def compute_stats(campaign)
     counts = campaign.campaign_recipients.group(:status).count
     %i[pending queued sent delivered read failed omitted].each_with_object({}) do |key, acc|
-      acc[key] = counts[CampaignRecipient.statuses[key.to_s]].to_i
+      acc[key] = counts[key.to_s].to_i
     end
   end
 
