@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import dynamic from "next/dynamic";
 import {
   Dialog,
   DialogContent,
@@ -23,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Search, Plus, ArrowLeft, Pencil, Trash2, MessageSquareText } from "lucide-react";
+import { Search, Plus, ArrowLeft, Pencil, Trash2, MessageSquareText, Smile } from "lucide-react";
 import {
   getCannedResponses,
   createCannedResponse,
@@ -33,6 +34,8 @@ import {
 import { ClientApiError } from "@/lib/api-client/client";
 import { useToast } from "@/hooks/use-toast";
 import type { CannedResponse } from "@/lib/types/messaging";
+
+const EmojiPicker = dynamic(() => import("emoji-picker-react"), { ssr: false });
 
 interface CannedResponsesManagerDialogProps {
   open: boolean;
@@ -58,6 +61,8 @@ export function CannedResponsesManagerDialog({
   const [editing, setEditing] = useState<CannedResponse | null>(null);
   const [shortCode, setShortCode] = useState("");
   const [content, setContent] = useState("");
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const contentRef = useRef<HTMLTextAreaElement>(null);
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<CannedResponse | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -97,6 +102,7 @@ export function CannedResponsesManagerDialog({
     setEditing(null);
     setShortCode("");
     setContent("");
+    setEmojiOpen(false);
     setView("form");
   }, []);
 
@@ -104,8 +110,31 @@ export function CannedResponsesManagerDialog({
     setEditing(item);
     setShortCode(item.short_code);
     setContent(item.content);
+    setEmojiOpen(false);
     setView("form");
   }, []);
+
+  // Insert an emoji at the current caret position within the content textarea.
+  const insertEmoji = useCallback(
+    (emojiData: { emoji: string }) => {
+      const ta = contentRef.current;
+      const emoji = emojiData.emoji;
+      if (!ta) {
+        setContent((prev) => prev + emoji);
+      } else {
+        const start = ta.selectionStart ?? ta.value.length;
+        const end = ta.selectionEnd ?? ta.value.length;
+        setContent((prev) => prev.slice(0, start) + emoji + prev.slice(end));
+        requestAnimationFrame(() => {
+          const pos = start + emoji.length;
+          ta.focus();
+          ta.setSelectionRange(pos, pos);
+        });
+      }
+      setEmojiOpen(false);
+    },
+    []
+  );
 
   const handleSave = useCallback(async () => {
     const code = shortCode.trim();
@@ -263,6 +292,7 @@ export function CannedResponsesManagerDialog({
             <div className="space-y-1.5">
               <Label htmlFor="cr-short-code">Atajo</Label>
               <Input
+                autoFocus
                 id="cr-short-code"
                 placeholder="saludo"
                 value={shortCode}
@@ -275,14 +305,27 @@ export function CannedResponsesManagerDialog({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="cr-content">Contenido</Label>
-              <Textarea
-                id="cr-content"
-                placeholder="Escribe el texto de la respuesta..."
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                rows={5}
-                className="text-sm resize-none"
-              />
+              <div className="relative">
+                <Textarea
+                  ref={contentRef}
+                  id="cr-content"
+                  placeholder="Escribe el texto de la respuesta..."
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  rows={5}
+                  className="text-sm resize-none pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute bottom-2 right-2 h-7 w-7 text-muted-foreground hover:text-foreground"
+                  title="Insertar emoji"
+                  onClick={() => setEmojiOpen((v) => !v)}
+                >
+                  <Smile className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             <div className="flex justify-end gap-2 pt-1">
               <Button variant="outline" onClick={() => setView("list")} disabled={saving}>
@@ -293,6 +336,21 @@ export function CannedResponsesManagerDialog({
               </Button>
             </div>
           </div>
+        )}
+
+        {/* Emoji picker — rendered inside the Dialog subtree (not a portal) so its
+            internal scroll isn't blocked by the Dialog's scroll-lock. */}
+        {emojiOpen && view === "form" && (
+          <>
+            <div
+              className="absolute inset-0 z-40"
+              onClick={() => setEmojiOpen(false)}
+              aria-hidden
+            />
+            <div className="absolute bottom-4 right-4 z-50 shadow-lg rounded-lg overflow-hidden">
+              <EmojiPicker onEmojiClick={insertEmoji} width={300} height={360} />
+            </div>
+          </>
         )}
       </DialogContent>
 
