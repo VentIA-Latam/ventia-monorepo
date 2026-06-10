@@ -103,6 +103,9 @@ Rails.application.routes.draw do
           post :import
           get :find_by_phone
         end
+
+        resources :notes, controller: 'contacts/notes',
+                          only: [:index, :create, :update, :destroy]
       end
 
       # Labels
@@ -114,7 +117,13 @@ Rails.application.routes.draw do
           post :trigger
           post :pause
           post :resume
+          post 'audience/csv',    to: 'campaigns#upload_csv'
+          post 'audience/labels', to: 'campaigns#set_labels_audience'
+          get  :preview
+          post 'retry-failed',    to: 'campaigns#retry_failed'
+          get  :recipients
         end
+        delete 'recipients/:recipient_id', to: 'campaigns#destroy_recipient'
       end
 
       # Automation Rules

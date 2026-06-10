@@ -13,7 +13,13 @@ from app.schemas.messaging import (
     AccountResponse,
     AssignConversationRequest,
     CannedResponsesListResponse,
+    ContactDetailResponse,
     ContactsListResponse,
+    ContactUpdate,
+    NoteCreate,
+    NoteResponse,
+    NotesListResponse,
+    NoteUpdate,
     ConversationCountsResponse,
     ConversationDetailResponse,
     ConversationLabelsListResponse,
@@ -29,6 +35,17 @@ from app.schemas.messaging import (
     NotificationSettingsResponse,
     NotificationsResponse,
     PushTokenRequest,
+    CampaignAudienceResponse,
+    CampaignCreate,
+    CampaignCsvUploadResponse,
+    CampaignDetailResponse,
+    CampaignLabelsAudienceRequest,
+    CampaignPreviewResponse,
+    CampaignRecipientsResponse,
+    CampaignRetryResponse,
+    CampaignsListResponse,
+    CampaignTriggerRequest,
+    CampaignUpdate,
     SendByPhoneRequest,
     SendByPhoneResponse,
     SendMessageRequest,
@@ -1404,6 +1421,132 @@ async def list_contacts(
     return result
 
 
+@router.patch(
+    "/contacts/{contact_id}",
+    response_model=ContactDetailResponse,
+    summary="Update a contact",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def update_contact(
+    contact_id: int,
+    payload: ContactUpdate,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("PATCH", "/messaging/*")),
+):
+    """Update contact fields (name, email, phone_number). Only fields present
+    in the payload are sent to Rails."""
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    # Strip unset fields so Rails only updates what the user actually sent.
+    # mode="json" serializa date/datetime a ISO strings (httpx no maneja date
+    # nativamente al encodear JSON).
+    body = payload.model_dump(exclude_unset=True, mode="json")
+    result = await messaging_service.update_contact(tenant_id, contact_id, body)
+
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+# --- Contact notes (Module 7) ---
+
+@router.get(
+    "/contacts/{contact_id}/notes",
+    response_model=NotesListResponse,
+    summary="List notes for a contact",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def list_contact_notes(
+    contact_id: int,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    """List notes attached to a contact, most recent first."""
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.get_contact_notes(tenant_id, contact_id)
+
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.post(
+    "/contacts/{contact_id}/notes",
+    response_model=NoteResponse,
+    status_code=201,
+    summary="Create a note for a contact",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def create_contact_note(
+    contact_id: int,
+    payload: NoteCreate,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    """Create a note. The author is the current user (forwarded via X-User-Id)."""
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.create_contact_note(tenant_id, contact_id, payload.content)
+
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.patch(
+    "/contacts/{contact_id}/notes/{note_id}",
+    response_model=NoteResponse,
+    summary="Update a note's content",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def update_contact_note(
+    contact_id: int,
+    note_id: int,
+    payload: NoteUpdate,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("PATCH", "/messaging/*")),
+):
+    """Update an existing note's content."""
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.update_contact_note(
+        tenant_id, contact_id, note_id, payload.content
+    )
+
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.delete(
+    "/contacts/{contact_id}/notes/{note_id}",
+    response_model=SuccessMessageResponse,
+    summary="Delete a note",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def delete_contact_note(
+    contact_id: int,
+    note_id: int,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("DELETE", "/messaging/*")),
+):
+    """Delete a note from a contact."""
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.delete_contact_note(tenant_id, contact_id, note_id)
+
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
 # --- Canned Responses ---
 
 @router.get(
@@ -2055,6 +2198,301 @@ async def update_notification_settings(
     tenant_id = _resolve_tenant_id(current_user, tenant_id)
     result = await messaging_service.update_notification_settings(
         tenant_id, str(current_user.id), payload.model_dump(exclude_none=True)
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+# --- Campaigns (Módulo 6) ---
+
+CAMPAIGN_TAGS = ["messaging", "campaigns"]
+CAMPAIGN_ERROR_RESPONSES = {
+    404: {"model": MessagingError, "description": "Campaign not found in tenant"},
+    422: {"model": MessagingError, "description": "Validation error or invalid state transition"},
+    503: {"model": MessagingError, "description": "Messaging service unavailable"},
+}
+
+
+@router.get(
+    "/campaigns",
+    response_model=CampaignsListResponse,
+    summary="List campaigns with stats",
+    description="Lista todas las campañas del tenant ordenadas por created_at DESC. "
+                "Incluye stats agregadas per-campaña en una sola query (sin N+1).",
+    tags=CAMPAIGN_TAGS,
+    responses={503: CAMPAIGN_ERROR_RESPONSES[503]},
+)
+async def list_campaigns(
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.list_campaigns(tenant_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.post(
+    "/campaigns",
+    response_model=CampaignDetailResponse,
+    status_code=201,
+    summary="Create campaign (status :draft)",
+    description="Crea una campaña en estado :draft. Después: configurar audiencia "
+                "(CSV o labels), variables del template, y dispararla via /trigger.",
+    tags=CAMPAIGN_TAGS,
+    responses={422: CAMPAIGN_ERROR_RESPONSES[422], 503: CAMPAIGN_ERROR_RESPONSES[503]},
+)
+async def create_campaign(
+    payload: CampaignCreate,
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.create_campaign(
+        tenant_id, payload.model_dump(exclude_none=True)
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.get(
+    "/campaigns/{campaign_id}",
+    response_model=CampaignDetailResponse,
+    summary="Get campaign detail with stats",
+    description="Detalle de campaña con stats per-status (pending/queued/sent/delivered/read/failed/omitted).",
+    tags=CAMPAIGN_TAGS,
+    responses={404: CAMPAIGN_ERROR_RESPONSES[404], 503: CAMPAIGN_ERROR_RESPONSES[503]},
+)
+async def get_campaign(
+    campaign_id: int,
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.get_campaign(tenant_id, campaign_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.patch(
+    "/campaigns/{campaign_id}",
+    response_model=CampaignDetailResponse,
+    summary="Update campaign (only in :draft)",
+    description="Actualiza title/template_params/header_media_url/enabled. Solo permitido en :draft.",
+    tags=CAMPAIGN_TAGS,
+    responses=CAMPAIGN_ERROR_RESPONSES,
+)
+async def update_campaign(
+    campaign_id: int,
+    payload: CampaignUpdate,
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("PATCH", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.update_campaign(
+        tenant_id, campaign_id, payload.model_dump(exclude_none=True)
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.delete(
+    "/campaigns/{campaign_id}",
+    summary="Delete campaign",
+    description="Borra campaña y todos sus campaign_recipients (cascade).",
+    tags=CAMPAIGN_TAGS,
+    responses={404: CAMPAIGN_ERROR_RESPONSES[404], 503: CAMPAIGN_ERROR_RESPONSES[503]},
+)
+async def delete_campaign(
+    campaign_id: int,
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("DELETE", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.delete_campaign(tenant_id, campaign_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.post(
+    "/campaigns/{campaign_id}/audience/csv",
+    response_model=CampaignCsvUploadResponse,
+    status_code=201,
+    summary="Upload CSV audience (multipart, max 5MB)",
+    description="Sube CSV con columna phone obligatoria + hasta 10 columnas variables. "
+                "Reemplaza recipients previos (solo en :draft).",
+    tags=CAMPAIGN_TAGS,
+    responses=CAMPAIGN_ERROR_RESPONSES,
+)
+async def upload_campaign_csv(
+    campaign_id: int,
+    file: UploadFile = File(..., description="CSV audiencia (max 5MB, content-type text/csv)"),
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    """Sube CSV de audiencia para una campaña en :draft.
+
+    Validaciones a nivel proxy (antes de cargar a memoria):
+    - Tamaño ≤ 5MB (Rails también valida; doble defensa evita OOM si Rails responde tarde)
+    - content_type debe ser text/csv o application/vnd.ms-excel
+    """
+    # Validar tamaño antes de await file.read() (que carga TODO a memoria)
+    max_bytes = 5 * 1024 * 1024
+    if file.size is not None and file.size > max_bytes:
+        raise HTTPException(
+            status_code=422,
+            detail=f"CSV file too large: {file.size} bytes (max {max_bytes})"
+        )
+    accepted_types = {"text/csv", "application/vnd.ms-excel", "application/octet-stream"}
+    if file.content_type and file.content_type not in accepted_types:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid content_type '{file.content_type}'. Expected: text/csv"
+        )
+
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.upload_campaign_csv(tenant_id, campaign_id, file)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.post(
+    "/campaigns/{campaign_id}/audience/labels",
+    response_model=CampaignAudienceResponse,
+    summary="Set audience by labels (snapshot)",
+    description="Snapshot de contactos con al menos una conversation etiquetada con los "
+                "label_ids. Excluye contactos sin phone. Reemplaza audiencia previa (solo :draft).",
+    tags=CAMPAIGN_TAGS,
+    responses=CAMPAIGN_ERROR_RESPONSES,
+)
+async def set_campaign_labels_audience(
+    campaign_id: int,
+    payload: CampaignLabelsAudienceRequest,
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.set_campaign_labels_audience(
+        tenant_id, campaign_id, payload.label_ids
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.get(
+    "/campaigns/{campaign_id}/preview",
+    response_model=CampaignPreviewResponse,
+    summary="Preview rendered template for sample recipients",
+    description="Renderiza el template con datos reales para 3 recipients sample. "
+                "También devuelve hasta 3 ejemplos de recipients que serían omitidos por falta de attr.",
+    tags=CAMPAIGN_TAGS,
+    responses={404: CAMPAIGN_ERROR_RESPONSES[404], 503: CAMPAIGN_ERROR_RESPONSES[503]},
+)
+async def preview_campaign(
+    campaign_id: int,
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.preview_campaign(tenant_id, campaign_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.post(
+    "/campaigns/{campaign_id}/trigger",
+    response_model=CampaignDetailResponse,
+    summary="Trigger campaign (now or scheduled)",
+    description="Si scheduled_at en futuro → marca :active, cron lo recoge. Si nil/pasado → "
+                "marca :active y encola TriggerJob inmediatamente. Solo permitido en :draft.",
+    tags=CAMPAIGN_TAGS,
+    responses=CAMPAIGN_ERROR_RESPONSES,
+)
+async def trigger_campaign(
+    campaign_id: int,
+    payload: CampaignTriggerRequest = CampaignTriggerRequest(),
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.trigger_campaign(tenant_id, campaign_id, payload.scheduled_at)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.post(
+    "/campaigns/{campaign_id}/retry-failed",
+    response_model=CampaignRetryResponse,
+    summary="Retry failed recipients",
+    description="Resetea recipients en status :failed a :pending y encola TriggerJob de nuevo. "
+                "Solo permitido en :completed. Recipients :omitted NO se reintentan.",
+    tags=CAMPAIGN_TAGS,
+    responses=CAMPAIGN_ERROR_RESPONSES,
+)
+async def retry_failed_campaign(
+    campaign_id: int,
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("POST", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.retry_failed_campaign(tenant_id, campaign_id)
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.get(
+    "/campaigns/{campaign_id}/recipients",
+    response_model=CampaignRecipientsResponse,
+    summary="List campaign recipients (paginated, filterable)",
+    description="Lista paginada de recipients. Filtros: status (CSV: 'failed,omitted'), search (phone o contact name).",
+    tags=CAMPAIGN_TAGS,
+    responses={404: CAMPAIGN_ERROR_RESPONSES[404], 503: CAMPAIGN_ERROR_RESPONSES[503]},
+)
+async def list_campaign_recipients(
+    campaign_id: int,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(25, ge=1, le=100),
+    status: str | None = Query(None, description="CSV de status: 'failed' o 'failed,omitted'"),
+    search: str | None = Query(None, description="Match contra phone o contact name"),
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.list_campaign_recipients(
+        tenant_id, campaign_id, page, per_page, status, search
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    return result
+
+
+@router.delete(
+    "/campaigns/{campaign_id}/recipients/{recipient_id}",
+    summary="Exclude single recipient",
+    description="Borra un recipient antes de trigger (solo en :draft). Decrementa recipients_count.",
+    tags=CAMPAIGN_TAGS,
+    responses=CAMPAIGN_ERROR_RESPONSES,
+)
+async def delete_campaign_recipient(
+    campaign_id: int,
+    recipient_id: int,
+    tenant_id: int | None = Query(None),
+    current_user: User = Depends(require_permission_dual("DELETE", "/messaging/*")),
+):
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    result = await messaging_service.delete_campaign_recipient(
+        tenant_id, campaign_id, recipient_id
     )
     if result is None:
         raise HTTPException(status_code=503, detail="Messaging service unavailable")

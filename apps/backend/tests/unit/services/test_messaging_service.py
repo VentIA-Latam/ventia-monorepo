@@ -114,3 +114,104 @@ class TestFindContactByPhone:
             )
 
         assert result is None
+
+
+@pytest.mark.asyncio
+class TestUpdateContact:
+    """Proxy a PATCH /api/v1/contacts/:id (Module 7 — contact edit)."""
+
+    async def test_forwards_payload_wrapped_in_contact(self):
+        service = MessagingService()
+        rails_payload = {"success": True, "data": {"id": 42, "name": "Renzo"}}
+        with patch.object(service, "_request", new=AsyncMock(return_value=rails_payload)) as mock_req:
+            result = await service.update_contact(
+                tenant_id=10, contact_id=42, payload={"name": "Renzo", "email": "r@v.com"}
+            )
+
+        assert result == rails_payload
+        mock_req.assert_awaited_once_with(
+            "PATCH",
+            "/api/v1/contacts/42",
+            10,
+            json_data={"contact": {"name": "Renzo", "email": "r@v.com"}},
+        )
+
+    async def test_returns_none_on_request_failure(self):
+        service = MessagingService()
+        with patch.object(service, "_request", new=AsyncMock(return_value=None)):
+            result = await service.update_contact(tenant_id=10, contact_id=42, payload={})
+        assert result is None
+
+    async def test_forwards_birthdate_iso_string(self):
+        service = MessagingService()
+        rails_payload = {
+            "success": True,
+            "data": {"id": 42, "birthdate": "1995-03-12"},
+        }
+        with patch.object(service, "_request", new=AsyncMock(return_value=rails_payload)) as mock_req:
+            result = await service.update_contact(
+                tenant_id=10, contact_id=42, payload={"birthdate": "1995-03-12"}
+            )
+
+        assert result == rails_payload
+        mock_req.assert_awaited_once_with(
+            "PATCH",
+            "/api/v1/contacts/42",
+            10,
+            json_data={"contact": {"birthdate": "1995-03-12"}},
+        )
+
+
+@pytest.mark.asyncio
+class TestContactNotes:
+    """Proxy a /api/v1/contacts/:contact_id/notes (Module 7)."""
+
+    async def test_get_notes_forwards_get(self):
+        service = MessagingService()
+        rails_payload = {"success": True, "data": [{"id": 1, "content": "Cliente VIP"}]}
+        with patch.object(service, "_request", new=AsyncMock(return_value=rails_payload)) as mock_req:
+            result = await service.get_contact_notes(tenant_id=10, contact_id=42)
+
+        assert result == rails_payload
+        mock_req.assert_awaited_once_with("GET", "/api/v1/contacts/42/notes", 10)
+
+    async def test_create_note_wraps_content_in_note(self):
+        service = MessagingService()
+        rails_payload = {"success": True, "data": {"id": 5, "content": "Nueva"}}
+        with patch.object(service, "_request", new=AsyncMock(return_value=rails_payload)) as mock_req:
+            result = await service.create_contact_note(
+                tenant_id=10, contact_id=42, content="Nueva"
+            )
+
+        assert result == rails_payload
+        mock_req.assert_awaited_once_with(
+            "POST",
+            "/api/v1/contacts/42/notes",
+            10,
+            json_data={"note": {"content": "Nueva"}},
+        )
+
+    async def test_update_note_wraps_content_in_note(self):
+        service = MessagingService()
+        rails_payload = {"success": True, "data": {"id": 5, "content": "Editada"}}
+        with patch.object(service, "_request", new=AsyncMock(return_value=rails_payload)) as mock_req:
+            result = await service.update_contact_note(
+                tenant_id=10, contact_id=42, note_id=5, content="Editada"
+            )
+
+        assert result == rails_payload
+        mock_req.assert_awaited_once_with(
+            "PATCH",
+            "/api/v1/contacts/42/notes/5",
+            10,
+            json_data={"note": {"content": "Editada"}},
+        )
+
+    async def test_delete_note_uses_delete_method(self):
+        service = MessagingService()
+        rails_payload = {"success": True}
+        with patch.object(service, "_request", new=AsyncMock(return_value=rails_payload)) as mock_req:
+            result = await service.delete_contact_note(tenant_id=10, contact_id=42, note_id=5)
+
+        assert result == rails_payload
+        mock_req.assert_awaited_once_with("DELETE", "/api/v1/contacts/42/notes/5", 10)

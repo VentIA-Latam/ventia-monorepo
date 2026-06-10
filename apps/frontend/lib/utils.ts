@@ -49,8 +49,10 @@ export function formatDate(isoDate: string, timezone: string = 'America/Lima'): 
     return `${day}/${month}/${year}`;
   }
 
-  // Timestamps (e.g. "2026-02-06 00:34:06") → convert from UTC to target timezone
-  const utcDate = new Date(isoDate + 'Z');
+  // Timestamps (e.g. "2026-02-06 00:34:06") → convert from UTC to target timezone.
+  // Algunas APIs ya incluyen TZ ("...Z" o "...+00:00"); evitar duplicarla.
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(isoDate);
+  const utcDate = new Date(hasTimezone ? isoDate : isoDate + 'Z');
   const localDate = new Date(
     utcDate.toLocaleString('en-US', { timeZone: timezone })
   );
@@ -68,7 +70,11 @@ export function formatDate(isoDate: string, timezone: string = 'America/Lima'): 
  * @returns String formateado "15/01/2024 14:30"
  */
 export function formatDateTime(isoDate: string, timezone: string = 'America/Lima'): string {
-  const utcDate = new Date(isoDate + 'Z');
+  // Algunas APIs devuelven naive ISO ("2026-01-15T14:30:00") y otras incluyen TZ
+  // ("...Z" o "...+00:00"). Si no hay TZ, asumimos UTC; si ya viene, no la duplicamos
+  // (añadir 'Z' a un string con offset produce Invalid Date → NaN en la salida).
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(isoDate);
+  const utcDate = new Date(hasTimezone ? isoDate : isoDate + 'Z');
   const localDate = new Date(
     utcDate.toLocaleString('en-US', { timeZone: timezone })
   );

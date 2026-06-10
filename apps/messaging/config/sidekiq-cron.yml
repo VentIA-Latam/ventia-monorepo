@@ -1,0 +1,8 @@
+# Sidekiq Cron schedule. Loaded by config/initializers/sidekiq.rb on server boot.
+# Crontab syntax: validar en https://crontab.guru/
+
+trigger_scheduled_campaigns:
+  cron: '*/5 * * * *'                     # Cada 5 minutos
+  class: 'Campaigns::TriggerScheduledJob'
+  queue: scheduled
+  description: 'Recoge campañas con scheduled_at vencido y las encola via TriggerJob'

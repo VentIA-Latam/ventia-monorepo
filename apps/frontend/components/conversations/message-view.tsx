@@ -801,7 +801,12 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
         {/* 3-dot menu — WhatsApp style */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 text-muted-foreground">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0 h-8 w-8 text-muted-foreground"
+              aria-label="Más opciones del chat"
+            >
               <MoreVertical className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>

@@ -26,5 +26,8 @@ Rails.application.config.after_initialize do
   # FCM Push Notifications - sends push to offline agents
   Wisper.subscribe(FcmListener.instance)
 
-  Rails.logger.info "[Wisper] Event listeners registered successfully (7 listeners)"
+  # Campaign recipients - sync Message.status (from Meta webhooks) to CampaignRecipient
+  Wisper.subscribe(CampaignRecipientStatusListener.instance)
+
+  Rails.logger.info "[Wisper] Event listeners registered successfully (8 listeners)"
 end
