@@ -133,6 +133,17 @@ class Conversation < ApplicationRecord
     Conversations::MessageWindowService.new(self).can_reply?
   end
 
+  # Activa/desactiva el agente IA y sincroniza la etiqueta de sistema `soporte-humano`.
+  # IA off → añade la etiqueta (pasa a soporte humano); IA on → la quita. Fuente única
+  # de verdad para esta transición, usada por Automation::ActionService (acción
+  # set_ai_agent). El ConversationLabel se destruye directamente para disparar
+  # after_destroy_commit (activity message + broadcast en tiempo real), igual que en
+  # ConversationsController#sync_soporte_humano_label.
+  def set_ai_agent!(enabled)
+    update!(ai_agent_enabled: ActiveModel::Type::Boolean.new.cast(enabled))
+    sync_soporte_humano_label!
+  end
+
   def webhook_data
     {
       id: id,
@@ -153,6 +164,21 @@ class Conversation < ApplicationRecord
   end
 
   private
+
+  def sync_soporte_humano_label!
+    if ai_agent_enabled
+      label = account.labels.find_by(title: 'soporte-humano')
+      join = label && conversation_labels.find_by(label_id: label.id)
+      join&.destroy!
+    else
+      label = Label.find_or_create_by!(account_id: account_id, title: 'soporte-humano') do |l|
+        l.color = '#EF4444'
+        l.system = true
+        l.show_on_sidebar = true
+      end
+      labels << label unless labels.exists?(label.id)
+    end
+  end
 
   def validate_temperature_key
     return if temperature.blank?

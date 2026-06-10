@@ -19,7 +19,6 @@ import { ArrowLeft, ArrowDown, MessageSquare, Loader2, Bot, AlertTriangle, MoreV
 import { MessageBubble } from "./message-bubble";
 import { MessageComposer } from "./message-composer";
 import { TemplatePicker } from "./template-picker";
-import { CannedResponsesManagerDialog } from "./canned-responses-manager-dialog";
 import { useMessagingEvent, useMessagingReconnect } from "./messaging-provider";
 import { getMessages, sendMessage, updateConversation, markConversationRead } from "@/lib/api-client/messaging";
 import type { Conversation, Message, MessageType, MessageStatus, MessageContentAttributes, MessageAdditionalAttributes, AttachmentBrief, ContactBrief, AgentBrief, QuotedMessageSnapshot } from "@/lib/types/messaging";
@@ -97,7 +96,7 @@ interface MessageViewProps {
 export const MessageView = memo(function MessageView({ conversation, tenantId, targetMessageId, targetNonce, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
   const lastEvent = useMessagingEvent();
   const reconnectedAt = useMessagingReconnect();
-  const { userDetails, isAdmin, isSuperAdmin } = useAuth();
+  const { userDetails } = useAuth();
   const { toast } = useToast();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -120,8 +119,6 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
   const contentRef = useRef<HTMLDivElement>(null);
   const scrollBehaviorRef = useRef<false | "instant" | "smooth">(false);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
-  const [showCannedManager, setShowCannedManager] = useState(false);
-  const canManageCannedResponses = isAdmin || isSuperAdmin;
   const [showActivityMessages, setShowActivityMessages] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [jumpHighlightId, setJumpHighlightId] = useState<string | null>(null);
@@ -551,11 +548,19 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
 
   // Send message
   const handleSend = useCallback(
-    async (content: string, file?: File) => {
+    async (content: string, file?: File, cannedResponseId?: number) => {
       if (!conversation) return;
 
       const inReplyTo = replyingTo?.source_id ?? null;
       const replyAttrs = inReplyTo ? { in_reply_to: inReplyTo } : undefined;
+      // Outgoing content_attributes: reply context + the canned response that armed this
+      // message (the backend runs its actions on send). Kept separate from the optimistic
+      // temp message, which only needs the reply context for its preview.
+      const sendAttrs = {
+        ...(inReplyTo ? { in_reply_to: inReplyTo } : {}),
+        ...(cannedResponseId ? { canned_response_id: cannedResponseId } : {}),
+      };
+      const hasSendAttrs = Object.keys(sendAttrs).length > 0;
 
       // Build temp attachment preview for optimistic UI
       const tempAttachments: AttachmentBrief[] = [];
@@ -598,7 +603,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
       try {
         const result = await sendMessage(
           conversation.id,
-          { content, ...(replyAttrs ? { content_attributes: replyAttrs } : {}) },
+          { content, ...(hasSendAttrs ? { content_attributes: sendAttrs } : {}) },
           file,
           tenantId
         );
@@ -997,20 +1002,7 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
             : undefined
         }
         tenantId={tenantId}
-        canManageCannedResponses={canManageCannedResponses}
-        onManageCannedResponses={
-          canManageCannedResponses ? () => setShowCannedManager(true) : undefined
-        }
       />
-
-      {/* Canned responses management (admin only) */}
-      {canManageCannedResponses && (
-        <CannedResponsesManagerDialog
-          open={showCannedManager}
-          onOpenChange={setShowCannedManager}
-          tenantId={tenantId}
-        />
-      )}
 
       {/* Template picker dialog */}
       {conversation.inbox?.channel_type === "Channel::Whatsapp" && conversation.inbox_id && (

@@ -33,6 +33,7 @@ const PAGE_META: Record<string, { title: string; breadcrumb: string[] }> = {
   '/invoices/new': { title: 'Nuevo Comprobante', breadcrumb: ['Facturación', 'Nuevo'] },
   '/invoices': { title: 'Facturación', breadcrumb: ['Facturación'] },
   '/orders': { title: 'Pedidos', breadcrumb: ['Pedidos'] },
+  '/canned-responses': { title: 'Respuestas rápidas', breadcrumb: ['Respuestas rápidas'] },
   '/tickets': { title: 'Tickets de Soporte', breadcrumb: ['Tickets'] },
   '/plan': { title: 'Mi Plan', breadcrumb: ['Plan & Facturación'] },
   '/settings/api-keys': { title: 'Credenciales (API Key)', breadcrumb: ['Configuración', 'API Keys'] },

@@ -167,6 +167,8 @@ export interface MessageContentAttributes {
   items?: Array<{ title: string; value: string }>;
   contacts?: unknown[];
   in_reply_to?: string;
+  // Respuesta rápida que originó el mensaje; el backend dispara sus acciones al enviar.
+  canned_response_id?: number;
   quoted?: QuotedMessageSnapshot;
   is_unavailable?: boolean;
   unavailable_reason?: string;
@@ -219,10 +221,25 @@ export interface Inbox {
 
 // --- Canned Response ---
 
+// Acción asociada a una respuesta rápida; se ejecuta al enviar un mensaje originado
+// en ella. Esquema espejo del jsonb de Rails (Macro/AutomationRule/CannedResponse).
+export type CannedResponseActionName =
+  | "add_label"
+  | "remove_label"
+  | "set_ai_agent"
+  | "change_status"
+  | "resolve_conversation";
+
+export interface CannedResponseAction {
+  action_name: CannedResponseActionName;
+  action_params: Record<string, unknown>;
+}
+
 export interface CannedResponse {
   id: number;
   short_code: string;
   content: string;
+  actions: CannedResponseAction[];
 }
 
 // --- Team ---

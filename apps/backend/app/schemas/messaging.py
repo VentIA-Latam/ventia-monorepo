@@ -221,10 +221,16 @@ class InboxResponse(BaseModel):
     channel_type: Optional[str] = None
 
 
+class CannedResponseAction(BaseModel):
+    action_name: str = Field(..., description="Action to run when the response is sent (e.g. 'add_label', 'set_ai_agent')")
+    action_params: dict = Field(default_factory=dict, description="Parameters for the action (e.g. {'labels': [1, 2]} or {'enabled': false})")
+
+
 class CannedResponseResponse(BaseModel):
     id: int
     short_code: str
     content: str
+    actions: list[CannedResponseAction] = []
 
 
 class CannedResponsesListResponse(BaseModel):
@@ -240,11 +246,15 @@ class CannedResponseDetailResponse(BaseModel):
 class CannedResponseCreate(BaseModel):
     short_code: str = Field(..., description="Short code used to trigger the response (e.g. 'thanks')")
     content: str = Field(..., description="Message text inserted when the response is selected")
+    actions: list[CannedResponseAction] = Field(default_factory=list, description="Actions executed when a message originated from this response is sent")
 
 
 class CannedResponseUpdate(BaseModel):
     short_code: Optional[str] = Field(None, description="Updated short code")
     content: Optional[str] = Field(None, description="Updated message text")
+    # Optional (no default []) so an omitted field is not forwarded as an empty list
+    # that would wipe existing actions on a partial update.
+    actions: Optional[list[CannedResponseAction]] = Field(None, description="Updated actions list (replaces all actions when provided)")
 
 
 class TeamResponse(BaseModel):

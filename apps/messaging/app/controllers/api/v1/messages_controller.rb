@@ -143,6 +143,8 @@ class Api::V1::MessagesController < Api::V1::BaseController
         SendReplyJob.set(wait: 2.seconds).perform_later(message.id)
       end
 
+      trigger_canned_response_actions(message)
+
       render_success(message_json(message.reload), message: 'Message sent', status: :created)
     else
       render_error('Failed to send message', errors: message.errors.full_messages)
@@ -211,6 +213,24 @@ class Api::V1::MessagesController < Api::V1::BaseController
     permitted = params.require(:message).permit(:content, :content_type)
     permitted[:content_attributes] = extract_content_attributes
     permitted
+  end
+
+  # Si el mensaje saliente se originó en una respuesta rápida (canned response) con
+  # acciones asociadas, ejecutarlas al enviar (etiquetas, agente↔IA, estado). El id
+  # viaja dentro de content_attributes (ya persistido en el mensaje → auditoría). Se
+  # busca scoped al account => anti-IDOR (un id ajeno resuelve a nil = no-op).
+  # Automation::ActionService aísla errores (rescue + log), así que una acción que
+  # falle no rompe el envío del mensaje.
+  def trigger_canned_response_actions(message)
+    return unless message.outgoing?
+
+    cr_id = message.content_attributes['canned_response_id']
+    return if cr_id.blank?
+
+    canned_response = current_account.canned_responses.find_by(id: cr_id)
+    return if canned_response.nil? || canned_response.actions.blank?
+
+    Automation::ActionService.new(rule: canned_response, conversation: @conversation).perform
   end
 
   # Chatwoot pattern: extract content_attributes as a plain hash

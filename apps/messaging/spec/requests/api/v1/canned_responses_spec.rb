@@ -123,6 +123,41 @@ RSpec.describe 'Api::V1::CannedResponses', type: :request do
     end
   end
 
+  describe 'actions (admin)' do
+    let(:label) { create(:label, account: account) }
+
+    it 'persists actions on create and returns them' do
+      post '/api/v1/canned_responses',
+           params: { canned_response: { short_code: 'escala', content: 'Te paso con un humano',
+                                        actions: [{ action_name: 'set_ai_agent', action_params: { enabled: false } }] } }.to_json,
+           headers: headers_for(admin)
+
+      expect(response).to have_http_status(:created)
+      expect(response.parsed_body['data']['actions'].first['action_name']).to eq('set_ai_agent')
+      expect(account.canned_responses.find_by(short_code: 'escala').actions).to be_present
+    end
+
+    it 'updates actions (preserving nested params like label ids)' do
+      patch "/api/v1/canned_responses/#{canned_response.id}",
+            params: { canned_response: { actions: [{ action_name: 'add_label', action_params: { labels: [label.id] } }] } }.to_json,
+            headers: headers_for(admin)
+
+      expect(response).to have_http_status(:ok)
+      action = canned_response.reload.actions.first
+      expect(action['action_name']).to eq('add_label')
+      expect(action['action_params']['labels']).to eq([label.id])
+    end
+
+    it 'rejects an action outside the whitelist with 422' do
+      post '/api/v1/canned_responses',
+           params: { canned_response: { short_code: 'bad', content: 'x',
+                                        actions: [{ action_name: 'rm_rf', action_params: {} }] } }.to_json,
+           headers: headers_for(admin)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
+
   describe 'multi-tenant isolation (IDOR)' do
     let(:other_account) { create(:account, ventia_tenant_id: rand(100_000..999_999)) }
     let!(:other_canned_response) do

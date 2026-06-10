@@ -28,6 +28,8 @@ class Automation::ActionService
       change_status(action['action_params'])
     when 'resolve_conversation'
       @conversation.resolve!
+    when 'set_ai_agent'
+      set_ai_agent(action['action_params'])
     when 'send_webhook_event'
       send_webhook_event(action['action_params'])
     else
@@ -47,6 +49,13 @@ class Automation::ActionService
       content_type: :text,
       content: message_content
     )
+  end
+
+  def set_ai_agent(params)
+    enabled = ActiveModel::Type::Boolean.new.cast(params['enabled'])
+    return if enabled.nil?
+
+    @conversation.set_ai_agent!(enabled)
   end
 
   def add_label(params)

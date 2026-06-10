@@ -24,6 +24,7 @@ import {
   Clock,
   Ticket,
   Radio,
+  Zap,
 } from "lucide-react"
 import { usePathname, useSearchParams } from "next/navigation"
 import { useTheme } from "next-themes"
@@ -112,6 +113,11 @@ const dataPlatform = [
     title: "Recordatorios",
     url: "/dashboard/reminders",
     icon: Clock,
+  },
+  {
+    title: "Respuestas rápidas",
+    url: "/dashboard/canned-responses",
+    icon: Zap,
   },
 ]
 

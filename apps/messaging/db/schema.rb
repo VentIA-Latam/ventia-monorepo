@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_06_02_000002) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_10_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -146,20 +146,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_02_000002) do
     t.text "content", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "actions", default: [], null: false
     t.index ["account_id", "short_code"], name: "index_canned_responses_on_account_id_and_short_code", unique: true
-  end
-
-  create_table "channel_instagram", force: :cascade do |t|
-    t.string "instagram_id", null: false
-    t.string "username"
-    t.text "access_token", null: false
-    t.datetime "token_expires_at"
-    t.jsonb "provider_config", default: {}
-    t.bigint "account_id", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_channel_instagram_on_account_id"
-    t.index ["instagram_id"], name: "index_channel_instagram_on_instagram_id", unique: true
   end
 
   create_table "channel_whatsapp", force: :cascade do |t|
@@ -354,7 +342,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_02_000002) do
     t.bigint "account_id", null: false
     t.bigint "user_id", null: false
     t.integer "email_flags", default: 3, null: false
-    t.integer "push_flags", default: 7, null: false
+    t.integer "push_flags", default: 4, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id", "user_id"], name: "index_notification_settings_on_account_id_and_user_id", unique: true
@@ -447,7 +435,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_02_000002) do
   add_foreign_key "campaigns", "accounts"
   add_foreign_key "campaigns", "inboxes"
   add_foreign_key "canned_responses", "accounts"
-  add_foreign_key "channel_instagram", "accounts"
   add_foreign_key "channel_whatsapp", "accounts"
   add_foreign_key "contact_inboxes", "contacts"
   add_foreign_key "contact_inboxes", "inboxes"

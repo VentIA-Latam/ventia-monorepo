@@ -1,12 +1,55 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, Smile, Plus, Mic, X, FileText, Image as ImageIcon, Zap } from "lucide-react";
+import {
+  Send, Smile, Plus, Mic, X, FileText, Image as ImageIcon,
+  Zap, Tag, Bot, UserRound, CheckCircle2, CircleDot, type LucideIcon,
+} from "lucide-react";
 import dynamic from "next/dynamic";
-import type { Message } from "@/lib/types/messaging";
+import type { Message, CannedResponse, CannedResponseAction, Label } from "@/lib/types/messaging";
+import { getLabels } from "@/lib/api-client/messaging";
 import { QuotedMessagePreview } from "./quoted-message-preview";
 import { CannedResponsePicker, type CannedResponsePickerHandle } from "./canned-response-picker";
+
+const STATUS_LABELS: Record<string, string> = {
+  open: "Abierta",
+  pending: "Pendiente",
+  resolved: "Resuelta",
+  snoozed: "Pospuesta",
+};
+
+// Resolve label ids to names (falls back to a generic count if not loaded / missing).
+function labelText(params: Record<string, unknown>, verb: string, labelById: Map<number, string>): string {
+  const ids = Array.isArray(params.labels) ? (params.labels as unknown[]) : [];
+  const names = ids.map((id) => labelById.get(Number(id))).filter(Boolean) as string[];
+  if (names.length) return `${verb} ${names.join(", ")}`;
+  return ids.length > 1 ? `${verb} ${ids.length} etiquetas` : `${verb} etiqueta`;
+}
+
+// Human-readable summary (icon + text) of an action, for the "Al enviar:" chip.
+function describeAction(
+  action: CannedResponseAction,
+  labelById: Map<number, string>
+): { Icon: LucideIcon; text: string } | null {
+  const params = action.action_params ?? {};
+  switch (action.action_name) {
+    case "add_label":
+      return { Icon: Tag, text: labelText(params, "Agrega", labelById) };
+    case "remove_label":
+      return { Icon: Tag, text: labelText(params, "Quita", labelById) };
+    case "set_ai_agent":
+      return params.enabled
+        ? { Icon: Bot, text: "Pasar a IA" }
+        : { Icon: UserRound, text: "Pasar a soporte humano" };
+    case "change_status":
+      return { Icon: CircleDot, text: `Estado: ${STATUS_LABELS[String(params.status)] ?? params.status}` };
+    case "resolve_conversation":
+      return { Icon: CheckCircle2, text: "Resolver conversación" };
+    default:
+      return null;
+  }
+}
 
 const importAudioRecorder = () => import("./audio-recorder").then((mod) => ({ default: mod.AudioRecorder }));
 const AudioRecorder = dynamic(importAudioRecorder, {
@@ -38,20 +81,17 @@ function isMediaFile(file: File): boolean {
 }
 
 interface MessageComposerProps {
-  onSend: (content: string, file?: File) => void;
+  /** cannedResponseId is the "armed" response (if any) whose actions fire on send. */
+  onSend: (content: string, file?: File, cannedResponseId?: number) => void;
   disabled?: boolean;
   onOpenTemplates?: () => void;
   audioFormat?: "mp3" | "wav";
   replyingTo?: Message | null;
   onCancelReply?: () => void;
   tenantId?: number;
-  /** Whether the current user may create/edit/delete canned responses. */
-  canManageCannedResponses?: boolean;
-  /** Opens the canned-responses management dialog (admin only). */
-  onManageCannedResponses?: () => void;
 }
 
-export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat = "mp3", replyingTo, onCancelReply, tenantId, canManageCannedResponses = false, onManageCannedResponses }: MessageComposerProps) {
+export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat = "mp3", replyingTo, onCancelReply, tenantId }: MessageComposerProps) {
   const [content, setContent] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -59,7 +99,13 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat
   const [fileSizeError, setFileSizeError] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [cannedOpen, setCannedOpen] = useState(false);
-  const [cannedMode, setCannedMode] = useState<"trigger" | "button">("trigger");
+  // The canned response the current draft originated from. Its actions fire on send and
+  // are previewed in the "Al enviar:" chip; "last inserted wins" and it is cleared on
+  // send, on disarm, or when the draft is emptied.
+  const [armedResponse, setArmedResponse] = useState<CannedResponse | null>(null);
+  // Label catalog, fetched lazily the first time a response with a label action is armed,
+  // so the chip can show real label names without a fetch on every conversation.
+  const [labels, setLabels] = useState<Label[] | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cannedPickerRef = useRef<CannedResponsePickerHandle>(null);
@@ -67,6 +113,27 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat
   const closeCanned = useCallback(() => {
     setCannedOpen(false);
   }, []);
+
+  const labelById = useMemo(() => {
+    const map = new Map<number, string>();
+    (labels ?? []).forEach((l) => map.set(l.id, l.title));
+    return map;
+  }, [labels]);
+
+  // Lazy-load the label catalog the first time an armed response references labels.
+  useEffect(() => {
+    if (labels !== null) return;
+    const usesLabels = armedResponse?.actions?.some(
+      (a) => a.action_name === "add_label" || a.action_name === "remove_label"
+    );
+    if (!usesLabels) return;
+
+    let cancelled = false;
+    getLabels(tenantId)
+      .then((res) => { if (!cancelled) setLabels(res.data ?? []); })
+      .catch(() => { if (!cancelled) setLabels([]); }); // fall back to generic text; don't retry-loop
+    return () => { cancelled = true; };
+  }, [armedResponse, labels, tenantId]);
 
   // Clean up object URL on unmount or file change
   useEffect(() => {
@@ -82,22 +149,20 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat
     ta.style.height = Math.min(ta.scrollHeight, 200) + "px";
   }, []);
 
-  // Insert a selected canned response. In "trigger" mode the whole "/code" token
-  // is replaced; in "button" mode the text is appended to the current draft.
+  // Insert a selected canned response (always via the "/" trigger): the whole "/code"
+  // token is replaced by the response text, and the message is "armed" with the
+  // response id so its actions fire on send (last inserted wins).
   const insertCanned = useCallback(
-    (text: string) => {
-      setContent((prev) =>
-        cannedMode === "trigger" || !prev.trim()
-          ? text
-          : `${prev}${prev.endsWith(" ") ? "" : " "}${text}`
-      );
+    (response: CannedResponse) => {
+      setContent(response.content);
+      setArmedResponse(response);
       setCannedOpen(false);
       requestAnimationFrame(() => {
         textareaRef.current?.focus();
         adjustHeight();
       });
     },
-    [cannedMode, adjustHeight]
+    [adjustHeight]
   );
 
   const clearFile = useCallback(() => {
@@ -136,14 +201,15 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat
   const handleSend = useCallback(() => {
     const trimmed = content.trim();
     if (!trimmed && !selectedFile) return;
-    onSend(trimmed, selectedFile ?? undefined);
+    onSend(trimmed, selectedFile ?? undefined, armedResponse?.id);
     setContent("");
+    setArmedResponse(null);
     setCannedOpen(false);
     clearFile();
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
-  }, [content, selectedFile, onSend, clearFile]);
+  }, [content, selectedFile, armedResponse, onSend, clearFile]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -151,7 +217,7 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat
       // confirms a candidate) so we don't send a half-composed message.
       if (e.nativeEvent.isComposing) return;
       // While the "/" canned-response picker is open, let it consume navigation keys.
-      if (cannedOpen && cannedMode === "trigger" && cannedPickerRef.current?.handleKeyDown(e)) {
+      if (cannedOpen && cannedPickerRef.current?.handleKeyDown(e)) {
         e.preventDefault();
         return;
       }
@@ -163,7 +229,7 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat
         onCancelReply?.();
       }
     },
-    [handleSend, replyingTo, onCancelReply, cannedOpen, cannedMode]
+    [handleSend, replyingTo, onCancelReply, cannedOpen]
   );
 
   // Update draft text and detect the "/" trigger (draft is a single "/code" token).
@@ -172,29 +238,13 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat
       const value = e.target.value;
       setContent(value);
       adjustHeight();
+      // Emptying the draft clears the armed canned response (no orphan actions).
+      if (value.length === 0) setArmedResponse(null);
       const isTrigger = value.startsWith("/") && !/\s/.test(value);
-      if (isTrigger) {
-        setCannedMode("trigger");
-        setCannedOpen(true);
-      } else if (cannedMode === "trigger") {
-        setCannedOpen(false);
-      }
+      setCannedOpen(isTrigger);
     },
-    [adjustHeight, cannedMode]
+    [adjustHeight]
   );
-
-  const toggleCannedButton = useCallback(() => {
-    setCannedOpen((prev) => {
-      if (prev && cannedMode === "button") return false;
-      setCannedMode("button");
-      return true;
-    });
-  }, [cannedMode]);
-
-  const handleManageCanned = useCallback(() => {
-    setCannedOpen(false);
-    onManageCannedResponses?.();
-  }, [onManageCannedResponses]);
 
   // Focus the textarea when the user starts replying to a message (US-UX-002).
   useEffect(() => {
@@ -229,17 +279,14 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat
         </div>
       )}
 
-      {/* Canned responses picker ("/" trigger or button) */}
+      {/* Canned responses picker ("/" trigger) */}
       <CannedResponsePicker
         ref={cannedPickerRef}
         open={cannedOpen}
-        mode={cannedMode}
-        query={cannedMode === "trigger" ? content.slice(1) : ""}
+        query={content.startsWith("/") ? content.slice(1) : ""}
         tenantId={tenantId}
-        canManage={canManageCannedResponses}
         onSelect={insertCanned}
         onClose={closeCanned}
-        onManage={handleManageCanned}
       />
 
       {/* Quoted reply preview (US-UX-002) — above the input, dismissible */}
@@ -249,6 +296,39 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat
           message={replyingTo}
           onCancel={onCancelReply}
         />
+      )}
+
+      {/* Armed canned-response actions — what will run on send (dismissible to disarm) */}
+      {armedResponse && armedResponse.actions?.length > 0 && (
+        <div className="mb-2 flex items-center gap-2 rounded-lg border border-volt/30 bg-volt/5 px-3 py-1.5">
+          <Zap className="h-3.5 w-3.5 text-volt shrink-0" />
+          <span className="text-xs font-medium text-muted-foreground shrink-0">Al enviar:</span>
+          <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
+            {armedResponse.actions.map((action, i) => {
+              const d = describeAction(action, labelById);
+              if (!d) return null;
+              const Icon = d.Icon;
+              return (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-background px-2 py-0.5 text-[11px] text-foreground"
+                >
+                  <Icon className="h-3 w-3 text-volt shrink-0" />
+                  {d.text}
+                </span>
+              );
+            })}
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={() => setArmedResponse(null)}
+            title="Quitar acciones de esta respuesta"
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
       )}
 
       {/* File preview area */}
@@ -324,18 +404,6 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat
             onClick={() => fileInputRef.current?.click()}
           >
             <Plus className="h-5 w-5" />
-          </Button>
-
-          {/* Canned responses button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="shrink-0 h-10 w-10 rounded-full text-muted-foreground hover:text-foreground"
-            type="button"
-            onClick={toggleCannedButton}
-            title="Respuestas predefinidas"
-          >
-            <Zap className="h-5 w-5" />
           </Button>
 
           {/* Template button */}

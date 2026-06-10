@@ -1,7 +1,8 @@
 require 'rails_helper'
 
 RSpec.describe CannedResponse, type: :model do
-  let(:account) { create(:account) }
+  # Random tenant id to avoid colliding with persisted/seeded accounts (sequence starts low).
+  let(:account) { create(:account, ventia_tenant_id: rand(100_000..999_999)) }
 
   describe 'validations' do
     it 'requires a short_code' do
@@ -25,9 +26,45 @@ RSpec.describe CannedResponse, type: :model do
 
     it 'allows the same short_code in a different account' do
       account.canned_responses.create!(short_code: 'saludo', content: 'hola')
-      other = create(:account)
+      other = create(:account, ventia_tenant_id: rand(100_000..999_999))
       cr = other.canned_responses.build(short_code: 'saludo', content: 'hola')
       expect(cr).to be_valid
+    end
+  end
+
+  describe 'actions validation' do
+    it 'defaults to an empty array' do
+      cr = account.canned_responses.create!(short_code: 'saludo', content: 'hola')
+      expect(cr.actions).to eq([])
+    end
+
+    it 'accepts whitelisted actions with params' do
+      cr = account.canned_responses.build(
+        short_code: 'esc', content: 'hola',
+        actions: [{ 'action_name' => 'add_label', 'action_params' => { 'labels' => [1] } }]
+      )
+      expect(cr).to be_valid
+    end
+
+    it 'rejects an action name outside the whitelist' do
+      cr = account.canned_responses.build(
+        short_code: 'esc', content: 'hola',
+        actions: [{ 'action_name' => 'drop_table' }]
+      )
+      expect(cr).not_to be_valid
+      expect(cr.errors[:actions]).to be_present
+    end
+
+    it 'rejects actions that are not an array' do
+      cr = account.canned_responses.build(short_code: 'esc', content: 'hola', actions: 'nope')
+      expect(cr).not_to be_valid
+      expect(cr.errors[:actions]).to be_present
+    end
+
+    it 'rejects malformed action entries (missing action_name)' do
+      cr = account.canned_responses.build(short_code: 'esc', content: 'hola', actions: [{ 'foo' => 'bar' }])
+      expect(cr).not_to be_valid
+      expect(cr.errors[:actions]).to be_present
     end
   end
 

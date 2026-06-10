@@ -9,6 +9,7 @@ import type {
   Inbox,
   Label,
   CannedResponse,
+  CannedResponseAction,
   SendMessagePayload,
   SendTemplatePayload,
   WhatsAppConnectParams,
@@ -207,6 +208,7 @@ export async function getInboxes(
 export interface CannedResponsePayload {
   short_code: string;
   content: string;
+  actions?: CannedResponseAction[];
 }
 
 export async function getCannedResponses(
