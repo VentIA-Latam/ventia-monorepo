@@ -19,7 +19,8 @@ class CannedResponse < ApplicationRecord
   scope :search, lambda { |term|
     return all if term.blank?
 
-    where('short_code ILIKE :term OR content ILIKE :term', term: "%#{term}%")
-      .order(Arel.sql("CASE WHEN short_code ILIKE '#{sanitize_sql_like(term)}%' THEN 0 ELSE 1 END, short_code ASC"))
+    prefix = "#{sanitize_sql_like(term)}%"
+    where('short_code ILIKE :term OR content ILIKE :term', term: "%#{sanitize_sql_like(term)}%")
+      .order(Arel.sql(sanitize_sql_array(['CASE WHEN short_code ILIKE ? THEN 0 ELSE 1 END, short_code ASC', prefix])))
   }
 end

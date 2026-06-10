@@ -1431,17 +1431,17 @@ async def list_canned_responses(
       "success": true,
       "data": [
         {
-          "id": "cr_101",
+          "id": 101,
           "short_code": "thanks",
           "content": "Thank you for reaching out! We appreciate your interest."
         },
         {
-          "id": "cr_102",
+          "id": 102,
           "short_code": "help",
           "content": "How can we help you today? Please describe your inquiry in detail."
         },
         {
-          "id": "cr_103",
+          "id": 103,
           "short_code": "order_status",
           "content": "Your order is being processed. You'll receive a tracking number shortly."
         }

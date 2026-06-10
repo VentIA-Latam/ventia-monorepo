@@ -147,6 +147,9 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // Ignore keystrokes while an IME composition is active (e.g. Enter that
+      // confirms a candidate) so we don't send a half-composed message.
+      if (e.nativeEvent.isComposing) return;
       // While the "/" canned-response picker is open, let it consume navigation keys.
       if (cannedOpen && cannedMode === "trigger" && cannedPickerRef.current?.handleKeyDown(e)) {
         e.preventDefault();

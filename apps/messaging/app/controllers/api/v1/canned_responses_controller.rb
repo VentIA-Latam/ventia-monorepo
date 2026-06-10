@@ -22,7 +22,7 @@ module Api
         if @canned_response.save
           render_success(@canned_response, status: :created)
         else
-          render_error(@canned_response.errors.full_messages, status: :unprocessable_entity)
+          render_error(@canned_response.errors.full_messages.join(', '), status: :unprocessable_entity)
         end
       end
 
@@ -31,7 +31,7 @@ module Api
         if @canned_response.update(canned_response_params)
           render_success(@canned_response)
         else
-          render_error(@canned_response.errors.full_messages, status: :unprocessable_entity)
+          render_error(@canned_response.errors.full_messages.join(', '), status: :unprocessable_entity)
         end
       end
 

@@ -62,6 +62,10 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       },
     });
 
+    if (response.status === 204) {
+      return new NextResponse(null, { status: 204 });
+    }
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: "Failed to delete canned response" }));
       return NextResponse.json({ error: error.detail }, { status: response.status });

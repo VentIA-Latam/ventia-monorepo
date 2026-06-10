@@ -48,18 +48,15 @@ export const CannedResponsePicker = forwardRef<
   // Fetch the (account-scoped) catalog once each time the picker opens.
   useEffect(() => {
     if (!open) return;
-    let cancelled = false;
-    getCannedResponses({ tenantId })
-      .then((result) => {
-        if (!cancelled) setItems(result.data ?? []);
-      })
+    const controller = new AbortController();
+    getCannedResponses({ tenantId }, controller.signal)
+      .then((result) => setItems(result.data ?? []))
       .catch((err) => {
+        if (controller.signal.aborted) return;
         console.error("Error fetching canned responses:", err);
-        if (!cancelled) setItems([]);
+        setItems([]);
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => controller.abort();
   }, [open, tenantId]);
 
   const effectiveQuery = mode === "trigger" ? query : internalSearch;
@@ -123,9 +120,12 @@ export const CannedResponsePicker = forwardRef<
           case "Enter":
             if (filtered.length > 0) {
               select(filtered[activeIndex]);
-              return true;
+            } else {
+              // No matches: dismiss the picker instead of letting the composer
+              // send the literal "/command". A second Enter (picker closed) sends.
+              onClose();
             }
-            return false;
+            return true;
           case "Escape":
             onClose();
             return true;
@@ -140,6 +140,7 @@ export const CannedResponsePicker = forwardRef<
   // Local keyboard handling for "button" mode (focus is on the search input).
   const handleLocalKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      if (e.nativeEvent.isComposing) return;
       if (e.key === "ArrowDown") {
         e.preventDefault();
         move(1);
