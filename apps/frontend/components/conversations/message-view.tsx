@@ -19,6 +19,7 @@ import { ArrowLeft, ArrowDown, MessageSquare, Loader2, Bot, AlertTriangle, MoreV
 import { MessageBubble } from "./message-bubble";
 import { MessageComposer } from "./message-composer";
 import { TemplatePicker } from "./template-picker";
+import { CannedResponsesManagerDialog } from "./canned-responses-manager-dialog";
 import { useMessagingEvent, useMessagingReconnect } from "./messaging-provider";
 import { getMessages, sendMessage, updateConversation, markConversationRead } from "@/lib/api-client/messaging";
 import type { Conversation, Message, MessageType, MessageStatus, MessageContentAttributes, MessageAdditionalAttributes, AttachmentBrief, ContactBrief, AgentBrief, QuotedMessageSnapshot } from "@/lib/types/messaging";
@@ -96,7 +97,7 @@ interface MessageViewProps {
 export const MessageView = memo(function MessageView({ conversation, tenantId, targetMessageId, targetNonce, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
   const lastEvent = useMessagingEvent();
   const reconnectedAt = useMessagingReconnect();
-  const { userDetails } = useAuth();
+  const { userDetails, isAdmin, isSuperAdmin } = useAuth();
   const { toast } = useToast();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -119,6 +120,8 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
   const contentRef = useRef<HTMLDivElement>(null);
   const scrollBehaviorRef = useRef<false | "instant" | "smooth">(false);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [showCannedManager, setShowCannedManager] = useState(false);
+  const canManageCannedResponses = isAdmin || isSuperAdmin;
   const [showActivityMessages, setShowActivityMessages] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [jumpHighlightId, setJumpHighlightId] = useState<string | null>(null);
@@ -993,7 +996,21 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
             ? () => setShowTemplatePicker(true)
             : undefined
         }
+        tenantId={tenantId}
+        canManageCannedResponses={canManageCannedResponses}
+        onManageCannedResponses={
+          canManageCannedResponses ? () => setShowCannedManager(true) : undefined
+        }
       />
+
+      {/* Canned responses management (admin only) */}
+      {canManageCannedResponses && (
+        <CannedResponsesManagerDialog
+          open={showCannedManager}
+          onOpenChange={setShowCannedManager}
+          tenantId={tenantId}
+        />
+      )}
 
       {/* Template picker dialog */}
       {conversation.inbox?.channel_type === "Channel::Whatsapp" && conversation.inbox_id && (

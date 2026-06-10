@@ -2,10 +2,11 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, Smile, Plus, Mic, X, FileText, Image as ImageIcon } from "lucide-react";
+import { Send, Smile, Plus, Mic, X, FileText, Image as ImageIcon, Zap } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { Message } from "@/lib/types/messaging";
 import { QuotedMessagePreview } from "./quoted-message-preview";
+import { CannedResponsePicker, type CannedResponsePickerHandle } from "./canned-response-picker";
 
 const importAudioRecorder = () => import("./audio-recorder").then((mod) => ({ default: mod.AudioRecorder }));
 const AudioRecorder = dynamic(importAudioRecorder, {
@@ -43,17 +44,29 @@ interface MessageComposerProps {
   audioFormat?: "mp3" | "wav";
   replyingTo?: Message | null;
   onCancelReply?: () => void;
+  tenantId?: number;
+  /** Whether the current user may create/edit/delete canned responses. */
+  canManageCannedResponses?: boolean;
+  /** Opens the canned-responses management dialog (admin only). */
+  onManageCannedResponses?: () => void;
 }
 
-export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat = "mp3", replyingTo, onCancelReply }: MessageComposerProps) {
+export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat = "mp3", replyingTo, onCancelReply, tenantId, canManageCannedResponses = false, onManageCannedResponses }: MessageComposerProps) {
   const [content, setContent] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [fileSizeError, setFileSizeError] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [cannedOpen, setCannedOpen] = useState(false);
+  const [cannedMode, setCannedMode] = useState<"trigger" | "button">("trigger");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cannedPickerRef = useRef<CannedResponsePickerHandle>(null);
+
+  const closeCanned = useCallback(() => {
+    setCannedOpen(false);
+  }, []);
 
   // Clean up object URL on unmount or file change
   useEffect(() => {
@@ -68,6 +81,24 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat
     ta.style.height = "auto";
     ta.style.height = Math.min(ta.scrollHeight, 200) + "px";
   }, []);
+
+  // Insert a selected canned response. In "trigger" mode the whole "/code" token
+  // is replaced; in "button" mode the text is appended to the current draft.
+  const insertCanned = useCallback(
+    (text: string) => {
+      setContent((prev) =>
+        cannedMode === "trigger" || !prev.trim()
+          ? text
+          : `${prev}${prev.endsWith(" ") ? "" : " "}${text}`
+      );
+      setCannedOpen(false);
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+        adjustHeight();
+      });
+    },
+    [cannedMode, adjustHeight]
+  );
 
   const clearFile = useCallback(() => {
     setSelectedFile(null);
@@ -107,6 +138,7 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat
     if (!trimmed && !selectedFile) return;
     onSend(trimmed, selectedFile ?? undefined);
     setContent("");
+    setCannedOpen(false);
     clearFile();
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -115,6 +147,11 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // While the "/" canned-response picker is open, let it consume navigation keys.
+      if (cannedOpen && cannedMode === "trigger" && cannedPickerRef.current?.handleKeyDown(e)) {
+        e.preventDefault();
+        return;
+      }
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         handleSend();
@@ -123,8 +160,38 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat
         onCancelReply?.();
       }
     },
-    [handleSend, replyingTo, onCancelReply]
+    [handleSend, replyingTo, onCancelReply, cannedOpen, cannedMode]
   );
+
+  // Update draft text and detect the "/" trigger (draft is a single "/code" token).
+  const handleContentChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const value = e.target.value;
+      setContent(value);
+      adjustHeight();
+      const isTrigger = value.startsWith("/") && !/\s/.test(value);
+      if (isTrigger) {
+        setCannedMode("trigger");
+        setCannedOpen(true);
+      } else if (cannedMode === "trigger") {
+        setCannedOpen(false);
+      }
+    },
+    [adjustHeight, cannedMode]
+  );
+
+  const toggleCannedButton = useCallback(() => {
+    setCannedOpen((prev) => {
+      if (prev && cannedMode === "button") return false;
+      setCannedMode("button");
+      return true;
+    });
+  }, [cannedMode]);
+
+  const handleManageCanned = useCallback(() => {
+    setCannedOpen(false);
+    onManageCannedResponses?.();
+  }, [onManageCannedResponses]);
 
   // Focus the textarea when the user starts replying to a message (US-UX-002).
   useEffect(() => {
@@ -158,6 +225,19 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat
           />
         </div>
       )}
+
+      {/* Canned responses picker ("/" trigger or button) */}
+      <CannedResponsePicker
+        ref={cannedPickerRef}
+        open={cannedOpen}
+        mode={cannedMode}
+        query={cannedMode === "trigger" ? content.slice(1) : ""}
+        tenantId={tenantId}
+        canManage={canManageCannedResponses}
+        onSelect={insertCanned}
+        onClose={closeCanned}
+        onManage={handleManageCanned}
+      />
 
       {/* Quoted reply preview (US-UX-002) — above the input, dismissible */}
       {replyingTo && (
@@ -243,6 +323,18 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat
             <Plus className="h-5 w-5" />
           </Button>
 
+          {/* Canned responses button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 h-10 w-10 rounded-full text-muted-foreground hover:text-foreground"
+            type="button"
+            onClick={toggleCannedButton}
+            title="Respuestas predefinidas"
+          >
+            <Zap className="h-5 w-5" />
+          </Button>
+
           {/* Template button */}
           {onOpenTemplates && (
             <Button
@@ -261,10 +353,7 @@ export function MessageComposer({ onSend, disabled, onOpenTemplates, audioFormat
           <textarea
             ref={textareaRef}
             value={content}
-            onChange={(e) => {
-              setContent(e.target.value);
-              adjustHeight();
-            }}
+            onChange={handleContentChange}
             onKeyDown={handleKeyDown}
             placeholder="Escribe un mensaje"
             disabled={disabled}
