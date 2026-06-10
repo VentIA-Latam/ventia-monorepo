@@ -160,5 +160,4 @@ export const CONTACT_BUILT_IN_ATTRIBUTES: ContactBuiltInAttribute[] = [
   { label: "Nombre", path: "name" },
   { label: "Teléfono", path: "phone_number" },
   { label: "Email", path: "email" },
-  { label: "Identificador", path: "identifier" },
 ];

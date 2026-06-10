@@ -259,50 +259,18 @@ function AttributePicker({
   value: string;
   onChange: (path: string) => void;
 }) {
-  const builtIn = CONTACT_BUILT_IN_ATTRIBUTES.map((a) => a.path);
-  const isCustom = value.startsWith("custom_attributes.") || (!builtIn.includes(value) && value !== "");
-  const [mode, setMode] = useState<"built-in" | "custom">(isCustom ? "custom" : "built-in");
-  const [customKey, setCustomKey] = useState(
-    isCustom ? value.replace(/^custom_attributes\./, "") : ""
-  );
-
   return (
-    <div className="space-y-2">
-      <select
-        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-        value={mode === "custom" ? "__custom__" : value}
-        onChange={(e) => {
-          const v = e.target.value;
-          if (v === "__custom__") {
-            setMode("custom");
-            if (customKey) onChange(`custom_attributes.${customKey}`);
-            else onChange("");
-          } else {
-            setMode("built-in");
-            onChange(v);
-          }
-        }}
-      >
-        <option value="">Elegir atributo…</option>
-        {CONTACT_BUILT_IN_ATTRIBUTES.map((a) => (
-          <option key={a.path} value={a.path}>
-            {a.label}
-          </option>
-        ))}
-        <option value="__custom__">Atributo personalizado…</option>
-      </select>
-
-      {mode === "custom" && (
-        <Input
-          value={customKey}
-          onChange={(e) => {
-            const k = e.target.value;
-            setCustomKey(k);
-            onChange(k ? `custom_attributes.${k}` : "");
-          }}
-          placeholder="ej. order_id, discount_code"
-        />
-      )}
-    </div>
+    <select
+      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      <option value="">Elegir atributo…</option>
+      {CONTACT_BUILT_IN_ATTRIBUTES.map((a) => (
+        <option key={a.path} value={a.path}>
+          {a.label}
+        </option>
+      ))}
+    </select>
   );
 }
