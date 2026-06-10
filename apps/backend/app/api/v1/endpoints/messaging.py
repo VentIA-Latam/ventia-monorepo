@@ -1437,7 +1437,9 @@ async def update_contact(
     tenant_id = _resolve_tenant_id(current_user, tenant_id)
 
     # Strip unset fields so Rails only updates what the user actually sent.
-    body = payload.model_dump(exclude_unset=True)
+    # mode="json" serializa date/datetime a ISO strings (httpx no maneja date
+    # nativamente al encodear JSON).
+    body = payload.model_dump(exclude_unset=True, mode="json")
     result = await messaging_service.update_contact(tenant_id, contact_id, body)
 
     if result is None:

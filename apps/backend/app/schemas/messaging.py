@@ -2,7 +2,7 @@
 Pydantic schemas for the messaging service API.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -113,6 +113,7 @@ class ContactUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=255)
     email: Optional[str] = Field(None, max_length=255)
     phone_number: Optional[str] = Field(None, max_length=32)
+    birthdate: Optional[date] = None
 
 
 class ContactDetailResponse(BaseModel):

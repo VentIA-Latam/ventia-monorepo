@@ -31,7 +31,11 @@ import {
   Check,
   AlertTriangle,
   Pencil,
+  Cake,
 } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
+import { birthdayLabel } from "@/lib/utils/birthdate";
 import { TemperatureSelector } from "./temperature-selector";
 import { LabelManager } from "./label-manager";
 import { ContactEditForm, type ContactEditFormHandle } from "./contact-edit-form";
@@ -348,6 +352,19 @@ export const ContactInfoPanel = memo(function ContactInfoPanel({
             <div className="flex items-center gap-3 text-sm">
               <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
               <span className="truncate">{contact.email}</span>
+            </div>
+          )}
+          {contact?.birthdate && (
+            <div className="flex items-center gap-3 text-sm">
+              <Cake className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="tabular-nums">
+                {format(parseISO(contact.birthdate), "d MMM yyyy", { locale: es })}
+              </span>
+              {birthdayLabel(contact.birthdate) && (
+                <span className="text-muted-foreground">
+                  · {birthdayLabel(contact.birthdate)}
+                </span>
+              )}
             </div>
           )}
         </div>

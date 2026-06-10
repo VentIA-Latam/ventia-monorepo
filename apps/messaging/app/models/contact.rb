@@ -12,6 +12,7 @@
 #  contact_type          :integer          default("visitor")
 #  blocked               :boolean          default(FALSE)
 #  last_activity_at      :datetime
+#  birthdate             :date
 #  account_id            :bigint           not null
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
@@ -36,6 +37,7 @@ class Contact < ApplicationRecord
             allow_blank: true,
             uniqueness: { scope: [:account_id] },
             format: { with: /\A\+[1-9]\d{1,14}\z/ }
+  validate :birthdate_must_be_in_past_or_today
 
   # Associations
   belongs_to :account
@@ -80,6 +82,13 @@ class Contact < ApplicationRecord
     self.phone_number = phone_number&.gsub(/[^\d+]/, '')
     self.email = email&.downcase&.strip if email.present?
     self.name = name&.strip if name.present?
+  end
+
+  def birthdate_must_be_in_past_or_today
+    return if birthdate.blank?
+    return unless birthdate > Date.current
+
+    errors.add(:birthdate, 'cannot be in the future')
   end
 
   def dispatch_create_event

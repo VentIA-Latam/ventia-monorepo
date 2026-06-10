@@ -86,6 +86,7 @@ class Api::V1::ContactsController < Api::V1::BaseController
       :phone_number,
       :identifier,
       :contact_type,
+      :birthdate,
       additional_attributes: {},
       custom_attributes: {}
     )
@@ -99,6 +100,7 @@ class Api::V1::ContactsController < Api::V1::BaseController
       phone_number: contact.phone_number,
       identifier: contact.identifier,
       contact_type: contact.contact_type,
+      birthdate: contact.birthdate&.iso8601,
       last_activity_at: contact.last_activity_at,
       created_at: contact.created_at,
       notes_count: contact.notes.size

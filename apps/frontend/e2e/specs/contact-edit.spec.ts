@@ -91,4 +91,17 @@ test.describe("Editar contacto desde el panel @contacts @smoke", () => {
     // Vuelve a vista lectura sin haber guardado nada
     await contactInfoPanelPage.expectViewMode();
   });
+
+  test("editar birthdate via Calendar y verificar persistencia", async ({
+    contactInfoPanelPage,
+    page,
+  }) => {
+    await contactInfoPanelPage.enterEditMode();
+    await contactInfoPanelPage.openBirthdatePicker();
+    await contactInfoPanelPage.selectDate("1995-03-12");
+    await contactInfoPanelPage.save();
+
+    // Modo lectura muestra la fecha formateada en español ("12 mar 1995").
+    await expect(page.getByText(/12 mar\.? 1995/i)).toBeVisible();
+  });
 });

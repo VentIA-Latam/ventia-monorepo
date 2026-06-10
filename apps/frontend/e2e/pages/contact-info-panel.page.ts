@@ -202,6 +202,49 @@ export class ContactInfoPanelPage {
     await expect(this.noteByContent(content)).toHaveCount(0);
   }
 
+  // ─── Birthdate picker ──────────────────────────────────────
+
+  /**
+   * Abre el Popover del Calendar de cumpleaños. El trigger es un Button con
+   * aria-label "Seleccionar fecha de nacimiento".
+   */
+  async openBirthdatePicker() {
+    await this.page
+      .getByRole("button", { name: "Seleccionar fecha de nacimiento" })
+      .click();
+    // El Calendar shadcn renderiza dos dropdowns (mes/año) en captionLayout="dropdown".
+    // Esperar a que estén visibles confirma que el Popover terminó de abrir.
+    await expect(
+      this.page.getByRole("combobox").first()
+    ).toBeVisible();
+  }
+
+  /**
+   * Selecciona una fecha ISO (YYYY-MM-DD) dentro del Calendar abierto.
+   * Navega los dropdowns de mes y año, luego clickea el día.
+   */
+  async selectDate(iso: string) {
+    const [yearStr, monthStr, dayStr] = iso.split("-");
+    const year = Number(yearStr);
+    const monthIndex = Number(monthStr) - 1; // 0..11
+    const day = Number(dayStr);
+
+    // react-day-picker v9 renderiza dos <select> en captionLayout="dropdown".
+    // El orden suele ser month primero, luego year. Los seleccionamos por posición.
+    const dropdowns = this.page.locator('[role="dialog"], [data-radix-popper-content-wrapper]')
+      .first()
+      .locator("select");
+    await dropdowns.nth(0).selectOption(String(monthIndex));
+    await dropdowns.nth(1).selectOption(String(year));
+
+    // Día: button con texto del número del día dentro del grid.
+    await this.page
+      .getByRole("gridcell")
+      .filter({ hasText: new RegExp(`^${day}$`) })
+      .first()
+      .click();
+  }
+
   // ─── Dialogs ───────────────────────────────────────────────
 
   async expectDiscardDialogVisible() {

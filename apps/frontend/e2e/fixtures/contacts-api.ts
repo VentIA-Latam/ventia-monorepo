@@ -18,6 +18,7 @@ export interface ContactSnapshot {
   phone_number: string | null;
   email: string | null;
   identifier: string | null;
+  birthdate: string | null;
 }
 
 export interface NoteSummary {
@@ -62,6 +63,7 @@ export async function findContactByPhone(
     phone_number: match.phone_number ?? null,
     email: match.email ?? null,
     identifier: match.identifier ?? null,
+    birthdate: match.birthdate ?? null,
   };
 }
 
@@ -82,6 +84,7 @@ export async function restoreContact(
         name: snapshot.name ?? "",
         email: snapshot.email ?? "",
         phone_number: snapshot.phone_number ?? "",
+        birthdate: snapshot.birthdate,
       },
     }
   );

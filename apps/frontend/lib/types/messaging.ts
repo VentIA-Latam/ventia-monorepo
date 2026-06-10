@@ -7,6 +7,7 @@ export interface ContactBrief {
   identifier: string | null;
   whatsapp_bsuid: string | null;
   email: string | null;
+  birthdate?: string | null;
   last_activity_at?: string | null;
   notes_count?: number;
 }
@@ -29,6 +30,7 @@ export interface ContactUpdatePayload {
   name?: string;
   email?: string | null;
   phone_number?: string;
+  birthdate?: string | null;
 }
 
 export interface AgentBrief {

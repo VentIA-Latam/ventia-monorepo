@@ -4,8 +4,18 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Cake } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { updateContact } from "@/lib/api-client/messaging";
 import type { ContactBrief, ContactUpdatePayload } from "@/lib/types/messaging";
@@ -23,6 +33,15 @@ const contactSchema = z.object({
       z.string().regex(/^\+\d{8,15}$/, "Formato: +51 904 890 457")
     )
     .or(z.literal(""))
+    .optional(),
+  birthdate: z
+    .union([
+      z.literal(""),
+      z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato inválido")
+        .refine((v) => new Date(v) <= new Date(), "La fecha no puede ser futura"),
+    ])
     .optional(),
 });
 
@@ -57,14 +76,20 @@ export const ContactEditForm = forwardRef<ContactEditFormHandle, ContactEditForm
       handleSubmit,
       formState: { errors, isDirty },
       reset,
+      watch,
+      setValue,
     } = useForm<ContactFormValues>({
       resolver: zodResolver(contactSchema),
       defaultValues: {
         name: contact.name ?? "",
         email: contact.email ?? "",
         phone_number: contact.phone_number ?? "",
+        birthdate: contact.birthdate ?? "",
       },
     });
+
+    const birthdateValue = watch("birthdate") ?? "";
+    const [pickerOpen, setPickerOpen] = useState(false);
 
     useEffect(() => {
       onDirtyChange?.(isDirty);
@@ -84,6 +109,9 @@ export const ContactEditForm = forwardRef<ContactEditFormHandle, ContactEditForm
         if (values.phone_number !== (contact.phone_number ?? "")) {
           payload.phone_number = values.phone_number ?? "";
         }
+        if ((values.birthdate ?? "") !== (contact.birthdate ?? "")) {
+          payload.birthdate = values.birthdate ? values.birthdate : null;
+        }
 
         if (Object.keys(payload).length === 0) {
           // Nothing to update — exit edit mode.
@@ -96,6 +124,7 @@ export const ContactEditForm = forwardRef<ContactEditFormHandle, ContactEditForm
           name: updated.name ?? "",
           email: updated.email ?? "",
           phone_number: updated.phone_number ?? "",
+          birthdate: updated.birthdate ?? "",
         });
         toast({ title: "Contacto actualizado" });
         onSaved(updated);
@@ -197,6 +226,71 @@ export const ContactEditForm = forwardRef<ContactEditFormHandle, ContactEditForm
           {errors.phone_number && (
             <p id="contact-phone-error" className="text-xs text-destructive">
               {errors.phone_number.message}
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="contact-birthdate" className="text-xs text-muted-foreground">
+            Fecha de nacimiento
+          </Label>
+          <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                id="contact-birthdate"
+                type="button"
+                variant="outline"
+                disabled={submitting}
+                aria-label="Seleccionar fecha de nacimiento"
+                aria-invalid={!!errors.birthdate}
+                className="w-full justify-start font-normal"
+              >
+                <Cake className="h-4 w-4 mr-2 text-muted-foreground" />
+                {birthdateValue
+                  ? format(parseISO(birthdateValue), "PPP", { locale: es })
+                  : <span className="text-muted-foreground">Sin fecha</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={birthdateValue ? parseISO(birthdateValue) : undefined}
+                onSelect={(d) => {
+                  setValue("birthdate", d ? format(d, "yyyy-MM-dd") : "", {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
+                  if (d) setPickerOpen(false);
+                }}
+                captionLayout="dropdown"
+                startMonth={new Date(1900, 0)}
+                endMonth={new Date()}
+                locale={es}
+                disabled={(date) => date > new Date()}
+              />
+              {birthdateValue && (
+                <div className="border-t p-2 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setValue("birthdate", "", {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                      setPickerOpen(false);
+                    }}
+                  >
+                    Limpiar
+                  </Button>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+          {errors.birthdate && (
+            <p className="text-xs text-destructive">
+              {errors.birthdate.message}
             </p>
           )}
         </div>

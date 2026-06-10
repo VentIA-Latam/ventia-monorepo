@@ -142,6 +142,25 @@ class TestUpdateContact:
             result = await service.update_contact(tenant_id=10, contact_id=42, payload={})
         assert result is None
 
+    async def test_forwards_birthdate_iso_string(self):
+        service = MessagingService()
+        rails_payload = {
+            "success": True,
+            "data": {"id": 42, "birthdate": "1995-03-12"},
+        }
+        with patch.object(service, "_request", new=AsyncMock(return_value=rails_payload)) as mock_req:
+            result = await service.update_contact(
+                tenant_id=10, contact_id=42, payload={"birthdate": "1995-03-12"}
+            )
+
+        assert result == rails_payload
+        mock_req.assert_awaited_once_with(
+            "PATCH",
+            "/api/v1/contacts/42",
+            10,
+            json_data={"contact": {"birthdate": "1995-03-12"}},
+        )
+
 
 @pytest.mark.asyncio
 class TestContactNotes:
