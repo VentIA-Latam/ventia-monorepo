@@ -53,6 +53,22 @@ RSpec.describe WebhookListener do
       end
     end
 
+    context 'when the message is an external echo (agent replied from the WhatsApp Business app)' do
+      it 'dispatches the event so n8n keeps the human reply in context' do
+        # Echoes arrive via Meta's webhook with sender: nil but flagged as
+        # external_echo, mirroring Whatsapp::IncomingMessageService.
+        conversation.messages.create!(
+          account: account, inbox: inbox, sender: nil,
+          message_type: :outgoing, status: :delivered,
+          content: 'respuesta del asesor desde el celular',
+          content_attributes: { external_echo: true }
+        )
+
+        expect(listener).to have_received(:dispatch_webhooks)
+          .with(account, 'message_created', kind_of(Hash))
+      end
+    end
+
     context 'when the message is private (internal note)' do
       it 'does not dispatch the event' do
         conversation.messages.create!(

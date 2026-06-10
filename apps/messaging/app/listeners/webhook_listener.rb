@@ -17,7 +17,8 @@ class WebhookListener < BaseListener
   def message_created(event)
     message, account = extract_message_and_account(event)
     return if message.private?
-    return unless message.incoming? || (message.outgoing? && message.sender.present?)
+    return unless message.incoming? ||
+                  (message.outgoing? && (message.sender.present? || message.external_echo?))
 
     dispatch_webhooks(account, 'message_created', message.webhook_data)
   end
