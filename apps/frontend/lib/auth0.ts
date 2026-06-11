@@ -11,6 +11,12 @@ export const auth0 = new Auth0Client({
     audience: process.env.AUTH0_AUDIENCE || 'https://ventia-auth0-api',
     scope: 'openid profile email',
   },
+  // Evita la acumulación de cookies __txn_<state>. Con transacciones paralelas
+  // (default en v4.14) cada login no completado deja un cookie de ~476 bytes durante
+  // 1h; con prefetch de Next.js sobre rutas protegidas con sesión expirada se apilan
+  // hasta disparar 494 REQUEST_HEADER_TOO_LARGE en Vercel. Al deshabilitarlas se usa
+  // un único cookie __txn_ que se sobrescribe en cada intento. Ver auth0/nextjs-auth0#2450.
+  enableParallelTransactions: false,
 });
 
 /**

@@ -111,6 +111,16 @@ class Message < ApplicationRecord
     outgoing? && !private?
   end
 
+  # True when this outgoing message is an echo of a reply the agent sent from
+  # the native WhatsApp/Instagram Business app (not from the VentIA dashboard).
+  # These arrive via Meta's webhook and are stored with sender: nil, so the
+  # `sender.present?` heuristic can't tell them apart from AI-sent messages.
+  def external_echo?
+    return false if content_attributes.blank?
+
+    !!(content_attributes['external_echo'] || content_attributes[:external_echo])
+  end
+
   def webhook_data
     {
       id: id,

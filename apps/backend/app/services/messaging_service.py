@@ -398,6 +398,148 @@ class MessagingService:
             json_data=payload,
         )
 
+    # --- Campaigns (Módulo 6) ---
+
+    async def create_campaign(self, tenant_id: int, payload: dict) -> Optional[dict]:
+        """Create a campaign in :draft. Frontend then uploads CSV/labels and configures vars."""
+        return await self._request(
+            "POST", "/api/v1/campaigns", tenant_id, json_data={"campaign": payload}
+        )
+
+    async def update_campaign(
+        self, tenant_id: int, campaign_id: int, payload: dict
+    ) -> Optional[dict]:
+        """Update campaign (only allowed in :draft)."""
+        return await self._request(
+            "PATCH",
+            f"/api/v1/campaigns/{campaign_id}",
+            tenant_id,
+            json_data={"campaign": payload},
+        )
+
+    async def get_campaign(self, tenant_id: int, campaign_id: int) -> Optional[dict]:
+        """Get campaign detail (includes stats)."""
+        return await self._request("GET", f"/api/v1/campaigns/{campaign_id}", tenant_id)
+
+    async def list_campaigns(self, tenant_id: int) -> Optional[dict]:
+        return await self._request("GET", "/api/v1/campaigns", tenant_id)
+
+    async def delete_campaign(self, tenant_id: int, campaign_id: int) -> Optional[dict]:
+        return await self._request(
+            "DELETE", f"/api/v1/campaigns/{campaign_id}", tenant_id
+        )
+
+    async def upload_campaign_csv(
+        self,
+        tenant_id: int,
+        campaign_id: int,
+        file: Any,
+    ) -> Optional[dict]:
+        """Multipart upload del CSV de audiencia (espejo de send_message_with_file).
+
+        Manejo de errores alineado con `_request`:
+        - 2xx → devuelve body
+        - 4xx → raise MessagingClientError con el detail real (ej. "el CSV debe
+          tener una columna phone") en vez de devolver None y que el endpoint
+          mapee a 503 "service unavailable" misleading
+        - 5xx / RequestError → None (legítimo "service unavailable")
+        """
+        url = f"{self.base_url}/api/v1/campaigns/{campaign_id}/audience/csv"
+        headers: dict[str, str] = {"X-Tenant-Id": str(tenant_id)}
+        if self.api_key:
+            headers["X-API-Key"] = self.api_key
+
+        try:
+            file_content = await file.read()
+            files = {"file": (file.filename, file_content, file.content_type or "text/csv")}
+            # Timeout 90s: Rails parsea el CSV completo (5MB ~ 10-50k filas), normaliza
+            # phones, dedupea, y crea N CampaignRecipient. 30s era insuficiente.
+            async with httpx.AsyncClient(timeout=90.0) as client:
+                response = await client.post(url, headers=headers, files=files)
+            if response.status_code in (200, 201):
+                return response.json()
+
+            if 400 <= response.status_code < 500:
+                detail = self._extract_error_detail(response)
+                logger.warning(
+                    f"Messaging CSV upload client error: POST {url} -> {response.status_code} - {detail}"
+                )
+                raise MessagingClientError(response.status_code, detail)
+
+            logger.error(
+                f"Messaging CSV upload server error: POST {url} -> {response.status_code} - {response.text[:500]}"
+            )
+            return None
+        except httpx.RequestError as e:
+            logger.error(f"Messaging CSV upload request failed: {e}")
+            return None
+
+    async def set_campaign_labels_audience(
+        self, tenant_id: int, campaign_id: int, label_ids: list[int]
+    ) -> Optional[dict]:
+        return await self._request(
+            "POST",
+            f"/api/v1/campaigns/{campaign_id}/audience/labels",
+            tenant_id,
+            json_data={"label_ids": label_ids},
+        )
+
+    async def preview_campaign(self, tenant_id: int, campaign_id: int) -> Optional[dict]:
+        return await self._request(
+            "GET", f"/api/v1/campaigns/{campaign_id}/preview", tenant_id
+        )
+
+    async def trigger_campaign(
+        self, tenant_id: int, campaign_id: int, scheduled_at: Optional[str] = None
+    ) -> Optional[dict]:
+        payload = {"scheduled_at": scheduled_at} if scheduled_at else {}
+        return await self._request(
+            "POST",
+            f"/api/v1/campaigns/{campaign_id}/trigger",
+            tenant_id,
+            json_data=payload,
+        )
+
+    async def retry_failed_campaign(
+        self, tenant_id: int, campaign_id: int
+    ) -> Optional[dict]:
+        return await self._request(
+            "POST",
+            f"/api/v1/campaigns/{campaign_id}/retry-failed",
+            tenant_id,
+            json_data={},
+        )
+
+    async def list_campaign_recipients(
+        self,
+        tenant_id: int,
+        campaign_id: int,
+        page: int = 1,
+        per_page: int = 25,
+        status: Optional[str] = None,
+        search: Optional[str] = None,
+    ) -> Optional[dict]:
+        params: dict[str, Any] = {"page": page, "per_page": per_page}
+        if status:
+            params["status"] = status
+        if search:
+            params["search"] = search
+        return await self._request(
+            "GET",
+            f"/api/v1/campaigns/{campaign_id}/recipients",
+            tenant_id,
+            params=params,
+        )
+
+    async def delete_campaign_recipient(
+        self, tenant_id: int, campaign_id: int, recipient_id: int
+    ) -> Optional[dict]:
+        return await self._request(
+            "DELETE",
+            f"/api/v1/campaigns/{campaign_id}/recipients/{recipient_id}",
+            tenant_id,
+        )
+
     async def send_message_with_file(
         self,
         tenant_id: int,
@@ -510,6 +652,61 @@ class MessagingService:
         """Search contacts by name, email, or phone."""
         return await self._request(
             "POST", "/api/v1/contacts/search", tenant_id, json_data={"query": query}
+        )
+
+    async def update_contact(
+        self, tenant_id: int, contact_id: int, payload: dict
+    ) -> Optional[dict]:
+        """Update a contact (name, email, phone_number)."""
+        return await self._request(
+            "PATCH",
+            f"/api/v1/contacts/{contact_id}",
+            tenant_id,
+            json_data={"contact": payload},
+        )
+
+    # --- Contact notes (Module 7) ---
+
+    async def get_contact_notes(
+        self, tenant_id: int, contact_id: int
+    ) -> Optional[dict]:
+        """List notes for a contact (recent first)."""
+        return await self._request(
+            "GET",
+            f"/api/v1/contacts/{contact_id}/notes",
+            tenant_id,
+        )
+
+    async def create_contact_note(
+        self, tenant_id: int, contact_id: int, content: str
+    ) -> Optional[dict]:
+        """Create a note on a contact. user_id is taken from the X-User-Id header."""
+        return await self._request(
+            "POST",
+            f"/api/v1/contacts/{contact_id}/notes",
+            tenant_id,
+            json_data={"note": {"content": content}},
+        )
+
+    async def update_contact_note(
+        self, tenant_id: int, contact_id: int, note_id: int, content: str
+    ) -> Optional[dict]:
+        """Update a note's content."""
+        return await self._request(
+            "PATCH",
+            f"/api/v1/contacts/{contact_id}/notes/{note_id}",
+            tenant_id,
+            json_data={"note": {"content": content}},
+        )
+
+    async def delete_contact_note(
+        self, tenant_id: int, contact_id: int, note_id: int
+    ) -> Optional[dict]:
+        """Delete a note."""
+        return await self._request(
+            "DELETE",
+            f"/api/v1/contacts/{contact_id}/notes/{note_id}",
+            tenant_id,
         )
 
     async def find_contact_by_phone(

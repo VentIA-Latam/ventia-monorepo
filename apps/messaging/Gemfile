@@ -10,6 +10,7 @@ gem 'puma', '>= 6.4.3'
 
 # Background jobs
 gem 'sidekiq', '~> 7.3.0'
+gem 'sidekiq-cron', '~> 2.0'      # Periodic jobs (campaigns scheduler M6)
 gem 'connection_pool', '~> 2.4'  # Fix compatibility with Sidekiq 7.3
 gem 'redis', '~> 5.3'
 

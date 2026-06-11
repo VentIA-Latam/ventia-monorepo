@@ -37,26 +37,37 @@ class Campaign < ApplicationRecord
   belongs_to :account
   belongs_to :inbox
   has_many :conversations, dependent: :nullify
+  has_many :campaign_recipients, dependent: :destroy
 
   # Enums
   enum :campaign_type, { one_off: 0, ongoing: 1 }
-  enum :campaign_status, { active: 0, completed: 1, paused: 2 }
+  enum :campaign_status, {
+    active: 0, completed: 1, paused: 2, running: 3, draft: 4, failed: 5
+  }
+  enum :audience_type, { labels: 0, csv: 1 }
 
   # Scopes
   scope :enabled, -> { where(enabled: true) }
   scope :scheduled, -> { where.not(scheduled_at: nil) }
   scope :pending, -> { where(campaign_status: :active, enabled: true).where('scheduled_at <= ?', Time.current) }
+  # Cron picks these up: :active + enabled + not yet triggered + due
+  scope :triggerable, -> {
+    where(campaign_status: :active, enabled: true, triggered_at: nil)
+      .where('scheduled_at <= ?', Time.current)
+  }
 
   # Callbacks
   before_validation :set_default_values
   after_update_commit :broadcast_status_changed, if: :saved_change_to_campaign_status?
 
+  # Enqueue async trigger job. Idempotent: only enqueues if the campaign can actually
+  # be triggered (the job itself also re-checks via lock to handle double-fire from cron).
   def trigger!
-    return unless can_trigger?
+    return false unless can_trigger?
 
-    update!(triggered_at: Time.current)
     broadcast(:campaign_triggered, data: { campaign: self })
-    Campaigns::TriggerService.new(campaign: self).perform
+    Campaigns::TriggerJob.perform_later(id)
+    true
   end
 
   def pause!
@@ -68,7 +79,21 @@ class Campaign < ApplicationRecord
   end
 
   def can_trigger?
-    active? && enabled? && !triggered_at.present?
+    active? && enabled? && triggered_at.nil?
+  end
+
+  def all_recipients_terminal?
+    campaign_recipients.where(status: [:pending, :queued]).empty?
+  end
+
+  # Marca como :completed + broadcast :campaign_completed. Idempotente (devuelve false
+  # si ya estaba completed). Encapsula el broadcast porque Wisper#broadcast es private.
+  def complete!
+    return false if completed?
+
+    update!(campaign_status: :completed)
+    broadcast(:campaign_completed, data: { campaign: self })
+    true
   end
 
   def webhook_data
@@ -87,7 +112,9 @@ class Campaign < ApplicationRecord
 
   def set_default_values
     self.campaign_type ||= :one_off
-    self.scheduled_at ||= Time.current if one_off?
+    # NOTE: previously scheduled_at was auto-set to Time.current on one_off. That made
+    # every draft eligible for the cron the moment it transitioned to :active, which is
+    # surprising. Now scheduled_at stays nil until the controller's trigger action sets it.
   end
 
   def inbox_must_be_whatsapp

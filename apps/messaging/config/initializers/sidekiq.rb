@@ -4,10 +4,16 @@ Sidekiq.configure_server do |config|
     network_timeout: 5
   }
 
-  # Enable cron-like scheduled jobs if needed
-  # config.on(:startup) do
-  #   require 'sidekiq-scheduler'
-  # end
+  # Load sidekiq-cron schedule from config/sidekiq-cron.yml.
+  # Skipped en test env para no contaminar specs con cron real.
+  config.on(:startup) do
+    next if Rails.env.test?
+
+    schedule_file = Rails.root.join('config', 'sidekiq-cron.yml')
+    if File.exist?(schedule_file)
+      Sidekiq::Cron::Job.load_from_hash!(YAML.load_file(schedule_file))
+    end
+  end
 end
 
 Sidekiq.configure_client do |config|

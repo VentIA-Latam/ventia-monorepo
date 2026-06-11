@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_06_02_000002) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_10_004749) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -121,11 +121,32 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_02_000002) do
     t.index ["event_name"], name: "index_automation_rules_on_event_name"
   end
 
+  create_table "campaign_recipients", force: :cascade do |t|
+    t.bigint "campaign_id", null: false
+    t.bigint "contact_id"
+    t.string "phone", null: false
+    t.jsonb "vars", default: {}
+    t.bigint "conversation_id"
+    t.bigint "message_id"
+    t.integer "status", default: 0, null: false
+    t.text "external_error"
+    t.datetime "sent_at"
+    t.datetime "delivered_at"
+    t.datetime "read_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["campaign_id", "phone"], name: "index_campaign_recipients_on_campaign_id_and_phone", unique: true
+    t.index ["campaign_id", "status"], name: "index_campaign_recipients_on_campaign_id_and_status"
+    t.index ["campaign_id"], name: "index_campaign_recipients_on_campaign_id"
+    t.index ["contact_id"], name: "index_campaign_recipients_on_contact_id"
+    t.index ["message_id"], name: "index_campaign_recipients_on_message_id", where: "(message_id IS NOT NULL)"
+  end
+
   create_table "campaigns", force: :cascade do |t|
     t.string "title", null: false
     t.text "message"
     t.integer "campaign_type", default: 0
-    t.integer "campaign_status", default: 0
+    t.integer "campaign_status", default: 4
     t.bigint "account_id", null: false
     t.bigint "inbox_id", null: false
     t.bigint "sender_id"
@@ -135,6 +156,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_02_000002) do
     t.datetime "triggered_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "template_params", default: {}
+    t.integer "audience_type", default: 0
+    t.string "header_media_url"
+    t.integer "recipients_count", default: 0
+    t.integer "sent_count", default: 0
+    t.integer "failed_count", default: 0
     t.index ["account_id"], name: "index_campaigns_on_account_id"
     t.index ["campaign_status"], name: "index_campaigns_on_campaign_status"
     t.index ["inbox_id"], name: "index_campaigns_on_inbox_id"
@@ -201,6 +228,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_02_000002) do
     t.bigint "account_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.date "birthdate"
     t.index ["account_id"], name: "index_contacts_on_account_id"
     t.index ["email", "account_id"], name: "index_contacts_on_email_and_account_id", unique: true, where: "((email IS NOT NULL) AND ((email)::text <> ''::text))"
     t.index ["identifier", "account_id"], name: "index_contacts_on_identifier_and_account_id", unique: true, where: "((identifier IS NOT NULL) AND ((identifier)::text <> ''::text))"
@@ -350,6 +378,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_02_000002) do
     t.index ["source_id"], name: "index_messages_on_source_id"
   end
 
+  create_table "notes", force: :cascade do |t|
+    t.text "content", null: false
+    t.bigint "account_id", null: false
+    t.bigint "contact_id", null: false
+    t.bigint "user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_notes_on_account_id"
+    t.index ["contact_id", "created_at"], name: "index_notes_on_contact_id_and_created_at"
+    t.index ["contact_id"], name: "index_notes_on_contact_id"
+    t.index ["user_id"], name: "index_notes_on_user_id"
+  end
+
   create_table "notification_settings", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "user_id", null: false
@@ -444,6 +485,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_02_000002) do
   add_foreign_key "attachments", "accounts"
   add_foreign_key "attachments", "messages"
   add_foreign_key "automation_rules", "accounts"
+  add_foreign_key "campaign_recipients", "campaigns"
+  add_foreign_key "campaign_recipients", "contacts"
   add_foreign_key "campaigns", "accounts"
   add_foreign_key "campaigns", "inboxes"
   add_foreign_key "canned_responses", "accounts"
@@ -471,6 +514,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_02_000002) do
   add_foreign_key "messages", "accounts"
   add_foreign_key "messages", "conversations"
   add_foreign_key "messages", "inboxes"
+  add_foreign_key "notes", "accounts"
+  add_foreign_key "notes", "contacts"
+  add_foreign_key "notes", "users"
   add_foreign_key "notification_settings", "accounts"
   add_foreign_key "notification_settings", "users"
   add_foreign_key "notifications", "accounts"
