@@ -102,3 +102,41 @@ class TestOrderRepositoryConversationFilter:
             db, tenant_id=seeded["tenant_a"], messaging_conversation_id=100
         )
         assert count == 2
+
+    def test_count_all_cross_tenant_matches_get_all(self, db, seeded):
+        """Without tenant_id, count_all sees the same cross-tenant set as get_all."""
+        count = order_repository.count_all(db, messaging_conversation_id=100)
+        result = order_repository.get_all(db, messaging_conversation_id=100)
+        assert count == 3
+        assert count == len(result)
+
+    def test_count_and_get_all_parity_with_combined_filters(self, db, seeded):
+        """count_all and len(get_all) stay in sync for an identical filter set.
+
+        Guards against a future filter added to one method but not the other,
+        which would silently desync pagination total vs items.
+        """
+        filters = {
+            "tenant_id": seeded["tenant_a"],
+            "messaging_conversation_id": 100,
+            "status": "Pagado",
+        }
+        assert order_repository.count_all(db, **filters) == len(
+            order_repository.get_all(db, **filters)
+        )
+
+    def test_conversation_filter_combined_with_status(self, db, seeded):
+        """Conversation filter ANDs with status (does not replace it)."""
+        result = order_repository.get_all(
+            db, messaging_conversation_id=100, status="Pagado"
+        )
+        assert len(result) == 1
+        assert result[0].customer_email == "a2@x.com"
+
+    def test_conversation_filter_combined_with_validado(self, db, seeded):
+        """Conversation filter ANDs with the validado flag."""
+        result = order_repository.get_all(
+            db, messaging_conversation_id=100, validado=True
+        )
+        assert len(result) == 1
+        assert result[0].customer_email == "a2@x.com"

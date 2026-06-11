@@ -13,10 +13,11 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function formatCurrency(
   amount: number,
-  currency: string
+  currency: string = "PEN"
 ): string {
-  const symbol = currency === "PEN" ? "S/" : "$";
-  return `${symbol} ${amount.toFixed(2)}`;
+  const symbol = getCurrencySymbol(currency || "PEN");
+  const safeAmount = Number.isFinite(amount) ? amount : 0;
+  return `${symbol} ${safeAmount.toFixed(2)}`;
 }
 
 /**

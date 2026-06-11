@@ -40,11 +40,12 @@ export interface OrderListResponse {
 
 export interface LineItem {
   id?: string | number;
-  sku: string;
+  // Backend define sku y subtotal como opcionales (LineItemBase en schemas/order.py)
+  sku?: string;
   product: string;
   unitPrice: number;
   quantity: number;
-  subtotal: number;
+  subtotal?: number;
   [key: string]: unknown;
 }
 

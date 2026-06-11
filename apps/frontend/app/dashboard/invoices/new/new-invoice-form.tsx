@@ -793,7 +793,7 @@ export function NewInvoiceForm({ order, existingInvoices, basePath = '/dashboard
                               </td>
                               <td className="p-2 text-center">{item.quantity}</td>
                               <td className="p-2 text-right">S/ {item.unitPrice.toFixed(2)}</td>
-                              <td className="p-2 text-right font-medium">S/ {item.subtotal.toFixed(2)}</td>
+                              <td className="p-2 text-right font-medium">S/ {(item.subtotal ?? 0).toFixed(2)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -820,7 +820,7 @@ export function NewInvoiceForm({ order, existingInvoices, basePath = '/dashboard
                           </div>
                           <div className="flex justify-between text-sm pt-1 border-t">
                             <span className="text-muted-foreground font-medium">Subtotal:</span>
-                            <span className="font-bold">S/ {item.subtotal.toFixed(2)}</span>
+                            <span className="font-bold">S/ {(item.subtotal ?? 0).toFixed(2)}</span>
                           </div>
                         </div>
                       ))}
@@ -975,7 +975,7 @@ export function NewInvoiceForm({ order, existingInvoices, basePath = '/dashboard
                         {item.quantity} x {order.currency} {item.unitPrice.toFixed(2)}
                       </p>
                     </div>
-                    <span className="font-medium text-xs sm:text-sm whitespace-nowrap">{order.currency} {item.subtotal.toFixed(2)}</span>
+                    <span className="font-medium text-xs sm:text-sm whitespace-nowrap">{order.currency} {(item.subtotal ?? 0).toFixed(2)}</span>
                   </div>
                 ))}
               </div>

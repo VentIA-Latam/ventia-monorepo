@@ -209,7 +209,7 @@ async def list_orders(
     search: str | None = None,
     order_status: str | None = Query(None, alias="status"),
     channel: str | None = None,
-    messaging_conversation_id: int | None = None,
+    messaging_conversation_id: int | None = Query(None, ge=1),
     sort_by: str = "created_at",
     sort_order: str = "desc",
     current_user: User = Depends(get_current_user_or_api_key),
