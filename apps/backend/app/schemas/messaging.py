@@ -202,6 +202,11 @@ class ConversationListItem(BaseModel):
 
 class ConversationListMeta(BaseModel):
     current_page: int
+    # next_page/prev_page los envía Rails (Kaminari); sin declararlos aquí Pydantic
+    # los recortaba del meta y rompía la paginación de los consumidores (n8n, scroll
+    # infinito del frontend), que dependen de next_page para saber si hay más páginas.
+    next_page: Optional[int] = None
+    prev_page: Optional[int] = None
     total_pages: int
     total_count: int
 

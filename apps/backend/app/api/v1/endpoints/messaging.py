@@ -419,6 +419,8 @@ async def list_conversations(
       ],
       "meta": {
         "current_page": 1,
+        "next_page": 2,
+        "prev_page": null,
         "total_pages": 5,
         "total_count": 87
       }

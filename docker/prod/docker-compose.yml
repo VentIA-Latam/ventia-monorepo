@@ -205,12 +205,12 @@ services:
     image: ${FRONTEND_IMAGE:-equipoventia/ventia-frontend:latest}
     container_name: ventia-prod-frontend
     environment:
-      AUTH0_SECRET: ${AUTH0_FRONTEND_SECRET}
+      AUTH0_SECRET: ${AUTH0_SECRET}
       AUTH0_DOMAIN: ${AUTH0_DOMAIN}
       AUTH0_BASE_URL: ${AUTH0_BASE_URL:-https://ventia-latam.com}
       AUTH0_ISSUER_BASE_URL: ${AUTH0_ISSUER:-https://${AUTH0_DOMAIN}/}
-      AUTH0_CLIENT_ID: ${AUTH0_FRONTEND_CLIENT_ID}
-      AUTH0_CLIENT_SECRET: ${AUTH0_FRONTEND_CLIENT_SECRET}
+      AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID}
+      AUTH0_CLIENT_SECRET: ${AUTH0_CLIENT_SECRET}
       AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.ventia-latam.com/api/v1}
       NEXT_PUBLIC_MESSAGING_WS_URL: ${NEXT_PUBLIC_MESSAGING_WS_URL:-wss://ws.ventia-latam.com/cable}
