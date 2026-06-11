@@ -1,0 +1,105 @@
+# Deploy Frontend - Build, push to Docker Hub, deploy to GCP VM
+#
+# Trigger 1: Push a main con cambios en frontend → deploy automático como :latest
+# Trigger 2: Push de tag frontend-v* (ej: frontend-v1.2.0) → deploy con versión + :latest
+#
+# Las NEXT_PUBLIC_* se hornean en build-time (Next.js standalone), por eso van como
+# build-args. Son valores PÚBLICOS (se exponen al navegador) → GitHub Variables (vars.*).
+# Los secretos reales (AUTH0_*, GCS_*, RESEND_*) se inyectan en RUNTIME desde el .env de la VM.
+#
+# Secrets requeridos en GitHub (Settings > Secrets > Actions):
+#   SSH_PRIVATE_KEY    - Private key para conectar a la VM
+#   SSH_HOST           - IP externa de la VM en GCP
+#   SSH_USER           - Usuario SSH (renzo_ventia)
+#   DOCKERHUB_USERNAME - Usuario de Docker Hub
+#   DOCKERHUB_TOKEN    - Access token de Docker Hub
+#   SENTRY_AUTH_TOKEN  - (opcional) Para subir source maps a Sentry en el build
+#
+# Variables requeridas en GitHub (Settings > Secrets and variables > Actions > Variables):
+#   NEXT_PUBLIC_AUTH0_DOMAIN, NEXT_PUBLIC_AUTH0_CLIENT_ID, NEXT_PUBLIC_AUTH0_AUDIENCE
+#   NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+#   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET, NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+#   NEXT_PUBLIC_FIREBASE_APP_ID, NEXT_PUBLIC_FIREBASE_VAPID_KEY
+#   NEXT_PUBLIC_WHATSAPP_APP_ID, NEXT_PUBLIC_WHATSAPP_CONFIGURATION_ID
+#   NEXT_PUBLIC_SENTRY_DSN
+
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/frontend/**'
+      - 'docker/frontend.Dockerfile'
+  create:
+    tags:
+      - 'frontend-v*'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag' || (github.ref == 'refs/heads/main' && github.event_name == 'push')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine Docker tags
+        id: tags
+        run: |
+          REPO="${{ secrets.DOCKERHUB_USERNAME }}/ventia-frontend"
+          if [[ "$GITHUB_REF" == refs/tags/frontend-v* ]]; then
+            VERSION="${GITHUB_REF_NAME#frontend-v}"
+            echo "TAGS=${REPO}:${VERSION},${REPO}:latest" >> $GITHUB_OUTPUT
+          else
+            echo "TAGS=${REPO}:latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/frontend.Dockerfile
+          push: true
+          tags: ${{ steps.tags.outputs.TAGS }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://api.ventia-latam.com/api/v1
+            NEXT_PUBLIC_MESSAGING_WS_URL=wss://ws.ventia-latam.com/cable
+            NEXT_PUBLIC_ENVIRONMENT=production
+            NEXT_PUBLIC_WHATSAPP_API_VERSION=v22.0
+            NEXT_PUBLIC_AUTH0_DOMAIN=${{ vars.NEXT_PUBLIC_AUTH0_DOMAIN }}
+            NEXT_PUBLIC_AUTH0_CLIENT_ID=${{ vars.NEXT_PUBLIC_AUTH0_CLIENT_ID }}
+            NEXT_PUBLIC_AUTH0_AUDIENCE=${{ vars.NEXT_PUBLIC_AUTH0_AUDIENCE }}
+            NEXT_PUBLIC_FIREBASE_API_KEY=${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
+            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+            NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+            NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${{ vars.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+            NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ vars.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+            NEXT_PUBLIC_FIREBASE_APP_ID=${{ vars.NEXT_PUBLIC_FIREBASE_APP_ID }}
+            NEXT_PUBLIC_FIREBASE_VAPID_KEY=${{ vars.NEXT_PUBLIC_FIREBASE_VAPID_KEY }}
+            NEXT_PUBLIC_WHATSAPP_APP_ID=${{ vars.NEXT_PUBLIC_WHATSAPP_APP_ID }}
+            NEXT_PUBLIC_WHATSAPP_CONFIGURATION_ID=${{ vars.NEXT_PUBLIC_WHATSAPP_CONFIGURATION_ID }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+
+      - name: Deploy to VM
+        uses: appleboy/ssh-action@v1
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
+          script: |
+            echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            cd /opt/ventia-docker/prod
+            docker compose pull frontend
+            docker compose up -d --no-deps --force-recreate frontend
+            docker images ${{ secrets.DOCKERHUB_USERNAME }}/ventia-frontend --filter "before=${{ secrets.DOCKERHUB_USERNAME }}/ventia-frontend:latest" -q | xargs -r docker rmi -f
