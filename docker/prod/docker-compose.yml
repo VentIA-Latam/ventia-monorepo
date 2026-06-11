@@ -200,6 +200,43 @@ services:
     networks:
       - chatbot-network
 
+  # --- Frontend (Next.js) ---
+  frontend:
+    image: ${FRONTEND_IMAGE:-equipoventia/ventia-frontend:latest}
+    container_name: ventia-prod-frontend
+    environment:
+      AUTH0_SECRET: ${AUTH0_FRONTEND_SECRET}
+      AUTH0_DOMAIN: ${AUTH0_DOMAIN}
+      AUTH0_BASE_URL: ${AUTH0_BASE_URL:-https://ventia-latam.com}
+      AUTH0_ISSUER_BASE_URL: ${AUTH0_ISSUER:-https://${AUTH0_DOMAIN}/}
+      AUTH0_CLIENT_ID: ${AUTH0_FRONTEND_CLIENT_ID}
+      AUTH0_CLIENT_SECRET: ${AUTH0_FRONTEND_CLIENT_SECRET}
+      AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.ventia-latam.com/api/v1}
+      NEXT_PUBLIC_MESSAGING_WS_URL: ${NEXT_PUBLIC_MESSAGING_WS_URL:-wss://ws.ventia-latam.com/cable}
+      # GCS (server-side, API routes only)
+      GCS_BUCKET_NAME: ${GCS_BUCKET_NAME:-}
+      GCS_CLIENT_EMAIL: ${GCS_CLIENT_EMAIL:-}
+      GCS_PRIVATE_KEY: ${GCS_PRIVATE_KEY:-}
+      # Resend (Libro de Reclamaciones — server-side API route)
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RECLAMACIONES_TO_EMAIL: ${RECLAMACIONES_TO_EMAIL:-}
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - chatbot-network
+
 networks:
   chatbot-network:
     external: true
