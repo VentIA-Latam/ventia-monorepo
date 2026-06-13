@@ -493,9 +493,10 @@ export const MessageBubble = memo(function MessageBubble({
             ? "max-w-[340px]"
             : "max-w-[min(65%,500px)]",
         isOutgoing ? "ml-auto justify-end" : "mr-auto",
-        // Espacio reservado para el chip de feedback flotante (evita que tape
-        // el mensaje siguiente cuando hay mensajes seguidos).
-        showsFeedback && "mb-8"
+        // Espacio reservado para el chip de feedback SOLO cuando ya hay un voto
+        // (el chip persiste y no debe tapar el mensaje siguiente). Sin voto, el
+        // chip solo aparece al hover y no reserva espacio.
+        showsFeedback && message.feedback && "mb-8"
       )}
     >
       <div
