@@ -7,7 +7,35 @@ from fastapi import HTTPException
 
 from app.api.v1.endpoints.messaging import export_message_feedback
 from app.core.permissions import Role, can_access
+from app.schemas.messaging import MessageResponse
 from app.services.messaging_service import MessagingService
+
+
+class TestMessageResponseSerialization:
+    """Regresión: el response_model NO debe recortar el feedback que envía Rails."""
+
+    def test_message_response_preserves_feedback(self):
+        m = MessageResponse.model_validate(
+            {
+                "id": 10835,
+                "content": "Respuesta IA",
+                "message_type": "outgoing",
+                "feedback": {
+                    "rating": "like",
+                    "comment": None,
+                    "user_id": 2,
+                    "updated_at": "2026-06-13T07:27:16.335Z",
+                },
+            }
+        )
+        assert m.feedback is not None
+        assert m.feedback.rating == "like"
+        # Y al serializar (lo que devuelve FastAPI) el campo sigue presente.
+        assert m.model_dump()["feedback"]["rating"] == "like"
+
+    def test_message_response_feedback_defaults_none(self):
+        m = MessageResponse.model_validate({"id": 1, "content": "x"})
+        assert m.feedback is None
 
 
 def _mock_user(role: Role = Role.ADMIN, tenant_id: int = 1) -> MagicMock:

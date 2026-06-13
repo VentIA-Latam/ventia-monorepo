@@ -251,6 +251,18 @@ class ConversationResponse(BaseModel):
         from_attributes = True
 
 
+class MessageFeedbackInfo(BaseModel):
+    """Voto del agente actual sobre un mensaje de IA (serializado en el listado)."""
+
+    rating: str
+    comment: Optional[str] = None
+    user_id: int
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
 class MessageResponse(BaseModel):
     id: int
     source_id: Optional[str] = None
@@ -263,6 +275,9 @@ class MessageResponse(BaseModel):
     sender: Optional[UserBrief | ContactBrief] = None
     attachments: list[AttachmentBrief] = []
     created_at: Optional[datetime] = None
+    # Sin este campo, el response_model recortaría el feedback que envía Rails y
+    # el voto no persistiría visualmente al recargar (mismo patrón que next_page).
+    feedback: Optional[MessageFeedbackInfo] = None
 
     class Config:
         from_attributes = True
