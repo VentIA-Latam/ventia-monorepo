@@ -414,6 +414,14 @@ export const MessageBubble = memo(function MessageBubble({
 
   const hasReferral = !isOutgoing && !!message.content_attributes?.referral;
   const senderRole = getSenderRole(message);
+  // El chip de feedback solo va en respuestas de IA (outgoing) y para roles que
+  // pueden evaluar. Reservamos espacio debajo (mb) para que el chip flotante no
+  // tape el mensaje siguiente cuando hay mensajes seguidos.
+  const showsFeedback =
+    senderRole === "ai" &&
+    message.message_type === "outgoing" &&
+    canGiveFeedback &&
+    conversationId != null;
   const operatorName =
     message.sender && "name" in message.sender ? message.sender.name : null;
   const channelName =
@@ -484,7 +492,10 @@ export const MessageBubble = memo(function MessageBubble({
           : isTemplate || hasMediaAttachment
             ? "max-w-[340px]"
             : "max-w-[min(65%,500px)]",
-        isOutgoing ? "ml-auto justify-end" : "mr-auto"
+        isOutgoing ? "ml-auto justify-end" : "mr-auto",
+        // Espacio reservado para el chip de feedback flotante (evita que tape
+        // el mensaje siguiente cuando hay mensajes seguidos).
+        showsFeedback && "mb-8"
       )}
     >
       <div
@@ -698,17 +709,14 @@ export const MessageBubble = memo(function MessageBubble({
       {/* Feedback like/dislike — solo en respuestas del bot/IA evaluables.
           message_type === "outgoing" excluye templates (el backend rechaza no-IA
           con 422); canGiveFeedback respeta el rol (VIEWER/LOGISTICA no votan). */}
-      {senderRole === "ai" &&
-        message.message_type === "outgoing" &&
-        canGiveFeedback &&
-        conversationId != null && (
-          <MessageFeedbackControls
-            message={message}
-            conversationId={conversationId}
-            tenantId={tenantId}
-            onFeedbackChange={onFeedbackChange}
-          />
-        )}
+      {showsFeedback && conversationId != null && (
+        <MessageFeedbackControls
+          message={message}
+          conversationId={conversationId}
+          tenantId={tenantId}
+          onFeedbackChange={onFeedbackChange}
+        />
+      )}
 
       {/* Avatar lateral en outgoing — absolute para no robarle ancho al bubble */}
       {isOutgoing && showAvatar && (
