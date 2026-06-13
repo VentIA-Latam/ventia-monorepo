@@ -12,6 +12,8 @@ import { ReferralBubble } from "./referral-bubble";
 import { StoryReplyBubble } from "./story-reply-bubble";
 import { CarouselBubble } from "./carousel-bubble";
 import { QuotedMessagePreview } from "./quoted-message-preview";
+import { MessageFeedbackControls } from "./message-feedback-controls";
+import type { MessageFeedback } from "@/lib/types/messaging";
 import { formatTime, getSenderRole, getInitials } from "@/lib/utils/messaging";
 import { formatWhatsAppText } from "@/lib/utils/whatsapp-format";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -345,6 +347,14 @@ interface MessageBubbleProps {
   quotedMessage?: Message;
   /** Salta al mensaje original al hacer click en el quote. */
   onQuotedClick?: (message: Message) => void;
+  /** Conversación actual — necesaria para guardar el feedback de mensajes de IA. */
+  conversationId?: number | string;
+  /** Tenant override (SUPERADMIN). */
+  tenantId?: number;
+  /** Si el rol del usuario puede evaluar (SUPERADMIN/ADMIN/VENTAS). */
+  canGiveFeedback?: boolean;
+  /** Actualiza el feedback del mensaje en el estado del padre (optimista). */
+  onFeedbackChange?: (messageId: number | string, feedback: MessageFeedback | null) => void;
 }
 
 export const MessageBubble = memo(function MessageBubble({
@@ -354,6 +364,10 @@ export const MessageBubble = memo(function MessageBubble({
   onReply,
   quotedMessage,
   onQuotedClick,
+  conversationId,
+  tenantId,
+  canGiveFeedback = false,
+  onFeedbackChange,
 }: MessageBubbleProps) {
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const closeLightbox = useCallback(() => setLightboxSrc(null), []);
@@ -680,6 +694,21 @@ export const MessageBubble = memo(function MessageBubble({
           Mensaje automático
         </span>
       )}
+
+      {/* Feedback like/dislike — solo en respuestas del bot/IA evaluables.
+          message_type === "outgoing" excluye templates (el backend rechaza no-IA
+          con 422); canGiveFeedback respeta el rol (VIEWER/LOGISTICA no votan). */}
+      {senderRole === "ai" &&
+        message.message_type === "outgoing" &&
+        canGiveFeedback &&
+        conversationId != null && (
+          <MessageFeedbackControls
+            message={message}
+            conversationId={conversationId}
+            tenantId={tenantId}
+            onFeedbackChange={onFeedbackChange}
+          />
+        )}
 
       {/* Avatar lateral en outgoing — absolute para no robarle ancho al bubble */}
       {isOutgoing && showAvatar && (

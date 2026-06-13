@@ -45,6 +45,7 @@ class Account < ApplicationRecord
   has_many :contacts, dependent: :destroy
   has_many :conversations, dependent: :destroy
   has_many :messages, dependent: :destroy
+  has_many :message_feedbacks, dependent: :destroy
   has_many :labels, dependent: :destroy
   has_many :campaigns, dependent: :destroy
   has_many :automation_rules, dependent: :destroy

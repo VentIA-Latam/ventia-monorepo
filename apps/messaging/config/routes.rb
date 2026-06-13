@@ -89,8 +89,20 @@ Rails.application.routes.draw do
           collection do
             get :search
           end
+          # Feedback (like/dislike) del agente sobre mensajes de IA — uno por (mensaje, agente).
+          member do
+            put    :feedback, to: 'message_feedbacks#upsert'
+            delete :feedback, to: 'message_feedbacks#destroy'
+          end
         end
         resources :labels, only: [:index, :create, :destroy], controller: 'conversations/labels'
+      end
+
+      # Export del dataset de feedback de IA (JSONL) — restringido a ADMIN/SUPERADMIN en FastAPI.
+      resources :message_feedbacks, only: [] do
+        collection do
+          get :export
+        end
       end
 
       # Send message by phone (no requiere conversation_id existente)

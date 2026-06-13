@@ -21,7 +21,7 @@ import { MessageComposer } from "./message-composer";
 import { TemplatePicker } from "./template-picker";
 import { useMessagingEvent, useMessagingReconnect } from "./messaging-provider";
 import { getMessages, sendMessage, updateConversation, markConversationRead } from "@/lib/api-client/messaging";
-import type { Conversation, Message, MessageType, MessageStatus, MessageContentAttributes, MessageAdditionalAttributes, AttachmentBrief, ContactBrief, AgentBrief, QuotedMessageSnapshot } from "@/lib/types/messaging";
+import type { Conversation, Message, MessageType, MessageStatus, MessageContentAttributes, MessageAdditionalAttributes, AttachmentBrief, ContactBrief, AgentBrief, QuotedMessageSnapshot, MessageFeedback } from "@/lib/types/messaging";
 import { MessageSearchPanel } from "./message-search-panel";
 import { getInitials, getDateSeparatorLabel, parseTimestamp, getSenderKey } from "@/lib/utils/messaging";
 import { useAuth } from "@/hooks/use-auth";
@@ -96,7 +96,15 @@ interface MessageViewProps {
 export const MessageView = memo(function MessageView({ conversation, tenantId, targetMessageId, targetNonce, onBack, onOpenInfo, onConversationUpdate }: MessageViewProps) {
   const lastEvent = useMessagingEvent();
   const reconnectedAt = useMessagingReconnect();
-  const { userDetails } = useAuth();
+  const { userDetails, role } = useAuth();
+  // Solo los agentes que operan conversaciones pueden evaluar (alineado con el
+  // backend: SUPERADMIN/ADMIN/VENTAS). VIEWER/LOGISTICA no ven los controles.
+  // El rol llega en mayúsculas; comparamos case-insensitive como el propio hook.
+  const normalizedRole = role?.toLowerCase();
+  const canGiveFeedback =
+    normalizedRole === "superadmin" ||
+    normalizedRole === "admin" ||
+    normalizedRole === "ventas";
   const { toast } = useToast();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -716,6 +724,16 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
     [handleResultClick]
   );
 
+  // Actualiza el feedback de un mensaje de IA en el estado (optimista + servidor).
+  const handleFeedbackChange = useCallback(
+    (messageId: number | string, feedback: MessageFeedback | null) => {
+      setMessages((prev) =>
+        prev.map((m) => (String(m.id) === String(messageId) ? { ...m, feedback } : m))
+      );
+    },
+    []
+  );
+
   const handleToggleSearch = useCallback(() => {
     setIsSearchOpen((prev) => !prev);
   }, []);
@@ -945,6 +963,10 @@ export const MessageView = memo(function MessageView({ conversation, tenantId, t
                       onReply={setReplyingTo}
                       quotedMessage={quotedMessage}
                       onQuotedClick={handleQuotedClick}
+                      conversationId={conversation.id}
+                      tenantId={tenantId}
+                      canGiveFeedback={canGiveFeedback}
+                      onFeedbackChange={handleFeedbackChange}
                     />
                   </div>
                 </div>

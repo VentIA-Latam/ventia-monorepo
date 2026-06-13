@@ -3,7 +3,7 @@ Pydantic schemas for the messaging service API.
 """
 
 from datetime import date, datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -318,6 +318,18 @@ class SendMessageRequest(BaseModel):
     content: Optional[str] = None
     content_type: Optional[str] = None
     content_attributes: Optional[dict] = None
+
+
+class MessageFeedbackRequest(BaseModel):
+    """Like/dislike de un agente sobre un mensaje de IA.
+
+    El comentario es obligatorio en `dislike` y se ignora en `like` (lo fuerza el
+    backend Rails). El backend rechaza con 422 un dislike sin comentario o un
+    mensaje destino que no sea de IA.
+    """
+
+    rating: Literal["like", "dislike"]
+    comment: Optional[str] = Field(None, max_length=2000)
 
 
 class TemplateParamsRequest(BaseModel):

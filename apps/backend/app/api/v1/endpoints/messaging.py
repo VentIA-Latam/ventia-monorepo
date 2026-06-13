@@ -3,7 +3,9 @@ Messaging API endpoints - proxy to the standalone Rails messaging service.
 """
 
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from typing import Literal
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, require_permission_dual
@@ -29,6 +31,7 @@ from app.schemas.messaging import (
     InstagramAuthorizeResponse,
     InstagramStatusResponse,
     ManualWhatsAppRequest,
+    MessageFeedbackRequest,
     MessageListResponse,
     MessagingError,
     NotificationSettingsPayload,
@@ -987,6 +990,126 @@ async def send_message(
         raise HTTPException(status_code=503, detail="Messaging service unavailable")
 
     return result
+
+
+@router.put(
+    "/conversations/{conversation_id}/messages/{message_id}/feedback",
+    summary="Set like/dislike on an AI message",
+    tags=["messaging"],
+    responses={422: {"model": MessagingError}, 503: {"model": MessagingError}},
+)
+async def set_message_feedback(
+    conversation_id: str,
+    message_id: str,
+    payload: MessageFeedbackRequest,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(
+        require_permission_dual("PUT", "/messaging/conversations/*/messages/*/feedback")
+    ),
+):
+    """
+    Crea o actualiza el voto (like/dislike) del agente actual sobre un mensaje del
+    bot/IA. El dislike requiere comentario; el like lo ignora. Rechaza con 422 si el
+    mensaje destino no es de IA o si falta el comentario en un dislike.
+    """
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.set_message_feedback(
+        tenant_id,
+        conversation_id,
+        message_id,
+        payload.model_dump(exclude_none=True),
+        user_id=current_user.id,
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.delete(
+    "/conversations/{conversation_id}/messages/{message_id}/feedback",
+    summary="Remove feedback on an AI message",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def delete_message_feedback(
+    conversation_id: str,
+    message_id: str,
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(
+        require_permission_dual("DELETE", "/messaging/conversations/*/messages/*/feedback")
+    ),
+):
+    """Quita el voto del agente actual sobre el mensaje (toggle a neutral)."""
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    result = await messaging_service.delete_message_feedback(
+        tenant_id, conversation_id, message_id, user_id=current_user.id
+    )
+    if result is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+
+    return result
+
+
+@router.get(
+    "/feedback/export",
+    summary="Export the AI feedback dataset (NDJSON)",
+    tags=["messaging"],
+    responses={503: {"model": MessagingError}},
+)
+async def export_message_feedback(
+    rating: Literal["like", "dislike"] | None = Query(None, description="Filtrar por like | dislike"),
+    inbox_id: int | None = Query(None, description="Filtrar por inbox"),
+    from_: str | None = Query(None, alias="from", description="ISO8601 desde (created_at del feedback)"),
+    to: str | None = Query(None, description="ISO8601 hasta (created_at del feedback)"),
+    context: int | None = Query(
+        None, ge=0, le=20, description="Nº de mensajes previos por ejemplo (default 6)"
+    ),
+    tenant_id: int | None = Query(None, description="Tenant override (SUPERADMIN only)"),
+    current_user: User = Depends(require_permission_dual("GET", "/messaging/feedback/export")),
+):
+    """
+    Descarga el dataset de feedback de IA como NDJSON (una línea por voto, con la
+    respuesta del bot + contexto previo). Restringido a ADMIN/SUPERADMIN.
+    """
+    # No descartar el override en silencio: solo SUPERADMIN puede exportar otro tenant.
+    if tenant_id is not None and current_user.role != Role.SUPERADMIN:
+        raise HTTPException(
+            status_code=403, detail="Solo SUPERADMIN puede exportar el feedback de otro tenant"
+        )
+
+    tenant_id = _resolve_tenant_id(current_user, tenant_id)
+
+    params: dict = {}
+    if rating:
+        params["rating"] = rating
+    if inbox_id is not None:
+        params["inbox_id"] = inbox_id
+    if from_:
+        params["from"] = from_
+    if to:
+        params["to"] = to
+    if context is not None:
+        params["context"] = context
+
+    text, status_code = await messaging_service.export_message_feedback(
+        tenant_id, params or None
+    )
+    if status_code == 0 or text is None:
+        raise HTTPException(status_code=503, detail="Messaging service unavailable")
+    if status_code >= 400:
+        # Truncar el cuerpo de error de Rails (podría ser HTML/stacktrace largo).
+        raise HTTPException(
+            status_code=status_code, detail=(text or "Feedback export failed")[:500]
+        )
+
+    return Response(
+        content=text,
+        media_type="application/x-ndjson",
+        headers={"Content-Disposition": 'attachment; filename="ai_feedback_dataset.jsonl"'},
+    )
 
 
 @router.post(

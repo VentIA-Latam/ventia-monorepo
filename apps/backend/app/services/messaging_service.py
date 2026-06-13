@@ -381,6 +381,62 @@ class MessagingService:
             json_data={"message": payload},
         )
 
+    # --- AI message feedback (like/dislike) ---
+
+    async def set_message_feedback(
+        self,
+        tenant_id: int,
+        conversation_id: str,
+        message_id: str,
+        payload: dict,
+        user_id: Optional[str] = None,
+    ) -> Optional[dict]:
+        """Upsert the current agent's like/dislike on an AI message.
+
+        4xx from Rails (non-AI target, dislike without comment) propagate as
+        MessagingClientError and are mapped to the same status by the global handler.
+        """
+        return await self._request(
+            "PUT",
+            f"/api/v1/conversations/{conversation_id}/messages/{message_id}/feedback",
+            tenant_id,
+            user_id=user_id,
+            json_data=payload,
+        )
+
+    async def delete_message_feedback(
+        self,
+        tenant_id: int,
+        conversation_id: str,
+        message_id: str,
+        user_id: Optional[str] = None,
+    ) -> Optional[dict]:
+        """Remove the current agent's feedback on a message (toggle to neutral)."""
+        return await self._request(
+            "DELETE",
+            f"/api/v1/conversations/{conversation_id}/messages/{message_id}/feedback",
+            tenant_id,
+            user_id=user_id,
+        )
+
+    async def export_message_feedback(
+        self, tenant_id: int, params: Optional[dict] = None
+    ) -> tuple[Optional[str], int]:
+        """Export the AI feedback dataset as raw NDJSON text.
+
+        Returns (text, status_code); status_code=0 on network error. The body is
+        proxied verbatim so the caller can stream it back as a download.
+        """
+        url = f"{self.base_url}/api/v1/message_feedbacks/export"
+        headers = self._headers(tenant_id)
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.request("GET", url, headers=headers, params=params)
+                return response.text, response.status_code
+        except httpx.RequestError as e:
+            logger.error(f"Messaging feedback export failed: GET {url} -> {e}")
+            return None, 0
+
     async def send_by_phone(
         self, tenant_id: int, payload: dict, user_id: Optional[str] = None
     ) -> Optional[dict]:

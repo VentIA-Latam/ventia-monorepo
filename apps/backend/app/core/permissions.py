@@ -81,6 +81,16 @@ PERMISSIONS: Dict[Tuple[str, str], List[Role]] = {
     # MESSAGING ENDPOINTS
     ("GET", "/messaging/*"): [Role.SUPERADMIN, Role.ADMIN, Role.LOGISTICA, Role.VENTAS, Role.VIEWER],
     ("GET", "/messaging/export"): [Role.SUPERADMIN, Role.ADMIN],
+    # AI MESSAGE FEEDBACK (like/dislike sobre respuestas del bot).
+    # PUT/DELETE feedback tienen IDs en la URL (no hay match exacto), así que
+    # dependen del ORDEN: deben ir ANTES de los wildcards genéricos PUT/DELETE
+    # /messaging/* para ganar en can_access. El export usa una ruta sin IDs, así
+    # que gana por match EXACTO (no depende del orden). Dar feedback lo pueden
+    # hacer los agentes que operan conversaciones (mismo set que envía mensajes);
+    # el export del dataset queda restringido a ADMIN/SUPERADMIN.
+    ("PUT", "/messaging/conversations/*/messages/*/feedback"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
+    ("DELETE", "/messaging/conversations/*/messages/*/feedback"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
+    ("GET", "/messaging/feedback/export"): [Role.SUPERADMIN, Role.ADMIN],
     ("POST", "/messaging/*"): [Role.SUPERADMIN, Role.ADMIN, Role.VENTAS],
     ("PATCH", "/messaging/*"): [Role.SUPERADMIN, Role.ADMIN],
     ("PUT", "/messaging/*"): [Role.SUPERADMIN, Role.ADMIN],

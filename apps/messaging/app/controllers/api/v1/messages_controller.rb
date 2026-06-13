@@ -27,10 +27,11 @@ class Api::V1::MessagesController < Api::V1::BaseController
                end
 
     quoted_lookup = build_quoted_lookup(messages)
+    feedback_lookup = build_feedback_lookup(messages)
 
     render json: {
       success: true,
-      data: messages.map { |m| message_json(m, quoted_lookup) },
+      data: messages.map { |m| message_json(m, quoted_lookup, feedback_lookup) },
       meta: { has_more: has_more }
     }
   end
@@ -244,7 +245,18 @@ class Api::V1::MessagesController < Api::V1::BaseController
     @conversation.messages.where(source_id: ids).includes(:attachments, :sender).index_by(&:source_id)
   end
 
-  def message_json(message, quoted_lookup = nil)
+  # Voto del agente actual sobre los mensajes de la página (una sola query),
+  # mismo patrón anti-N+1 que build_quoted_lookup. Vacío si no hay usuario.
+  def build_feedback_lookup(messages)
+    return {} unless current_user
+
+    ids = messages.map(&:id)
+    return {} if ids.empty?
+
+    MessageFeedback.where(message_id: ids, user_id: current_user.id).index_by(&:message_id)
+  end
+
+  def message_json(message, quoted_lookup = nil, feedback_lookup = nil)
     attrs = message.content_attributes
     if message.in_reply_to.present?
       quoted = quoted_lookup ? quoted_lookup[message.in_reply_to] : @conversation.messages.find_by(source_id: message.in_reply_to)
@@ -262,6 +274,7 @@ class Api::V1::MessagesController < Api::V1::BaseController
       additional_attributes: message.additional_attributes,
       status: message.status,
       created_at: message.created_at,
+      feedback: feedback_json(message, feedback_lookup),
       sender: case message.sender&.class&.name
               when 'Contact'
                 { type: 'contact', id: message.sender.id, name: message.sender.name }
@@ -270,6 +283,15 @@ class Api::V1::MessagesController < Api::V1::BaseController
               end,
       attachments: message.attachments.map { |att| attachment_json(att) }
     }
+  end
+
+  # Voto del agente actual sobre este mensaje (o nil). Se resuelve desde el
+  # lookup precargado; sin él (p. ej. create) no hay feedback que mostrar.
+  def feedback_json(message, feedback_lookup)
+    fb = feedback_lookup && feedback_lookup[message.id]
+    return nil unless fb
+
+    { rating: fb.rating, comment: fb.comment, user_id: fb.user_id, updated_at: fb.updated_at }
   end
 
   def attachment_json(att)

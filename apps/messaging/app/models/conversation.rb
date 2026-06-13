@@ -58,6 +58,7 @@ class Conversation < ApplicationRecord
   belongs_to :assignee_agent_bot, class_name: 'AgentBot', optional: true
 
   has_many :messages, dependent: :destroy
+  has_many :message_feedbacks, dependent: :destroy
   has_many :conversation_labels, dependent: :destroy
   has_many :labels, through: :conversation_labels
 

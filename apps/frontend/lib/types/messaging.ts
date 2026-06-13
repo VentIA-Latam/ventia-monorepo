@@ -200,6 +200,16 @@ export interface MessageContentAttributes {
 
 export type MessageStatus = "sent" | "delivered" | "read" | "failed";
 
+export type FeedbackRating = "like" | "dislike";
+
+/** Voto del agente actual sobre un mensaje de IA (null si aún no votó). */
+export interface MessageFeedback {
+  rating: FeedbackRating;
+  comment: string | null;
+  user_id: number;
+  updated_at: string;
+}
+
 export interface Message {
   id: string | number;
   source_id?: string | null;
@@ -211,6 +221,8 @@ export interface Message {
   sender: AgentBrief | ContactBrief | null;
   attachments: AttachmentBrief[];
   created_at: string | number | null;
+  /** Feedback del agente actual sobre este mensaje (solo para mensajes de IA). */
+  feedback?: MessageFeedback | null;
 }
 
 export interface MessageListResponse {

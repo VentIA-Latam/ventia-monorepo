@@ -7,6 +7,8 @@ import type {
   ContactUpdatePayload,
   MessageListResponse,
   MessageSearchResponse,
+  MessageFeedback,
+  FeedbackRating,
   Note,
   WebSocketToken,
   Inbox,
@@ -189,6 +191,40 @@ export async function sendMessage(
   }
 
   return apiPost(`/api/messaging/conversations/${conversationId}/messages${qs}`, payload);
+}
+
+// --- AI message feedback (like/dislike) ---
+
+/**
+ * Crea o actualiza el voto del agente sobre un mensaje de IA. En dislike el
+ * comentario es obligatorio (lo valida el backend); en like se omite.
+ */
+export async function setMessageFeedback(
+  conversationId: number | string,
+  messageId: number | string,
+  rating: FeedbackRating,
+  comment?: string,
+  tenantId?: number,
+): Promise<{ success: boolean; data: MessageFeedback }> {
+  const qs = tenantId ? `?tenant_id=${tenantId}` : "";
+  const body: { rating: FeedbackRating; comment?: string } = { rating };
+  if (rating === "dislike" && comment) body.comment = comment;
+  return apiPut(
+    `/api/messaging/conversations/${conversationId}/messages/${messageId}/feedback${qs}`,
+    body,
+  );
+}
+
+/** Quita el voto del agente sobre el mensaje (toggle a neutral). */
+export async function deleteMessageFeedback(
+  conversationId: number | string,
+  messageId: number | string,
+  tenantId?: number,
+): Promise<unknown> {
+  const qs = tenantId ? `?tenant_id=${tenantId}` : "";
+  return apiDelete(
+    `/api/messaging/conversations/${conversationId}/messages/${messageId}/feedback${qs}`,
+  );
 }
 
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_06_10_004749) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_12_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -351,6 +351,22 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_10_004749) do
     t.index ["visibility"], name: "index_macros_on_visibility"
   end
 
+  create_table "message_feedbacks", force: :cascade do |t|
+    t.bigint "message_id", null: false
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "user_id", null: false
+    t.integer "rating", null: false
+    t.text "comment"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "rating", "created_at"], name: "idx_on_account_id_rating_created_at_8da5809ba9"
+    t.index ["account_id"], name: "index_message_feedbacks_on_account_id"
+    t.index ["conversation_id"], name: "index_message_feedbacks_on_conversation_id"
+    t.index ["message_id", "user_id"], name: "index_message_feedbacks_on_message_id_and_user_id", unique: true
+    t.index ["user_id"], name: "index_message_feedbacks_on_user_id"
+  end
+
   create_table "messages", force: :cascade do |t|
     t.text "content"
     t.integer "message_type", null: false
@@ -511,6 +527,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_06_10_004749) do
   add_foreign_key "inboxes", "accounts"
   add_foreign_key "labels", "accounts"
   add_foreign_key "macros", "accounts"
+  add_foreign_key "message_feedbacks", "messages"
   add_foreign_key "messages", "accounts"
   add_foreign_key "messages", "conversations"
   add_foreign_key "messages", "inboxes"
