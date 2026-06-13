@@ -1,5 +1,5 @@
 class Api::V1::MessageFeedbacksController < Api::V1::BaseController
-  CONTEXT_DEFAULT = 6
+  CONTEXT_DEFAULT = 10
   CONTEXT_MAX = 20
 
   before_action :require_current_user, only: [:upsert, :destroy]
@@ -66,7 +66,7 @@ class Api::V1::MessageFeedbacksController < Api::V1::BaseController
     context_index = build_context_index(feedbacks, context_size)
 
     lines = feedbacks.map do |fb|
-      {
+      row = {
         message_id: fb.message_id,
         conversation_id: fb.conversation_id,
         user_id: fb.user_id,
@@ -76,7 +76,10 @@ class Api::V1::MessageFeedbacksController < Api::V1::BaseController
         context: context_index[fb.message_id] || [],
         inbox_id: fb.conversation.inbox_id,
         created_at: fb.created_at.iso8601
-      }.to_json
+      }
+      attachments = attachment_briefs(fb.message)
+      row[:bot_attachments] = attachments if attachments.any?
+      row.to_json
     end
 
     render plain: lines.join("\n"), content_type: 'application/x-ndjson'
@@ -114,9 +117,9 @@ class Api::V1::MessageFeedbacksController < Api::V1::BaseController
 
   def export_scope(from = nil, to = nil)
     # inbox_id es columna de conversations, así que basta precargar :conversation
-    # (no :inbox). :message se usa para bot_response.
+    # (no :inbox). El mensaje + sus adjuntos se usan para bot_response/bot_attachments.
     scope = current_account.message_feedbacks
-                           .includes(:message, :conversation)
+                           .includes(:conversation, message: { attachments: { file_attachment: :blob } })
                            .order(created_at: :asc)
 
     if params[:rating].present? && MessageFeedback.ratings.key?(params[:rating])
@@ -143,6 +146,7 @@ class Api::V1::MessageFeedbacksController < Api::V1::BaseController
     messages_by_conv = Message
                        .where(account_id: current_account.id, conversation_id: conversation_ids)
                        .where.not(message_type: :activity)
+                       .includes(attachments: { file_attachment: :blob })
                        .order(:conversation_id, :created_at)
                        .group_by(&:conversation_id)
 
@@ -151,7 +155,28 @@ class Api::V1::MessageFeedbacksController < Api::V1::BaseController
       prior = (messages_by_conv[fb.conversation_id] || [])
               .select { |m| m.created_at < bot.created_at }
               .last(size)
-      index[fb.message_id] = prior.map { |m| { role: role_for(m), content: m.content } }
+      index[fb.message_id] = prior.map { |m| message_brief(m) }
+    end
+  end
+
+  # Representación de un mensaje en el dataset: rol + texto + adjuntos (si los hay).
+  def message_brief(message)
+    brief = { role: role_for(message), content: message.content }
+    attachments = attachment_briefs(message)
+    brief[:attachments] = attachments if attachments.any?
+    brief
+  end
+
+  # URLs y tipo de los adjuntos descargables del mensaje (imágenes, audio, etc.).
+  # location/contact no tienen archivo, se omiten.
+  def attachment_briefs(message)
+    message.attachments.filter_map do |att|
+      next if att.location? || att.contact?
+
+      url = att.external_url.presence || att.file_url
+      next if url.blank?
+
+      { file_type: att.file_type, url: url }
     end
   end
 

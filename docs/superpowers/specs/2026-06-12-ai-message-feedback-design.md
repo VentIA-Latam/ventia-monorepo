@@ -101,7 +101,7 @@ DELETE /api/v1/conversations/:conversation_id/messages/:message_id/feedback
 ### Export (objetivo dataset)
 
 ```
-GET /api/v1/message_feedbacks/export?rating=&inbox_id=&from=&to=&context=6
+GET /api/v1/message_feedbacks/export?rating=&inbox_id=&from=&to=&context=10
 ```
 
 - Respuesta **JSONL** (streaming), **una línea por voto**:
@@ -110,13 +110,18 @@ GET /api/v1/message_feedbacks/export?rating=&inbox_id=&from=&to=&context=6
 {"message_id":123,"conversation_id":45,"user_id":7,"rating":"dislike",
  "comment":"Dio un precio que no existe",
  "bot_response":"...texto del mensaje del bot...",
- "context":[{"role":"customer","content":"..."},{"role":"ai","content":"..."}],
+ "bot_attachments":[{"file_type":"image","url":"https://..."}],
+ "context":[{"role":"customer","content":"...","attachments":[{"file_type":"image","url":"https://..."}]},
+            {"role":"ai","content":"..."}],
  "inbox_id":7,"created_at":"2026-06-12T10:00:00Z"}
 ```
 
-- `context` = los últimos **N** mensajes (default 6, param `context`) anteriores
-  a la respuesta del bot dentro de la misma conversación (el prompt/contexto que
-  originó la respuesta). `role` ∈ `customer` | `ai` | `agent`.
+- `context` = los últimos **N** mensajes (default **10**, máx 20, param `context`)
+  anteriores a la respuesta del bot dentro de la misma conversación (el
+  prompt/contexto que originó la respuesta). `role` ∈ `customer` | `ai` | `agent`.
+- **Adjuntos**: cada mensaje (contexto y el del bot) incluye `attachments`/
+  `bot_attachments` con `{file_type, url}` de imágenes/audio/video/archivos
+  (se omite la clave en mensajes de solo texto; location/contact no llevan URL).
 - Filtros opcionales: `rating`, `inbox_id`, rango `from`/`to` (por `created_at`
   del feedback).
 - Una fila por voto incluye `user_id`; la consolidación (mayoría/consenso) se

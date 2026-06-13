@@ -222,6 +222,30 @@ RSpec.describe 'Api::V1::MessageFeedbacks', type: :request do
       expect(roles).to eq(%w[customer ai agent])
     end
 
+    it 'incluye las URLs de adjuntos en bot_attachments y en el contexto' do
+      customer = create_message(type: :incoming, sender: conversation.contact, content: 'mira esta foto')
+      customer.attachments.create!(account: account, file_type: :image, external_url: 'https://cdn/foto-cliente.jpg')
+      bot = create_message(content: 'Sí, ese polo cuesta 59.90')
+      bot.attachments.create!(account: account, file_type: :image, external_url: 'https://cdn/polo.jpg')
+      MessageFeedback.create!(message: bot, account: account, conversation: conversation, user: user, rating: :like)
+
+      get '/api/v1/message_feedbacks/export', headers: headers
+      row = JSON.parse(response.body.split("\n").reject(&:blank?).first)
+
+      expect(row['bot_attachments']).to eq([{ 'file_type' => 'image', 'url' => 'https://cdn/polo.jpg' }])
+      customer_ctx = row['context'].find { |c| c['role'] == 'customer' }
+      expect(customer_ctx['attachments']).to eq([{ 'file_type' => 'image', 'url' => 'https://cdn/foto-cliente.jpg' }])
+    end
+
+    it 'omite la clave attachments en mensajes de solo texto' do
+      bot = create_message(content: 'solo texto')
+      MessageFeedback.create!(message: bot, account: account, conversation: conversation, user: user, rating: :like)
+
+      get '/api/v1/message_feedbacks/export', headers: headers
+      row = JSON.parse(response.body.split("\n").reject(&:blank?).first)
+      expect(row).not_to have_key('bot_attachments')
+    end
+
     it 'rejects export for a non-admin agent (403)' do
       agent_user = create(:user, ventia_user_id: rand(100_000..999_999))
       AccountUser.create!(account: account, user: agent_user, role: :agent)
